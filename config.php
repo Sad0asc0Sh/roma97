@@ -44,26 +44,49 @@ if (!defined('SITE_URL')) {
     if ($httpHost !== '') {
         $detectedSiteUrl = $scheme . '://' . $httpHost;
 
-        // Derive the base path by stripping the document root from this file's path.
-        $docRoot = (string) ($_SERVER['DOCUMENT_ROOT'] ?? '');
-        if ($docRoot !== '') {
-            // Normalise separators so str_replace works on both Windows and Unix.
-            $normalizedDocRoot = str_replace('\\', '/', realpath($docRoot));
-            $normalizedAppRoot = str_replace('\\', '/', __DIR__);
+        // Derive the base URL path from the relationship between the URL path
+        // of the current script (SCRIPT_NAME) and its filesystem path
+        // (SCRIPT_FILENAME). This is robust against Apache Alias directives,
+        // custom document roots, vhosts, and any subfolder deployment — it does
+        // NOT rely on DOCUMENT_ROOT, which can be wrong when the project lives
+        // outside the default htdocs (e.g. XAMPP with an Alias).
+        //
+        // Example:
+        //   SCRIPT_NAME      = /roma/admin/news.php
+        //   SCRIPT_FILENAME  = D:/roma-final/roma/admin/news.php
+        //   __DIR__          = D:/roma-final/roma
+        //   -> relative script = admin/news.php
+        //   -> base URL path   = /roma
+        $scriptName = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+        $scriptFilename = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_FILENAME'] ?? ''));
+        $appRoot = str_replace('\\', '/', __DIR__);
 
-            if ($normalizedDocRoot !== '' && $normalizedAppRoot !== '' && str_starts_with($normalizedAppRoot, $normalizedDocRoot)) {
-                $basePath = substr($normalizedAppRoot, strlen($normalizedDocRoot));
-                // Leading/trailing slashes are trimmed; a root deployment yields ''.
-                $basePath = trim($basePath, '/');
-                if ($basePath !== '') {
-                    $detectedSiteUrl .= '/' . $basePath;
-                }
+        if ($scriptName !== '' && $scriptFilename !== '' && $appRoot !== '') {
+            // Find where the app root ends in SCRIPT_FILENAME, then take the
+            // remainder as the script's path relative to the project.
+            $relativeScript = '';
+            $rootEnd = strpos($scriptFilename, $appRoot);
+            if ($rootEnd !== false) {
+                $afterRoot = substr($scriptFilename, $rootEnd + strlen($appRoot));
+                $relativeScript = ltrim($afterRoot, '/');
             }
+
+            // Strip the relative script path from the end of SCRIPT_NAME to
+            // obtain the base URL path.
+            if ($relativeScript !== '' && str_ends_with($scriptName, $relativeScript)) {
+                $basePath = substr($scriptName, 0, strlen($scriptName) - strlen($relativeScript));
+            } else {
+                // Fallback: assume SCRIPT_NAME points directly into the root.
+                $basePath = $scriptName;
+            }
+
+            $basePath = rtrim($basePath, '/');
+            $detectedSiteUrl .= $basePath;
         }
     }
 
     // Fall back to the historical default if auto-detection failed (e.g. CLI).
-    if ($detectedSiteUrl === '') {
+    if ($detectedSiteUrl === '' || $detectedSiteUrl === 'http://' || $detectedSiteUrl === 'https://') {
         $detectedSiteUrl = 'http://localhost/roma';
     }
 
