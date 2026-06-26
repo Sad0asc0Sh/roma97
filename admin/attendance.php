@@ -383,7 +383,9 @@ require_once __DIR__ . '/header.php';
                                     <p class="attendance-card-meta"><?= e(attendanceAgeFromDob((string) ($child['date_of_birth'] ?? ''))) ?> · <?= e($parentName !== '' ? $parentName : '—') ?></p>
                                 </div>
                             </div>
-                            <fieldset class="attendance-fieldset">
+                            <!-- fieldset disabled by default in HTML so controls don't submit without JS;
+                                 JS re-enables on mobile viewport -->
+                            <fieldset class="attendance-fieldset" disabled data-mobile-fieldset>
                                 <legend class="sr-only">وضعیت برای <?= e($fullName) ?></legend>
                                 <p class="attendance-field-label">وضعیت</p>
                                 <div class="status-radio-group">
@@ -398,6 +400,7 @@ require_once __DIR__ . '/header.php';
                                         type="time"
                                         name="attendance[<?= e((string) $cid) ?>][check_in]"
                                         value="<?= e(attendanceTimeForInput($child['check_in'] ?? null)) ?>"
+                                        disabled
                                     >
                                 </label>
                                 <label class="time-input-label">
@@ -407,6 +410,7 @@ require_once __DIR__ . '/header.php';
                                         type="time"
                                         name="attendance[<?= e((string) $cid) ?>][check_out]"
                                         value="<?= e(attendanceTimeForInput($child['check_out'] ?? null)) ?>"
+                                        disabled
                                     >
                                 </label>
                             </div>
@@ -417,6 +421,7 @@ require_once __DIR__ . '/header.php';
                                     name="attendance[<?= e((string) $cid) ?>][notes]"
                                     rows="3"
                                     maxlength="5000"
+                                    disabled
                                 ><?= e($notesVal) ?></textarea>
                             </label>
                         </article>
@@ -439,11 +444,11 @@ require_once __DIR__ . '/header.php';
     if (!tableWrap || !cardsWrap) {
         return;
     }
-    // Disable all mobile card controls by default so they don't submit without JS.
-    // JS will enable the appropriate set based on viewport.
+    // Mobile card controls + fieldset are disabled in HTML by default (so they
+    // don't submit without JS). JS enables the appropriate set by viewport.
     var tableControls = tableWrap.querySelectorAll('input, textarea');
     var cardControls = cardsWrap.querySelectorAll('input, textarea');
-    cardControls.forEach(function (el) { el.disabled = true; });
+    var mobileFieldsets = cardsWrap.querySelectorAll('[data-mobile-fieldset]');
     function apply() {
         var desktop = mq.matches;
         tableControls.forEach(function (el) {
@@ -451,6 +456,10 @@ require_once __DIR__ . '/header.php';
         });
         cardControls.forEach(function (el) {
             el.disabled = desktop;
+        });
+        // Toggle the fieldset disabled state so its child radios follow
+        mobileFieldsets.forEach(function (fs) {
+            fs.disabled = desktop;
         });
     }
     if (typeof mq.addEventListener === 'function') {

@@ -1,8 +1,9 @@
 # ROMA — Production Status
 
-**Release:** Production Critical Fixes v1
+**Release:** Production Critical Fixes v1 (Validation Round 1)
 **Date:** 2026-06-26
-**Baseline:** Commit `6c28846` → this release
+**Baseline:** Commit `6c28846` → `7dd56d5` → this validation
+**Validation:** See `docs/TEST_RESULTS.md` — 24 tests passed, 1 failed+fixed
 
 ---
 
