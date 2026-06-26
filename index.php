@@ -99,7 +99,7 @@ require_once __DIR__ . '/templates/header.php';
             <div class="slides">
                 <?php foreach ($slides as $index => $slide): ?>
                     <div class="slide<?= $index === 0 ? ' is-active' : '' ?>" data-slide>
-                        <img src="<?= e($slide['image']) ?>" alt="<?= e($slide['title']) ?>" loading="<?= $index === 0 ? 'eager' : 'lazy' ?>">
+                        <img src="<?= e(url($slide['image'])) ?>" alt="<?= e($slide['title']) ?>" loading="<?= $index === 0 ? 'eager' : 'lazy' ?>">
                         <div class="slide-overlay">
                             <div class="slide-caption">
                                 <h2><?= e($slide['title']) ?></h2>
@@ -280,7 +280,7 @@ require_once __DIR__ . '/templates/header.php';
                 <article class="news-card fade-in">
                     <?php if (!empty($newsItem['image'])): ?>
                         <div class="news-card-image">
-                            <img src="<?= e($newsItem['image']) ?>" alt="<?= e($newsItem['title']) ?>" loading="lazy">
+                            <img src="<?= e(url($newsItem['image'])) ?>" alt="<?= e($newsItem['title']) ?>" loading="lazy">
                         </div>
                     <?php endif; ?>
                     <div class="news-card-body">

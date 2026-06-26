@@ -108,7 +108,7 @@ require_once __DIR__ . '/templates/header.php';
 
                 <?php if (!empty($singleNewsItem['image'])): ?>
                     <div class="news-article-image">
-                        <img src="<?= e($singleNewsItem['image']) ?>" alt="<?= e($singleNewsItem['title']) ?>">
+                        <img src="<?= e(url($singleNewsItem['image'])) ?>" alt="<?= e($singleNewsItem['title']) ?>">
                     </div>
                 <?php endif; ?>
 
@@ -143,7 +143,7 @@ require_once __DIR__ . '/templates/header.php';
                         <article class="news-list-card fade-in">
                             <?php if (!empty($newsItem['image'])): ?>
                                 <a href="<?= e(url('news.php?id=' . $newsItem['id'])) ?>" class="news-list-image">
-                                    <img src="<?= e($newsItem['image']) ?>" alt="<?= e($newsItem['title']) ?>" loading="lazy">
+                                    <img src="<?= e(url($newsItem['image'])) ?>" alt="<?= e($newsItem['title']) ?>" loading="lazy">
                                 </a>
                             <?php endif; ?>
                             <div class="news-list-content">

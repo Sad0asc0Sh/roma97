@@ -24,7 +24,51 @@ defined('DB_USER') || define('DB_USER', 'root');
 defined('DB_PASS') || define('DB_PASS', '');
 
 // Full base URL where this folder is served, without a trailing slash.
-defined('SITE_URL') || define('SITE_URL', 'http://localhost/roma');
+//
+// Auto-detection: if config.local.php has not already defined SITE_URL, we
+// compute it from the relationship between the Apache document root and this
+// project directory. This makes the app work on any localhost subpath
+// (e.g. http://localhost/roma, http://localhost/roma-final/roma, or a vhost)
+// without requiring a manual config.local.php for local development.
+if (!defined('SITE_URL')) {
+    $detectedSiteUrl = '';
+
+    // Build the scheme://host:port portion of the current request.
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['SERVER_PORT'] ?? '') === '443')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+            ? 'https'
+            : 'http';
+
+    $httpHost = (string) ($_SERVER['HTTP_HOST'] ?? '');
+    if ($httpHost !== '') {
+        $detectedSiteUrl = $scheme . '://' . $httpHost;
+
+        // Derive the base path by stripping the document root from this file's path.
+        $docRoot = (string) ($_SERVER['DOCUMENT_ROOT'] ?? '');
+        if ($docRoot !== '') {
+            // Normalise separators so str_replace works on both Windows and Unix.
+            $normalizedDocRoot = str_replace('\\', '/', realpath($docRoot));
+            $normalizedAppRoot = str_replace('\\', '/', __DIR__);
+
+            if ($normalizedDocRoot !== '' && $normalizedAppRoot !== '' && str_starts_with($normalizedAppRoot, $normalizedDocRoot)) {
+                $basePath = substr($normalizedAppRoot, strlen($normalizedDocRoot));
+                // Leading/trailing slashes are trimmed; a root deployment yields ''.
+                $basePath = trim($basePath, '/');
+                if ($basePath !== '') {
+                    $detectedSiteUrl .= '/' . $basePath;
+                }
+            }
+        }
+    }
+
+    // Fall back to the historical default if auto-detection failed (e.g. CLI).
+    if ($detectedSiteUrl === '') {
+        $detectedSiteUrl = 'http://localhost/roma';
+    }
+
+    define('SITE_URL', $detectedSiteUrl);
+}
 
 // ─── Security configuration ────────────────────────────────────────────────
 // Force HTTPS redirects. Enable in production with a valid SSL certificate.

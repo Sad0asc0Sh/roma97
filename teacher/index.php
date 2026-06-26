@@ -207,7 +207,7 @@ function attendanceBadge(?string $status): string
                         $parentName = e($child['parent_first_name'] . ' ' . $child['parent_last_name']);
                         $age = teacherDashAge((string) $child['date_of_birth']);
                         $hasAllergy = !empty($child['allergies']);
-                        $photoUrl = !empty($child['photo']) ? e((string) $child['photo']) : '';
+                        $photoUrl = !empty($child['photo']) ? e(url((string) $child['photo'])) : '';
                         ?>
                         <div class="child-card">
                             <div class="child-card-header">

@@ -17,6 +17,18 @@ function url(string $path = ''): string
     return rtrim(SITE_URL, '/') . '/' . ltrim($path, '/');
 }
 
+/**
+ * Build a fully-qualified URL for a static asset (CSS, JS, image, font).
+ *
+ * Currently equivalent to url(), but kept as a separate helper so that
+ * asset-specific logic (e.g. cache-busting, CDN switching) can be added
+ * later without touching every call site.
+ */
+function asset(string $path = ''): string
+{
+    return url($path);
+}
+
 function redirect(string $url): never
 {
     header('Location: ' . $url, true, 302);
@@ -122,11 +134,13 @@ function sendSecurityHeaders(): void
     }
     
     // Content Security Policy
+    // Note: the Vazirmatn font is loaded from cdn.jsdelivr.net (see header
+    // templates), so that origin must be allowed in style-src and font-src.
     $csp = "default-src 'self'; " .
            "script-src 'self' 'unsafe-inline'; " .
-           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " .
+           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " .
            "img-src 'self' data:; " .
-           "font-src 'self' https://fonts.gstatic.com; " .
+           "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; " .
            "connect-src 'self'; " .
            "frame-ancestors 'none'; " .
            "base-uri 'self'; " .
