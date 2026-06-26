@@ -21,17 +21,16 @@ $error = '';
 $successMessage = getFlash('success');
 $email = '';
 
+// Check brute-force lockout before any DB work
+if (!checkBruteForce('parent_login')) {
+    $error = 'تعداد تلاش‌های ناموفق زیاد است. لطفاً ۱۵ دقیقه دیگر تلاش کنید.';
+}
+
 try {
-    initializeParentTables();
     $pdo = getDb();
 } catch (Throwable $exception) {
     error_log($exception->getMessage());
     $pdo = null;
-}
-
-// Check brute-force lockout before processing login
-if (!checkBruteForce('parent_login')) {
-    $error = 'تعداد تلاش‌های ناموفق زیاد است. لطفاً ۱۵ دقیقه دیگر تلاش کنید.';
 }
 
 if (isPostRequest() && $error === '') {

@@ -34,7 +34,7 @@ try {
     if ($classroom !== null) {
         $classroomId = (int) $classroom['id'];
 
-        // Fetch کودک in this classroom with parent info + today's attendance
+        // Fetch children in this classroom with parent info + today's attendance
         $chStmt = $pdo->prepare(
             <<<'SQL'
 SELECT
@@ -49,7 +49,7 @@ SELECT
     p.phone       AS parent_phone,
     a.status      AS attendance_status
 FROM child_classroom cc
-INNER JOIN کودک ch ON ch.id = cc.child_id
+INNER JOIN children ch ON ch.id = cc.child_id
 INNER JOIN parents  p  ON p.id  = ch.parent_id
 LEFT  JOIN attendance a
        ON  a.child_id = ch.id

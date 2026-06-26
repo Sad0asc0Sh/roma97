@@ -12,30 +12,8 @@ require_once __DIR__ . '/db.php';
  */
 function initializeAuditTable(): void
 {
+    // Schema is created at install time via setup.php / schema.sql
     static $initialized = false;
-    if ($initialized) {
-        return;
-    }
-
-    $pdo = getDb();
-    $pdo->exec(<<<SQL
-CREATE TABLE IF NOT EXISTS audit_log (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    actor_type ENUM('admin','teacher','parent','system') NOT NULL DEFAULT 'system',
-    actor_id INT NULL,
-    actor_label VARCHAR(150) NULL,
-    action VARCHAR(100) NOT NULL,
-    entity_type VARCHAR(50) NULL,
-    entity_id INT NULL,
-    details TEXT NULL,
-    ip_address VARCHAR(45) NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_audit_created (created_at),
-    INDEX idx_audit_action (action),
-    INDEX idx_audit_entity (entity_type, entity_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-SQL);
-
     $initialized = true;
 }
 

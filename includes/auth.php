@@ -53,27 +53,8 @@ const BRUTE_FORCE_LOCKOUT_SECONDS = 900; // 15 minutes
  */
 function initializeLoginThrottleTable(): void
 {
+    // Schema is created at install time via setup.php / schema.sql
     static $initialized = false;
-    if ($initialized) {
-        return;
-    }
-
-    require_once __DIR__ . '/db.php';
-    $pdo = getDb();
-
-    $pdo->exec(<<<SQL
-CREATE TABLE IF NOT EXISTS login_throttle (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    context VARCHAR(50) NOT NULL,
-    key_type ENUM('ip','identifier') NOT NULL,
-    key_value VARCHAR(191) NOT NULL,
-    attempts INT NOT NULL DEFAULT 0,
-    locked_until DATETIME NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_throttle_key (context, key_type, key_value)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-SQL);
-
     $initialized = true;
 }
 

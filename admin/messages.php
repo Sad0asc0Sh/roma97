@@ -14,7 +14,10 @@ initializeMessagingTable();
 
 requireLogin();
 
-$adminId = (int) ($_SESSION['admin_id'] ?? 1); // Fallback to 1 if not set, but session should have it
+if (!isset($_SESSION['admin_id'])) {
+    redirect(url('admin/login.php'));
+}
+$adminId = (int) $_SESSION['admin_id'];
 $pdo = getDb();
 $error = '';
 $success = '';
@@ -24,7 +27,9 @@ if (isPostRequest() && isset($_POST['send_message'])) {
     if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
         $error = 'توکن CSRF نامعتبر است.';
     } else {
-        $recipientId = $_POST['recipient_id'] === 'all' ? null : (int) $_POST['recipient_id'];
+        $recipientRaw = (string) ($_POST['recipient_id'] ?? '');
+        $isBroadcast = ($recipientRaw === 'all');
+        $recipientId = $isBroadcast ? null : (int) $recipientRaw;
         $subject = trim((string) ($_POST['subject'] ?? ''));
         $body = trim((string) ($_POST['body'] ?? ''));
 
@@ -32,10 +37,36 @@ if (isPostRequest() && isset($_POST['send_message'])) {
             $error = 'موضوع و متن پیام الزامی است.';
         } else {
             try {
-                $stmt = $pdo->prepare('INSERT INTO messages (sender_type, sender_id, parent_id, subject, body) VALUES (?, ?, ?, ?, ?)');
-                $stmt->execute(['admin', $adminId, $recipientId, $subject, $body]);
-                recordAudit('message.send', 'message', (int) $pdo->lastInsertId(), ['recipient_id' => $recipientId]);
-                $success = 'پیام با موفقیت ارسال شد.';
+                $insertStmt = $pdo->prepare(
+                    'INSERT INTO messages (sender_type, sender_id, parent_id, subject, body) VALUES (?, ?, ?, ?, ?)'
+                );
+
+                $sentCount = 0;
+
+                if ($isBroadcast) {
+                    // Fan-out: insert one row per parent so each has independent read state
+                    $parentsListStmt = $pdo->query('SELECT id FROM parents ORDER BY id');
+                    while (($pid = $parentsListStmt->fetchColumn()) !== false) {
+                        $insertStmt->execute(['admin', $adminId, (int) $pid, $subject, $body]);
+                        $sentCount++;
+                    }
+
+                    if ($sentCount === 0) {
+                        // No parents exist — insert a single NULL row so the admin still sees it in sent list
+                        $insertStmt->execute(['admin', $adminId, null, $subject, $body]);
+                        $sentCount = 1;
+                    }
+
+                    recordAudit('message.send', 'message', null, ['broadcast' => true, 'recipients' => $sentCount]);
+                } else {
+                    $insertStmt->execute(['admin', $adminId, $recipientId, $subject, $body]);
+                    $sentCount = 1;
+                    recordAudit('message.send', 'message', (int) $pdo->lastInsertId(), ['recipient_id' => $recipientId]);
+                }
+
+                $success = $isBroadcast
+                    ? 'پیام با موفقیت به ' . persianNumber((string) $sentCount) . ' والد ارسال شد.'
+                    : 'پیام با موفقیت ارسال شد.';
             } catch (Throwable $e) {
                 error_log($e->getMessage());
                 $error = 'ارسال پیام ناموفق بود.';

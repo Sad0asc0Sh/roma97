@@ -293,7 +293,7 @@ require_once __DIR__ . '/header.php';
             </div>
 
             <div class="attendance-container">
-                <div class="attendance-table-wrap">
+                <div class="attendance-table-wrap attendance-desktop">
                     <div class="attendance-table-scroll">
                         <table class="attendance-table">
                             <thead>
@@ -362,7 +362,7 @@ require_once __DIR__ . '/header.php';
                     </div>
                 </div>
 
-                <div class="attendance-cards" aria-label="حضور و غیاب بر اساس کودک">
+                <div class="attendance-cards attendance-mobile" aria-label="حضور و غیاب بر اساس کودک" data-attendance-mobile>
                     <?php foreach ($rows as $child): ?>
                         <?php
                         $cid = (int) $child['id'];
@@ -435,12 +435,15 @@ require_once __DIR__ . '/header.php';
 (function () {
     var mq = window.matchMedia('(min-width: 768px)');
     var tableWrap = document.querySelector('.attendance-table-wrap');
-    var cardsWrap = document.querySelector('.attendance-cards');
+    var cardsWrap = document.querySelector('[data-attendance-mobile]');
     if (!tableWrap || !cardsWrap) {
         return;
     }
+    // Disable all mobile card controls by default so they don't submit without JS.
+    // JS will enable the appropriate set based on viewport.
     var tableControls = tableWrap.querySelectorAll('input, textarea');
     var cardControls = cardsWrap.querySelectorAll('input, textarea');
+    cardControls.forEach(function (el) { el.disabled = true; });
     function apply() {
         var desktop = mq.matches;
         tableControls.forEach(function (el) {

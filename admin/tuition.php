@@ -70,7 +70,12 @@ SQL;
             ':notes'  => $notes === '' ? null : $notes,
         ]);
 
-        recordAudit('tuition.payment', 'tuition_payment', (int) $pdo->lastInsertId());
+        // lastInsertId() returns 0 on UPDATE (ON DUPLICATE KEY UPDATE), so fetch the real id
+        $idStmt = $pdo->prepare('SELECT id FROM tuition_payments WHERE child_id = :cid AND month_year = :myear LIMIT 1');
+        $idStmt->execute([':cid' => $childId, ':myear' => $monthYear]);
+        $tuitionId = (int) $idStmt->fetchColumn();
+
+        recordAudit('tuition.payment', 'tuition_payment', $tuitionId);
         setFlash('success', 'پرداخت شهریه با موفقیت ثبت شد.');
         redirect(url('admin/tuition.php'));
     }

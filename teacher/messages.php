@@ -24,7 +24,9 @@ if (isPostRequest() && isset($_POST['send_message'])) {
     if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
         $error = 'توکن CSRF نامعتبر است.';
     } else {
-        $recipientId = $_POST['recipient_id'] === 'classroom' ? null : (int) $_POST['recipient_id'];
+        $recipientRaw = (string) ($_POST['recipient_id'] ?? '');
+        $isBroadcast = ($recipientRaw === 'classroom');
+        $recipientId = $isBroadcast ? null : (int) $recipientRaw;
         $subject = trim((string) ($_POST['subject'] ?? ''));
         $body = trim((string) ($_POST['body'] ?? ''));
 
@@ -32,10 +34,41 @@ if (isPostRequest() && isset($_POST['send_message'])) {
             $error = 'موضوع و متن پیام الزامی است.';
         } else {
             try {
-                // If it's a specific parent, verify they belong to the teacher's classroom
-                if ($recipientId !== null) {
+                $insertStmt = $pdo->prepare(
+                    'INSERT INTO messages (sender_type, sender_id, parent_id, subject, body) VALUES (?, ?, ?, ?, ?)'
+                );
+
+                $sentCount = 0;
+
+                if ($isBroadcast) {
+                    // Fan-out: insert one row per parent in this teacher's classroom
+                    $classParentsStmt = $pdo->prepare('
+                        SELECT DISTINCT p.id
+                        FROM parents p
+                        JOIN children c ON p.id = c.parent_id
+                        JOIN child_classroom cc ON c.id = cc.child_id
+                        JOIN classrooms cl ON cc.classroom_id = cl.id
+                        WHERE cl.teacher_id = ?
+                        ORDER BY p.id
+                    ');
+                    $classParentsStmt->execute([$teacherId]);
+
+                    while (($pid = $classParentsStmt->fetchColumn()) !== false) {
+                        $insertStmt->execute(['teacher', $teacherId, (int) $pid, $subject, $body]);
+                        $sentCount++;
+                    }
+
+                    if ($sentCount === 0) {
+                        // No parents in classroom — insert a single NULL row so teacher still sees it in sent list
+                        $insertStmt->execute(['teacher', $teacherId, null, $subject, $body]);
+                        $sentCount = 1;
+                    }
+
+                    recordAudit('message.send', 'message', null, ['broadcast' => true, 'recipients' => $sentCount]);
+                } else {
+                    // Verify the specific parent belongs to this teacher's classroom
                     $verifyStmt = $pdo->prepare('
-                        SELECT COUNT(*) 
+                        SELECT COUNT(*)
                         FROM child_classroom cc
                         JOIN children c ON cc.child_id = c.id
                         JOIN classrooms cl ON cc.classroom_id = cl.id
@@ -45,12 +78,15 @@ if (isPostRequest() && isset($_POST['send_message'])) {
                     if ((int) $verifyStmt->fetchColumn() === 0) {
                         throw new Exception('دریافت‌کننده نامعتبر است.');
                     }
+
+                    $insertStmt->execute(['teacher', $teacherId, $recipientId, $subject, $body]);
+                    $sentCount = 1;
+                    recordAudit('message.send', 'message', (int) $pdo->lastInsertId(), ['recipient_id' => $recipientId]);
                 }
 
-                $stmt = $pdo->prepare('INSERT INTO messages (sender_type, sender_id, parent_id, subject, body) VALUES (?, ?, ?, ?, ?)');
-                $stmt->execute(['teacher', $teacherId, $recipientId, $subject, $body]);
-                recordAudit('message.send', 'message', (int) $pdo->lastInsertId(), ['recipient_id' => $recipientId]);
-                $success = 'پیام با موفقیت ارسال شد.';
+                $success = $isBroadcast
+                    ? 'پیام با موفقیت به ' . persianNumber((string) $sentCount) . ' والد ارسال شد.'
+                    : 'پیام با موفقیت ارسال شد.';
             } catch (Throwable $e) {
                 error_log($e->getMessage());
                 $error = 'ارسال پیام ناموفق بود: ' . $e->getMessage();
