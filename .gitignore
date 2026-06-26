@@ -1,6 +1,9 @@
 # Local environment configuration (contains credentials — never commit)
 config.local.php
 
+# Installation lock file (environment-specific — never commit)
+install.lock
+
 # Runtime logs
 logs/*.log
 

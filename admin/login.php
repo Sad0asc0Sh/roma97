@@ -71,18 +71,6 @@ if ($lockedOut) {
                 $_SESSION['admin_username'] = $admin['username'];
                 recordAudit('auth.login', 'admin', (int) $admin['id']);
 
-                // Check if still using the default/seeded password — force change
-                $usingDefaultPassword = password_verify(
-                    DEFAULT_ADMIN_PASSWORD,
-                    $admin['password']
-                );
-
-                if ($usingDefaultPassword) {
-                    $_SESSION['default_admin_password'] = true;
-                    setFlash('error', 'شما از رمز عبور پیش‌فرض استفاده می‌کنید. لطفاً برای امنیت فوراً آن را تغییر دهید.');
-                    redirect(url('admin/settings.php'));
-                }
-
                 redirect(url('admin/index.php'));
             }
 

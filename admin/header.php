@@ -179,11 +179,4 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
         </header>
 
         <main class="admin-content">
-            <?php if (!empty($_SESSION['default_admin_password'])): ?>
-                <div class="alert alert-warning" role="alert">
-                    <span class="alert-icon">&#9888;</span>
-                    <div>
-                        <strong>هشدار امنیتی:</strong> رمز عبور پیش‌فرض مدیر هنوز فعال است. لطفاً قبل از انتشار سایت، آن را در <a href="<?php echo e(url('admin/settings.php')); ?>" class="alert-link">تنظیمات</a> تغییر دهید.
-                    </div>
-                </div>
-            <?php endif; ?>
+            <!-- Default-password warning removed (hardened: no hardcoded default password exists) -->

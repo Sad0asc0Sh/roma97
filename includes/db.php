@@ -7,12 +7,6 @@ if (!defined('ROOMA_APP')) {
 
 require_once __DIR__ . '/../config.php';
 
-const DEFAULT_ADMIN_USERNAME = 'admin';
-// NOTE: First-run auto-creates the admin account with this one-time password.
-// The admin MUST change it immediately after first login via admin/settings.php.
-// This constant is ONLY used in initializeDatabase() which seeds an empty table.
-const DEFAULT_ADMIN_PASSWORD = 'admin123';
-
 function getDb(): PDO
 {
     static $pdo = null;

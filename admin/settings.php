@@ -221,7 +221,6 @@ if (isPostRequest()) {
         ]);
 
         recordAudit('auth.password_change', 'admin', (int) $admin['id']);
-        unset($_SESSION['default_admin_password']);
         setFlash('success', 'رمز عبور با موفقیت تغییر کرد.');
         redirect(url('admin/settings.php'));
     }
