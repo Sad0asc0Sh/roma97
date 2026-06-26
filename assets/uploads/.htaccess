@@ -1,0 +1,36 @@
+# Rooma Daycare - Upload Directory Security
+
+# Disable directory browsing
+Options -Indexes
+
+# Block execution of PHP and other server-side scripts
+<FilesMatch "\.(php|phtml|php3|php4|php5|php6|php7|phps|cgi|pl|shtml|jsp|asp)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Block access to .htaccess and .htpasswd files
+<FilesMatch "^\.ht">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Only allow expected public upload file types to be served.
+# The rewrite rule is used because FilesMatch does not support "not this extension"
+# syntax with a leading ! on all Apache versions/configurations.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteCond %{REQUEST_URI} !\.(jpe?g|png|gif|webp|pdf)$ [NC]
+    RewriteRule . - [F,L]
+</IfModule>

@@ -1,0 +1,11 @@
+# Local environment configuration (contains credentials — never commit)
+config.local.php
+
+# Runtime logs
+logs/*.log
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+*.swp
+*.bak

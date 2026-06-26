@@ -1,0 +1,28 @@
+<?php
+declare(strict_types=1);
+
+/*
+ * Local / environment-specific configuration.
+ *
+ * 1. Copy this file to "config.local.php" in the same directory.
+ * 2. Fill in the values for your server.
+ * 3. config.local.php is git-ignored and overrides the defaults in config.php.
+ *
+ * Define ONLY the constants you need to override; anything you omit falls back
+ * to the safe defaults in config.php.
+ */
+
+// ─── Database ────────────────────────────────────────────────────────────
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'rooma_db');
+define('DB_USER', 'your_db_user');
+define('DB_PASS', 'your_db_password');
+
+// Public base URL of the app, WITHOUT a trailing slash.
+define('SITE_URL', 'https://example.com');
+
+// ─── Environment ─────────────────────────────────────────────────────────
+// Production: keep DEVELOPMENT_MODE false and FORCE_HTTPS true (with SSL).
+// Local dev:  set DEVELOPMENT_MODE true to see detailed errors.
+define('DEVELOPMENT_MODE', false);
+define('FORCE_HTTPS', true);
