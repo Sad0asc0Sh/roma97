@@ -1,4 +1,4 @@
-﻿/* ============================================
+/* ============================================
    ROOMA DAYCARE - DESIGN SYSTEM
    Persian/Lavender & Pink Kindergarten Theme
    Modern, Warm, Professional + Full RTL Support
@@ -251,34 +251,41 @@ p {
 .site-nav {
     display: none;
     align-items: center;
-    gap: var(--space-xs);
+    gap: 4px;
 }
 
-.site-nav a {
+/* Nav link - shows icon + label side by side */
+.site-nav .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     color: var(--neutral-dark);
     font-weight: 600;
-    padding: var(--space-xs) var(--space-md);
+    padding: 8px 14px;
     border-radius: var(--radius-full);
     transition: all var(--transition-fast);
     position: relative;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    text-decoration: none;
+    white-space: nowrap;
 }
 
-.site-nav a:hover {
+.site-nav .nav-link:hover {
     color: var(--primary-dark);
     background: rgba(232, 121, 181, 0.1);
     transform: translateY(-1px);
 }
 
-.site-nav a.active {
+.site-nav .nav-link.active {
     color: var(--primary-dark);
-    background: rgba(232, 121, 181, 0.15);
+    background: rgba(232, 121, 181, 0.12);
+    font-weight: 700;
 }
 
-.site-nav a.active::after {
+.site-nav .nav-link.active::after {
     content: '';
     position: absolute;
-    bottom: -2px;
+    bottom: 0;
     right: 50%;
     transform: translateX(50%);
     width: 24px;
@@ -287,8 +294,28 @@ p {
     border-radius: var(--radius-full);
 }
 
+.nav-icon {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.nav-label {
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.nav-auth {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-inline-start: var(--space-xs);
+    border-inline-start: 2px solid rgba(232, 121, 181, 0.2);
+    padding-inline-start: var(--space-sm);
+}
+
 .logout-form {
-    display: inline;
+    display: inline-flex;
+    align-items: center;
 }
 
 .logout-form button {
@@ -377,11 +404,29 @@ p {
         pointer-events: auto;
     }
 
-    .site-nav a {
+    .site-nav .nav-link {
         padding: var(--space-md);
-        text-align: center;
+        justify-content: center;
         border-radius: var(--radius-md);
-        font-size: 1.05rem;
+        font-size: 1rem;
+    }
+
+    .nav-auth {
+        flex-direction: column;
+        margin-inline-start: 0;
+        border-inline-start: none;
+        border-top: 2px solid rgba(232, 121, 181, 0.15);
+        padding-inline-start: 0;
+        padding-top: var(--space-sm);
+    }
+
+    .nav-auth .btn,
+    .nav-auth .logout-form {
+        width: 100%;
+    }
+
+    .nav-auth .btn {
+        justify-content: center;
     }
 
     .logout-form button {
@@ -405,7 +450,8 @@ p {
 /* === MAIN CONTENT === */
 .site-main {
     min-height: calc(100vh - 76px - 200px);
-    padding: var(--space-xl) 0;
+    /* No vertical padding here – the hero-slider sits flush at the top.
+       Individual sections carry their own padding via .section { padding: ... } */
 }
 
 /* === BUTTONS === */
@@ -4483,9 +4529,9 @@ body {
         pointer-events: auto;
     }
 
-    .site-nav a {
+    .site-nav .nav-link {
         padding: var(--space-md);
-        text-align: center;
+        justify-content: center;
         border-radius: var(--radius-md);
         font-size: 1rem;
     }
@@ -4501,19 +4547,35 @@ body {
     }
 }
 
-/* === MAIN CONTENT === */
+/* === MAIN CONTENT (duplicate kept for cascade order, padding intentionally removed) === */
 .site-main {
     min-height: calc(100vh - 72px - 200px);
-    padding: var(--space-xl) 0;
+    /* padding intentionally removed so hero-slider is flush */
 }
 
 /* === IMPROVED SLIDER === */
 .hero-slider {
-    margin-bottom: var(--space-xl);
+    margin: var(--space-lg) var(--space-sm) var(--space-xl);
     border-radius: var(--radius-xl);
     overflow: hidden;
     box-shadow: var(--shadow-lg);
     position: relative;
+}
+
+@media (min-width: 768px) {
+    .hero-slider {
+        margin-left: var(--space-md);
+        margin-right: var(--space-md);
+    }
+}
+
+@media (min-width: 1232px) {
+    /* Once viewport is wider than container + its padding, centre it like container */
+    .hero-slider {
+        margin-left: auto;
+        margin-right: auto;
+        max-width: 1200px;
+    }
 }
 
 .slider {

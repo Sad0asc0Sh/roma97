@@ -74,6 +74,20 @@ $siteDescriptionValue = siteDescription();
         </div>
     </div>
 </footer>
-<script src="<?php echo e(url('assets/js/script.js')); ?>" defer></script>
+<?php
+$scriptDir2  = str_replace('\\', '/', dirname($_SERVER['SCRIPT_FILENAME'] ?? ''));
+$appRootDir2 = str_replace('\\', '/', realpath(__DIR__ . '/..') ?: __DIR__ . '/..');
+$scriptDirReal2 = realpath($scriptDir2) ?: $scriptDir2;
+$relativePrefix2 = '';
+$tmp2 = str_replace('\\', '/', $scriptDirReal2);
+$appNorm2 = str_replace('\\', '/', $appRootDir2);
+while (strlen($tmp2) > strlen($appNorm2) && str_starts_with($tmp2, $appNorm2)) {
+    $relativePrefix2 .= '../';
+    $tmp2 = str_replace('\\', '/', dirname($tmp2));
+}
+if ($relativePrefix2 === '') { $relativePrefix2 = './'; }
+$jsHref = $relativePrefix2 . 'assets/js/script.js';
+?>
+<script src="<?php echo e($jsHref); ?>" defer></script>
 </body>
 </html>
