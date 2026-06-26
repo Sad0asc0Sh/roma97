@@ -140,7 +140,7 @@ function showGenericErrorPage(): void
     <div class="error-container">
         <h1>خطایی رخ داده است</h1>
         <p>متأسفیم، خطای غیرمنتظره‌ای رخ داده است. تیم ما مطلع شده و در حال رفع مشکل است</p>
-        <p><a href="/">بازگشت به صفحه اصلی</a></p>
+        <p><a href="' . (defined('SITE_URL') ? htmlspecialchars(SITE_URL, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '/') . '">بازگشت به صفحه اصلی</a></p>
     </div>
 </body>
 </html>';

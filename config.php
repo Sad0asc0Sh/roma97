@@ -85,9 +85,8 @@ if (!defined('SITE_URL')) {
         }
     }
 
-    // Fall back to the historical default if auto-detection failed (e.g. CLI).
     if ($detectedSiteUrl === '' || $detectedSiteUrl === 'http://' || $detectedSiteUrl === 'https://') {
-        $detectedSiteUrl = 'http://localhost/roma';
+        $detectedSiteUrl = 'http://localhost/' . basename(__DIR__);
     }
 
     define('SITE_URL', $detectedSiteUrl);
