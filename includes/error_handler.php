@@ -103,48 +103,93 @@ function customExceptionHandler(Throwable $exception): void
     
     // Show generic error page in production
     if (!DEVELOPMENT_MODE) {
-        showGenericErrorPage();
+        showGenericErrorPage($exception);
     } else {
-        // In development, show the exception
+        // In development, show the exception details
         echo '<pre>' . htmlspecialchars($logMessage) . '</pre>';
     }
 }
 
 /**
  * Display generic error page
+ *
+ * When the failure is a database/PDO connection problem, show a more helpful
+ * page that guides the user toward running setup.php rather than a generic
+ * "something went wrong" message. This dramatically improves the local
+ * development experience (the most common cause of a 500 on every page is
+ * that the database has not been created / setup.php has not been run).
  */
-function showGenericErrorPage(): void
+function showGenericErrorPage(?Throwable $exception = null): void
 {
     if (headers_sent()) {
         return;
     }
-    
+
     http_response_code(500);
-    
+
+    $isDbError = $exception instanceof PDOException
+        || ($exception !== null && strpos((string) $exception->getMessage(), 'SQLSTATE') !== false)
+        || ($exception !== null && stripos((string) $exception->getMessage(), 'mysql') !== false);
+
+    $homeUrl = defined('SITE_URL') ? htmlspecialchars(SITE_URL, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '/';
+
+    // In development mode, include the actual error text for fast debugging.
+    $detailBlock = '';
+    if (defined('DEVELOPMENT_MODE') && DEVELOPMENT_MODE && $exception !== null) {
+        $safeMessage = htmlspecialchars($exception->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $safeFile = htmlspecialchars($exception->getFile(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $safeLine = (int) $exception->getLine();
+        $detailBlock = '<div class="error-detail"><strong>خطا:</strong> ' . $safeMessage
+            . '<br><strong>فایل:</strong> ' . $safeFile . ':' . $safeLine . '</div>';
+    }
+
+    $title = $isDbError ? 'خطای اتصال به پایگاه داده' : 'خطایی رخ داده است';
+    $icon = $isDbError ? '🗄️' : '⚠️';
+
+    if ($isDbError) {
+        $message = 'اتصال به پایگاه داده ممکن نیست. لطفاً اطمینان حاصل کنید که:';
+        $hint = '<ul class="hint-list">
+            <li>سرویس MySQL (یا MariaDB) در حال اجراست.</li>
+            <li>پایگاه داده <code>rooma_db</code> ایجاد شده است — برای راه‌اندازی اولیه به <a href="' . $homeUrl . '/setup.php">صفحه نصب</a> بروید.</li>
+            <li>اعتبارنامه‌های پایگاه داده در <code>config.local.php</code> صحیح است.</li>
+        </ul>';
+    } else {
+        $message = 'متأسفیم، خطای غیرمنتظره‌ای رخ داده است. تیم ما مطلع شده و در حال رفع مشکل است';
+        $hint = '';
+    }
+
     echo '<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>خطا - مهد کودک روما</title>
+    <title>' . $title . ' - مهد کودک روما</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-        .error-container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; max-width: 500px; }
+        .error-container { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; max-width: 560px; }
+        .error-icon { font-size: 48px; margin-bottom: 16px; }
         h1 { color: #FF6B6B; margin-bottom: 16px; }
         p { color: #64748b; line-height: 1.8; }
         a { color: #FF6B6B; text-decoration: none; font-weight: 600; }
         a:hover { text-decoration: underline; }
+        .hint-list { text-align: right; direction: rtl; list-style: none; padding: 0; margin: 16px 0; }
+        .hint-list li { background: #f1f5f9; padding: 10px 14px; margin-bottom: 8px; border-radius: 6px; color: #475569; font-size: 14px; }
+        .hint-list code { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        .error-detail { background: #fef2f2; border: 1px solid #fecaca; padding: 12px; border-radius: 6px; margin-top: 16px; text-align: left; direction: ltr; color: #991b1b; font-size: 13px; font-family: monospace; }
     </style>
 </head>
 <body>
     <div class="error-container">
-        <h1>خطایی رخ داده است</h1>
-        <p>متأسفیم، خطای غیرمنتظره‌ای رخ داده است. تیم ما مطلع شده و در حال رفع مشکل است</p>
-        <p><a href="' . (defined('SITE_URL') ? htmlspecialchars(SITE_URL, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '/') . '">بازگشت به صفحه اصلی</a></p>
+        <div class="error-icon">' . $icon . '</div>
+        <h1>' . $title . '</h1>
+        <p>' . $message . '</p>
+        ' . $hint . '
+        ' . $detailBlock . '
+        <p><a href="' . $homeUrl . '">بازگشت به صفحه اصلی</a></p>
     </div>
 </body>
 </html>';
-    
+
     exit;
 }
 
