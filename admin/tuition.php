@@ -124,123 +124,124 @@ $pageTitle = 'مدیریت شهریه | مدیریت | ' . siteName();
 require_once __DIR__ . '/header.php';
 ?>
 
-<header class="page-heading-row">
-    <div>
-        <p class="eyebrow">پنل مدیریت</p>
-        <h1>مدیریت پرداخت شهریه</h1>
-    </div>
-    <a href="<?= e(url('admin/index.php')) ?>" class="btn btn-secondary">→ بازگشت به داشبورد</a>
-</header>
+<section class="dashboard">
+    <h1>&#128176; مدیریت شهریه</h1>
 
-<?php if ($successMessage !== null): ?>
-    <div class="notice" role="status"><?= e($successMessage) ?></div>
-<?php endif; ?>
+    <?php if ($successMessage !== null): ?>
+        <div class="notice" role="status">&#9989; <?= e($successMessage) ?></div>
+    <?php endif; ?>
 
-<?php if ($errorMessage !== null): ?>
-    <div class="alert" role="alert"><?= e($errorMessage) ?></div>
-<?php endif; ?>
+    <?php if ($errorMessage !== null): ?>
+        <div class="alert alert-danger" role="alert">&#10060; <?= e($errorMessage) ?></div>
+    <?php endif; ?>
 
-<div class="dashboard-grid admin-grid-1-2">
+    <div class="admin-two-column">
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <h2 class="admin-section-title" id="recordForm">&#10010; ثبت پرداخت</h2>
+            </div>
+            <form method="post" action="<?= e(url('admin/tuition.php')) ?>" novalidate>
+                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
 
-    <section class="card">
-                <h2 id="recordForm">ثبت پرداخت</h2>
-                <form method="post" action="<?= e(url('admin/tuition.php')) ?>" class="form-card">
-                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                    
-                    <div class="form-group">
-                        <label for="child_id">کودک / والدین</label>
-                        <select name="child_id" id="child_id" required>
-                            <option value="">-- انتخاب کودک --</option>
-                            <?php foreach ($children as $c): ?>
-                                <option value="<?= e((string) $c['id']) ?>" <?= $selectedChildId === (int) $c['id'] ? 'selected' : '' ?>>
-                                    <?= e(trim($c['first_name'] . ' ' . $c['last_name'])) ?> 
-                                    (والدین: <?= e(trim($c['p_first'] . ' ' . $c['p_last'])) ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label for="child_id" class="form-label">کودک / والدین</label>
+                    <select name="child_id" id="child_id" class="form-control" required>
+                        <option value="">-- انتخاب کودک --</option>
+                        <?php foreach ($children as $c): ?>
+                            <option value="<?= e((string) $c['id']) ?>" <?= $selectedChildId === (int) $c['id'] ? 'selected' : '' ?>>
+                                <?= e(trim($c['first_name'] . ' ' . $c['last_name'])) ?>
+                                (والدین: <?= e(trim($c['p_first'] . ' ' . $c['p_last'])) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
-                    <div class="form-group">
-                        <label for="month_year">ماه شهریه (YYYY-MM)</label>
-                        <input type="month" name="month_year" id="month_year" value="<?= e(date('Y-m')) ?>" required>
-                    </div>
+                <div class="form-group">
+                    <label for="month_year" class="form-label">ماه شهریه</label>
+                    <input type="month" name="month_year" id="month_year" class="form-control" value="<?= e(date('Y-m')) ?>" required>
+                </div>
 
-                    <div class="form-group">
-                        <label for="amount">مبلغ (تومان)</label>
-                        <input type="number" step="0.01" name="amount" id="amount" placeholder="۰" required>
-                    </div>
+                <div class="form-group">
+                    <label for="amount" class="form-label">مبلغ (تومان)</label>
+                    <input type="number" step="0.01" name="amount" id="amount" class="form-control" placeholder="۰" required>
+                </div>
 
-                    <div class="form-group">
-                        <label for="payment_date">تاریخ پرداخت</label>
-                        <input type="date" name="payment_date" id="payment_date" value="<?= e(date('Y-m-d')) ?>" required>
-                    </div>
+                <div class="form-group">
+                    <label for="payment_date" class="form-label">تاریخ پرداخت</label>
+                    <input type="date" name="payment_date" id="payment_date" class="form-control" value="<?= e(date('Y-m-d')) ?>" required>
+                </div>
 
-                    <div class="form-group">
-                        <label for="payment_method">روش پرداخت</label>
-                        <select name="payment_method" id="payment_method" required>
-                            <option value="cash">نقدی</option>
-                            <option value="bank_transfer">انتقال بانکی</option>
-                            <option value="check">چک</option>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label for="payment_method" class="form-label">روش پرداخت</label>
+                    <select name="payment_method" id="payment_method" class="form-control" required>
+                        <option value="cash">نقدی</option>
+                        <option value="bank_transfer">انتقال بانکی</option>
+                        <option value="check">چک</option>
+                    </select>
+                </div>
 
-                    <div class="form-group">
-                        <label for="notes">یادداشت (اختیاری)</label>
-                        <input type="text" name="notes" id="notes" placeholder="شماره رسید، دیرکرد و ...">
-                    </div>
+                <div class="form-group">
+                    <label for="notes" class="form-label">یادداشت (اختیاری)</label>
+                    <input type="text" name="notes" id="notes" class="form-control" placeholder="شماره رسید، دیرکرد و ...">
+                </div>
 
-                    <button type="submit" class="btn btn-primary">ذخیره پرداخت شهریه</button>
-                </form>
-            </section>
-
-            <section class="card">
-                <h2>وضعیت پرداخت کودکان فعال</h2>
-                <?php if (empty($dashboardStatus)): ?>
-                    <p class="muted">هیچ ثبت‌نام فعالی یافت نشد.</p>
-                <?php else: ?>
-                    <div class="attendance-table-scroll">
-                        <table class="attendance-table">
-                            <thead>
-                                <tr>
-                                    <th>نام کودک</th>
-                                    <th>نام والدین</th>
-                                    <th>آخرین ماه پرداخت</th>
-                                    <th>تاریخ آخرین پرداخت</th>
-                                    <th>عملیات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($dashboardStatus as $s): ?>
-                                    <tr>
-                                        <td><strong><?= e(trim($s['first_name'] . ' ' . $s['last_name'])) ?></strong></td>
-                                        <td><?= e(trim($s['p_first'] . ' ' . $s['p_last'])) ?></td>
-                                        <td>
-                                            <?php if ($s['latest_month']): ?>
-                                                <span class="badge badge-active"><?= e($s['latest_month']) ?></span>
-                                            <?php else: ?>
-                                                <span class="badge badge-inactive">ندارد</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <?= $s['latest_date'] ? e(shamsiDate($s['latest_date'])) : '—' ?>
-                                        </td>
-                                        <td>
-                                            <a href="<?= e(url('admin/tuition.php?child_id=' . $s['id'] . '#recordForm')) ?>" class="btn btn-secondary btn-sm">پرداخت</a>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    <?php if ($pagination['total'] > $pagination['perPage']): ?>
-                        <p class="pagination-summary">
-                            نمایش <?= e(persianNumber($pagination['from'])) ?> تا <?= e(persianNumber($pagination['to'])) ?> از <?= e(persianNumber($pagination['total'])) ?> کودک
-                        </p>
-                        <?= renderPagination($pagination, url('admin/tuition.php')) ?>
-                    <?php endif; ?>
-                <?php endif; ?>
-            </section>
-
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">&#128190; ذخیره پرداخت شهریه</button>
+                </div>
+            </form>
         </div>
+
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <h2 class="admin-section-title">&#128203; وضعیت پرداخت کودکان فعال</h2>
+            </div>
+            <?php if (empty($dashboardStatus)): ?>
+                <div class="empty-state empty-state-sm">
+                    <div class="empty-state-icon">&#128102;</div>
+                    <h3>هیچ ثبتنام فعالی یافت نشد</h3>
+                </div>
+            <?php else: ?>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>نام کودک</th>
+                                <th>والدین</th>
+                                <th>آخرین ماه پرداخت</th>
+                                <th>تاریخ آخرین پرداخت</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($dashboardStatus as $s): ?>
+                                <tr>
+                                    <td style="font-weight:600;"><?= e(trim($s['first_name'] . ' ' . $s['last_name'])) ?></td>
+                                    <td><?= e(trim($s['p_first'] . ' ' . $s['p_last'])) ?></td>
+                                    <td>
+                                        <?php if ($s['latest_month']): ?>
+                                            <span class="badge badge-success"><?= e($s['latest_month']) ?></span>
+                                        <?php else: ?>
+                                            <span class="badge badge-danger">ندارد</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?= $s['latest_date'] ? e(shamsiDate($s['latest_date'])) : '—' ?></td>
+                                    <td>
+                                        <a href="<?= e(url('admin/tuition.php?child_id=' . $s['id'] . '#recordForm')) ?>" class="btn btn-sm btn-secondary">&#128176; پرداخت</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php if ($pagination['total'] > $pagination['perPage']): ?>
+                    <p class="pagination-summary">
+                        نمایش <?= e(persianNumber($pagination['from'])) ?> تا <?= e(persianNumber($pagination['to'])) ?> از <?= e(persianNumber($pagination['total'])) ?> کودک
+                    </p>
+                    <?= renderPagination($pagination, url('admin/tuition.php')) ?>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
 
 <?php require_once __DIR__ . '/footer.php'; ?>

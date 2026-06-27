@@ -280,106 +280,101 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>تنظیمات</h1>
+    <h1>&#9881; تنظیمات</h1>
 
     <?php if ($successMessage !== null): ?>
-        <div class="notice" role="status"><?= e($successMessage) ?></div>
+        <div class="notice" role="status">&#9989; <?= e($successMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($errorMessage !== null): ?>
-        <div class="alert" role="alert"><?= e($errorMessage) ?></div>
+        <div class="alert alert-danger" role="alert">&#10060; <?= e($errorMessage) ?></div>
     <?php endif; ?>
 
-    <form class="form-card" method="post" action="<?= e(url('admin/settings.php')) ?>" enctype="multipart/form-data" novalidate>
-        <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-        <input type="hidden" name="action" value="update_settings">
-
-        <label for="site_name">نام سایت</label>
-        <input
-            type="text"
-            id="site_name"
-            name="site_name"
-            maxlength="100"
-            value="<?= e($settings['site_name']) ?>"
-            required
-        >
-
-        <label for="site_description">توضیحات متا</label>
-        <textarea
-            id="site_description"
-            name="site_description"
-            maxlength="255"
-            rows="4"
-        ><?= e($settings['site_description']) ?></textarea>
-
-        <label for="contact_phone">شماره تماس (نمایش در صفحه اصلی)</label>
-        <input
-            type="text"
-            id="contact_phone"
-            name="contact_phone"
-            maxlength="30"
-            placeholder="+98 21 1234 5678"
-            value="<?= e($settings['contact_phone'] ?? '') ?>"
-        >
-
-        <?php if ($settings['logo'] !== ''): ?>
-            <div>
-                <p>لوگوی فعلی</p>
-                <img src="<?= e(url($settings['logo'])) ?>" alt="لوگوی <?= e($settings['site_name']) ?>" class="admin-logo-preview">
+    <div class="admin-settings-grid">
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <h2 class="admin-section-title">&#128196; تنظیمات عمومی سایت</h2>
             </div>
-        <?php endif; ?>
+            <form method="post" action="<?= e(url('admin/settings.php')) ?>" enctype="multipart/form-data" novalidate>
+                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                <input type="hidden" name="action" value="update_settings">
 
-        <label for="logo">لوگو</label>
-        <input
-            type="file"
-            id="logo"
-            name="logo"
-            accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif"
-        >
-        <p>فرمت‌های مجاز: JPG، PNG، GIF. حداکثر حجم: ۵۰۰ کیلوبایت.</p>
+                <div class="form-group">
+                    <label for="site_name" class="form-label">نام سایت</label>
+                    <input type="text" id="site_name" name="site_name" class="form-control"
+                        maxlength="100" placeholder="نام مهد کودک..."
+                        value="<?= e($settings['site_name']) ?>" required>
+                </div>
 
-        <button type="submit">ذخیره تنظیمات</button>
-    </form>
+                <div class="form-group">
+                    <label for="site_description" class="form-label">توضیحات متا</label>
+                    <textarea id="site_description" name="site_description" class="form-control"
+                        maxlength="255" rows="3"
+                        placeholder="توضیحات کوتاه درباره سایت..."><?= e($settings['site_description']) ?></textarea>
+                </div>
 
-    <form class="form-card margin-top-lg" method="post" action="<?= e(url('admin/settings.php')) ?>" novalidate>
-        <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-        <input type="hidden" name="action" value="change_password">
+                <div class="form-group">
+                    <label for="contact_phone" class="form-label">شماره تماس</label>
+                    <input type="text" id="contact_phone" name="contact_phone" class="form-control"
+                        maxlength="30" placeholder="+98 21 1234 5678"
+                        value="<?= e($settings['contact_phone'] ?? '') ?>">
+                    <small style="color:var(--muted);font-size:0.85rem;">نمایش در صفحه اصلی سایت</small>
+                </div>
 
-        <h2>تغییر رمز عبور</h2>
-        <p class="muted">برای امنیت حساب، رمز عبور خود را به‌صورت دوره‌ای تغییر دهید — به‌خصوص اگر هنوز از رمز پیش‌فرض استفاده می‌کنید.</p>
+                <?php if ($settings['logo'] !== ''): ?>
+                    <div class="form-group">
+                        <label class="form-label">لوگوی فعلی</label>
+                        <img src="<?= e(url($settings['logo'])) ?>" alt="لوگوی <?= e($settings['site_name']) ?>" class="admin-logo-preview">
+                    </div>
+                <?php endif; ?>
 
-        <label for="current_password">رمز عبور فعلی</label>
-        <input
-            type="password"
-            id="current_password"
-            name="current_password"
-            autocomplete="current-password"
-            required
-        >
+                <div class="form-group">
+                    <label for="logo" class="form-label">لوگو (برای تغییر)</label>
+                    <input type="file" id="logo" name="logo" class="form-control"
+                        accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif">
+                    <small style="color:var(--muted);font-size:0.85rem;">فرمتهای مجاز: JPG، PNG، GIF. حداکثر حجم: ۵۰۰ کیلوبایت.</small>
+                </div>
 
-        <label for="new_password">رمز عبور جدید</label>
-        <input
-            type="password"
-            id="new_password"
-            name="new_password"
-            autocomplete="new-password"
-            minlength="8"
-            required
-        >
-        <p class="muted">حداقل ۸ کاراکتر، شامل حداقل یک حرف و یک عدد.</p>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">&#128190; ذخیره تنظیمات</button>
+                </div>
+            </form>
+        </div>
 
-        <label for="confirm_new_password">تکرار رمز عبور جدید</label>
-        <input
-            type="password"
-            id="confirm_new_password"
-            name="confirm_new_password"
-            autocomplete="new-password"
-            minlength="8"
-            required
-        >
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <h2 class="admin-section-title">&#128274; تغییر رمز عبور</h2>
+            </div>
+            <p style="color:var(--muted);margin-bottom:var(--space-md);font-size:0.9rem;">برای امنیت حساب، رمز عبور خود را بهصورت دورهای تغییر دهید.</p>
+            <form method="post" action="<?= e(url('admin/settings.php')) ?>" novalidate>
+                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                <input type="hidden" name="action" value="change_password">
 
-        <button type="submit">تغییر رمز عبور</button>
-    </form>
+                <div class="form-group">
+                    <label for="current_password" class="form-label">رمز عبور فعلی</label>
+                    <input type="password" id="current_password" name="current_password" class="form-control"
+                        autocomplete="current-password" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="new_password" class="form-label">رمز عبور جدید</label>
+                    <input type="password" id="new_password" name="new_password" class="form-control"
+                        autocomplete="new-password" minlength="8" required>
+                    <small style="color:var(--muted);font-size:0.85rem;">حداقل ۸ کاراکتر، شامل حداقل یک حرف و یک عدد.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_new_password" class="form-label">تکرار رمز عبور جدید</label>
+                    <input type="password" id="confirm_new_password" name="confirm_new_password" class="form-control"
+                        autocomplete="new-password" minlength="8" required>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">&#128274; تغییر رمز عبور</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </section>
 
 <?php require_once __DIR__ . '/footer.php'; ?>
