@@ -52,14 +52,14 @@ body.auth-standalone {
     min-height: 100dvh;
 }
 
-/* === BRAND PANEL (Left) === */
+/* === BRAND PANEL (Right-to-Left swap) === */
 .auth-brand {
     display: none;
     width: 50%;
     background: var(--auth-gradient-hero);
     position: relative;
     overflow: hidden;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     flex-direction: column;
     padding: 60px;
@@ -134,7 +134,7 @@ body.auth-standalone {
     background: rgba(255,255,255,0.08);
     border-radius: 24px;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     border: 1px solid rgba(255,255,255,0.1);
     backdrop-filter: blur(10px);
@@ -195,12 +195,12 @@ body.auth-standalone {
 
 .auth-feature-icon svg { color: var(--auth-primary-light); }
 
-/* === FORM PANEL (Right) === */
+/* === FORM PANEL (Left-to-Right swap) === */
 .auth-form-panel {
     flex: 1;
     display: flex;
     align-items: flex-start;
-    justify-content: flex-start;
+    justify-content: center;
     padding: 32px 32px 48px;
     background: var(--auth-white);
     overflow-y: auto;
@@ -752,4 +752,28 @@ body.auth-standalone {
     .auth-form-panel { padding: 20px; }
     .auth-header { margin-bottom: 20px; }
     .auth-form { gap: 14px; }
+}
+
+/* ============================================
+   DESKTOP LAYOUT OVERRIDE (≥ 1024px)
+   - Brand panel: LEFT, fixed (no scroll)
+   - Form panel:  RIGHT, scrollable
+   Must come AFTER base styles to override properly.
+   ============================================ */
+@media (min-width: 1024px) {
+    body.auth-standalone {
+        overflow: hidden;       /* Prevent page-level scroll */
+    }
+    .auth-wrapper {
+        height: 100vh;          /* Lock to viewport */
+        height: 100dvh;
+        overflow: hidden;       /* No wrapper scroll */
+    }
+    .auth-brand {
+        order: 1;               /* LEFT side in RTL */
+    }
+    .auth-form-panel {
+        order: 0;               /* RIGHT side in RTL */
+        overflow-y: auto;       /* Scrollable for long forms */
+    }
 }
