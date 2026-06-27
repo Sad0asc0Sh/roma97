@@ -88,12 +88,12 @@ function seedDefaultPages(PDO $pdo): void
         [
             'slug' => 'about',
             'title' => 'درباره ما',
-            'content' => 'به مهد کودک روما خوش آمدید. ما محیطی گرم، امن و شاد را فراهم می‌کنیم تا کودکان بتوانند یاد بگیرند، بازی کنند و رشد کنند.',
+            'content' => 'به مهد کودک روما خوش آمدید. ما محیطی گرم، امن و شاد را فراهم میکنیم تا کودکان بتوانند یاد بگیرند، بازی کنند و رشد کنند.',
         ],
         [
             'slug' => 'services',
             'title' => 'خدمات ما',
-            'content' => 'ما برنامه‌های مراقبت روزانه، فعالیت‌های یادگیری اولیه، بازی‌های خلاقانه و حمایت دلسوزانه از کودکان و خانواده‌ها را ارائه می‌دهیم.',
+            'content' => 'ما برنامههای مراقبت روزانه، فعالیتهای یادگیری اولیه، بازیهای خلاقانه و حمایت دلسوزانه از کودکان و خانوادهها را ارائه میدهیم.',
         ],
     ];
 
@@ -182,7 +182,7 @@ if (isPostRequest()) {
                 ]);
 
                 recordAudit('page.update', 'page', (int) $pageId);
-                setFlash('success', 'صفحه با موفقیت به‌روزرسانی شد.');
+                setFlash('success', 'صفحه با موفقیت بهروزرسانی شد.');
                 redirect(url('admin/pages.php'));
             }
 
@@ -240,18 +240,20 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>صفحات</h1>
+    <h1>&#128196; صفحات</h1>
 
     <?php if ($successMessage !== null): ?>
-        <div class="notice" role="status"><?= e($successMessage) ?></div>
+        <div class="notice" role="status">&#9989; <?= e($successMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($errorMessage !== null): ?>
-        <div class="alert" role="alert"><?= e($errorMessage) ?></div>
+        <div class="alert alert-danger" role="alert">&#10060; <?= e($errorMessage) ?></div>
     <?php endif; ?>
 
-    <section class="form-card" aria-labelledby="page-form-title">
-        <h2 id="page-form-title"><?= $editPage ? 'ویرایش صفحه' : 'افزودن صفحه' ?></h2>
+    <div class="admin-section">
+        <div class="admin-section-header">
+            <h2 class="admin-section-title" id="page-form-title">&#10010; <?= $editPage ? 'ویرایش صفحه' : 'افزودن صفحه' ?></h2>
+        </div>
         <form method="post" action="<?= e(url('admin/pages.php')) ?>" novalidate>
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="save_page">
@@ -259,41 +261,60 @@ require_once __DIR__ . '/header.php';
                 <input type="hidden" name="page_id" value="<?= e($editPage['id']) ?>">
             <?php endif; ?>
 
-            <div class="form-group"><label for="title" class="form-label">عنوان</label>
-            <input type="text" id="title" class="form-control"
-                name="title"
-                maxlength="255"
-                value="<?= e($editPage['title'] ?? '') ?>"
-                required
-            >
+            <div class="form-group">
+                <label for="title" class="form-label">عنوان صفحه</label>
+                <input type="text" id="title" name="title" class="form-control"
+                    maxlength="255"
+                    placeholder="عنوان صفحه را وارد کنید..."
+                    value="<?= e($editPage['title'] ?? '') ?>"
+                    required>
+            </div>
 
-            </div><div class="form-group"><label for="slug" class="form-label">نامک</label>
-            <?php if ($editPage): ?>
-                <input type="text" id="slug" value="<?= e($editPage['slug']) ?>" disabled>
-                <p>نامک بعد از ایجاد صفحه قابل تغییر نیست.</p>
-            <?php else: ?>
-                <input type="text" id="slug" name="slug" class="form-control" maxlength="100"
-                    pattern="[a-z0-9-]+"
-                    required
-                >
-                <p>از حروف کوچک انگلیسی، اعداد و خط تیره استفاده کنید.</p>
-            <?php endif; ?>
+            <div class="form-group">
+                <label for="slug" class="form-label">نامک (آدرس صفحه)</label>
+                <?php if ($editPage): ?>
+                    <input type="text" id="slug" class="form-control" value="<?= e($editPage['slug']) ?>" disabled>
+                    <small style="color:var(--muted);font-size:0.85rem;">نامک بعد از ایجاد صفحه قابل تغییر نیست.</small>
+                <?php else: ?>
+                    <input type="text" id="slug" name="slug" class="form-control"
+                        maxlength="100"
+                        pattern="[a-z0-9-]+"
+                        placeholder="مثال: about-us"
+                        required>
+                    <small style="color:var(--muted);font-size:0.85rem;">از حروف کوچک انگلیسی، اعداد و خط تیره استفاده کنید.</small>
+                <?php endif; ?>
+            </div>
 
-            </div><div class="form-group"><label for="content" class="form-label">محتوا</label>
-            <textarea id="content" class="form-control" name="content" rows="10" required><?= e($editPage['content'] ?? '') ?></textarea></div> as plain text with line breaks for security.</p>
+            <div class="form-group">
+                <label for="content" class="form-label">محتوای صفحه</label>
+                <textarea id="content" name="content" class="form-control" rows="10"
+                    placeholder="محتوای صفحه را اینجا بنویسید..."
+                    required><?= e($editPage['content'] ?? '') ?></textarea>
+                <small style="color:var(--muted);font-size:0.85rem;">محتوا به صورت متن ساده با خطوط جدید نمایش داده می‌شود.</small>
+            </div>
 
-            <button type="submit" class="btn btn-primary"><?= $editPage ? 'به‌روزرسانی صفحه' : 'افزودن صفحه' ?></button>
-            <?php if ($editPage): ?>
-                <a href="<?= e(url('admin/pages.php')) ?>">لغو ویرایش</a>
-            <?php endif; ?>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    &#128190; <?= $editPage ? 'بهروزرسانی صفحه' : 'افزودن صفحه' ?>
+                </button>
+                <?php if ($editPage): ?>
+                    <a href="<?= e(url('admin/pages.php')) ?>" class="btn btn-outline">&#10006; لغو ویرایش</a>
+                <?php endif; ?>
+            </div>
         </form>
-    </section>
+    </div>
 
-    <section aria-labelledby="pages-list-title" class="margin-top-xl">
-        <h2 id="pages-list-title">همه صفحات</h2>
+    <div class="admin-section">
+        <div class="admin-section-header">
+            <h2 class="admin-section-title">&#128196; همه صفحات</h2>
+        </div>
 
         <?php if ($pages === []): ?>
-            <p>هنوز هیچ صفحه‌ای اضافه نشده است.</p>
+            <div class="empty-state empty-state-sm">
+                <div class="empty-state-icon">&#128196;</div>
+                <h3>هنوز صفحه‌ای اضافه نشده</h3>
+                <p>از فرم بالا اولین صفحه خود را اضافه کنید.</p>
+            </div>
         <?php else: ?>
             <div class="admin-table-wrap">
                 <table class="admin-table">
@@ -308,15 +329,19 @@ require_once __DIR__ . '/header.php';
                     <tbody>
                         <?php foreach ($pages as $page): ?>
                             <tr>
-                                <td><?= e($page['title']) ?></td>
-                                <td><?= e($page['slug']) ?></td>
+                                <td style="font-weight:600;"><?= e($page['title']) ?></td>
+                                <td><code style="background:var(--bg-lavender);padding:3px 8px;border-radius:6px;font-size:0.85rem;"><?= e($page['slug']) ?></code></td>
                                 <td><?= e(formatAdminPageDate($page['created_at'])) ?></td>
                                 <td>
-                                    <a href="<?= e(url('page.php?slug=' . $page['slug'])) ?>" target="_blank" rel="noopener">مشاهده</a><a href="<?= e(url('admin/pages.php?edit=' . $page['id'])) ?>">ویرایش</a><form method="post" action="<?= e(url('admin/pages.php')) ?>" class="form-inline" onsubmit="return confirm('این صفحه حذف شود؟');">
+                                    <a href="<?= e(url('page.php?slug=' . $page['slug'])) ?>" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">&#128065; مشاهده</a>
+                                    <a href="<?= e(url('admin/pages.php?edit=' . $page['id'])) ?>" class="btn btn-sm btn-secondary">&#9998; ویرایش</a>
+                                    <form method="post" action="<?= e(url('admin/pages.php')) ?>" class="form-inline" onsubmit="return confirm('آیا این صفحه حذف شود؟');">
                                         <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                         <input type="hidden" name="action" value="delete_page">
                                         <input type="hidden" name="page_id" value="<?= e($page['id']) ?>">
-                                        <button type="submit" class="btn btn-danger btn-sm">حذف</button></form></div></td>
+                                        <button type="submit" class="btn-reset">&#128465; حذف</button>
+                                    </form>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -324,12 +349,12 @@ require_once __DIR__ . '/header.php';
             </div>
             <?php if ($pagination['total'] > $pagination['perPage']): ?>
                 <p class="pagination-summary">
-                    نمایش <?= e(persianNumber($pagination['from'])) ?> تا <?= e(persianNumber($pagination['to'])) ?> از <?= e(persianNumber($pagination['total'])) ?> برگه
+                    نمایش <?= e(persianNumber($pagination['from'])) ?> تا <?= e(persianNumber($pagination['to'])) ?> از <?= e(persianNumber($pagination['total'])) ?> صفحه
                 </p>
                 <?= renderPagination($pagination, url('admin/pages.php')) ?>
             <?php endif; ?>
         <?php endif; ?>
-    </section>
+    </div>
 </section>
 
 <?php require_once __DIR__ . '/footer.php'; ?>

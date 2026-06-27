@@ -214,7 +214,7 @@ if (isPostRequest()) {
                 }
 
                 recordAudit('slide.update', 'slide', (int) $slideId);
-                setFlash('success', 'اسلاید با موفقیت به‌روزرسانی شد.');
+                setFlash('success', 'اسلاید با موفقیت بهروزرسانی شد.');
                 redirect(url('admin/slides.php'));
             }
 
@@ -279,7 +279,7 @@ if (isPostRequest()) {
 
             $pdo->commit();
             recordAudit('slide.reorder', 'slide');
-            setFlash('success', 'ترتیب نمایش اسلایدها با موفقیت به‌روزرسانی شد.');
+            setFlash('success', 'ترتیب نمایش اسلایدها با موفقیت بهروزرسانی شد.');
             redirect(url('admin/slides.php'));
         }
 
@@ -315,31 +315,33 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>اسلایدها</h1>
+    <h1>&#127912; اسلایدها</h1>
 
     <?php if ($successMessage !== null): ?>
-        <div class="notice" role="status"><?= e($successMessage) ?></div>
+        <div class="notice" role="status">&#9989; <?= e($successMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($errorMessage !== null): ?>
-        <div class="alert" role="alert"><?= e($errorMessage) ?></div>
+        <div class="alert alert-danger" role="alert">&#10060; <?= e($errorMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($deleteSlide !== null): ?>
-        <div class="alert" role="alert">
-            <p>اسلاید «<?= e($deleteSlide['title']) ?>» حذف شود؟</p>
-            <form method="post" action="<?= e(url('admin/slides.php')) ?>">
+        <div class="alert alert-danger" role="alert">
+            <p>&#9888;&#65039; آیا اسلاید «<?= e($deleteSlide['title']) ?>» حذف شود؟</p>
+            <form method="post" action="<?= e(url('admin/slides.php')) ?>" style="margin-top:12px;">
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <input type="hidden" name="action" value="delete_slide">
                 <input type="hidden" name="slide_id" value="<?= e($deleteSlide['id']) ?>">
-                <button type="submit" class="btn btn-danger btn-sm">حذف</button>
-                <a href="<?= e(url('admin/slides.php')) ?>">انصراف</a>
+                <button type="submit" class="btn btn-danger btn-sm">&#128465; حذف اسلاید</button>
+                <a href="<?= e(url('admin/slides.php')) ?>" class="btn btn-outline btn-sm" style="margin-inline-start:8px;">انصراف</a>
             </form>
         </div>
     <?php endif; ?>
 
-    <div class="admin-section"><div class="admin-section-header"><h2 class="admin-section-title"> aria-labelledby="slide-form-title">
-        <h2 id="slide-form-title"><?= $editSlide ? 'ویرایش اسلاید' : 'افزودن اسلاید' ?></h2>
+    <div class="admin-section">
+        <div class="admin-section-header">
+            <h2 class="admin-section-title" id="slide-form-title">&#10010; <?= $editSlide ? 'ویرایش اسلاید' : 'افزودن اسلاید' ?></h2>
+        </div>
         <form method="post" action="<?= e(url('admin/slides.php')) ?>" enctype="multipart/form-data" novalidate>
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="save_slide">
@@ -347,49 +349,61 @@ require_once __DIR__ . '/header.php';
                 <input type="hidden" name="slide_id" value="<?= e($editSlide['id']) ?>">
             <?php endif; ?>
 
-            <div class="form-group"><label for="title" class="form-label">عنوان</label>
-            <input type="text" id="title" class="form-control"
-                name="title"
-                maxlength="255"
-                value="<?= e($editSlide['title'] ?? '') ?>"
-                required
-            >
+            <div class="form-group">
+                <label for="title" class="form-label">عنوان اسلاید</label>
+                <input type="text" id="title" name="title" class="form-control"
+                    maxlength="255"
+                    placeholder="عنوان اسلاید را وارد کنید..."
+                    value="<?= e($editSlide['title'] ?? '') ?>"
+                    required>
+            </div>
 
-            </div><div class="form-group"><label for="sort_order" class="form-label">ترتیب نمایش</label>
-            <input type="number" id="sort_order" class="form-control" style="max-width:120px"
-                name="sort_order"
-                min="0"
-                step="1"
-                value="<?= e($editSlide['sort_order'] ?? '0') ?>"
-                required
-            >
+            <div class="form-group">
+                <label for="sort_order" class="form-label">ترتیب نمایش</label>
+                <input type="number" id="sort_order" name="sort_order" class="form-control"
+                    style="max-width:150px;"
+                    min="0" step="1"
+                    value="<?= e($editSlide['sort_order'] ?? '0') ?>"
+                    required>
+            </div>
 
             <?php if ($editSlide): ?>
-                <div class="form-group"><label class="form-label">تصویر فعلی</label>
+                <div class="form-group">
+                    <label class="form-label">تصویر فعلی</label>
                     <img src="<?= e(url($editSlide['image'])) ?>" alt="<?= e($editSlide['title']) ?>" class="admin-image-preview">
                 </div>
             <?php endif; ?>
 
-            </div><div class="form-group"><label for="image" class="form-label">تصویر <?= $editSlide ? '(اختیاری)' : '' ?></label>
-            <input type="file" id="image" class="form-control"
-                name="image"
-                accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif"
-                <?= $editSlide ? '' : 'required' ?>
-            >
-            <p>فرمت‌های مجاز: JPG، PNG، GIF. حداکثر حجم: ۵۰۰ کیلوبایت.</p>
+            <div class="form-group">
+                <label for="image" class="form-label">تصویر <?= $editSlide ? '(اختیاری - برای تغییر)' : '' ?></label>
+                <input type="file" id="image" name="image" class="form-control"
+                    accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif"
+                    <?= $editSlide ? '' : 'required' ?>>
+                <small style="color:var(--muted);font-size:0.85rem;">فرمتهای مجاز: JPG، PNG، GIF. حداکثر حجم: ۵۰۰ کیلوبایت.</small>
+            </div>
 
-            <button type="submit" class="btn btn-primary"><?= $editSlide ? 'به‌روزرسانی اسلاید' : 'افزودن اسلاید' ?></button>
-            <?php if ($editSlide): ?>
-                <a href="<?= e(url('admin/slides.php')) ?>">لغو ویرایش</a>
-            <?php endif; ?>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    &#128190; <?= $editSlide ? 'بهروزرسانی اسلاید' : 'افزودن اسلاید' ?>
+                </button>
+                <?php if ($editSlide): ?>
+                    <a href="<?= e(url('admin/slides.php')) ?>" class="btn btn-outline">&#10006; لغو ویرایش</a>
+                <?php endif; ?>
+            </div>
         </form>
-    </section>
+    </div>
 
-    </div><div class="admin-section"><div class="admin-section-header"><h2 class="admin-section-title">همه اسلایدها</h2></div>
-        <h2 id="slides-list-title">همه اسلایدها</h2>
+    <div class="admin-section">
+        <div class="admin-section-header">
+            <h2 class="admin-section-title">&#128196; همه اسلایدها</h2>
+        </div>
 
         <?php if ($slides === []): ?>
-            <p>هنوز اسلایدی اضافه نشده است.</p>
+            <div class="empty-state empty-state-sm">
+                <div class="empty-state-icon">&#128444;</div>
+                <h3>هنوز اسلایدی اضافه نشده</h3>
+                <p>از فرم بالا اولین اسلاید خود را اضافه کنید.</p>
+            </div>
         <?php else: ?>
             <form method="post" action="<?= e(url('admin/slides.php')) ?>">
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
@@ -411,22 +425,18 @@ require_once __DIR__ . '/header.php';
                                     <td>
                                         <img src="<?= e(url($slide['image'])) ?>" alt="<?= e($slide['title']) ?>" class="admin-slide-thumb">
                                     </td>
-                                    <td><?= e($slide['title']) ?></td>
+                                    <td style="font-weight:600;"><?= e($slide['title']) ?></td>
                                     <td>
-                                        <input
-                                            type="number"
+                                        <input type="number"
                                             name="sort_order[<?= e($slide['id']) ?>]"
-                                            min="0"
-                                            step="1"
+                                            min="0" step="1"
                                             value="<?= e($slide['sort_order']) ?>"
                                             class="admin-sort-input"
-                                            required
-                                        >
+                                            required>
                                     </td>
                                     <td>
-                                        <a href="<?= e(url('admin/slides.php?edit=' . $slide['id'])) ?>">ویرایش</a>
-                                        |
-                                        <a href="<?= e(url('admin/slides.php?delete=' . $slide['id'])) ?>">حذف</a>
+                                        <a href="<?= e(url('admin/slides.php?edit=' . $slide['id'])) ?>" class="btn btn-sm btn-secondary">&#9998; ویرایش</a>
+                                        <a href="<?= e(url('admin/slides.php?delete=' . $slide['id'])) ?>" class="btn btn-sm btn-reject">&#128465; حذف</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -434,7 +444,9 @@ require_once __DIR__ . '/header.php';
                     </table>
                 </div>
 
-                <button type="submit" class="margin-top-md">به‌روزرسانی ترتیب نمایش</button>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-sm">&#128260; بهروزرسانی ترتیب نمایش</button>
+                </div>
             </form>
             <?php if ($pagination['total'] > $pagination['perPage']): ?>
                 <p class="pagination-summary">
@@ -443,7 +455,7 @@ require_once __DIR__ . '/header.php';
                 <?= renderPagination($pagination, url('admin/slides.php')) ?>
             <?php endif; ?>
         <?php endif; ?>
-    </section>
+    </div>
 </section>
 
 <?php require_once __DIR__ . '/footer.php'; ?>

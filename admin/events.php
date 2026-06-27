@@ -449,32 +449,34 @@ $showForm = ($action === 'add' || $action === 'edit');
 ?>
 
 <section class="dashboard admin-events-dashboard">
-    <h1>رویدادها</h1>
+    <h1>&#128197; رویدادها</h1>
 
     <?php if ($successMessage !== null): ?>
-        <div class="notice" role="status"><?= e($successMessage) ?></div>
+        <div class="notice" role="status">&#9989; <?= e($successMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($errorMessage !== null): ?>
-        <div class="alert" role="alert"><?= e($errorMessage) ?></div>
+        <div class="alert alert-danger" role="alert">&#10060; <?= e($errorMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($deleteEvent !== null): ?>
-        <div class="alert" role="alert">
-            <p>رویداد «<?= e((string) $deleteEvent['title']) ?>" (<?= e(shamsiDate((string) $deleteEvent['event_date'] ?? '')) ?>)?</p>
-            <form method="post" action="<?= e(url('admin/events.php' . adminEventsBuildQuery($filterCategory, $filterStatus))) ?>">
+        <div class="alert alert-danger" role="alert">
+            <p>&#9888;&#65039; آیا رویداد «<?= e((string) $deleteEvent['title']) ?>» (<?= e(shamsiDate((string) $deleteEvent['event_date'] ?? '')) ?>) حذف شود؟</p>
+            <form method="post" action="<?= e(url('admin/events.php' . adminEventsBuildQuery($filterCategory, $filterStatus))) ?>" style="margin-top:12px;">
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <input type="hidden" name="form_action" value="delete_event">
                 <input type="hidden" name="event_id" value="<?= e((string) $deleteEvent['id']) ?>">
-                <button type="submit" class="btn">حذف</button>
-                <a href="<?= e($listUrl) ?>">انصراف</a>
+                <button type="submit" class="btn btn-danger btn-sm">&#128465; حذف</button>
+                <a href="<?= e($listUrl) ?>" class="btn btn-outline btn-sm" style="margin-inline-start:8px;">انصراف</a>
             </form>
         </div>
     <?php endif; ?>
 
     <?php if ($showForm): ?>
-        <section class="form-card admin-event-form-card" aria-labelledby="event-form-title">
-            <h2 id="event-form-title"><?= $formPreset['event_id'] > 0 ? 'ویرایش رویداد' : 'افزودن رویداد' ?></h2>
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <h2 class="admin-section-title" id="event-form-title">&#10010; <?= $formPreset['event_id'] > 0 ? 'ویرایش رویداد' : 'افزودن رویداد' ?></h2>
+            </div>
             <form class="admin-event-form" method="post" action="<?= e(url('admin/events.php' . $filterQuerySuffix)) ?>" novalidate>
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <input type="hidden" name="form_action" value="save_event">
@@ -482,77 +484,96 @@ $showForm = ($action === 'add' || $action === 'edit');
                     <input type="hidden" name="event_id" value="<?= e((string) $formPreset['event_id']) ?>">
                 <?php endif; ?>
 
-                <label for="title">عنوان</label>
-                <input type="text" id="title" name="title" maxlength="255" value="<?= e($formPreset['title']) ?>" required>
+                <div class="form-group">
+                    <label for="title" class="form-label">عنوان رویداد</label>
+                    <input type="text" id="title" name="title" class="form-control" maxlength="255" placeholder="عنوان رویداد..." value="<?= e($formPreset['title']) ?>" required>
+                </div>
 
-                <label for="description">توضیحات</label>
-                <textarea id="description" name="description" rows="5"><?= e($formPreset['description']) ?></textarea>
+                <div class="form-group">
+                    <label for="description" class="form-label">توضیحات</label>
+                    <textarea id="description" name="description" class="form-control" rows="5" placeholder="توضیحات رویداد..."><?= e($formPreset['description']) ?></textarea>
+                </div>
 
-                <label for="event_date">تاریخ رویداد</label>
-                <input type="date" id="event_date" name="event_date" value="<?= e($formPreset['event_date']) ?>" required>
+                <div class="form-group">
+                    <label for="event_date" class="form-label">تاریخ رویداد</label>
+                    <input type="date" id="event_date" name="event_date" class="form-control" value="<?= e($formPreset['event_date']) ?>" required>
+                </div>
 
                 <div class="admin-event-times">
-                    <div>
-                        <label for="start_time">زمان شروع (اختیاری)</label>
-                        <input type="time" id="start_time" name="start_time" value="<?= e($formPreset['start_time']) ?>">
+                    <div class="form-group">
+                        <label for="start_time" class="form-label">زمان شروع (اختیاری)</label>
+                        <input type="time" id="start_time" name="start_time" class="form-control" value="<?= e($formPreset['start_time']) ?>">
                     </div>
-                    <div>
-                        <label for="end_time">زمان پایان (اختیاری)</label>
-                        <input type="time" id="end_time" name="end_time" value="<?= e($formPreset['end_time']) ?>">
+                    <div class="form-group">
+                        <label for="end_time" class="form-label">زمان پایان (اختیاری)</label>
+                        <input type="time" id="end_time" name="end_time" class="form-control" value="<?= e($formPreset['end_time']) ?>">
                     </div>
                 </div>
 
-                <label for="category">دسته‌بندی</label>
-                <select id="category" name="category">
-                    <?php foreach (adminEventCategories() as $c): ?>
-                        <option value="<?= e($c) ?>" <?= $formPreset['category'] === $c ? 'selected' : '' ?>><?= e(adminEventCategoryLabel($c)) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <div class="form-group">
+                    <label for="category" class="form-label">دستهبندی</label>
+                    <select id="category" name="category" class="form-control">
+                        <?php foreach (adminEventCategories() as $c): ?>
+                            <option value="<?= e($c) ?>" <?= $formPreset['category'] === $c ? 'selected' : '' ?>><?= e(adminEventCategoryLabel($c)) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
-                <label for="status">وضعیت</label>
-                <select id="status" name="status">
-                    <?php foreach (adminEventStatuses() as $s): ?>
-                        <option value="<?= e($s) ?>" <?= $formPreset['status'] === $s ? 'selected' : '' ?>><?= e(adminEventStatusLabel($s)) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <div class="form-group">
+                    <label for="status" class="form-label">وضعیت</label>
+                    <select id="status" name="status" class="form-control">
+                        <?php foreach (adminEventStatuses() as $s): ?>
+                            <option value="<?= e($s) ?>" <?= $formPreset['status'] === $s ? 'selected' : '' ?>><?= e(adminEventStatusLabel($s)) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
                 <div class="form-actions">
-                    <button type="submit" class="btn"><?= $formPreset['event_id'] > 0 ? 'ذخیره تغییرات' : 'ایجاد رویداد' ?></button>
-                    <a href="<?= e($listUrl) ?>">بازگشت به فهرست</a>
+                    <button type="submit" class="btn btn-primary">&#128190; <?= $formPreset['event_id'] > 0 ? 'ذخیره تغییرات' : 'ایجاد رویداد' ?></button>
+                    <a href="<?= e($listUrl) ?>" class="btn btn-outline">&#8592; بازگشت به فهرست</a>
                 </div>
             </form>
-        </section>
+        </div>
     <?php else: ?>
 
-        <div class="admin-events-toolbar">
-            <form class="events-filter-form" method="get" action="<?= e(url('admin/events.php')) ?>">
-                <label for="filter_category">دسته‌بندی</label>
-                <select id="filter_category" name="category" onchange="this.form.submit()">
-                    <option value="all" <?= $filterCategory === 'all' ? 'selected' : '' ?>>همه</option>
-                    <?php foreach (adminEventCategories() as $c): ?>
-                        <option value="<?= e($c) ?>" <?= $filterCategory === $c ? 'selected' : '' ?>><?= e(adminEventCategoryLabel($c)) ?></option>
-                    <?php endforeach; ?>
-                </select>
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <h2 class="admin-section-title">&#128203; فیلتر رویدادها</h2>
+            </div>
+            <div class="admin-events-toolbar" style="display:flex;align-items:center;gap:var(--space-sm);flex-wrap:wrap;">
+                <form class="events-filter-form" method="get" action="<?= e(url('admin/events.php')) ?>" style="display:flex;align-items:center;gap:var(--space-sm);flex-wrap:wrap;">
+                    <label for="filter_category" style="font-weight:600;font-size:0.9rem;">دستهبندی:</label>
+                    <select id="filter_category" name="category" class="form-control" style="max-width:150px;" onchange="this.form.submit()">
+                        <option value="all" <?= $filterCategory === 'all' ? 'selected' : '' ?>>همه</option>
+                        <?php foreach (adminEventCategories() as $c): ?>
+                            <option value="<?= e($c) ?>" <?= $filterCategory === $c ? 'selected' : '' ?>><?= e(adminEventCategoryLabel($c)) ?></option>
+                        <?php endforeach; ?>
+                    </select>
 
-                <label for="filter_status">وضعیت</label>
-                <select id="filter_status" name="status" onchange="this.form.submit()">
-                    <option value="all" <?= $filterStatus === 'all' ? 'selected' : '' ?>>همه</option>
-                    <?php foreach (adminEventStatuses() as $s): ?>
-                        <option value="<?= e($s) ?>" <?= $filterStatus === $s ? 'selected' : '' ?>><?= e(adminEventStatusLabel($s)) ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <noscript><button type="submit" class="btn btn-secondary">اعمال فیلتر</button></noscript>
-            </form>
-            <?php
-            $addQ = adminEventFilterQueryParts($filterCategory, $filterStatus);
-            $addQ['action'] = 'add';
-            $addUrl = url('admin/events.php?' . http_build_query($addQ));
-            ?>
-            <a class="btn" href="<?= e($addUrl) ?>">افزودن رویداد</a>
+                    <label for="filter_status" style="font-weight:600;font-size:0.9rem;">وضعیت:</label>
+                    <select id="filter_status" name="status" class="form-control" style="max-width:150px;" onchange="this.form.submit()">
+                        <option value="all" <?= $filterStatus === 'all' ? 'selected' : '' ?>>همه</option>
+                        <?php foreach (adminEventStatuses() as $s): ?>
+                            <option value="<?= e($s) ?>" <?= $filterStatus === $s ? 'selected' : '' ?>><?= e(adminEventStatusLabel($s)) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <noscript><button type="submit" class="btn btn-secondary btn-sm">اعمال فیلتر</button></noscript>
+                </form>
+                <?php
+                $addQ = adminEventFilterQueryParts($filterCategory, $filterStatus);
+                $addQ['action'] = 'add';
+                $addUrl = url('admin/events.php?' . http_build_query($addQ));
+                ?>
+                <a class="btn btn-primary btn-sm" href="<?= e($addUrl) ?>">&#10010; افزودن رویداد</a>
+            </div>
         </div>
 
         <?php if ($listEvents === []): ?>
-            <p class="muted">هنوز رویدادی وجود ندارد. <a href="<?= e($addUrl) ?>">یکی اضافه کنید</a></p>
+            <div class="empty-state empty-state-sm">
+                <div class="empty-state-icon">&#128197;</div>
+                <h3>هنوز رویدادی وجود ندارد</h3>
+                <p><a href="<?= e($addUrl) ?>">یک رویداد جدید اضافه کنید</a></p>
+            </div>
         <?php else: ?>
             <?php
             $buildManageQuery = static function (array $extra) use ($filterCategory, $filterStatus): string {
@@ -566,9 +587,9 @@ $showForm = ($action === 'add' || $action === 'edit');
             };
             ?>
 
-            <div class="events-list events-table-wrap">
+            <div class="events-list admin-table-wrap">
                 <div class="events-table-scroll">
-                    <table class="events-admin-table">
+                    <table class="admin-table">
                         <thead>
                             <tr>
                                 <th scope="col">تاریخ</th>
@@ -599,9 +620,8 @@ $showForm = ($action === 'add' || $action === 'edit');
                                     <td>
                                         <?php $editHref = url('admin/events.php' . $buildManageQuery(['action' => 'edit', 'id' => $eid])); ?>
                                         <?php $delHref = url('admin/events.php' . $buildManageQuery(['action' => 'delete', 'id' => $eid])); ?>
-                                        <a href="<?= e($editHref) ?>">ویرایش</a>
-                                        ·
-                                        <a href="<?= e($delHref) ?>">حذف</a>
+                                        <a href="<?= e($editHref) ?>" class="btn btn-sm btn-secondary">&#9998; ویرایش</a>
+                                        <a href="<?= e($delHref) ?>" class="btn btn-sm btn-reject">&#128465; حذف</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

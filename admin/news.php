@@ -205,7 +205,7 @@ if (isPostRequest()) {
                 }
 
                 recordAudit('news.update', 'news', (int) $newsId);
-                setFlash('success', 'خبر با موفقیت به‌روزرسانی شد.');
+                setFlash('success', 'خبر با موفقیت بهروزرسانی شد.');
                 redirect(url('admin/news.php'));
             }
 
@@ -268,18 +268,20 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>اخبار</h1>
+    <h1>&#128240; اخبار</h1>
 
     <?php if ($successMessage !== null): ?>
-        <div class="notice" role="status"><?= e($successMessage) ?></div>
+        <div class="notice" role="status">&#9989; <?= e($successMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($errorMessage !== null): ?>
-        <div class="alert" role="alert"><?= e($errorMessage) ?></div>
+        <div class="alert alert-danger" role="alert">&#10060; <?= e($errorMessage) ?></div>
     <?php endif; ?>
 
-    <section class="form-card" aria-labelledby="news-form-title">
-        <h2 id="news-form-title"><?= $editNewsItem ? 'ویرایش خبر' : 'افزودن خبر' ?></h2>
+    <div class="admin-section">
+        <div class="admin-section-header">
+            <h2 class="admin-section-title" id="news-form-title">&#10010; <?= $editNewsItem ? 'ویرایش خبر' : 'افزودن خبر' ?></h2>
+        </div>
         <form method="post" action="<?= e(url('admin/news.php')) ?>" enctype="multipart/form-data" novalidate>
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="save_news">
@@ -287,47 +289,58 @@ require_once __DIR__ . '/header.php';
                 <input type="hidden" name="news_id" value="<?= e($editNewsItem['id']) ?>">
             <?php endif; ?>
 
-            <label for="title">عنوان</label>
-            <input
-                type="text"
-                id="title"
-                name="title"
-                maxlength="255"
-                value="<?= e($editNewsItem['title'] ?? '') ?>"
-                required
-            >
+            <div class="form-group">
+                <label for="title" class="form-label">عنوان خبر</label>
+                <input type="text" id="title" name="title" class="form-control"
+                    maxlength="255"
+                    placeholder="عنوان خبر را وارد کنید..."
+                    value="<?= e($editNewsItem['title'] ?? '') ?>"
+                    required>
+            </div>
 
-            <label for="content">محتوا</label>
-            <textarea id="content" name="content" rows="8" required><?= e($editNewsItem['content'] ?? '') ?></textarea>
+            <div class="form-group">
+                <label for="content" class="form-label">محتوای خبر</label>
+                <textarea id="content" name="content" class="form-control" rows="8"
+                    placeholder="متن خبر را اینجا بنویسید..."
+                    required><?= e($editNewsItem['content'] ?? '') ?></textarea>
+            </div>
 
             <?php if ($editNewsItem && !empty($editNewsItem['image'])): ?>
-                <div>
-                    <p>تصویر فعلی</p>
+                <div class="form-group">
+                    <label class="form-label">تصویر فعلی</label>
                     <img src="<?= e(url($editNewsItem['image'])) ?>" alt="<?= e($editNewsItem['title']) ?>" class="admin-image-preview">
                 </div>
             <?php endif; ?>
 
-            <label for="image">تصویر (اختیاری)</label>
-            <input
-                type="file"
-                id="image"
-                name="image"
-                accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif"
-            >
-            <p>فرمت‌های مجاز: JPG، PNG، GIF. حداکثر حجم: ۵۰۰ کیلوبایت.</p>
+            <div class="form-group">
+                <label for="image" class="form-label">تصویر (اختیاری)</label>
+                <input type="file" id="image" name="image" class="form-control"
+                    accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif">
+                <small style="color:var(--muted);font-size:0.85rem;">فرمتهای مجاز: JPG، PNG، GIF. حداکثر حجم: ۵۰۰ کیلوبایت.</small>
+            </div>
 
-            <button type="submit"><?= $editNewsItem ? 'به‌روزرسانی خبر' : 'افزودن خبر' ?></button>
-            <?php if ($editNewsItem): ?>
-                <a href="<?= e(url('admin/news.php')) ?>">لغو ویرایش</a>
-            <?php endif; ?>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    &#128190; <?= $editNewsItem ? 'بهروزرسانی خبر' : 'افزودن خبر' ?>
+                </button>
+                <?php if ($editNewsItem): ?>
+                    <a href="<?= e(url('admin/news.php')) ?>" class="btn btn-outline">&#10006; لغو ویرایش</a>
+                <?php endif; ?>
+            </div>
         </form>
-    </section>
+    </div>
 
-    <section aria-labelledby="news-list-title" class="margin-top-xl">
-        <h2 id="news-list-title">همه اخبار</h2>
+    <div class="admin-section">
+        <div class="admin-section-header">
+            <h2 class="admin-section-title">&#128196; همه اخبار</h2>
+        </div>
 
         <?php if ($newsItems === []): ?>
-            <p>هنوز هیچ خبری اضافه نشده است.</p>
+            <div class="empty-state empty-state-sm">
+                <div class="empty-state-icon">&#128240;</div>
+                <h3>هنوز خبری اضافه نشده</h3>
+                <p>از فرم بالا اولین خبر خود را اضافه کنید.</p>
+            </div>
         <?php else: ?>
             <div class="admin-table-wrap">
                 <table class="admin-table">
@@ -341,16 +354,15 @@ require_once __DIR__ . '/header.php';
                     <tbody>
                         <?php foreach ($newsItems as $newsItem): ?>
                             <tr>
-                                <td><?= e($newsItem['title']) ?></td>
+                                <td style="font-weight:600;"><?= e($newsItem['title']) ?></td>
                                 <td><?= e(formatAdminNewsDate($newsItem['created_at'])) ?></td>
                                 <td>
-                                    <a href="<?= e(url('admin/news.php?edit=' . $newsItem['id'])) ?>">ویرایش</a>
-                                    |
-                                    <form method="post" action="<?= e(url('admin/news.php')) ?>" class="form-inline" onsubmit="return confirm('این خبر حذف شود؟');">
+                                    <a href="<?= e(url('admin/news.php?edit=' . $newsItem['id'])) ?>" class="btn btn-sm btn-secondary">&#9998; ویرایش</a>
+                                    <form method="post" action="<?= e(url('admin/news.php')) ?>" class="form-inline" onsubmit="return confirm('آیا این خبر حذف شود؟');">
                                         <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                         <input type="hidden" name="action" value="delete_news">
                                         <input type="hidden" name="news_id" value="<?= e($newsItem['id']) ?>">
-                                        <button type="submit" class="btn-reset">حذف</button>
+                                        <button type="submit" class="btn-reset">&#128465; حذف</button>
                                     </form>
                                 </td>
                             </tr>
@@ -365,7 +377,7 @@ require_once __DIR__ . '/header.php';
                 <?= renderPagination($pagination, url('admin/news.php')) ?>
             <?php endif; ?>
         <?php endif; ?>
-    </section>
+    </div>
 </section>
 
 <?php require_once __DIR__ . '/footer.php'; ?>

@@ -7980,3 +7980,867 @@ tbody tr:hover {
 .stat-icon-svg {
     animation: svgFadeIn 0.6s ease forwards;
 }
+
+/* ============================================
+   ADMIN PANEL - COMPLETE UI/UX OVERHAUL
+   All missing classes for admin pages
+   ============================================ */
+
+/* === ADMIN DASHBOARD SECTION === */
+section.dashboard,
+section.dashboard.admin-events-dashboard {
+    max-width: 1200px;
+}
+
+section.dashboard > h1 {
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    margin-bottom: var(--space-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--neutral-dark);
+}
+
+/* === FORM CARD (used in slides, news, pages, events) === */
+section.form-card,
+.admin-form-card {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--space-lg);
+    border: 1px solid var(--border);
+    transition: box-shadow var(--transition-base);
+}
+
+section.form-card:hover,
+.admin-form-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+section.form-card h2,
+.admin-form-card h2 {
+    font-size: 1.35rem;
+    margin-bottom: var(--space-lg);
+    color: var(--primary-dark);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding-bottom: var(--space-sm);
+    border-bottom: 2px solid var(--primary-light);
+}
+
+section.form-card label,
+section.form-card .form-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    margin-top: var(--space-md);
+    color: var(--neutral-dark);
+    font-size: 0.9375rem;
+}
+
+section.form-card label:first-of-type {
+    margin-top: 0;
+}
+
+section.form-card input[type="text"],
+section.form-card input[type="number"],
+section.form-card input[type="email"],
+section.form-card input[type="date"],
+section.form-card input[type="time"],
+section.form-card input[type="password"],
+section.form-card input[type="file"],
+section.form-card textarea,
+section.form-card select {
+    width: 100%;
+    padding: 12px 16px;
+    font-family: var(--font-base);
+    font-size: 1rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+    background: var(--white);
+    color: var(--neutral-dark);
+    direction: rtl;
+}
+
+section.form-card input:focus,
+section.form-card textarea:focus,
+section.form-card select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(232, 121, 181, 0.12);
+}
+
+section.form-card textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+section.form-card input[type="file"] {
+    padding: 10px 14px;
+    cursor: pointer;
+}
+
+section.form-card input[disabled] {
+    background: var(--neutral-light);
+    color: var(--muted);
+    cursor: not-allowed;
+}
+
+section.form-card > p,
+section.form-card form > p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 4px;
+    margin-bottom: var(--space-sm);
+}
+
+section.form-card button[type="submit"],
+section.form-card .form-submit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: 12px 28px;
+    font-family: var(--font-base);
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    border: none;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    background: var(--gradient-primary);
+    color: var(--white);
+    margin-top: var(--space-lg);
+    box-shadow: var(--shadow-pink);
+}
+
+section.form-card button[type="submit"]:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+section.form-card .btn-cancel,
+section.form-card a[href] {
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: none;
+    margin-right: var(--space-sm);
+    transition: color var(--transition-fast);
+}
+
+section.form-card a[href]:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+/* === FORM GRID FOR TEACHER ADD/EDIT === */
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+}
+
+@media (max-width: 767px) {
+    .form-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+.form-grid-2 .form-group {
+    margin-bottom: 0;
+}
+
+.form-grid-2 .form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--neutral-dark);
+    font-size: 0.9375rem;
+}
+
+.form-grid-2 .form-group .req {
+    color: var(--danger);
+}
+
+.form-grid-2 .form-group .form-control {
+    width: 100%;
+    padding: 12px 16px;
+    font-family: var(--font-base);
+    font-size: 1rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+    background: var(--white);
+}
+
+.form-grid-2 .form-group .form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(232, 121, 181, 0.12);
+}
+
+/* === ADMIN TABLE WRAP & TABLE === */
+.admin-table-wrap {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin-bottom: var(--space-md);
+    border: 1px solid var(--border);
+}
+
+table.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 0;
+    overflow: visible;
+    background: transparent;
+}
+
+table.admin-table thead {
+    background: linear-gradient(135deg, rgba(232, 121, 181, 0.08) 0%, rgba(200, 168, 233, 0.08) 100%);
+}
+
+table.admin-table th {
+    padding: 14px 18px;
+    text-align: start;
+    font-weight: 700;
+    color: var(--primary-dark);
+    border-bottom: 2px solid var(--primary-light);
+    background: transparent;
+    white-space: nowrap;
+    font-size: 0.9rem;
+}
+
+table.admin-table td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    color: var(--neutral-dark);
+    vertical-align: middle;
+}
+
+table.admin-table tbody tr {
+    transition: background var(--transition-fast);
+}
+
+table.admin-table tbody tr:hover {
+    background: rgba(232, 121, 181, 0.04);
+}
+
+table.admin-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Admin table action links */
+.admin-table td a,
+td a.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: var(--radius-full);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.admin-table td a {
+    color: var(--primary-dark);
+    background: rgba(232, 121, 181, 0.1);
+}
+
+.admin-table td a:hover {
+    background: var(--primary);
+    color: var(--white);
+    transform: translateY(-1px);
+}
+
+/* === ADMIN SORT INPUT (slides page) === */
+.admin-sort-input {
+    max-width: 90px;
+    padding: 8px 12px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-base);
+    font-size: 0.9rem;
+    text-align: center;
+    transition: all var(--transition-fast);
+}
+
+.admin-sort-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(232, 121, 181, 0.12);
+}
+
+/* === ADMIN SLIDE THUMB === */
+.admin-slide-thumb {
+    width: 100px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border);
+    transition: all var(--transition-fast);
+}
+
+.admin-slide-thumb:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-md);
+    transform: scale(1.05);
+}
+
+/* === ADMIN IMAGE PREVIEW === */
+.admin-image-preview {
+    max-width: 240px;
+    height: auto;
+    border-radius: var(--radius-md);
+    border: 3px solid var(--border);
+    margin: var(--space-sm) 0;
+    box-shadow: var(--shadow-sm);
+}
+
+/* === TEACHER AVATAR THUMB === */
+.teacher-avatar-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+    border: 2px solid var(--primary-light);
+}
+
+.teacher-avatar-placeholder {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    background: var(--gradient-primary);
+    color: var(--white);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.teacher-avatar-sm {
+    height: 50px;
+    width: 50px;
+    margin-top: 6px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary-light);
+}
+
+.teacher-cert-link {
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.teacher-cert-link:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+/* === BADGE STATUS CLASSES === */
+.badge-active {
+    background: rgba(136, 216, 176, 0.2);
+    color: #3F9B73;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+}
+
+.badge-pending {
+    background: rgba(255, 213, 128, 0.25);
+    color: #B57F1A;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+}
+
+.badge-inactive {
+    background: rgba(255, 139, 148, 0.2);
+    color: #C75057;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+}
+
+/* === TEACHER FILTERS === */
+.teacher-filters {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
+    flex-wrap: wrap;
+}
+
+.teacher-filters strong {
+    font-size: 0.9rem;
+    color: var(--neutral-dark);
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 18px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: var(--radius-full);
+    text-decoration: none;
+    color: var(--neutral-dark);
+    background: var(--white);
+    border: 2px solid var(--border);
+    transition: all var(--transition-fast);
+}
+
+.filter-chip:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(232, 121, 181, 0.05);
+}
+
+.filter-chip.active {
+    background: var(--gradient-primary);
+    color: var(--white);
+    border-color: transparent;
+    box-shadow: var(--shadow-pink);
+}
+
+/* === ACTION BUTTONS IN TABLE === */
+.inline-form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.btn-sm {
+    padding: 6px 14px;
+    font-size: 0.82rem;
+}
+
+.btn-approve {
+    background: linear-gradient(135deg, #88D8B0 0%, #6BC49A 100%);
+    color: var(--white);
+    border: none;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    font-family: var(--font-base);
+    transition: all var(--transition-fast);
+}
+
+.btn-approve:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(136, 216, 176, 0.4);
+}
+
+.btn-reject {
+    background: linear-gradient(135deg, #FF8B94 0%, #E57780 100%);
+    color: var(--white);
+    border: none;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    font-family: var(--font-base);
+    transition: all var(--transition-fast);
+}
+
+.btn-reject:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 139, 148, 0.4);
+}
+
+.btn-login-as {
+    background: linear-gradient(135deg, #C8A8E9 0%, #B090D8 100%);
+    color: var(--white);
+    border: none;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    font-family: var(--font-base);
+    transition: all var(--transition-fast);
+}
+
+.btn-login-as:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(200, 168, 233, 0.4);
+}
+
+td.teacher-actions-cell {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* === MOBILE TEACHER CARDS === */
+.teacher-mobile-cards {
+    display: none;
+}
+
+.teacher-mobile-card {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--space-md);
+    border: 1px solid var(--border);
+    transition: all var(--transition-fast);
+}
+
+.teacher-mobile-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.tmc-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--border);
+}
+
+.tmc-actions {
+    display: flex;
+    gap: var(--space-xs);
+    margin-top: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+/* === BUTTON RESET (for inline delete forms) === */
+.btn-reset {
+    background: none;
+    border: none;
+    color: var(--danger);
+    cursor: pointer;
+    font-family: var(--font-base);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-reset:hover {
+    background: rgba(255, 139, 148, 0.15);
+    text-decoration: none;
+}
+
+/* === FORM INLINE (for delete actions in tables) === */
+.form-inline {
+    display: inline-flex;
+    margin: 0;
+}
+
+/* === ADMIN EVENT FORM SPECIFICS === */
+.admin-event-form-card {
+    /* inherits form-card styles */
+}
+
+.admin-event-form label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    margin-top: var(--space-md);
+    color: var(--neutral-dark);
+}
+
+.admin-event-form label:first-of-type {
+    margin-top: 0;
+}
+
+.admin-event-times {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+}
+
+@media (max-width: 575px) {
+    .admin-event-times {
+        grid-template-columns: 1fr;
+    }
+}
+
+.admin-event-times label {
+    margin-top: 0;
+}
+
+/* Event category badges */
+.event-category-general { background: rgba(135, 206, 235, 0.2); color: #2C7AB8; }
+.event-category-trip { background: rgba(136, 216, 176, 0.2); color: #3F9B73; }
+.event-category-celebration { background: rgba(255, 213, 128, 0.25); color: #B57F1A; }
+.event-category-meeting { background: rgba(200, 168, 233, 0.2); color: #7B5EA7; }
+.event-category-holiday { background: rgba(255, 139, 148, 0.2); color: #C75057; }
+
+/* Event status badges */
+.event-status-scheduled { background: rgba(136, 216, 176, 0.2); color: #3F9B73; }
+.event-status-cancelled { background: rgba(255, 139, 148, 0.2); color: #C75057; }
+.event-status-completed { background: rgba(135, 206, 235, 0.2); color: #2C7AB8; }
+
+/* === PAGINATION SUMMARY === */
+.pagination-summary {
+    font-size: 0.9rem;
+    color: var(--muted);
+    text-align: center;
+    margin-top: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
+/* === ADMIN DELETE CONFIRMATION === */
+section.dashboard .alert[role="alert"] {
+    background: rgba(255, 139, 148, 0.08);
+    border-inline-start: 4px solid var(--danger);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+section.dashboard .alert[role="alert"] p {
+    margin-bottom: var(--space-sm);
+    font-weight: 600;
+    color: var(--neutral-dark);
+}
+
+section.dashboard .alert[role="alert"] button[type="submit"] {
+    background: var(--danger);
+    color: var(--white);
+    border: none;
+    padding: 8px 20px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    font-family: var(--font-base);
+    transition: all var(--transition-fast);
+    margin-right: var(--space-sm);
+}
+
+section.dashboard .alert[role="alert"] button[type="submit"]:hover {
+    background: #E57780;
+    transform: translateY(-1px);
+}
+
+section.dashboard .alert[role="alert"] a {
+    color: var(--muted);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+section.dashboard .alert[role="alert"] a:hover {
+    color: var(--neutral-dark);
+    text-decoration: underline;
+}
+
+/* === NOTICE (success) === */
+section.dashboard .notice {
+    background: linear-gradient(135deg, rgba(135, 206, 235, 0.12) 0%, rgba(136, 216, 176, 0.12) 100%);
+    color: #2A7F62;
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    border-inline-start: 4px solid var(--accent);
+    margin-bottom: var(--space-md);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+/* === EMPTY STATE FOR LISTS === */
+section.dashboard > p,
+section.dashboard > section > p {
+    font-size: 1rem;
+    color: var(--muted);
+    text-align: center;
+    padding: var(--space-xl);
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+/* === ADMIN EVENTS FILTER CHIPS === */
+.admin-events-filters {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-md);
+}
+
+/* === RESPONSIVE TABLES IN ADMIN === */
+@media (max-width: 767px) {
+    .admin-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    table.admin-table {
+        min-width: 600px;
+    }
+    
+    .admin-content {
+        padding: var(--space-sm);
+    }
+    
+    section.form-card,
+    .admin-form-card {
+        padding: var(--space-md);
+    }
+    
+    .form-grid-2 {
+        grid-template-columns: 1fr;
+    }
+    
+    td.teacher-actions-cell {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* === ADMIN PAGE FORMS FIX === */
+section.form-card form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+section.form-card form .form-group {
+    margin-bottom: 0;
+}
+
+/* === INLINE DELETE BUTTON STYLE (slides, pages) === */
+.admin-table td form.form-inline {
+    display: inline-flex;
+    vertical-align: middle;
+}
+
+/* === TEACHER FORM ACTIONS === */
+.form-actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-lg);
+    flex-wrap: wrap;
+}
+
+.form-actions .btn {
+    min-width: 140px;
+}
+
+.form-actions .btn-primary {
+    background: var(--gradient-primary);
+    color: var(--white);
+    border: none;
+    box-shadow: var(--shadow-pink);
+}
+
+.form-actions .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.form-actions .btn-secondary {
+    background: transparent;
+    color: var(--primary-dark);
+    border: 2px solid var(--primary-light);
+}
+
+.form-actions .btn-secondary:hover {
+    background: rgba(232, 121, 181, 0.08);
+}
+
+/* === ADMIN SETTINGS SPECIFIC === */
+.admin-settings-grid {
+    display: grid;
+    gap: var(--space-lg);
+}
+
+.admin-settings-section {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+}
+
+.admin-settings-section h2 {
+    font-size: 1.25rem;
+    margin-bottom: var(--space-md);
+    color: var(--primary-dark);
+    padding-bottom: var(--space-sm);
+    border-bottom: 2px solid var(--primary-light);
+}
+
+/* === ADMIN SALARY/TUITION SPECIFIC === */
+.amount-highlight {
+    color: #1d7663;
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.notes-ellipsis {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+}
+
+/* === ADMIN AUDIT PAGE === */
+.audit-filter-bar {
+    display: flex;
+    gap: var(--space-sm);
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: var(--space-md);
+}
+
+/* === GENERAL BUTTON STYLING INSIDE TABLES === */
+.admin-table .btn {
+    font-size: 0.82rem;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    font-weight: 700;
+    transition: all var(--transition-fast);
+}
+
+.admin-table .btn-secondary {
+    background: rgba(200, 168, 233, 0.15);
+    color: var(--secondary-dark);
+    border: none;
+}
+
+.admin-table .btn-secondary:hover {
+    background: var(--secondary);
+    color: var(--white);
+    transform: translateY(-1px);
+}
