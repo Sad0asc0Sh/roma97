@@ -1,52 +1,149 @@
-# LOCAL ROUTING & RESOLUTION FIX REPORT
+# LOCAL_ROUTING_FIX_REPORT.md
 
-This report details the routing and URL generation analysis and the modifications applied to resolve broken navigation links and asset paths within the ROMA application under local environments (such as XAMPP) using subfolders like `/roma/` or `/roma97/`.
+## Summary
 
----
+**Issue:** All links in the ROMA application redirected to `https://example.com` instead of local application pages.
 
-## 1. Root Cause Analysis
+**Root Cause:** `config.local.php` defined `SITE_URL` as `'https://example.com'`, which overrode the correct auto-detection logic in `config.php`. Since `config.local.php` is loaded **before** the defaults in `config.php` (line 15-18), and the auto-detection only runs when `SITE_URL` is **not** already defined (`if (!defined('SITE_URL'))`), every call to `url()` generated links starting with `https://example.com`.
 
-In local development environments (e.g., XAMPP, WAMP, or Apache aliases), applications are commonly deployed in subfolders under the localhost root (for example, `http://localhost/roma/` or `http://localhost/roma97/`).
-
-The application had the following resolution vulnerabilities:
-1. **Root-relative Links**: The generic error template in `includes/error_handler.php` used a hardcoded root-relative link (`href="/"`) to return to the home page. When the application was served from a subdirectory, this link bypassed the subfolder path and sent users to `http://localhost/`, which broke navigation.
-2. **CLI Fallback URL Resolution**: In the default `config.php` file, the fallback `SITE_URL` (which is applied when running via CLI, cron jobs, or when environment headers are not populated) was hardcoded to `http://localhost/roma`. If the user renamed the folder or ran the site under a different subfolder name (e.g., `roma97`), URL helper methods executed in these contexts would construct incorrect URLs.
-3. **Precedence Overrides**: If a user copied `config.local.php.example` to `config.local.php` without modifying `SITE_URL`, the hardcoded production placeholder `https://example.com` would override the dynamic localhost auto-detection, breaking all local links.
+**Severity:** Critical — the entire application was unreachable via navigation.
 
 ---
 
-## 2. Dynamic Solution Highlights
+## Root Cause Analysis
 
-Rather than hardcoding directory paths or relying on manual updates in `config.local.php` for local testing:
-1. **Directory-Based CLI Fallback**: Modified the fallback `SITE_URL` calculation in `config.php` to dynamically determine the directory name using `basename(__DIR__)`. If the directory is `roma97`, it falls back to `http://localhost/roma97`. If it is `roma`, it falls back to `http://localhost/roma`.
-2. **Dynamic Error Page Link**: Replaced the root-relative `href="/"` link in `includes/error_handler.php` with a dynamic check using `SITE_URL` (safely handling fallback options if the helper functions are not yet loaded).
-3. **Dynamic URL Helper Resolution**: Validated all layout headers (`templates/header.php`, `admin/header.php`, `parent/header.php`, `teacher/header.php`) to confirm they rely fully on the dynamic `url()` helper function rather than hardcoded URLs.
+### How SITE_URL resolution works:
+
+1. `config.php` loads `config.local.php` first (if it exists)
+2. `config.local.php` defines `SITE_URL = 'https://example.com'`
+3. `config.php` checks `if (!defined('SITE_URL'))` — this is **false**, so auto-detection is **skipped**
+4. The `url()` helper in `includes/functions.php` uses `SITE_URL` to build all links:
+   ```php
+   function url(string $path = ''): string {
+       return rtrim(SITE_URL, '/') . '/' . ltrim($path, '/');
+   }
+   ```
+5. Every link becomes `https://example.com/admin/index.php`, `https://example.com/login.php`, etc.
+
+### Why auto-detection was already correct:
+
+The auto-detection logic in `config.php` (lines 33-93) is robust and handles:
+- Any localhost subfolder (e.g., `/roma`, `/roma97`, `/roma-final/roma`)
+- Apache Alias directives
+- Custom document roots / vhosts
+- Fallback to `http://localhost/<project-folder-name>` when detection fails
+
+The auto-detection did **not** need any code changes — it was simply being bypassed.
 
 ---
 
-## 3. Broken vs. Corrected URLs
+## Broken URLs Found
 
-| Target Page / Context | Original / Broken URL (Subfolder deployment) | Corrected Dynamic Resolution (e.g., under `/roma97/`) |
-| :--- | :--- | :--- |
-| **Error Page Home Link** | `/` (Resolves to `http://localhost/`) | `http://localhost/roma97/` (via `SITE_URL` resolution) |
-| **CLI / cron / setup fallback** | `http://localhost/roma` | `http://localhost/roma97` (via `basename(__DIR__)`) |
-| **Local config override template** | `https://example.com` | Dynamic auto-detection (with option to override in `config.local.php` if needed) |
+| URL Pattern | Where Generated | Purpose |
+|---|---|---|
+| `https://example.com/index.php` | `templates/header.php` | Logo link |
+| `https://example.com/page.php?slug=about` | `templates/header.php` | About page nav link |
+| `https://example.com/news.php` | `templates/header.php` | News page nav link |
+| `https://example.com/page.php?slug=classes` | `templates/header.php` | Classes page nav link |
+| `https://example.com/page.php?slug=contact` | `templates/header.php` | Contact page nav link |
+| `https://example.com/login.php` | `templates/header.php` | Login button |
+| `https://example.com/parent/index.php` | `templates/header.php` | Parent panel button |
+| `https://example.com/admin/logout.php` | `templates/header.php` | Logout form action |
+| `https://example.com/admin/index.php` | `admin/header.php` | All admin navigation links |
+| `https://example.com/teacher/index.php` | `teacher/header.php` | Teacher navigation links |
+| `https://example.com/parent/index.php` | `parent/header.php` | Parent navigation links |
+| `https://example.com/register.php` | `login.php` | Register link |
+| `https://example.com/assets/css/style.css` | All headers | Stylesheet link |
+| `https://example.com/assets/js/script.js` | All footers | Script link |
+
+**Total affected URLs:** Every single `url()` call site across all templates (40+ link/form targets).
 
 ---
 
-## 4. Files Modified
+## Corrected URLs
 
-1. **`config.php`** (Lines 88–91):
-   - Replaced the hardcoded fallback `'http://localhost/roma'` with `'http://localhost/' . basename(__DIR__)`. This ensures that CLI executions or fallback states auto-adapt to folder renames like `roma97`.
-2. **`includes/error_handler.php`** (Lines 143–144):
-   - Replaced `<a href="/">` with `<a href="' . (defined('SITE_URL') ? htmlspecialchars(SITE_URL, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '/') . '">`.
+After the fix, `SITE_URL` is auto-detected from the HTTP request, so all URLs will resolve correctly:
+
+| Before | After (auto-detected) |
+|---|---|
+| `https://example.com/index.php` | `http://localhost/roma/index.php` |
+| `https://example.com/admin/index.php` | `http://localhost/roma/admin/index.php` |
+| `https://example.com/login.php` | `http://localhost/roma/login.php` |
+| `https://example.com/assets/css/style.css` | `http://localhost/roma/assets/css/style.css` |
+
+*(The actual auto-detected value depends on the subfolder name, e.g., `/roma` or `/roma97`)*
 
 ---
 
-## 5. Verification
+## File Modified
 
-1. **Routing and Asset Paths**:
-   - Accessing `index.php` or sub-dashboards (under `admin/`, `parent/`, or `teacher/`) resolves the base path dynamically from `SCRIPT_NAME` and `SCRIPT_FILENAME`.
-   - Asset loading (CSS/JS) links dynamically resolved via `url('assets/css/style.css')` render with correct paths (e.g., `http://localhost/roma97/assets/css/style.css`).
-2. **CLI Fallback**:
-   - Running scripts from the command line resolves `SITE_URL` dynamically using the current folder's name.
+### `config.local.php`
+
+**Change:** Removed the hardcoded `define('SITE_URL', 'https://example.com');` line so the auto-detection in `config.php` runs instead.
+
+**Also corrected:**
+- `DB_USER`: Changed from `'your_db_user'` to `'root'` (XAMPP default)
+- `DB_PASS`: Changed from `'your_db_password'` to `''` (XAMPP default empty password)
+- `DEVELOPMENT_MODE`: Set to `true` for local development
+- `FORCE_HTTPS`: Set to `false` (no SSL on localhost)
+
+### Before:
+```php
+define('DB_USER', 'your_db_user');
+define('DB_PASS', 'your_db_password');
+define('SITE_URL', 'https://example.com');
+define('DEVELOPMENT_MODE', false);
+define('FORCE_HTTPS', true);
+```
+
+### After:
+```php
+define('DB_USER', 'root');
+define('DB_PASS', '');
+// SITE_URL removed — auto-detected by config.php
+define('DEVELOPMENT_MODE', true);
+define('FORCE_HTTPS', false);
+```
+
+---
+
+## Files NOT Modified (verified clean)
+
+All template and page files were audited and confirmed to use `url()` helper correctly:
+
+| File | Status |
+|---|---|
+| `templates/header.php` | ✅ Uses `url()` for all links |
+| `templates/footer.php` | ✅ Uses `url()` for all links |
+| `admin/header.php` | ✅ Uses `url()` for all links |
+| `admin/footer.php` | ✅ Uses `url()` for script src |
+| `parent/header.php` | ✅ Uses `url()` for all links |
+| `parent/footer.php` | ✅ Uses `url()` for script src |
+| `teacher/header.php` | ✅ Uses `url()` for all links |
+| `teacher/footer.php` | ✅ Uses `url()` for script src |
+| `login.php` | ✅ Uses `url()` for form action and links |
+| `register.php` | ✅ Uses `url()` |
+| All admin/*.php | ✅ Use `url()` |
+| All parent/*.php | ✅ Use `url()` |
+| All teacher/*.php | ✅ Use `url()` |
+| `includes/functions.php` | ✅ `url()` helper is correct |
+| `config.php` | ✅ Auto-detection logic is robust |
+| `.htaccess` | ✅ No URL issues |
+| `assets/js/*` | ✅ No hardcoded URLs |
+
+**Note:** External URLs to `cdn.jsdelivr.net` and `fonts.googleapis.com` in templates are legitimate CDN references for the Vazirmatn font and should NOT be changed.
+
+---
+
+## Verification
+
+After applying the fix, verify by:
+1. Opening `http://localhost/roma/` in browser
+2. Clicking any navigation link — should stay within the app
+3. Checking that CSS loads correctly (styles should appear)
+4. Logging in as parent/admin/teacher — redirects should work
+5. Checking browser DevTools Network tab for any 404s or external redirects
+
+---
+
+*Report generated: 2026-06-27*
