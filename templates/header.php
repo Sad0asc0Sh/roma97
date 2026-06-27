@@ -25,6 +25,7 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="<?php echo $pageDescriptionValue; ?>">
+    <meta name="theme-color" content="#E879B5">
     <title><?php echo $pageTitleValue; ?></title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -57,7 +58,19 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
             <?php if ($logo !== ''): ?>
                 <img src="<?php echo e(url($logo)); ?>" alt="<?php echo e($siteNameValue); ?>" class="site-logo">
             <?php else: ?>
-                <span class="logo-icon">&#127800;</span>
+                <svg class="logo-icon-svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <circle cx="16" cy="16" r="15" stroke="url(#logoGrad)" stroke-width="2"/>
+                    <path d="M16 8c-2.5 0-4.5 1.2-4.5 3.5 0 1.5.8 2.5 2 3.2-.5.3-1.2 1-1.5 1.8-.3.8-.2 1.5.3 2 .5.5 1.2.5 1.8.3.6-.2 1-.8 1.2-1.2h.7c.2.4.6 1 1.2 1.2.6.2 1.3.2 1.8-.3.5-.5.6-1.2.3-2-.3-.8-1-1.5-1.5-1.8 1.2-.7 2-1.7 2-3.2 0-2.3-2-3.5-4.5-3.5z" fill="url(#logoGrad)"/>
+                    <circle cx="13.5" cy="12" r="1" fill="white"/>
+                    <circle cx="18.5" cy="12" r="1" fill="white"/>
+                    <path d="M13.5 15.5c0 0 1 1.5 2.5 1.5s2.5-1.5 2.5-1.5" stroke="white" stroke-width="0.8" stroke-linecap="round" fill="none"/>
+                    <defs>
+                        <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
+                            <stop stop-color="#E879B5"/>
+                            <stop offset="1" stop-color="#C8A8E9"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
                 <span class="site-name"><?php echo e($siteNameValue); ?></span>
             <?php endif; ?>
         </a>
@@ -70,37 +83,46 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
 
         <nav class="site-nav" aria-label="منوی اصلی">
             <a href="<?php echo e(url('index.php')); ?>" class="nav-link <?php echo $currentPage === 'index.php' ? 'active' : ''; ?>">
-                <span class="nav-icon">&#127968;</span>
+                <svg class="nav-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 <span class="nav-label">خانه</span>
             </a>
             <a href="<?php echo e(url('page.php?slug=about')); ?>" class="nav-link <?php echo $currentPage === 'page.php' && $currentSlug === 'about' ? 'active' : ''; ?>">
-                <span class="nav-icon">&#128212;</span>
+                <svg class="nav-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                 <span class="nav-label">درباره ما</span>
             </a>
             <a href="<?php echo e(url('news.php')); ?>" class="nav-link <?php echo $currentPage === 'news.php' ? 'active' : ''; ?>">
-                <span class="nav-icon">&#128240;</span>
+                <svg class="nav-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
                 <span class="nav-label">اخبار</span>
             </a>
             <a href="<?php echo e(url('page.php?slug=classes')); ?>" class="nav-link <?php echo $currentPage === 'page.php' && $currentSlug === 'classes' ? 'active' : ''; ?>">
-                <span class="nav-icon">&#127752;</span>
-                <span class="nav-label">کلاس‌ها</span>
+                <svg class="nav-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/></svg>
+                <span class="nav-label">کلاسها</span>
             </a>
             <a href="<?php echo e(url('page.php?slug=contact')); ?>" class="nav-link <?php echo $currentPage === 'page.php' && $currentSlug === 'contact' ? 'active' : ''; ?>">
-                <span class="nav-icon">&#128222;</span>
+                <svg class="nav-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
                 <span class="nav-label">تماس با ما</span>
             </a>
 
             <div class="nav-auth">
                 <?php if (isParentLoggedIn()): ?>
-                    <a href="<?php echo e(url('parent/index.php')); ?>" class="btn btn-primary btn-sm">&#128101; پنل والدین</a>
+                    <a href="<?php echo e(url('parent/index.php')); ?>" class="btn btn-primary btn-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        پنل والدین
+                    </a>
                 <?php else: ?>
-                    <a href="<?php echo e(url('login.php')); ?>" class="btn btn-primary btn-sm">&#128274; ورود</a>
+                    <a href="<?php echo e(url('login.php')); ?>" class="btn btn-primary btn-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                        ورود
+                    </a>
                 <?php endif; ?>
 
                 <?php if (isLoggedIn()): ?>
                     <form class="logout-form" method="post" action="<?php echo e(url('admin/logout.php')); ?>">
                         <input type="hidden" name="csrf_token" value="<?php echo e(generateCsrfToken()); ?>">
-                        <button type="submit" class="btn btn-sm btn-outline">&#128682; خروج</button>
+                        <button type="submit" class="btn btn-sm btn-outline">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                            خروج
+                        </button>
                     </form>
                 <?php endif; ?>
             </div>

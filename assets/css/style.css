@@ -7772,3 +7772,211 @@ tbody tr:hover {
     margin: 0;
     font-size: 1.05rem;
 }
+
+/* ============================================================
+   Enterprise SVG Icon System
+   Professional, scalable vector icons replacing all emojis
+   ============================================================ */
+
+/* Nav SVG icons */
+.nav-icon-svg {
+    flex-shrink: 0;
+    opacity: 0.8;
+    transition: opacity var(--transition-fast);
+}
+
+.nav-link:hover .nav-icon-svg,
+.nav-link.active .nav-icon-svg {
+    opacity: 1;
+}
+
+/* Logo SVG */
+.logo-icon-svg {
+    flex-shrink: 0;
+    transition: transform var(--transition-base);
+}
+
+.logo:hover .logo-icon-svg {
+    transform: scale(1.05);
+}
+
+/* Section header SVG icons */
+.section-icon-svg {
+    display: block;
+    margin: 0 auto var(--space-sm);
+    opacity: 0.9;
+}
+
+/* Service card SVG icon wrapper */
+.service-icon-wrap {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto var(--space-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(232, 121, 181, 0.08) 0%, rgba(200, 168, 233, 0.08) 100%);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-base);
+}
+
+.service-card:hover .service-icon-wrap {
+    background: linear-gradient(135deg, rgba(232, 121, 181, 0.15) 0%, rgba(200, 168, 233, 0.15) 100%);
+    transform: scale(1.08);
+}
+
+/* Stat card SVG icons */
+.stat-icon-svg {
+    display: block;
+    margin: 0 auto var(--space-sm);
+}
+
+/* Hero fallback SVG icon */
+.hero-fallback-icon-svg {
+    display: block;
+    margin: 0 auto var(--space-lg);
+    opacity: 0.9;
+}
+
+/* Form input SVG icons */
+.input-wrapper .input-icon {
+    position: absolute;
+    inset-inline-start: 14px;
+    color: var(--muted);
+    pointer-events: none;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+}
+
+.input-wrapper .input-icon svg,
+.input-wrapper svg.input-icon {
+    color: var(--muted);
+    opacity: 0.6;
+    transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.input-wrapper input:focus ~ .input-icon,
+.input-wrapper:focus-within .input-icon {
+    opacity: 1;
+    color: var(--primary);
+}
+
+/* Password toggle SVG button */
+.toggle-password {
+    position: absolute;
+    inset-inline-end: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    transition: all var(--transition-fast);
+}
+
+.toggle-password:hover {
+    color: var(--primary);
+    background: rgba(232, 121, 181, 0.08);
+}
+
+.toggle-password .eye-icon {
+    display: flex;
+}
+
+/* Alert SVG icons */
+.alert .alert-icon {
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: inherit;
+    opacity: 0.8;
+}
+
+/* Auth back link SVG */
+.auth-back a svg {
+    transition: transform var(--transition-fast);
+}
+
+.auth-back a:hover svg {
+    transform: translateX(-3px);
+}
+
+[dir="rtl"] .auth-back a:hover svg {
+    transform: translateX(3px);
+}
+
+/* Footer contact SVG icons */
+.footer-contacts .contact-icon {
+    flex-shrink: 0;
+    color: var(--primary);
+    opacity: 0.8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
+}
+
+/* News date SVG */
+.news-date svg {
+    flex-shrink: 0;
+}
+
+/* News read more arrow SVG */
+.news-read-more svg {
+    transition: transform var(--transition-fast);
+}
+
+.news-read-more:hover svg {
+    transform: translateX(-3px);
+}
+
+[dir="rtl"] .news-read-more:hover svg {
+    transform: translateX(3px);
+}
+
+/* CTA section SVG */
+.cta-content > svg {
+    display: block;
+    margin: 0 auto var(--space-lg);
+    opacity: 0.9;
+}
+
+/* Star SVG alignment */
+.testimonial-stars {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-bottom: var(--space-sm);
+}
+
+/* News date with SVG icon */
+.news-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Button SVG icons inside */
+.btn svg {
+    flex-shrink: 0;
+}
+
+/* Subtle animations for SVG elements */
+@keyframes svgFadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.section-icon-svg,
+.stat-icon-svg {
+    animation: svgFadeIn 0.6s ease forwards;
+}

@@ -13,11 +13,23 @@ $siteDescriptionValue = siteDescription();
         <div class="footer-content">
             <div class="footer-section footer-brand">
                 <div class="footer-logo">
-                    <span class="logo-icon">&#127800;</span>
+                    <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+                        <circle cx="16" cy="16" r="15" stroke="url(#footerLogoGrad)" stroke-width="2"/>
+                        <path d="M16 8c-2.5 0-4.5 1.2-4.5 3.5 0 1.5.8 2.5 2 3.2-.5.3-1.2 1-1.5 1.8-.3.8-.2 1.5.3 2 .5.5 1.2.5 1.8.3.6-.2 1-.8 1.2-1.2h.7c.2.4.6 1 1.2 1.2.6.2 1.3.2 1.8-.3.5-.5.6-1.2.3-2-.3-.8-1-1.5-1.5-1.8 1.2-.7 2-1.7 2-3.2 0-2.3-2-3.5-4.5-3.5z" fill="url(#footerLogoGrad)"/>
+                        <circle cx="13.5" cy="12" r="1" fill="white"/>
+                        <circle cx="18.5" cy="12" r="1" fill="white"/>
+                        <path d="M13.5 15.5c0 0 1 1.5 2.5 1.5s2.5-1.5 2.5-1.5" stroke="white" stroke-width="0.8" stroke-linecap="round" fill="none"/>
+                        <defs>
+                            <linearGradient id="footerLogoGrad" x1="0" y1="0" x2="32" y2="32">
+                                <stop stop-color="#E879B5"/>
+                                <stop offset="1" stop-color="#C8A8E9"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
                     <span class="logo-text"><?php echo e($siteNameValue); ?></span>
                 </div>
                 <p><?php echo e($siteDescriptionValue); ?></p>
-                <p class="footer-tagline">&#10024; جایی که ستاره‌های کوچک می‌درخشند</p>
+                <p class="footer-tagline">جایی که ستارههای کوچک میدرخشند</p>
                 <div class="footer-social">
                     <a href="#" class="social-link" aria-label="اینستاگرام">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
@@ -36,7 +48,7 @@ $siteDescriptionValue = siteDescription();
                 <ul class="footer-links">
                     <li><a href="<?php echo e(url('index.php')); ?>">خانه</a></li>
                     <li><a href="<?php echo e(url('page.php?slug=about')); ?>">درباره ما</a></li>
-                    <li><a href="<?php echo e(url('page.php?slug=classes')); ?>">کلاس‌ها</a></li>
+                    <li><a href="<?php echo e(url('page.php?slug=classes')); ?>">کلاسها</a></li>
                     <li><a href="<?php echo e(url('news.php')); ?>">اخبار</a></li>
                     <li><a href="<?php echo e(url('login.php')); ?>">ورود والدین</a></li>
                 </ul>
@@ -46,23 +58,23 @@ $siteDescriptionValue = siteDescription();
                 <h3>تماس با ما</h3>
                 <ul class="footer-contacts">
                     <li>
-                        <span class="contact-icon">&#128205;</span>
+                        <svg class="contact-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
                         <span>تهران، خیابان مهد کودک، پلاک ۱۲۳</span>
                     </li>
                     <li>
-                        <span class="contact-icon">&#128222;</span>
+                        <svg class="contact-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
                         <span dir="ltr">۰۲۱-۱۲۳۴۵۶۷۸</span>
                     </li>
                     <li>
-                        <span class="contact-icon">&#128241;</span>
+                        <svg class="contact-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
                         <span dir="ltr">۰۹۱۲۳۴۵۶۷۸۹</span>
                     </li>
                     <li>
-                        <span class="contact-icon">&#9993;</span>
+                        <svg class="contact-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                         <span>info@roomadaycare.ir</span>
                     </li>
                     <li>
-                        <span class="contact-icon">&#128336;</span>
+                        <svg class="contact-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         <span>شنبه تا چهارشنبه: ۷ تا ۱۷</span>
                     </li>
                 </ul>
