@@ -259,37 +259,30 @@ require_once __DIR__ . '/header.php';
                 <input type="hidden" name="page_id" value="<?= e($editPage['id']) ?>">
             <?php endif; ?>
 
-            <label for="title">عنوان</label>
-            <input
-                type="text"
-                id="title"
+            <div class="form-group"><label for="title" class="form-label">عنوان</label>
+            <input type="text" id="title" class="form-control"
                 name="title"
                 maxlength="255"
                 value="<?= e($editPage['title'] ?? '') ?>"
                 required
             >
 
-            <label for="slug">نامک</label>
+            </div><div class="form-group"><label for="slug" class="form-label">نامک</label>
             <?php if ($editPage): ?>
                 <input type="text" id="slug" value="<?= e($editPage['slug']) ?>" disabled>
                 <p>نامک بعد از ایجاد صفحه قابل تغییر نیست.</p>
             <?php else: ?>
-                <input
-                    type="text"
-                    id="slug"
-                    name="slug"
-                    maxlength="100"
+                <input type="text" id="slug" name="slug" class="form-control" maxlength="100"
                     pattern="[a-z0-9-]+"
                     required
                 >
                 <p>از حروف کوچک انگلیسی، اعداد و خط تیره استفاده کنید.</p>
             <?php endif; ?>
 
-            <label for="content">محتوا</label>
-            <textarea id="content" name="content" rows="10" required><?= e($editPage['content'] ?? '') ?></textarea>
-            <p>Content is displayed as plain text with line breaks for security.</p>
+            </div><div class="form-group"><label for="content" class="form-label">محتوا</label>
+            <textarea id="content" class="form-control" name="content" rows="10" required><?= e($editPage['content'] ?? '') ?></textarea></div> as plain text with line breaks for security.</p>
 
-            <button type="submit"><?= $editPage ? 'به‌روزرسانی صفحه' : 'افزودن صفحه' ?></button>
+            <button type="submit" class="btn btn-primary"><?= $editPage ? 'به‌روزرسانی صفحه' : 'افزودن صفحه' ?></button>
             <?php if ($editPage): ?>
                 <a href="<?= e(url('admin/pages.php')) ?>">لغو ویرایش</a>
             <?php endif; ?>
@@ -319,17 +312,11 @@ require_once __DIR__ . '/header.php';
                                 <td><?= e($page['slug']) ?></td>
                                 <td><?= e(formatAdminPageDate($page['created_at'])) ?></td>
                                 <td>
-                                    <a href="<?= e(url('page.php?slug=' . $page['slug'])) ?>" target="_blank" rel="noopener">مشاهده</a>
-                                    |
-                                    <a href="<?= e(url('admin/pages.php?edit=' . $page['id'])) ?>">ویرایش</a>
-                                    |
-                                    <form method="post" action="<?= e(url('admin/pages.php')) ?>" class="form-inline" onsubmit="return confirm('این صفحه حذف شود؟');">
+                                    <a href="<?= e(url('page.php?slug=' . $page['slug'])) ?>" target="_blank" rel="noopener">مشاهده</a><a href="<?= e(url('admin/pages.php?edit=' . $page['id'])) ?>">ویرایش</a><form method="post" action="<?= e(url('admin/pages.php')) ?>" class="form-inline" onsubmit="return confirm('این صفحه حذف شود؟');">
                                         <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                         <input type="hidden" name="action" value="delete_page">
                                         <input type="hidden" name="page_id" value="<?= e($page['id']) ?>">
-                                        <button type="submit" class="btn-reset">حذف</button>
-                                    </form>
-                                </td>
+                                        <button type="submit" class="btn btn-danger btn-sm">حذف</button></form></div></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>

@@ -332,13 +332,13 @@ require_once __DIR__ . '/header.php';
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <input type="hidden" name="action" value="delete_slide">
                 <input type="hidden" name="slide_id" value="<?= e($deleteSlide['id']) ?>">
-                <button type="submit">حذف اسلاید</button>
+                <button type="submit" class="btn btn-danger btn-sm">حذف</button>
                 <a href="<?= e(url('admin/slides.php')) ?>">انصراف</a>
             </form>
         </div>
     <?php endif; ?>
 
-    <section class="form-card" aria-labelledby="slide-form-title">
+    <div class="admin-section"><div class="admin-section-header"><h2 class="admin-section-title"> aria-labelledby="slide-form-title">
         <h2 id="slide-form-title"><?= $editSlide ? 'ویرایش اسلاید' : 'افزودن اسلاید' ?></h2>
         <form method="post" action="<?= e(url('admin/slides.php')) ?>" enctype="multipart/form-data" novalidate>
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
@@ -347,20 +347,16 @@ require_once __DIR__ . '/header.php';
                 <input type="hidden" name="slide_id" value="<?= e($editSlide['id']) ?>">
             <?php endif; ?>
 
-            <label for="title">عنوان</label>
-            <input
-                type="text"
-                id="title"
+            <div class="form-group"><label for="title" class="form-label">عنوان</label>
+            <input type="text" id="title" class="form-control"
                 name="title"
                 maxlength="255"
                 value="<?= e($editSlide['title'] ?? '') ?>"
                 required
             >
 
-            <label for="sort_order">ترتیب نمایش</label>
-            <input
-                type="number"
-                id="sort_order"
+            </div><div class="form-group"><label for="sort_order" class="form-label">ترتیب نمایش</label>
+            <input type="number" id="sort_order" class="form-control" style="max-width:120px"
                 name="sort_order"
                 min="0"
                 step="1"
@@ -369,30 +365,27 @@ require_once __DIR__ . '/header.php';
             >
 
             <?php if ($editSlide): ?>
-                <div>
-                    <p>تصویر فعلی</p>
+                <div class="form-group"><label class="form-label">تصویر فعلی</label>
                     <img src="<?= e(url($editSlide['image'])) ?>" alt="<?= e($editSlide['title']) ?>" class="admin-image-preview">
                 </div>
             <?php endif; ?>
 
-            <label for="image">تصویر <?= $editSlide ? '(اختیاری)' : '' ?></label>
-            <input
-                type="file"
-                id="image"
+            </div><div class="form-group"><label for="image" class="form-label">تصویر <?= $editSlide ? '(اختیاری)' : '' ?></label>
+            <input type="file" id="image" class="form-control"
                 name="image"
                 accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif"
                 <?= $editSlide ? '' : 'required' ?>
             >
             <p>فرمت‌های مجاز: JPG، PNG، GIF. حداکثر حجم: ۵۰۰ کیلوبایت.</p>
 
-            <button type="submit"><?= $editSlide ? 'به‌روزرسانی اسلاید' : 'افزودن اسلاید' ?></button>
+            <button type="submit" class="btn btn-primary"><?= $editSlide ? 'به‌روزرسانی اسلاید' : 'افزودن اسلاید' ?></button>
             <?php if ($editSlide): ?>
                 <a href="<?= e(url('admin/slides.php')) ?>">لغو ویرایش</a>
             <?php endif; ?>
         </form>
     </section>
 
-    <section aria-labelledby="slides-list-title" class="margin-top-xl">
+    </div><div class="admin-section"><div class="admin-section-header"><h2 class="admin-section-title">همه اسلایدها</h2></div>
         <h2 id="slides-list-title">همه اسلایدها</h2>
 
         <?php if ($slides === []): ?>
