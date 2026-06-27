@@ -73,7 +73,7 @@ require_once __DIR__ . '/header.php';
     <!-- Metrics Grid -->
     <div class="metrics-grid">
         <div class="metric-card metric-primary">
-            <div class="metric-icon">👶</div>
+            <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg></div>
             <div class="metric-content">
                 <div class="metric-value"><?= e((string) $metrics['active_children']) ?></div>
                 <div class="metric-label">کودکان فعال</div>
@@ -82,7 +82,7 @@ require_once __DIR__ . '/header.php';
         </div>
 
         <div class="metric-card metric-secondary">
-            <div class="metric-icon">👨‍🏫</div>
+            <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
             <div class="metric-content">
                 <div class="metric-value"><?= e((string) $metrics['total_teachers']) ?></div>
                 <div class="metric-label">معلمان</div>
@@ -91,7 +91,7 @@ require_once __DIR__ . '/header.php';
         </div>
 
         <div class="metric-card metric-accent">
-            <div class="metric-icon">💰</div>
+            <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
             <div class="metric-content">
                 <div class="metric-value">$<?= e(number_format($metrics['monthly_tuition'], 2)) ?></div>
                 <div class="metric-label">شهریه این ماه</div>
@@ -100,7 +100,7 @@ require_once __DIR__ . '/header.php';
         </div>
 
         <div class="metric-card metric-info">
-            <div class="metric-icon">📅</div>
+            <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></div>
             <div class="metric-content">
                 <div class="metric-value"><?= e((string) $metrics['upcoming_events']) ?></div>
                 <div class="metric-label">رویدادهای پیش‌رو</div>
@@ -111,7 +111,7 @@ require_once __DIR__ . '/header.php';
 
     <?php if ($metrics['pending_children'] > 0): ?>
     <div class="alert alert-warning" role="alert">
-        <span class="alert-icon">📋</span>
+        <span class="alert-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></span>
         <div>
             <strong>اقدام لازم:</strong> <?= e((string) $metrics['pending_children']) ?> ثبت‌نام در انتظار تأیید است.
             <a href="<?= e(url('admin/children.php?status=pending')) ?>" class="alert-link">بررسی ←</a>
@@ -125,28 +125,28 @@ require_once __DIR__ . '/header.php';
             <h2 class="admin-section-title">اقدامات سریع</h2>
         </div>
         <div class="quick-actions-grid">
-            <a href="<?= e(url('admin/children.php')) ?>" class="quick-action-card">
-                <span class="quick-action-icon">👶</span>
+            <a href="<?= e(url('admin/children.php')) ?>" class="quick-action">
+                <span class="quick-action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg></span>
                 <span class="quick-action-text">مدیریت کودکان</span>
             </a>
-            <a href="<?= e(url('admin/attendance.php')) ?>" class="quick-action-card">
-                <span class="quick-action-icon">✅</span>
+            <a href="<?= e(url('admin/attendance.php')) ?>" class="quick-action">
+                <span class="quick-action-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>
                 <span class="quick-action-text">ثبت حضور و غیاب</span>
             </a>
-            <a href="<?= e(url('admin/events.php')) ?>" class="quick-action-card">
-                <span class="quick-action-icon">📅</span>
+            <a href="<?= e(url('admin/events.php')) ?>" class="quick-action">
+                <span class="quick-action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></span>
                 <span class="quick-action-text">افزودن رویداد</span>
             </a>
-            <a href="<?= e(url('admin/news.php')) ?>" class="quick-action-card">
-                <span class="quick-action-icon">📰</span>
+            <a href="<?= e(url('admin/news.php')) ?>" class="quick-action">
+                <span class="quick-action-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"/></svg></span>
                 <span class="quick-action-text">ارسال خبر</span>
             </a>
-            <a href="<?= e(url('admin/teachers.php')) ?>" class="quick-action-card">
-                <span class="quick-action-icon">👨‍🏫</span>
+            <a href="<?= e(url('admin/teachers.php')) ?>" class="quick-action">
+                <span class="quick-action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
                 <span class="quick-action-text">مدیریت معلمان</span>
             </a>
-            <a href="<?= e(url('admin/classrooms.php')) ?>" class="quick-action-card">
-                <span class="quick-action-icon">🏫</span>
+            <a href="<?= e(url('admin/classrooms.php')) ?>" class="quick-action">
+                <span class="quick-action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
                 <span class="quick-action-text">کلاس‌ها</span>
             </a>
         </div>
@@ -169,7 +169,7 @@ require_once __DIR__ . '/header.php';
                 <div class="quick-list">
                     <?php foreach ($recentRegistrations as $child): ?>
                         <div class="quick-list-item">
-                            <div class="quick-list-avatar">👶</div>
+                            <div class="quick-list-avatar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg></div>
                             <div class="quick-list-content">
                                 <div class="quick-list-title">
                                     <a href="<?= e(url('admin/child-detail.php?id=' . $child['id'])) ?>">
@@ -210,7 +210,7 @@ require_once __DIR__ . '/header.php';
                 <div class="quick-list">
                     <?php foreach ($upcomingEvents as $event): ?>
                         <div class="quick-list-item">
-                            <div class="quick-list-avatar">📅</div>
+                            <div class="quick-list-avatar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></div>
                             <div class="quick-list-content">
                                 <div class="quick-list-title">
                                     <a href="<?= e(url('admin/events.php')) ?>">

@@ -41,12 +41,6 @@ $unreadCountFa = persianNumber((string) $unreadCount);
 <body class="parent-portal-body">
     <header class="parent-header">
         <div class="parent-header-container">
-            <button class="parent-menu-toggle" aria-label="باز و بسته کردن منو" aria-expanded="false">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-
             <nav class="parent-nav" aria-label="منوی والدین">
                 <a href="<?php echo e(url('parent/index.php')); ?>" class="parent-nav-item <?php echo $currentPage === 'index.php' ? 'active' : ''; ?>" <?php echo $currentPage === 'index.php' ? 'aria-current="page"' : ''; ?>>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
