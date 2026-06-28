@@ -307,4 +307,51 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // ============================================
+    // MOBILE BOTTOM NAVIGATION
+    // ============================================
+
+    // Add haptic-style touch feedback to bottom nav items
+    var bottomNavItems = document.querySelectorAll('.mobile-bottom-nav .bottom-nav-item, .public-bottom-nav .bottom-nav-item');
+    bottomNavItems.forEach(function(item) {
+        item.addEventListener('touchstart', function() {
+            this.style.transition = 'transform 0.1s ease';
+        }, { passive: true });
+        item.addEventListener('touchend', function() {
+            var el = this;
+            setTimeout(function() {
+                el.style.transition = '';
+            }, 150);
+        }, { passive: true });
+    });
+
+    // Hide bottom nav on scroll down, show on scroll up (mobile only)
+    var bottomNav = document.querySelector('.mobile-bottom-nav');
+    if (bottomNav) {
+        var lastScrollY = 0;
+        var navHideThreshold = 10;
+        var ticking = false;
+
+        window.addEventListener('scroll', function() {
+            if (!ticking) {
+                window.requestAnimationFrame(function() {
+                    var currentScrollY = window.scrollY;
+                    var diff = currentScrollY - lastScrollY;
+
+                    if (diff > navHideThreshold && currentScrollY > 200) {
+                        bottomNav.style.transform = 'translateY(100%)';
+                        bottomNav.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
+                    } else if (diff < -navHideThreshold) {
+                        bottomNav.style.transform = 'translateY(0)';
+                        bottomNav.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
+                    }
+
+                    lastScrollY = currentScrollY;
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }, { passive: true });
+    }
 });
