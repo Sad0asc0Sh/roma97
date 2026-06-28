@@ -299,5 +299,11 @@ INSERT INTO settings (meta_key, meta_value) VALUES
     ('site_name', 'Rooma'),
     ('site_description', 'Welcome to Rooma Daycare'),
     ('logo', ''),
-    ('contact_phone', '+98 21 1234 5678')
+    ('contact_phone', '+98 21 1234 5678'),
+    ('contact_email', 'info@rooma.ir'),
+    ('site_address', 'تهران، خیابان ولیعصر، کوچه گلستان'),
+    ('working_hours', 'شنبه تا پنجشنبه ۷:۰۰ الی ۱۷:۰۰'),
+    ('instagram', ''),
+    ('telegram', ''),
+    ('whatsapp', '')
 ON DUPLICATE KEY UPDATE meta_value = meta_value;

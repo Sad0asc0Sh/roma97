@@ -24,16 +24,28 @@ function getSettings(PDO $pdo): array
         'site_description' => 'به مهد کودک روما خوش آمدید',
         'logo' => '',
         'contact_phone' => '+98 21 1234 5678',
+        'contact_email' => 'info@rooma.ir',
+        'site_address' => '',
+        'working_hours' => '',
+        'instagram' => '',
+        'telegram' => '',
+        'whatsapp' => '',
     ];
 
     $statement = $pdo->prepare(
-        'SELECT meta_key, meta_value FROM settings WHERE meta_key IN (:site_name, :site_description, :logo, :contact_phone)'
+        'SELECT meta_key, meta_value FROM settings WHERE meta_key IN (:site_name, :site_description, :logo, :contact_phone, :contact_email, :site_address, :working_hours, :instagram, :telegram, :whatsapp)'
     );
     $statement->execute([
         ':site_name' => 'site_name',
         ':site_description' => 'site_description',
         ':logo' => 'logo',
         ':contact_phone' => 'contact_phone',
+        ':contact_email' => 'contact_email',
+        ':site_address' => 'site_address',
+        ':working_hours' => 'working_hours',
+        ':instagram' => 'instagram',
+        ':telegram' => 'telegram',
+        ':whatsapp' => 'whatsapp',
     ]);
 
     while ($row = $statement->fetch()) {
@@ -165,6 +177,12 @@ try {
         'site_description' => 'به مهد کودک روما خوش آمدید',
         'logo' => '',
         'contact_phone' => '+98 21 1234 5678',
+        'contact_email' => 'info@rooma.ir',
+        'site_address' => '',
+        'working_hours' => '',
+        'instagram' => '',
+        'telegram' => '',
+        'whatsapp' => '',
     ];
 }
 
@@ -228,6 +246,12 @@ if (isPostRequest()) {
     $siteName = trim((string) ($_POST['site_name'] ?? ''));
     $siteDescription = trim((string) ($_POST['site_description'] ?? ''));
     $contactPhone = trim((string) ($_POST['contact_phone'] ?? ''));
+    $contactEmail = trim((string) ($_POST['contact_email'] ?? ''));
+    $siteAddressVal = trim((string) ($_POST['site_address'] ?? ''));
+    $workingHours = trim((string) ($_POST['working_hours'] ?? ''));
+    $instagram = trim((string) ($_POST['instagram'] ?? ''));
+    $telegram = trim((string) ($_POST['telegram'] ?? ''));
+    $whatsapp = trim((string) ($_POST['whatsapp'] ?? ''));
     $newLogo = null;
 
     if ($siteName === '' || settingsStringLength($siteName) > 100) {
@@ -245,6 +269,21 @@ if (isPostRequest()) {
         redirect(url('admin/settings.php'));
     }
 
+    if ($contactEmail !== '' && settingsStringLength($contactEmail) > 100) {
+        setFlash('error', 'ایمیل معتبر وارد کنید.');
+        redirect(url('admin/settings.php'));
+    }
+
+    if (settingsStringLength($siteAddressVal) > 255) {
+        setFlash('error', 'آدرس بسیار طولانی است.');
+        redirect(url('admin/settings.php'));
+    }
+
+    if (settingsStringLength($workingHours) > 100) {
+        setFlash('error', 'ساعت کاری بسیار طولانی است.');
+        redirect(url('admin/settings.php'));
+    }
+
     try {
         $newLogo = handleLogoUpload($_FILES['logo'] ?? []);
         $logoPath = $newLogo ?? $settings['logo'];
@@ -253,6 +292,12 @@ if (isPostRequest()) {
         saveSetting($pdo, 'site_description', $siteDescription);
         saveSetting($pdo, 'logo', $logoPath);
         saveSetting($pdo, 'contact_phone', $contactPhone);
+        saveSetting($pdo, 'contact_email', $contactEmail);
+        saveSetting($pdo, 'site_address', $siteAddressVal);
+        saveSetting($pdo, 'working_hours', $workingHours);
+        saveSetting($pdo, 'instagram', $instagram);
+        saveSetting($pdo, 'telegram', $telegram);
+        saveSetting($pdo, 'whatsapp', $whatsapp);
 
         if ($newLogo !== null) {
             deleteLogoFile($settings['logo']);
@@ -319,6 +364,48 @@ require_once __DIR__ . '/header.php';
                         maxlength="30" placeholder="+98 21 1234 5678"
                         value="<?= e($settings['contact_phone'] ?? '') ?>">
                     <small style="color:var(--muted);font-size:0.85rem;">نمایش در صفحه اصلی سایت</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="contact_email" class="form-label">ایمیل</label>
+                    <input type="email" id="contact_email" name="contact_email" class="form-control"
+                        maxlength="100" placeholder="info@rooma.ir"
+                        value="<?= e($settings['contact_email'] ?? '') ?>">
+                </div>
+
+                <div class="form-group">
+                    <label for="site_address" class="form-label">آدرس</label>
+                    <input type="text" id="site_address" name="site_address" class="form-control"
+                        maxlength="255" placeholder="تهران، خیابان ..."
+                        value="<?= e($settings['site_address'] ?? '') ?>">
+                </div>
+
+                <div class="form-group">
+                    <label for="working_hours" class="form-label">ساعت کاری</label>
+                    <input type="text" id="working_hours" name="working_hours" class="form-control"
+                        maxlength="100" placeholder="شنبه تا پنجشنبه ..."
+                        value="<?= e($settings['working_hours'] ?? '') ?>">
+                </div>
+
+                <div class="form-group">
+                    <label for="instagram" class="form-label">اینستاگرام (لینک)</label>
+                    <input type="url" id="instagram" name="instagram" class="form-control"
+                        maxlength="255" placeholder="https://instagram.com/..."
+                        value="<?= e($settings['instagram'] ?? '') ?>">
+                </div>
+
+                <div class="form-group">
+                    <label for="telegram" class="form-label">تلگرام (لینک)</label>
+                    <input type="url" id="telegram" name="telegram" class="form-control"
+                        maxlength="255" placeholder="https://t.me/..."
+                        value="<?= e($settings['telegram'] ?? '') ?>">
+                </div>
+
+                <div class="form-group">
+                    <label for="whatsapp" class="form-label">واتس‌اپ (شماره)</label>
+                    <input type="text" id="whatsapp" name="whatsapp" class="form-control"
+                        maxlength="30" placeholder="+98 912 ..."
+                        value="<?= e($settings['whatsapp'] ?? '') ?>">
                 </div>
 
                 <?php if ($settings['logo'] !== ''): ?>

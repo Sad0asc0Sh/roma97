@@ -86,6 +86,37 @@ function siteContactPhone(): string
     return getSetting('contact_phone', '+98 21 1234 5678');
 }
 
+
+function siteContactEmail(): string
+{
+    return getSetting('contact_email', 'info@rooma.ir');
+}
+
+function siteAddress(): string
+{
+    return getSetting('site_address', 'تهران، خیابان ولیعصر، کوچه گلستان');
+}
+
+function siteWorkingHours(): string
+{
+    return getSetting('working_hours', 'شنبه تا پنجشنبه ۷:۰۰ الی ۱۷:۰۰');
+}
+
+function siteInstagram(): string
+{
+    return getSetting('instagram', '');
+}
+
+function siteTelegram(): string
+{
+    return getSetting('telegram', '');
+}
+
+function siteWhatsApp(): string
+{
+    return getSetting('whatsapp', '');
+}
+
 function setFlash(string $key, string $message): void
 {
     if (session_status() !== PHP_SESSION_ACTIVE) {
