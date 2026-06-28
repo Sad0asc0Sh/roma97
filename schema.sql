@@ -274,6 +274,8 @@ CREATE TABLE IF NOT EXISTS audit_log (
     INDEX idx_audit_entity (entity_type, entity_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+ALTER TABLE slides ADD COLUMN IF NOT EXISTS subtitle VARCHAR(500) DEFAULT NULL AFTER title;
+
 -- ─── Post-create migrations for existing installations ────────────────────
 -- BUG-H05: Add missing composite index on messages(parent_id, is_read)
 -- Uses try/catch via stored procedure for cross-version compatibility.

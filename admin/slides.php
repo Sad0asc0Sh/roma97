@@ -19,7 +19,7 @@ function slideStringLength(string $value): int
 
 function findSlide(PDO $pdo, int $id): ?array
 {
-    $statement = $pdo->prepare('SELECT id, title, image, sort_order, created_at FROM slides WHERE id = :id LIMIT 1');
+    $statement = $pdo->prepare('SELECT id, title, subtitle, image, sort_order, created_at FROM slides WHERE id = :id LIMIT 1');
     $statement->execute([':id' => $id]);
     $slide = $statement->fetch();
 
@@ -29,7 +29,7 @@ function findSlide(PDO $pdo, int $id): ?array
 function getAllSlides(PDO $pdo, int $limit = 20, int $offset = 0): array
 {
     $statement = $pdo->prepare(
-        'SELECT id, title, image, sort_order, created_at FROM slides ORDER BY sort_order ASC, created_at DESC'
+        'SELECT id, title, subtitle, image, sort_order, created_at FROM slides ORDER BY sort_order ASC, created_at DESC'
         . ' LIMIT ' . (int) $limit . ' OFFSET ' . (int) $offset
     );
     $statement->execute();
@@ -98,7 +98,7 @@ function uploadSlideImage(array $file, bool $required): ?string
         throw new RuntimeException('تصویر اسلاید نامعتبر است.');
     }
 
-    if (($file['size'] ?? 0) > 512000) {
+    if (($file['size'] ?? 0) > 2048000) {
         throw new RuntimeException('تصویر اسلاید نامعتبر است.');
     }
 
@@ -114,6 +114,7 @@ function uploadSlideImage(array $file, bool $required): ?string
         'jpeg' => ['image/jpeg'],
         'png' => ['image/png'],
         'gif' => ['image/gif'],
+        'webp' => ['image/webp'],
     ];
 
     if (!array_key_exists($extension, $allowedTypes)) {
@@ -171,6 +172,7 @@ if (isPostRequest()) {
         if ($action === 'save_slide') {
             $slideId = parseSlideId($_POST['slide_id'] ?? null);
             $title = trim((string) ($_POST['title'] ?? ''));
+            $subtitle = trim((string) ($_POST['subtitle'] ?? ''));
             $sortOrder = parseSortOrder($_POST['sort_order'] ?? null);
             $isEdit = $slideId > 0;
             $currentSlide = null;
@@ -200,10 +202,11 @@ if (isPostRequest()) {
 
             if ($isEdit) {
                 $statement = $pdo->prepare(
-                    'UPDATE slides SET title = :title, image = :image, sort_order = :sort_order WHERE id = :id'
+                    'UPDATE slides SET title = :title, subtitle = :subtitle, image = :image, sort_order = :sort_order WHERE id = :id'
                 );
                 $statement->execute([
                     ':title' => $title,
+                    ':subtitle' => $subtitle !== '' ? $subtitle : null,
                     ':image' => $imagePath,
                     ':sort_order' => $sortOrder,
                     ':id' => $slideId,
@@ -219,10 +222,11 @@ if (isPostRequest()) {
             }
 
             $statement = $pdo->prepare(
-                'INSERT INTO slides (title, image, sort_order) VALUES (:title, :image, :sort_order)'
+                'INSERT INTO slides (title, subtitle, image, sort_order) VALUES (:title, :subtitle, :image, :sort_order)'
             );
             $statement->execute([
                 ':title' => $title,
+                ':subtitle' => $subtitle !== '' ? $subtitle : null,
                 ':image' => $imagePath,
                 ':sort_order' => $sortOrder,
             ]);
@@ -342,6 +346,7 @@ require_once __DIR__ . '/header.php';
         <div class="admin-section-header">
             <h2 class="admin-section-title" id="slide-form-title">&#10010; <?= $editSlide ? 'ویرایش اسلاید' : 'افزودن اسلاید' ?></h2>
         </div>
+        <div style="margin-bottom:16px;padding:12px 16px;background:#f0f9f4;border-right:3px solid #3D8B63;border-radius:8px;font-size:0.875rem;line-height:2"><strong>&#128161; راهنمای ابعاد بنر:</strong> دسکتاپ: ۱۹۲۰×۶۰۰ | تبلت: ۱۰۲۴×۴۵۰ | موبایل: ۷۵۰×۱۰۰۰ — فرمت: JPG/PNG/WebP — حداکثر ۲MB — نسبت ایده‌آل: <strong>۱۶:۵</strong></div>
         <form method="post" action="<?= e(url('admin/slides.php')) ?>" enctype="multipart/form-data" novalidate>
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="save_slide">
@@ -356,6 +361,14 @@ require_once __DIR__ . '/header.php';
                     placeholder="عنوان اسلاید را وارد کنید..."
                     value="<?= e($editSlide['title'] ?? '') ?>"
                     required>
+            </div>
+
+            <div class="form-group">
+                <label for="subtitle" class="form-label">زیرعنوان <span style="color:var(--muted);font-weight:400">(اختیاری)</span></label>
+                <input type="text" id="subtitle" name="subtitle" class="form-control"
+                    maxlength="500"
+                    placeholder="متن توضیحی زیر عنوان بنر"
+                    value="<?= e($editSlide['subtitle'] ?? '') ?>">
             </div>
 
             <div class="form-group">
@@ -377,9 +390,9 @@ require_once __DIR__ . '/header.php';
             <div class="form-group">
                 <label for="image" class="form-label">تصویر <?= $editSlide ? '(اختیاری - برای تغییر)' : '' ?></label>
                 <input type="file" id="image" name="image" class="form-control"
-                    accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif"
+                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                     <?= $editSlide ? '' : 'required' ?>>
-                <small style="color:var(--muted);font-size:0.85rem;">فرمتهای مجاز: JPG، PNG، GIF. حداکثر حجم: ۵۰۰ کیلوبایت.</small>
+                <small style="color:var(--muted);font-size:0.85rem;">فرمت: JPG, PNG, WebP — حداکثر ۲ مگابایت — ابعاد پیشنهادی: ۱۹۲۰×۶۰۰ px</small>
             </div>
 
             <div class="form-actions">

@@ -105,7 +105,10 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
                     <a href="<?php echo e(url('admin/classrooms.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'classrooms.php' ? 'active' : ''; ?>">
                         <span class="nav-text">کلاس‌ها</span>
                     </a>
-                </div>
+
+                    <a href="<?php echo e(url('admin/parents.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'parents.php' ? 'active' : ''; ?>">
+                        <span class="nav-text">&#128101; مدیریت والدین</span>
+                    </a>                </div>
             </div>
 
             <div class="admin-nav-group">

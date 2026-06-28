@@ -109,6 +109,16 @@ require_once __DIR__ . '/header.php';
         </div>
     </div>
 
+    <?php if ($metrics['pending_parents'] > 0): ?>
+    <div class="alert alert-warning" role="alert">
+        <span class="alert-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span>
+        <div>
+            <strong>ثبتنام جدید والدین:</strong> <?= e((string) $metrics['pending_parents']) ?> والد در انتظار تأیید هویت هستند.
+            <a href="<?= e(url('admin/parents.php')) ?>" class="alert-link">بررسی و تأیید ←</a>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <?php if ($metrics['pending_children'] > 0): ?>
     <div class="alert alert-warning" role="alert">
         <span class="alert-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></span>

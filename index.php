@@ -11,7 +11,7 @@ try {
     initializeCmsTables();
     $pdo = getDb();
     $statement = $pdo->prepare(
-        'SELECT id, title, image FROM slides ORDER BY sort_order ASC, created_at DESC'
+        'SELECT id, title, subtitle, image FROM slides ORDER BY sort_order ASC, created_at DESC'
     );
     $statement->execute();
     $slides = $statement->fetchAll();
@@ -78,7 +78,7 @@ require_once __DIR__ . '/templates/header.php';
 ?>
 
 <!-- Hero Slider -->
-<section class="hero-slider" aria-label="تصاویر برگزیده مهد کودک <?= e(siteName()) ?>">
+<section class="hero-slider-wrapper" aria-label="تصاویر برگزیده مهد کودک <?= e(siteName()) ?>">
     <?php if ($slides === []): ?>
         <div class="hero-fallback">
             <div class="container">
@@ -115,6 +115,7 @@ require_once __DIR__ . '/templates/header.php';
                         <div class="slide-overlay">
                             <div class="slide-caption">
                                 <h2><?= e($slide['title']) ?></h2>
+                                <?php if (!empty($slide['subtitle'])): ?><span class="slide-subtitle"><?= e($slide['subtitle']) ?></span><?php endif; ?>
                             </div>
                         </div>
                     </div>
