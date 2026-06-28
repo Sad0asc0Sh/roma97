@@ -109,7 +109,7 @@ function uploadChildPhoto(array $file): ?string
         @touch($indexFile);
     }
 
-    $fileName = uniqid('child_', true) . '.' . $extension;
+    $fileName = 'child-' . bin2hex(random_bytes(16)) . '.' . $extension;
     $destination = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
 
     if (!move_uploaded_file($tmpName, $destination)) {

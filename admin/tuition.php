@@ -52,12 +52,12 @@ try {
 
         $sql = <<<SQL
 INSERT INTO tuition_payments (parent_id, child_id, amount, payment_date, payment_method, month_year, notes)
-VALUES (:pid, :cid, :amount, :pdate, :pmeth, :myear, :notes)
+VALUES (:pid, :cid, :amount, :pdate, :pmeth, :myear, :notes) AS new
 ON DUPLICATE KEY UPDATE
-    amount = VALUES(amount),
-    payment_date = VALUES(payment_date),
-    payment_method = VALUES(payment_method),
-    notes = VALUES(notes)
+    amount         = new.amount,
+    payment_date   = new.payment_date,
+    payment_method = new.payment_method,
+    notes          = new.notes
 SQL;
         $stmt = $pdo->prepare($sql);
         $stmt->execute([

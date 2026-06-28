@@ -60,10 +60,12 @@ if ($lockedOut) {
             if ($admin && password_verify($password, $admin['password'])) {
                 resetLoginAttempts('admin_login', $username);
                 session_regenerate_id(true);
+                $_SESSION['last_activity'] = time();
                 $_SESSION['admin_logged_in'] = true;
                 $_SESSION['admin_id'] = (int) $admin['id'];
                 $_SESSION['admin_username'] = $admin['username'];
                 recordAudit('auth.login', 'admin', (int) $admin['id']);
+                rotateCsrfToken();
                 redirect(url('admin/index.php'));
             }
 

@@ -128,7 +128,7 @@ function uploadNewsImage(array $file): ?string
         throw new RuntimeException('بارگذاری تصویر خبر در دسترس نیست.');
     }
 
-    $fileName = uniqid('news_', true) . '.' . $extension;
+    $fileName = 'news-' . bin2hex(random_bytes(16)) . '.' . $extension;
     $destination = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
 
     if (!move_uploaded_file($tmpName, $destination)) {

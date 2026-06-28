@@ -190,53 +190,77 @@ function enforceHttps(): void
 }
 
 /**
- * Validate file upload security
+ * Validate file upload security.
+ *
+ * Returns an empty array when the upload passes all checks.  Each element is a
+ * human-readable error string when something is wrong.
+ *
+ * NOTE: This helper is deliberately conservative. It verifies extension, MIME
+ * type (via finfo), image content (via getimagesize), and ensures the file was
+ * produced by an HTTP POST upload.  Individual upload handlers may add further
+ * constraints (e.g. max dimensions, PDF-only, etc.).
  */
 function validateUploadSecurity(array $file, array $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif']): array
 {
     $errors = [];
-    
-    // Check for upload errors
-    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK && ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
-        $errors[] = 'File upload failed with error code: ' . ($file['error'] ?? 'unknown');
+
+    // Check for upload errors (UPLOAD_ERR_NO_FILE is allowed — caller decides)
+    $errorCode = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($errorCode !== UPLOAD_ERR_OK && $errorCode !== UPLOAD_ERR_NO_FILE) {
+        $errors[] = 'File upload failed with error code: ' . $errorCode;
         return $errors;
     }
-    
-    // Check file size
-    $maxSize = defined('MAX_UPLOAD_SIZE') ? MAX_UPLOAD_SIZE : 512000;
+
+    // No file uploaded at all — return without errors so the caller can handle
+    // the "no file" case (e.g. skip photo update).
+    if ($errorCode === UPLOAD_ERR_NO_FILE) {
+        return $errors;
+    }
+
+    // Check file size (512 KB default, override with MAX_UPLOAD_SIZE constant)
+    $maxSize = defined('MAX_UPLOAD_SIZE') ? (int) MAX_UPLOAD_SIZE : 512000;
     if (($file['size'] ?? 0) > $maxSize) {
         $errors[] = 'File size exceeds maximum allowed size.';
     }
-    
+
     // Check file extension
-    $extension = strtolower(pathinfo((string) ($file['name'] ?? ''), PATHINFO_EXTENSION));
-    if (!in_array($extension, $allowedExtensions, true)) {
+    $fileName = (string) ($file['name'] ?? '');
+    $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+    if ($extension === '' || !in_array($extension, $allowedExtensions, true)) {
         $errors[] = 'File type not allowed. Allowed types: ' . implode(', ', $allowedExtensions);
     }
-    
-    // Verify it's an uploaded file
+
+    // Verify it's a genuine uploaded file (prevents directory-traversal attacks)
     $tmpName = (string) ($file['tmp_name'] ?? '');
-    if ($tmpName !== '' && !is_uploaded_file($tmpName)) {
+    if ($tmpName === '' || !is_uploaded_file($tmpName)) {
         $errors[] = 'Invalid file upload.';
+        return $errors;
     }
-    
-    // Check MIME type if finfo is available
-    if (class_exists('finfo') && $tmpName !== '' && is_uploaded_file($tmpName)) {
+
+    // Verify MIME type if finfo is available
+    if (class_exists('finfo')) {
         $finfo = new finfo(FILEINFO_MIME_TYPE);
         $mimeType = $finfo->file($tmpName);
-        
+
         $allowedMimes = [
-            'jpg' => ['image/jpeg'],
+            'jpg'  => ['image/jpeg'],
             'jpeg' => ['image/jpeg'],
-            'png' => ['image/png'],
-            'gif' => ['image/gif'],
+            'png'  => ['image/png'],
+            'gif'  => ['image/gif'],
         ];
-        
-        if (isset($allowedMimes[$extension]) && !in_array($mimeType, $allowedMimes[$extension], true)) {
+
+        if ($extension !== '' && isset($allowedMimes[$extension]) && !in_array($mimeType, $allowedMimes[$extension], true)) {
             $errors[] = 'File MIME type does not match extension.';
         }
     }
-    
+
+    // Cross-validate with getimagesize for image files
+    if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif'], true)) {
+        if (getimagesize($tmpName) === false) {
+            $errors[] = 'File is not a valid image.';
+        }
+    }
+
     return $errors;
 }
 

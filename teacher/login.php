@@ -52,9 +52,11 @@ if (isPostRequest() && $error === '') {
                 } else {
                     resetLoginAttempts('teacher_login', $email);
                     session_regenerate_id(true);
+                    $_SESSION['last_activity'] = time();
                     $_SESSION['teacher_id']   = (int) $teacher['id'];
                     recordAudit('auth.login', 'teacher', (int) $teacher['id']);
                     $_SESSION['teacher_name'] = trim($teacher['first_name'] . ' ' . $teacher['last_name']);
+                    rotateCsrfToken();
                     redirect(url('teacher/index.php'));
                 }
             } catch (Throwable $e) {

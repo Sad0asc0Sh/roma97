@@ -8,6 +8,7 @@ require_once __DIR__ . '/../includes/error_handler.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/audit.php';
 
 requireParentLogin();
 
@@ -141,7 +142,7 @@ function uploadAvatar(array $file): string
         @touch($indexFile);
     }
 
-    $fileName = uniqid('avatar_', true) . '.' . $extension;
+    $fileName = 'avatar-' . bin2hex(random_bytes(16)) . '.' . $extension;
     $destination = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
 
     if (!move_uploaded_file($tmpName, $destination)) {
@@ -228,6 +229,7 @@ if (isPostRequest()) {
 
             $_SESSION['parent_name'] = trim($infoOld['first_name'] . ' ' . $infoOld['last_name']);
             $_SESSION['parent_first_name'] = $infoOld['first_name'];
+            recordAudit('parent.update_profile', 'parent', $parentId);
             setFlash('success', 'پروفایل به‌روزرسانی شد.');
             redirect(url('parent/profile.php'));
         }
@@ -255,6 +257,7 @@ if (isPostRequest()) {
                 ':id' => $parentId,
             ]);
 
+            recordAudit('auth.password_change', 'parent', $parentId);
             setFlash('success', 'رمز عبور تغییر کرد.');
             redirect(url('parent/profile.php'));
         }

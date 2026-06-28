@@ -165,12 +165,12 @@ try {
         $upsert = $pdo->prepare(
             <<<'SQL'
 INSERT INTO attendance (child_id, attendance_date, status, check_in, check_out, notes)
-VALUES (:child_id, :attendance_date, :status, :check_in, :check_out, :notes)
+VALUES (:child_id, :attendance_date, :status, :check_in, :check_out, :notes) AS new
 ON DUPLICATE KEY UPDATE
-    status = VALUES(status),
-    check_in = VALUES(check_in),
-    check_out = VALUES(check_out),
-    notes = VALUES(notes)
+    status    = new.status,
+    check_in  = new.check_in,
+    check_out = new.check_out,
+    notes     = new.notes
 SQL
         );
 

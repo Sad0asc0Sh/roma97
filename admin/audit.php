@@ -19,7 +19,10 @@ function auditActionLabel(string $action): string
 {
     $labels = [
         'auth.login'              => 'ورود به سیستم',
+        'auth.login_token'        => 'ورود با توکن یکبار مصرف',
+        'auth.logout'             => 'خروج از سیستم',
         'auth.password_change'    => 'تغییر رمز عبور',
+        'auth.register'           => 'ثبت‌نام حساب جدید',
         'settings.update'         => 'به‌روزرسانی تنظیمات سایت',
         'news.create'            => 'ایجاد خبر',
         'news.update'            => 'ویرایش خبر',

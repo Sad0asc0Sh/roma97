@@ -105,7 +105,7 @@ if (isPostRequest()) {
                 }
             } catch (Throwable $e) {
                 error_log($e->getMessage());
-                setFlash('error', 'ذخیره کلاس امکان‌پذیر نیست: ' . $e->getMessage());
+                setFlash('error', 'ذخیره کلاس امکان‌پذیر نیست. لطفاً دوباره تلاش کنید.');
             }
             redirect(url('admin/classrooms.php'));
         }

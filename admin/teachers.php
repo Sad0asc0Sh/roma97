@@ -186,6 +186,19 @@ if (isPostRequest()) {
 
         if (empty($formErrors)) {
             try {
+                // Ensure email is unique (exclude the current teacher when editing).
+                $emailCheck = $pdo->prepare(
+                    'SELECT id FROM teachers WHERE email = :email AND id != :tid LIMIT 1'
+                );
+                $emailCheck->execute([
+                    ':email' => $fields['email'],
+                    ':tid'   => $teacherId > 0 ? $teacherId : -1,
+                ]);
+                if ($emailCheck->fetchColumn() !== false) {
+                    $formErrors[] = 'معلم دیگری با این ایمیل قبلاً ثبت شده است.';
+                    goto skipSave;
+                }
+
                 $avatarPath      = handleTeacherUpload('avatar', 'avatars');
                 $certPath        = handleTeacherUpload('certificate_file', 'certificates');
 
@@ -264,8 +277,10 @@ if (isPostRequest()) {
                 }
             } catch (Throwable $e) {
                 error_log($e->getMessage());
-                setFlash('error', 'ذخیره معلم ممکن نیست. ' . $e->getMessage());
+                setFlash('error', 'ذخیره معلم ممکن نیست. لطفاً دوباره تلاش کنید.');
             }
+
+            skipSave:
             redirect(url('admin/teachers.php'));
         }
         // Fall through to show form with errors

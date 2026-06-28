@@ -6,6 +6,7 @@ require_once __DIR__ . '/includes/error_handler.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/csrf.php';
 require_once __DIR__ . '/includes/db.php';
+require_once __DIR__ . '/includes/audit.php';
 
 if (isParentLoggedIn()) {
     redirect(url('parent/index.php'));
@@ -70,6 +71,11 @@ if (isPostRequest()) {
         $errors[] = 'درخواست نامعتبر است. لطفاً دوباره تلاش کنید.';
     }
 
+    // Rate-limit registrations per IP to prevent bulk account creation.
+    if ($errors === [] && !checkBruteForce('parent_register', null)) {
+        $errors[] = 'تعداد دفعات ثبتنام بیش از حد مجاز است. لطفاً چند دقیقه دیگر تلاش کنید.';
+    }
+
     if (!isValidParentName($old['first_name'])) {
         $errors[] = 'لطفاً نام معتبر وارد کنید.';
     }
@@ -107,6 +113,10 @@ if (isPostRequest()) {
         }
     }
 
+    if ($errors !== [] && $pdo instanceof PDO) {
+        recordFailedAttempt('parent_register');
+    }
+
     if ($errors === [] && $pdo instanceof PDO) {
         try {
             $statement = $pdo->prepare(
@@ -122,6 +132,9 @@ if (isPostRequest()) {
                 ':status' => 'pending',
                 ':email_verified' => 0,
             ]);
+
+            $newParentId = (int) $pdo->lastInsertId();
+            recordAudit('auth.register', 'parent', $newParentId > 0 ? $newParentId : null, ['email' => $old['email']]);
 
             setFlash('success', 'ثبتنام شما با موفقیت انجام شد. منتظر تأیید مدیر بمانید.');
             redirect(url('login.php'));

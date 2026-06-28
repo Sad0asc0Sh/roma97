@@ -18,7 +18,7 @@ function startSecureSession(): void
 
     // Use the isHttps() function for consistency
     $isSecure = isHttps();
-    
+
     // Also set session.cookie_secure in ini
     ini_set('session.cookie_secure', $isSecure ? '1' : '0');
 
@@ -32,6 +32,71 @@ function startSecureSession(): void
     ]);
 
     session_start();
+
+    // Idle-timeout enforcement. A rolling window guards against a stolen session
+    // cookie on an abandoned device: even though the cookie persists (lifetime 0),
+    // activity older than SESSION_IDLE_TIMEOUT is treated as expired.
+    enforceSessionIdleTimeout();
+}
+
+/**
+ * Hard cap on inactivity. Defaults to 2 hours; override via SESSION_IDLE_TIMEOUT
+ * in config.local.php (seconds). Falls back to 7200 when undefined.
+ */
+function sessionIdleTimeoutSeconds(): int
+{
+    $configured = defined('SESSION_IDLE_TIMEOUT') ? (int) SESSION_IDLE_TIMEOUT : 0;
+
+    return $configured > 0 ? $configured : 7200;
+}
+
+/**
+ * Expire the session if it has been idle for too long. Clears the authentication
+ * markers so the role guards (requireLogin / requireParentLogin / requireTeacherLogin)
+ * redirect to the login page on the next request.
+ */
+function enforceSessionIdleTimeout(): void
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        return;
+    }
+
+    $now = time();
+
+    if (!isset($_SESSION['last_activity'])) {
+        $_SESSION['last_activity'] = $now;
+
+        return;
+    }
+
+    if (($now - (int) $_SESSION['last_activity']) > sessionIdleTimeoutSeconds()) {
+        // Session expired by inactivity — destroy it cleanly and start fresh.
+        $_SESSION = [];
+
+        if (ini_get('session.use_cookies')) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                '',
+                $now - 42000,
+                $params['path'],
+                $params['domain'],
+                $params['secure'],
+                $params['httponly']
+            );
+        }
+
+        session_destroy();
+        session_start();
+        session_regenerate_id(true);
+
+        return;
+    }
+
+    // Roll the activity timestamp. We do NOT regenerate the id on every request
+    // (that breaks concurrent requests / back-button navigation); the login flows
+    // already regenerate on privilege change.
+    $_SESSION['last_activity'] = $now;
 }
 
 startSecureSession();
@@ -192,6 +257,16 @@ function resetLoginAttempts(string $context = 'login', ?string $identifier = nul
     } catch (Throwable $e) {
         error_log('resetLoginAttempts failed: ' . $e->getMessage());
     }
+}
+
+/**
+ * Invalidate any CSRF token carried over in the session. Call this right after
+ * session_regenerate_id() on a successful login so a token issued to the
+ * pre-authentication (anonymous) session cannot be reused on the authenticated one.
+ */
+function rotateCsrfToken(): void
+{
+    unset($_SESSION['csrf_token']);
 }
 
 function isLoggedIn(): bool

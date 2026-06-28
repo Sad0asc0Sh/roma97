@@ -139,7 +139,7 @@ function uploadSlideImage(array $file, bool $required): ?string
         throw new RuntimeException('بارگذاری تصویر اسلاید در دسترس نیست.');
     }
 
-    $fileName = uniqid('slide_', true) . '.' . $extension;
+    $fileName = 'slide-' . bin2hex(random_bytes(16)) . '.' . $extension;
     $destination = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
 
     if (!move_uploaded_file($tmpName, $destination)) {

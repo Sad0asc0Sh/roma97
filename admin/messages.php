@@ -44,29 +44,59 @@ if (isPostRequest() && isset($_POST['send_message'])) {
                 $sentCount = 0;
 
                 if ($isBroadcast) {
-                    // Fan-out: insert one row per parent so each has independent read state
-                    $parentsListStmt = $pdo->query('SELECT id FROM parents ORDER BY id');
-                    while (($pid = $parentsListStmt->fetchColumn()) !== false) {
-                        $insertStmt->execute(['admin', $adminId, (int) $pid, $subject, $body]);
-                        $sentCount++;
-                    }
+                    // Fan-out: insert one row per ACTIVE parent so each has independent
+                    // read state. Suspended/pending parents should not receive broadcasts.
+                    // Wrapped in a transaction so the fan-out is all-or-nothing.
+                    $pdo->beginTransaction();
+                    try {
+                        $parentsListStmt = $pdo->prepare(
+                            "SELECT id FROM parents WHERE status = 'active' ORDER BY id"
+                        );
+                        $parentsListStmt->execute();
 
-                    if ($sentCount === 0) {
-                        // No parents exist — insert a single NULL row so the admin still sees it in sent list
-                        $insertStmt->execute(['admin', $adminId, null, $subject, $body]);
-                        $sentCount = 1;
+                        while (($pid = $parentsListStmt->fetchColumn()) !== false) {
+                            $insertStmt->execute(['admin', $adminId, (int) $pid, $subject, $body]);
+                            $sentCount++;
+                        }
+
+                        if ($sentCount === 0) {
+                            // No active parents — insert a single NULL row so the admin
+                            // still sees it in sent list (and the broadcast is recorded).
+                            $insertStmt->execute(['admin', $adminId, null, $subject, $body]);
+                            $sentCount = 1;
+                        }
+
+                        $pdo->commit();
+                    } catch (Throwable $inner) {
+                        if ($pdo->inTransaction()) {
+                            $pdo->rollBack();
+                        }
+                        throw $inner;
                     }
 
                     recordAudit('message.send', 'message', null, ['broadcast' => true, 'recipients' => $sentCount]);
                 } else {
-                    $insertStmt->execute(['admin', $adminId, $recipientId, $subject, $body]);
-                    $sentCount = 1;
-                    recordAudit('message.send', 'message', (int) $pdo->lastInsertId(), ['recipient_id' => $recipientId]);
+                    // Validate that the chosen recipient is a real active parent before
+                    // sending, so an admin can't address a suspended/deleted account.
+                    $verifyStmt = $pdo->prepare(
+                        'SELECT id FROM parents WHERE id = :id AND status = :active LIMIT 1'
+                    );
+                    $verifyStmt->execute([':id' => $recipientId, ':active' => 'active']);
+
+                    if ($verifyStmt->fetchColumn() === false) {
+                        $error = 'گیرنده انتخاب‌شده معتبر یا فعال نیست.';
+                    } else {
+                        $insertStmt->execute(['admin', $adminId, $recipientId, $subject, $body]);
+                        $sentCount = 1;
+                        recordAudit('message.send', 'message', (int) $pdo->lastInsertId(), ['recipient_id' => $recipientId]);
+                    }
                 }
 
-                $success = $isBroadcast
-                    ? 'پیام با موفقیت به ' . persianNumber((string) $sentCount) . ' والد ارسال شد.'
-                    : 'پیام با موفقیت ارسال شد.';
+                if ($error === '') {
+                    $success = $isBroadcast
+                        ? 'پیام با موفقیت به ' . persianNumber((string) $sentCount) . ' والد ارسال شد.'
+                        : 'پیام با موفقیت ارسال شد.';
+                }
             } catch (Throwable $e) {
                 error_log($e->getMessage());
                 $error = 'ارسال پیام ناموفق بود.';
@@ -75,8 +105,8 @@ if (isPostRequest() && isset($_POST['send_message'])) {
     }
 }
 
-// Fetch Parents for dropdown
-$parentsStmt = $pdo->query('SELECT id, first_name, last_name, email FROM parents ORDER BY last_name, first_name');
+// Fetch Parents for dropdown (only active ones can receive messages)
+$parentsStmt = $pdo->query("SELECT id, first_name, last_name, email FROM parents WHERE status = 'active' ORDER BY last_name, first_name");
 $parents = $parentsStmt->fetchAll();
 
 // Fetch Sent Messages (paginated)

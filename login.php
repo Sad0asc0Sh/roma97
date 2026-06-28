@@ -72,10 +72,14 @@ if (isPostRequest() && $error === '') {
                 resetLoginAttempts('parent_login', $email);
 
                 session_regenerate_id(true);
+                $_SESSION['last_activity'] = time();
                 $_SESSION['parent_id'] = (int) $parent['id'];
                 recordAudit('auth.login', 'parent', (int) $parent['id']);
                 $_SESSION['parent_name'] = trim($parent['first_name'] . ' ' . $parent['last_name']);
                 $_SESSION['parent_first_name'] = (string) $parent['first_name'];
+
+                // Drop the anonymous CSRF token so it cannot be reused post-login.
+                rotateCsrfToken();
 
                 redirect(url('parent/index.php'));
             }

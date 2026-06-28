@@ -48,8 +48,8 @@ function getSettings(PDO $pdo): array
 function saveSetting(PDO $pdo, string $key, string $value): void
 {
     $statement = $pdo->prepare(
-        'INSERT INTO settings (meta_key, meta_value) VALUES (:meta_key, :meta_value)
-         ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)'
+        "INSERT INTO settings (meta_key, meta_value) VALUES (:meta_key, :meta_value)
+         ON DUPLICATE KEY UPDATE meta_value = :meta_value"
     );
 
     $statement->execute([

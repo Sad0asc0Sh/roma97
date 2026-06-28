@@ -105,7 +105,24 @@ if ($action === 'assign_classroom') {
         $del->execute([':cid' => $childId]);
 
         if ($classroomId > 0) {
-            $ins = $pdo->prepare('INSERT INTO child_classroom (child_id, classroom_id) VALUES (:cid, :clid)');
+            // Verify the classroom exists before assigning (defensive: avoids an FK
+            // error surfacing as a confusing generic message if an invalid id is posted).
+            $existsCl = $pdo->prepare('SELECT id FROM classrooms WHERE id = :clid LIMIT 1');
+            $existsCl->execute([':clid' => $classroomId]);
+
+            if ($existsCl->fetchColumn() === false) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                setFlash('error', 'کلاس انتخاب‌شده معتبر نیست.');
+                redirect($destination);
+            }
+
+            // enrollment_date is NOT NULL with no default — must be supplied explicitly.
+            $ins = $pdo->prepare(
+                'INSERT INTO child_classroom (child_id, classroom_id, enrollment_date)
+                 VALUES (:cid, :clid, CURDATE())'
+            );
             $ins->execute([':cid' => $childId, ':clid' => $classroomId]);
         }
 
