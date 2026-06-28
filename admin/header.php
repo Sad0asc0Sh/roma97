@@ -64,6 +64,9 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
                     <a href="<?php echo e(url('admin/slides.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'slides.php' ? 'active' : ''; ?>">
                         <span class="nav-text">اسلایدها</span>
                     </a>
+                    <a href="<?php echo e(url('admin/gallery.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'gallery.php' ? 'active' : ''; ?>">
+                        <span class="nav-text">&#128247; گالری تصاویر</span>
+                    </a>
                     <a href="<?php echo e(url('admin/news.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'news.php' ? 'active' : ''; ?>">
                         <span class="nav-text">اخبار</span>
                     </a>

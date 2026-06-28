@@ -456,3 +456,6 @@ code{font-size:0.8rem;background:var(--adm-primary-50);padding:2px 8px;border-ra
 /* ── QUICK ACTION TEXT ──────────────────────────────────────── */
 .quick-action-text{font-size:0.8rem;font-weight:600;color:inherit;transition:color var(--adm-transition)}
 .quick-action:hover .quick-action-text{color:var(--adm-primary)}
+.admin-gallery-thumb{width:80px;height:60px;object-fit:cover;border-radius:var(--adm-radius-xs);border:1px solid var(--adm-border)}
+.admin-image-preview-wrap{margin-top:8px}.admin-image-preview-wrap img{max-width:220px;border-radius:var(--adm-radius-sm);border:1px solid var(--adm-border)}
+.btn-xs{padding:3px 8px;font-size:0.7rem}.btn-success{background:#10B981;color:#fff;border:none}.btn-success:hover{background:#059669}.btn-muted{background:#9CA3AF;color:#fff;border:none}

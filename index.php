@@ -325,56 +325,69 @@ require_once __DIR__ . '/templates/header.php';
 </section>
 <?php endif; ?>
 
-<!-- Testimonials Section -->
-<section class="section testimonials-section">
+
+<?php
+// Roma Gallery
+try {
+    $gStmt = $pdo->prepare('SELECT id, title, caption, image FROM gallery_images WHERE is_active = 1 ORDER BY sort_order ASC, created_at DESC LIMIT 12');
+    $gStmt->execute();
+    $galleryItems = $gStmt->fetchAll();
+} catch (Throwable $exception) { $galleryItems = []; }
+?>
+<?php if (!empty($galleryItems)): ?>
+<!-- Gallery Section -->
+<section class="section gallery-section">
     <div class="container">
         <div class="section-header">
-            <svg class="section-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#testGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><defs><linearGradient id="testGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
-            <h2>نظر والدین درباره ما</h2>
+            <svg class="section-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#galGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/><defs><linearGradient id="galGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
+            <h2>گالری تصاویر <?= e(siteName()) ?></h2>
+            <p class="section-subtitle">لحظات شاد و به‌یادماندنی کودکان ما</p>
         </div>
-        <div class="testimonials-grid">
-            <div class="testimonial-card fade-in">
-                <div class="testimonial-stars" aria-label="۵ ستاره">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <div class="gallery-grid">
+            <?php foreach ($galleryItems as $gi): ?>
+                <div class="gallery-item fade-in" data-gallery-item>
+                    <img src="<?= e(url($gi['image'])) ?>" alt="<?= e($gi['title'] ?? '') ?>" loading="lazy" class="gallery-img">
+                    <div class="gallery-overlay">
+                        <div class="gallery-overlay-content">
+                            <svg class="gallery-zoom-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                            <?php if (!empty($gi['title'])): ?><span class="gallery-title"><?= e($gi['title']) ?></span><?php endif; ?>
+                            <?php if (!empty($gi['caption'])): ?><span class="gallery-caption"><?= e($gi['caption']) ?></span><?php endif; ?>
+                        </div>
+                    </div>
                 </div>
-                <blockquote class="testimonial-text">
-                    «<?= e(siteName()) ?> نعمت بزرگی برای خانواده ما بوده است. کارکنان مهربان، حرفهای و واقعاً به رشد هر کودک اهمیت میدهند. پسرم هر روز با اشتیاق به مهد کودک میرود.»
-                </blockquote>
-                <cite class="testimonial-author">سمیه احمدی</cite>
-            </div>
-            <div class="testimonial-card fade-in">
-                <div class="testimonial-stars" aria-label="۵ ستاره">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                </div>
-                <blockquote class="testimonial-text">
-                    «دخترم هر روز از مهد کودک صحبت میکند! فعالیتهای خلاقانه و محیط گرم باعث شده تا او پیشرفت چشمگیری داشته باشد. ممنون از تیم فوقالعاده شما.»
-                </blockquote>
-                <cite class="testimonial-author">مریم رضایی</cite>
-            </div>
-            <div class="testimonial-card fade-in">
-                <div class="testimonial-stars" aria-label="۵ ستاره">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                </div>
-                <blockquote class="testimonial-text">
-                    «به عنوان پدر دو کودک، آرامش خاطر من با حضور در <?= e(siteName()) ?> تضمین شده است. گزارشهای روزانه و دوربینهای مداربسته باعث شده همیشه در جریان باشم.»
-                </blockquote>
-                <cite class="testimonial-author">علی کریمی</cite>
-            </div>
+            <?php endforeach; ?>
         </div>
     </div>
 </section>
+
+<!-- Gallery Lightbox -->
+<div class="gallery-lightbox" id="galleryLightbox" role="dialog" aria-label="گالری تصاویر">
+    <button class="gallery-lightbox-close" aria-label="بستن">&times;</button>
+    <button class="gallery-lightbox-prev" aria-label="قبلی">&#8249;</button>
+    <button class="gallery-lightbox-next" aria-label="بعدی">&#8250;</button>
+    <div class="gallery-lightbox-content">
+        <img src="" alt="" class="gallery-lightbox-img">
+        <div class="gallery-lightbox-info"><h3 class="gallery-lightbox-title"></h3><p class="gallery-lightbox-caption"></p></div>
+    </div>
+</div>
+<script>
+(function(){
+    var items=document.querySelectorAll("[data-gallery-item]"),lb=document.getElementById("galleryLightbox");
+    if(!lb||!items.length)return;
+    var img=lb.querySelector(".gallery-lightbox-img"),ttl=lb.querySelector(".gallery-lightbox-title"),cap=lb.querySelector(".gallery-lightbox-caption");
+    var close=lb.querySelector(".gallery-lightbox-close"),prev=lb.querySelector(".gallery-lightbox-prev"),next=lb.querySelector(".gallery-lightbox-next");
+    var idx=0;
+    function show(i){idx=i;var el=items[i];img.src=el.querySelector("img").src;ttl.textContent=el.querySelector(".gallery-title")?el.querySelector(".gallery-title").textContent:"";cap.textContent=el.querySelector(".gallery-caption")?el.querySelector(".gallery-caption").textContent:"";lb.classList.add("active");document.body.style.overflow="hidden";}
+    function hide(){lb.classList.remove("active");document.body.style.overflow="";}
+    items.forEach(function(el,i){el.addEventListener("click",function(){show(i);});});
+    close.addEventListener("click",hide);
+    lb.addEventListener("click",function(e){if(e.target===lb)hide();});
+    prev.addEventListener("click",function(e){e.stopPropagation();show((idx-1+items.length)%items.length);});
+    next.addEventListener("click",function(e){e.stopPropagation();show((idx+1)%items.length);});
+    document.addEventListener("keydown",function(e){if(!lb.classList.contains("active"))return;if(e.key==="Escape")hide();if(e.key==="ArrowLeft")show((idx+1)%items.length);if(e.key==="ArrowRight")show((idx-1+items.length)%items.length);});
+})();
+</script>
+<?php endif; ?>
 
 <!-- CTA Section -->
 <section class="section cta-section">
