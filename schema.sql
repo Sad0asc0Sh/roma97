@@ -274,6 +274,8 @@ CREATE TABLE IF NOT EXISTS audit_log (
     INDEX idx_audit_entity (entity_type, entity_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+ALTER TABLE slides ADD COLUMN IF NOT EXISTS subtitle VARCHAR(500) DEFAULT NULL AFTER title;
+
 -- ─── Post-create migrations for existing installations ────────────────────
 -- BUG-H05: Add missing composite index on messages(parent_id, is_read)
 -- Uses try/catch via stored procedure for cross-version compatibility.
@@ -299,5 +301,11 @@ INSERT INTO settings (meta_key, meta_value) VALUES
     ('site_name', 'Rooma'),
     ('site_description', 'Welcome to Rooma Daycare'),
     ('logo', ''),
-    ('contact_phone', '+98 21 1234 5678')
+    ('contact_phone', '+98 21 1234 5678'),
+    ('contact_email', 'info@rooma.ir'),
+    ('site_address', 'تهران، خیابان ولیعصر، کوچه گلستان'),
+    ('working_hours', 'شنبه تا پنجشنبه ۷:۰۰ الی ۱۷:۰۰'),
+    ('instagram', ''),
+    ('telegram', ''),
+    ('whatsapp', '')
 ON DUPLICATE KEY UPDATE meta_value = meta_value;

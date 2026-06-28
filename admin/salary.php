@@ -95,119 +95,118 @@ $pageTitle = 'مدیریت حقوق | مدیریت | ' . siteName();
 require_once __DIR__ . '/header.php';
 ?>
 
-<header class="page-heading-row">
-    <div>
-        <p class="eyebrow">پنل مدیریت</p>
-        <h1>مدیریت حقوق</h1>
-    </div>
-    <a href="<?= e(url('admin/index.php')) ?>" class="btn btn-secondary">→ بازگشت به داشبورد</a>
-</header>
+<section class="dashboard">
+    <h1>&#128176; مدیریت حقوق</h1>
 
-<?php if ($successMessage !== null): ?>
-    <div class="notice" role="status"><?= e($successMessage) ?></div>
-<?php endif; ?>
+    <?php if ($successMessage !== null): ?>
+        <div class="notice" role="status">&#9989; <?= e($successMessage) ?></div>
+    <?php endif; ?>
 
-<?php if ($errorMessage !== null): ?>
-    <div class="alert" role="alert"><?= e($errorMessage) ?></div>
-<?php endif; ?>
+    <?php if ($errorMessage !== null): ?>
+        <div class="alert alert-danger" role="alert">&#10060; <?= e($errorMessage) ?></div>
+    <?php endif; ?>
 
-<div class="dashboard-grid admin-grid-1-2">
+    <div class="admin-two-column">
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <h2 class="admin-section-title">&#10010; ثبت پرداخت حقوق</h2>
+            </div>
+            <form method="post" action="<?= e(url('admin/salary.php')) ?>" novalidate>
+                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
 
-    <section class="card">
-                <h2>ثبت پرداخت حقوق</h2>
-                <form method="post" action="<?= e(url('admin/salary.php')) ?>" class="form-card">
-                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                    
-                    <div class="form-group">
-                        <label for="teacher_id">معلم</label>
-                        <select name="teacher_id" id="teacher_id" required>
-                            <option value="">-- انتخاب معلم --</option>
-                            <?php foreach ($teachers as $t): ?>
-                                <option value="<?= e((string) $t['id']) ?>">
-                                    <?= e(trim($t['first_name'] . ' ' . $t['last_name'])) ?> 
-                                    (پایه: <?= e(number_format((float) ($t['salary'] ?? 0), 2)) ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label for="teacher_id" class="form-label">معلم</label>
+                    <select name="teacher_id" id="teacher_id" class="form-control" required>
+                        <option value="">-- انتخاب معلم --</option>
+                        <?php foreach ($teachers as $t): ?>
+                            <option value="<?= e((string) $t['id']) ?>">
+                                <?= e(trim($t['first_name'] . ' ' . $t['last_name'])) ?>
+                                (پایه: <?= e(number_format((float) ($t['salary'] ?? 0), 2)) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
-                    <div class="form-group">
-                        <label for="month_year">ماه پرداخت (YYYY-MM)</label>
-                        <input type="month" name="month_year" id="month_year" value="<?= e(date('Y-m')) ?>" required>
-                    </div>
+                <div class="form-group">
+                    <label for="month_year" class="form-label">ماه پرداخت</label>
+                    <input type="month" name="month_year" id="month_year" class="form-control" value="<?= e(date('Y-m')) ?>" required>
+                </div>
 
-                    <div class="form-group">
-                        <label for="amount">مبلغ (تومان)</label>
-                        <input type="number" step="0.01" name="amount" id="amount" placeholder="۰" required>
-                    </div>
+                <div class="form-group">
+                    <label for="amount" class="form-label">مبلغ (تومان)</label>
+                    <input type="number" step="0.01" name="amount" id="amount" class="form-control" placeholder="۰" required>
+                </div>
 
-                    <div class="form-group">
-                        <label for="payment_date">تاریخ پرداخت</label>
-                        <input type="date" name="payment_date" id="payment_date" value="<?= e(date('Y-m-d')) ?>" required>
-                    </div>
+                <div class="form-group">
+                    <label for="payment_date" class="form-label">تاریخ پرداخت</label>
+                    <input type="date" name="payment_date" id="payment_date" class="form-control" value="<?= e(date('Y-m-d')) ?>" required>
+                </div>
 
-                    <div class="form-group">
-                        <label for="payment_method">روش پرداخت</label>
-                        <select name="payment_method" id="payment_method" required>
-                            <option value="bank_transfer">انتقال بانکی</option>
-                            <option value="cash">نقدی</option>
-                            <option value="check">چک</option>
-                        </select>
-                    </div>
+                <div class="form-group">
+                    <label for="payment_method" class="form-label">روش پرداخت</label>
+                    <select name="payment_method" id="payment_method" class="form-control" required>
+                        <option value="bank_transfer">انتقال بانکی</option>
+                        <option value="cash">نقدی</option>
+                        <option value="check">چک</option>
+                    </select>
+                </div>
 
-                    <div class="form-group">
-                        <label for="notes">یادداشت (اختیاری)</label>
-                        <input type="text" name="notes" id="notes" placeholder="شناسه تراکنش، پاداش‌های ویژه و ...">
-                    </div>
+                <div class="form-group">
+                    <label for="notes" class="form-label">یادداشت (اختیاری)</label>
+                    <input type="text" name="notes" id="notes" class="form-control" placeholder="شناسه تراکنش، پاداشهای ویژه و ...">
+                </div>
 
-                    <button type="submit" class="btn btn-primary">ثبت پرداخت</button>
-                </form>
-            </section>
-
-            <section class="card">
-                <h2>پرداخت‌های اخیر</h2>
-                <?php if (empty($recentPayments)): ?>
-                    <p class="muted">هنوز پرداخت حقوقی ثبت نشده است.</p>
-                <?php else: ?>
-                    <div class="attendance-table-scroll">
-                        <table class="attendance-table">
-                            <thead>
-                                <tr>
-                                    <th>تاریخ</th>
-                                    <th>معلم</th>
-                                    <th>ماه</th>
-                                    <th>مبلغ</th>
-                                    <th>روش</th>
-                                    <th>یادداشت</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($recentPayments as $pay): ?>
-                                    <tr>
-                                        <td><?= e(shamsiDate($pay['payment_date'])) ?></td>
-                                        <td><strong><?= e(trim($pay['first_name'] . ' ' . $pay['last_name'])) ?></strong></td>
-                                        <td><?= e($pay['month_year']) ?></td>
-                                        <td class="amount-highlight">$<?= e(number_format((float) $pay['amount'], 2)) ?></td>
-                                        <td>
-                                            <?= e(ucwords(str_replace('_', ' ', $pay['payment_method']))) ?>
-                                        </td>
-                                        <td class="notes-ellipsis">
-                                            <?= e($pay['notes'] ?? '—') ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    <?php if ($pagination['total'] > $pagination['perPage']): ?>
-                        <p class="pagination-summary">
-                            نمایش <?= e(persianNumber($pagination['from'])) ?> تا <?= e(persianNumber($pagination['to'])) ?> از <?= e(persianNumber($pagination['total'])) ?> پرداخت
-                        </p>
-                        <?= renderPagination($pagination, url('admin/salary.php')) ?>
-                    <?php endif; ?>
-                <?php endif; ?>
-            </section>
-
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">&#128190; ثبت پرداخت</button>
+                </div>
+            </form>
         </div>
+
+        <div class="admin-section">
+            <div class="admin-section-header">
+                <h2 class="admin-section-title">&#128203; پرداختهای اخیر</h2>
+            </div>
+            <?php if (empty($recentPayments)): ?>
+                <div class="empty-state empty-state-sm">
+                    <div class="empty-state-icon">&#128176;</div>
+                    <h3>هنوز پرداخت حقوقی ثبت نشده</h3>
+                </div>
+            <?php else: ?>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>تاریخ</th>
+                                <th>معلم</th>
+                                <th>ماه</th>
+                                <th>مبلغ</th>
+                                <th>روش</th>
+                                <th>یادداشت</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($recentPayments as $pay): ?>
+                                <tr>
+                                    <td><?= e(shamsiDate($pay['payment_date'])) ?></td>
+                                    <td style="font-weight:600;"><?= e(trim($pay['first_name'] . ' ' . $pay['last_name'])) ?></td>
+                                    <td><?= e($pay['month_year']) ?></td>
+                                    <td class="amount-highlight"><?= e(number_format((float) $pay['amount'], 2)) ?> ت</td>
+                                    <td><?= e(ucwords(str_replace('_', ' ', $pay['payment_method']))) ?></td>
+                                    <td class="notes-ellipsis"><?= e($pay['notes'] ?? '—') ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php if ($pagination['total'] > $pagination['perPage']): ?>
+                    <p class="pagination-summary">
+                        نمایش <?= e(persianNumber($pagination['from'])) ?> تا <?= e(persianNumber($pagination['to'])) ?> از <?= e(persianNumber($pagination['total'])) ?> پرداخت
+                    </p>
+                    <?= renderPagination($pagination, url('admin/salary.php')) ?>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
 
 <?php require_once __DIR__ . '/footer.php'; ?>

@@ -11,7 +11,7 @@ try {
     initializeCmsTables();
     $pdo = getDb();
     $statement = $pdo->prepare(
-        'SELECT id, title, image FROM slides ORDER BY sort_order ASC, created_at DESC'
+        'SELECT id, title, subtitle, image FROM slides ORDER BY sort_order ASC, created_at DESC'
     );
     $statement->execute();
     $slides = $statement->fetchAll();
@@ -78,7 +78,7 @@ require_once __DIR__ . '/templates/header.php';
 ?>
 
 <!-- Hero Slider -->
-<section class="hero-slider" aria-label="تصاویر برگزیده مهد کودک <?= e(siteName()) ?>">
+<section class="hero-slider-wrapper" aria-label="تصاویر برگزیده مهد کودک <?= e(siteName()) ?>">
     <?php if ($slides === []): ?>
         <div class="hero-fallback">
             <div class="container">
@@ -91,8 +91,8 @@ require_once __DIR__ . '/templates/header.php';
                         <path d="M31 35c0 0 2 3 5 3s5-3 5-3" stroke="white" stroke-width="1.6" stroke-linecap="round" fill="none"/>
                         <defs>
                             <linearGradient id="heroGrad" x1="0" y1="0" x2="72" y2="72">
-                                <stop stop-color="#E879B5"/>
-                                <stop offset="1" stop-color="#C8A8E9"/>
+                                <stop stop-color="#3D8B63"/>
+                                <stop offset="1" stop-color="#C4724A"/>
                             </linearGradient>
                         </defs>
                     </svg>
@@ -115,6 +115,7 @@ require_once __DIR__ . '/templates/header.php';
                         <div class="slide-overlay">
                             <div class="slide-caption">
                                 <h2><?= e($slide['title']) ?></h2>
+                                <?php if (!empty($slide['subtitle'])): ?><span class="slide-subtitle"><?= e($slide['subtitle']) ?></span><?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -148,8 +149,8 @@ require_once __DIR__ . '/templates/header.php';
                 <path d="M20 8c-1.5 0-2.7.7-2.7 2.1 0 .9.5 1.5 1.2 1.9-.3.2-.7.6-.9 1.1-.2.5-.1.9.2 1.2.3.3.7.3 1.1.2.4-.1.6-.5.7-.7h.4c.1.2.4.6.7.7.4.1.8.1 1.1-.2.3-.3.4-.7.2-1.2-.2-.5-.6-.9-.9-1.1.7-.4 1.2-1 1.2-1.9 0-1.4-1.2-2.1-2.7-2.1z" fill="url(#svcGrad)" transform="translate(0,6) scale(1.3)"/>
                 <defs>
                     <linearGradient id="svcGrad" x1="0" y1="0" x2="40" y2="40">
-                        <stop stop-color="#E879B5"/>
-                        <stop offset="1" stop-color="#C8A8E9"/>
+                        <stop stop-color="#3D8B63"/>
+                        <stop offset="1" stop-color="#C4724A"/>
                     </linearGradient>
                 </defs>
             </svg>
@@ -159,42 +160,42 @@ require_once __DIR__ . '/templates/header.php';
         <div class="services-grid">
             <div class="service-card fade-in">
                 <div class="service-icon-wrap">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10" stroke="url(#svc1)" stroke-width="2"/><defs><linearGradient id="svc1" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#E879B5"/><stop offset="1" stop-color="#C8A8E9"/></linearGradient></defs></svg>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10" stroke="url(#svc1)" stroke-width="2"/><defs><linearGradient id="svc1" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
                 </div>
                 <h3>محیط امن و مطمئن</h3>
                 <p>امنیت فرزند شما اولویت اول ماست. مهد کودک ما به سیستمهای امنیتی مدرن و کارکنان آموزشدیده مجهز است</p>
             </div>
             <div class="service-card fade-in">
                 <div class="service-icon-wrap">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="0.5" fill="url(#svc2)"/><circle cx="17.5" cy="10.5" r="0.5" fill="url(#svc2)"/><circle cx="8.5" cy="7.5" r="0.5" fill="url(#svc2)"/><circle cx="6.5" cy="12.5" r="0.5" fill="url(#svc2)"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/><defs><linearGradient id="svc2" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#E879B5"/><stop offset="1" stop-color="#C8A8E9"/></linearGradient></defs></svg>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="0.5" fill="url(#svc2)"/><circle cx="17.5" cy="10.5" r="0.5" fill="url(#svc2)"/><circle cx="8.5" cy="7.5" r="0.5" fill="url(#svc2)"/><circle cx="6.5" cy="12.5" r="0.5" fill="url(#svc2)"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/><defs><linearGradient id="svc2" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
                 </div>
                 <h3>یادگیری خلاقانه</h3>
                 <p>خلاقیت کودکان را از طریق هنر، موسیقی و فعالیتهای آموزشی مبتنی بر بازی پرورش میدهیم</p>
             </div>
             <div class="service-card fade-in">
                 <div class="service-icon-wrap">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/><defs><linearGradient id="svc3" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#E879B5"/><stop offset="1" stop-color="#C8A8E9"/></linearGradient></defs></svg>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/><defs><linearGradient id="svc3" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
                 </div>
                 <h3>وعدههای غذایی سالم</h3>
                 <p>غذاهای مقوی و خوشمزه به صورت روزانه و تازه تهیه میشود تا رشد و سلامت کودک شما را تضمین کند</p>
             </div>
             <div class="service-card fade-in">
                 <div class="service-icon-wrap">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/><defs><linearGradient id="svc4" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#E879B5"/><stop offset="1" stop-color="#C8A8E9"/></linearGradient></defs></svg>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/><defs><linearGradient id="svc4" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
                 </div>
                 <h3>برنامه آموزشی استاندارد</h3>
                 <p>برنامههای آموزشی ما مطابق با استانداردهای روز دنیا و متناسب با سن کودکان طراحی شده است</p>
             </div>
             <div class="service-card fade-in">
                 <div class="service-icon-wrap">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/><defs><linearGradient id="svc5" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#E879B5"/><stop offset="1" stop-color="#C8A8E9"/></linearGradient></defs></svg>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/><defs><linearGradient id="svc5" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
                 </div>
                 <h3>مربیان مجرب و دلسوز</h3>
                 <p>تیم مربیان ما با تحصیلات مرتبط و تجربه کافی، با عشق و مهربانی از کودکان مراقبت میکنند</p>
             </div>
             <div class="service-card fade-in">
                 <div class="service-icon-wrap">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/><defs><linearGradient id="svc6" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#E879B5"/><stop offset="1" stop-color="#C8A8E9"/></linearGradient></defs></svg>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/><defs><linearGradient id="svc6" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
                 </div>
                 <h3>فعالیتهای هنری و موسیقی</h3>
                 <p>کلاسهای موسیقی، نقاشی، نمایش خلاق و ورزشهای مناسب برای رشد همهجانبه کودکان برگزار میشود</p>
@@ -208,7 +209,7 @@ require_once __DIR__ . '/templates/header.php';
     <div class="container">
         <div class="stats-grid">
             <div class="stat-card fade-in">
-                <svg class="stat-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#statGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/><defs><linearGradient id="statGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#E879B5"/><stop offset="1" stop-color="#C8A8E9"/></linearGradient></defs></svg>
+                <svg class="stat-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#statGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/><defs><linearGradient id="statGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
                 <div class="stat-number">۱۰+</div>
                 <div class="stat-label">سال تجربه</div>
             </div>
@@ -235,14 +236,14 @@ require_once __DIR__ . '/templates/header.php';
 <section class="section classes-section">
     <div class="container">
         <div class="section-header">
-            <svg class="section-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#clsGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/><defs><linearGradient id="clsGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#E879B5"/><stop offset="1" stop-color="#C8A8E9"/></linearGradient></defs></svg>
+            <svg class="section-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#clsGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/><defs><linearGradient id="clsGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
             <h2>کلاسهای ما</h2>
             <p class="section-subtitle">هر کلاس متناسب با سن و نیازهای رشدی کودکان طراحی شده است</p>
         </div>
         <div class="classes-grid">
             <div class="class-card fade-in">
                 <div class="class-card-header class-gradient-pink">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#C76299" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#C4724A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                 </div>
                 <div class="class-card-body">
                     <h3>کلاس نوباوه</h3>
@@ -257,7 +258,7 @@ require_once __DIR__ . '/templates/header.php';
             </div>
             <div class="class-card fade-in">
                 <div class="class-card-header class-gradient-lavender">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#A88AD1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#E8A838" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                 </div>
                 <div class="class-card-body">
                     <h3>کلاس خردسال</h3>
@@ -272,7 +273,7 @@ require_once __DIR__ . '/templates/header.php';
             </div>
             <div class="class-card fade-in">
                 <div class="class-card-header class-gradient-sky">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#5DADE2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/></svg>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#5B8DB8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/></svg>
                 </div>
                 <div class="class-card-body">
                     <h3>کلاس پیشدبستانی</h3>
@@ -294,7 +295,7 @@ require_once __DIR__ . '/templates/header.php';
 <section class="section news-section">
     <div class="container">
         <div class="section-header">
-            <svg class="section-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#newsGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/><defs><linearGradient id="newsGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#E879B5"/><stop offset="1" stop-color="#C8A8E9"/></linearGradient></defs></svg>
+            <svg class="section-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#newsGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/><defs><linearGradient id="newsGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
             <h2>آخرین اخبار و رویدادها</h2>
         </div>
         <div class="news-grid">
@@ -325,56 +326,69 @@ require_once __DIR__ . '/templates/header.php';
 </section>
 <?php endif; ?>
 
-<!-- Testimonials Section -->
-<section class="section testimonials-section">
+
+<?php
+// Roma Gallery
+try {
+    $gStmt = $pdo->prepare('SELECT id, title, caption, image FROM gallery_images WHERE is_active = 1 ORDER BY sort_order ASC, created_at DESC LIMIT 12');
+    $gStmt->execute();
+    $galleryItems = $gStmt->fetchAll();
+} catch (Throwable $exception) { $galleryItems = []; }
+?>
+<?php if (!empty($galleryItems)): ?>
+<!-- Gallery Section -->
+<section class="section gallery-section">
     <div class="container">
         <div class="section-header">
-            <svg class="section-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#testGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><defs><linearGradient id="testGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#E879B5"/><stop offset="1" stop-color="#C8A8E9"/></linearGradient></defs></svg>
-            <h2>نظر والدین درباره ما</h2>
+            <svg class="section-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#galGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/><defs><linearGradient id="galGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
+            <h2>گالری تصاویر <?= e(siteName()) ?></h2>
+            <p class="section-subtitle">لحظات شاد و به‌یادماندنی کودکان ما</p>
         </div>
-        <div class="testimonials-grid">
-            <div class="testimonial-card fade-in">
-                <div class="testimonial-stars" aria-label="۵ ستاره">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <div class="gallery-grid">
+            <?php foreach ($galleryItems as $gi): ?>
+                <div class="gallery-item fade-in" data-gallery-item>
+                    <img src="<?= e(url($gi['image'])) ?>" alt="<?= e($gi['title'] ?? '') ?>" loading="lazy" class="gallery-img">
+                    <div class="gallery-overlay">
+                        <div class="gallery-overlay-content">
+                            <svg class="gallery-zoom-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                            <?php if (!empty($gi['title'])): ?><span class="gallery-title"><?= e($gi['title']) ?></span><?php endif; ?>
+                            <?php if (!empty($gi['caption'])): ?><span class="gallery-caption"><?= e($gi['caption']) ?></span><?php endif; ?>
+                        </div>
+                    </div>
                 </div>
-                <blockquote class="testimonial-text">
-                    «<?= e(siteName()) ?> نعمت بزرگی برای خانواده ما بوده است. کارکنان مهربان، حرفهای و واقعاً به رشد هر کودک اهمیت میدهند. پسرم هر روز با اشتیاق به مهد کودک میرود.»
-                </blockquote>
-                <cite class="testimonial-author">سمیه احمدی</cite>
-            </div>
-            <div class="testimonial-card fade-in">
-                <div class="testimonial-stars" aria-label="۵ ستاره">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                </div>
-                <blockquote class="testimonial-text">
-                    «دخترم هر روز از مهد کودک صحبت میکند! فعالیتهای خلاقانه و محیط گرم باعث شده تا او پیشرفت چشمگیری داشته باشد. ممنون از تیم فوقالعاده شما.»
-                </blockquote>
-                <cite class="testimonial-author">مریم رضایی</cite>
-            </div>
-            <div class="testimonial-card fade-in">
-                <div class="testimonial-stars" aria-label="۵ ستاره">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FFB800" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                </div>
-                <blockquote class="testimonial-text">
-                    «به عنوان پدر دو کودک، آرامش خاطر من با حضور در <?= e(siteName()) ?> تضمین شده است. گزارشهای روزانه و دوربینهای مداربسته باعث شده همیشه در جریان باشم.»
-                </blockquote>
-                <cite class="testimonial-author">علی کریمی</cite>
-            </div>
+            <?php endforeach; ?>
         </div>
     </div>
 </section>
+
+<!-- Gallery Lightbox -->
+<div class="gallery-lightbox" id="galleryLightbox" role="dialog" aria-label="گالری تصاویر">
+    <button class="gallery-lightbox-close" aria-label="بستن">&times;</button>
+    <button class="gallery-lightbox-prev" aria-label="قبلی">&#8249;</button>
+    <button class="gallery-lightbox-next" aria-label="بعدی">&#8250;</button>
+    <div class="gallery-lightbox-content">
+        <img src="" alt="" class="gallery-lightbox-img">
+        <div class="gallery-lightbox-info"><h3 class="gallery-lightbox-title"></h3><p class="gallery-lightbox-caption"></p></div>
+    </div>
+</div>
+<script>
+(function(){
+    var items=document.querySelectorAll("[data-gallery-item]"),lb=document.getElementById("galleryLightbox");
+    if(!lb||!items.length)return;
+    var img=lb.querySelector(".gallery-lightbox-img"),ttl=lb.querySelector(".gallery-lightbox-title"),cap=lb.querySelector(".gallery-lightbox-caption");
+    var close=lb.querySelector(".gallery-lightbox-close"),prev=lb.querySelector(".gallery-lightbox-prev"),next=lb.querySelector(".gallery-lightbox-next");
+    var idx=0;
+    function show(i){idx=i;var el=items[i];img.src=el.querySelector("img").src;ttl.textContent=el.querySelector(".gallery-title")?el.querySelector(".gallery-title").textContent:"";cap.textContent=el.querySelector(".gallery-caption")?el.querySelector(".gallery-caption").textContent:"";lb.classList.add("active");document.body.style.overflow="hidden";}
+    function hide(){lb.classList.remove("active");document.body.style.overflow="";}
+    items.forEach(function(el,i){el.addEventListener("click",function(){show(i);});});
+    close.addEventListener("click",hide);
+    lb.addEventListener("click",function(e){if(e.target===lb)hide();});
+    prev.addEventListener("click",function(e){e.stopPropagation();show((idx-1+items.length)%items.length);});
+    next.addEventListener("click",function(e){e.stopPropagation();show((idx+1)%items.length);});
+    document.addEventListener("keydown",function(e){if(!lb.classList.contains("active"))return;if(e.key==="Escape")hide();if(e.key==="ArrowLeft")show((idx+1)%items.length);if(e.key==="ArrowRight")show((idx-1+items.length)%items.length);});
+})();
+</script>
+<?php endif; ?>
 
 <!-- CTA Section -->
 <section class="section cta-section">

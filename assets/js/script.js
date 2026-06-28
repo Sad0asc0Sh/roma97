@@ -113,45 +113,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // ============================================
-    // PUBLIC SITE HEADER
-    // ============================================
-    var menuToggle = document.querySelector('.mobile-menu-toggle');
-    var siteNav = document.querySelector('.site-nav');
-
-    if (menuToggle && siteNav) {
-        menuToggle.addEventListener('click', function() {
-            var isExpanded = menuToggle.getAttribute('aria-expanded') === 'true';
-            menuToggle.setAttribute('aria-expanded', !isExpanded);
-            menuToggle.classList.toggle('active');
-            siteNav.classList.toggle('active');
-
-            // Prevent body scroll when mobile menu is open
-            document.body.style.overflow = siteNav.classList.contains('active') ? 'hidden' : '';
-        });
-
-        // Close menu when clicking nav links
-        var navLinks = siteNav.querySelectorAll('a');
-        navLinks.forEach(function(link) {
-            link.addEventListener('click', function() {
-                menuToggle.classList.remove('active');
-                siteNav.classList.remove('active');
-                menuToggle.setAttribute('aria-expanded', 'false');
-                document.body.style.overflow = '';
-            });
-        });
-
-        // Close menu on Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && siteNav.classList.contains('active')) {
-                menuToggle.classList.remove('active');
-                siteNav.classList.remove('active');
-                menuToggle.setAttribute('aria-expanded', 'false');
-                document.body.style.overflow = '';
-            }
-        });
-    }
-
     // Header scroll effect
     var header = document.querySelector('.site-header');
     if (header) {
@@ -270,29 +231,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // ============================================
-    // TEACHER PORTAL FUNCTIONALITY
-    // ============================================
-    
-    var teacherMobileToggle = document.getElementById('teacherMobileToggle');
-    var teacherNav = document.getElementById('teacherNav');
-    
-    if (teacherMobileToggle && teacherNav) {
-        teacherMobileToggle.addEventListener('click', function() {
-            teacherNav.classList.toggle('active');
-            teacherMobileToggle.classList.toggle('active');
-        });
-        
-        // Close menu when clicking nav links
-        var teacherNavLinks = teacherNav.querySelectorAll('a');
-        teacherNavLinks.forEach(function(link) {
-            link.addEventListener('click', function() {
-                teacherNav.classList.remove('active');
-                teacherMobileToggle.classList.remove('active');
-            });
-        });
-    }
-    
-    // ============================================
     // FORM ENHANCEMENTS
     // ============================================
 
@@ -327,44 +265,6 @@ document.addEventListener('DOMContentLoaded', function() {
             wrapper.appendChild(table);
         }
     });
-
-    // ============================================
-    // PARENT PORTAL FUNCTIONALITY
-    // ============================================
-
-    var parentMenuToggle = document.querySelector('.parent-menu-toggle');
-    var parentNav = document.querySelector('.parent-nav');
-
-    if (parentMenuToggle && parentNav) {
-        parentMenuToggle.addEventListener('click', function() {
-            var isExpanded = parentMenuToggle.getAttribute('aria-expanded') === 'true';
-            parentMenuToggle.setAttribute('aria-expanded', !isExpanded);
-            parentMenuToggle.classList.toggle('active');
-            parentNav.classList.toggle('active');
-            document.body.style.overflow = parentNav.classList.contains('active') ? 'hidden' : '';
-        });
-
-        // Close menu when clicking nav links
-        var parentNavLinks = parentNav.querySelectorAll('a');
-        parentNavLinks.forEach(function(link) {
-            link.addEventListener('click', function() {
-                parentMenuToggle.classList.remove('active');
-                parentNav.classList.remove('active');
-                parentMenuToggle.setAttribute('aria-expanded', 'false');
-                document.body.style.overflow = '';
-            });
-        });
-
-        // Close on Escape
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && parentNav.classList.contains('active')) {
-                parentMenuToggle.classList.remove('active');
-                parentNav.classList.remove('active');
-                parentMenuToggle.setAttribute('aria-expanded', 'false');
-                document.body.style.overflow = '';
-            }
-        });
-    }
 
     // ============================================
     // PASSWORD TOGGLE
@@ -407,4 +307,51 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // ============================================
+    // MOBILE BOTTOM NAVIGATION
+    // ============================================
+
+    // Add haptic-style touch feedback to bottom nav items
+    var bottomNavItems = document.querySelectorAll('.mobile-bottom-nav .bottom-nav-item, .public-bottom-nav .bottom-nav-item');
+    bottomNavItems.forEach(function(item) {
+        item.addEventListener('touchstart', function() {
+            this.style.transition = 'transform 0.1s ease';
+        }, { passive: true });
+        item.addEventListener('touchend', function() {
+            var el = this;
+            setTimeout(function() {
+                el.style.transition = '';
+            }, 150);
+        }, { passive: true });
+    });
+
+    // Hide bottom nav on scroll down, show on scroll up (mobile only)
+    var bottomNav = document.querySelector('.mobile-bottom-nav');
+    if (bottomNav) {
+        var lastScrollY = 0;
+        var navHideThreshold = 10;
+        var ticking = false;
+
+        window.addEventListener('scroll', function() {
+            if (!ticking) {
+                window.requestAnimationFrame(function() {
+                    var currentScrollY = window.scrollY;
+                    var diff = currentScrollY - lastScrollY;
+
+                    if (diff > navHideThreshold && currentScrollY > 200) {
+                        bottomNav.style.transform = 'translateY(100%)';
+                        bottomNav.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
+                    } else if (diff < -navHideThreshold) {
+                        bottomNav.style.transform = 'translateY(0)';
+                        bottomNav.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
+                    }
+
+                    lastScrollY = currentScrollY;
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }, { passive: true });
+    }
 });

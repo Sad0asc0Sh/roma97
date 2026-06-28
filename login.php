@@ -98,7 +98,7 @@ $siteNameValue = e(siteName());
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="ورود به پنل والدین مهد کودک <?= $siteNameValue ?>">
-    <meta name="theme-color" content="#E879B5">
+    <meta name="theme-color" content="#3D8B63">
     <title>ورود | <?= $siteNameValue ?></title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://fonts.googleapis.com">
