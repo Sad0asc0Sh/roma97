@@ -73,7 +73,7 @@ $siteNameValue = e(siteName());
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="ورود معلم مهد کودک <?= $siteNameValue ?>">
-    <meta name="theme-color" content="#87CEEB">
+    <meta name="theme-color" content="#E8A838">
     <title>ورود معلم | <?= $siteNameValue ?></title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -111,8 +111,8 @@ $siteNameValue = e(siteName());
                     <path d="M28 16v4" stroke="url(#tGrad)" stroke-width="1.5" stroke-linecap="round"/>
                     <defs>
                         <linearGradient id="tGrad" x1="0" y1="0" x2="40" y2="40">
-                            <stop stop-color="#E879B5"/>
-                            <stop offset="1" stop-color="#C8A8E9"/>
+                            <stop stop-color="#3D8B63"/>
+                            <stop offset="1" stop-color="#C4724A"/>
                         </linearGradient>
                     </defs>
                 </svg>

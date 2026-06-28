@@ -21,8 +21,8 @@ $siteDescriptionValue = siteDescription();
                         <path d="M13.5 15.5c0 0 1 1.5 2.5 1.5s2.5-1.5 2.5-1.5" stroke="white" stroke-width="0.8" stroke-linecap="round" fill="none"/>
                         <defs>
                             <linearGradient id="footerLogoGrad" x1="0" y1="0" x2="32" y2="32">
-                                <stop stop-color="#E879B5"/>
-                                <stop offset="1" stop-color="#C8A8E9"/>
+                                <stop stop-color="#3D8B63"/>
+                                <stop offset="1" stop-color="#C4724A"/>
                             </linearGradient>
                         </defs>
                     </svg>
@@ -102,7 +102,7 @@ $jsHref = $relativePrefix2 . 'assets/js/script.js';
 ?>
 
 <!-- Mobile Bottom Navigation -->
-<nav class="mobile-bottom-nav" aria-label="منوی ناوبری موبایل">
+<nav class="bottom-nav" aria-label="منوی ناوبری موبایل">
     <a href="<?php echo e(url('index.php')); ?>" class="bottom-nav-item <?php echo $currentPage === 'index.php' ? 'active' : ''; ?>">
         <svg class="bottom-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         <span class="bottom-nav-label">خانه</span>

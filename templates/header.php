@@ -25,12 +25,13 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="<?php echo $pageDescriptionValue; ?>">
-    <meta name="theme-color" content="#E879B5">
+    <meta name="theme-color" content="#3D8B63">
     <title><?php echo $pageTitleValue; ?></title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <?php
     // Compute a reliable relative path to the CSS asset that works regardless
     // of how SITE_URL is configured (avoids broken styles on misconfigured servers).
@@ -66,8 +67,8 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
                     <path d="M13.5 15.5c0 0 1 1.5 2.5 1.5s2.5-1.5 2.5-1.5" stroke="white" stroke-width="0.8" stroke-linecap="round" fill="none"/>
                     <defs>
                         <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
-                            <stop stop-color="#E879B5"/>
-                            <stop offset="1" stop-color="#C8A8E9"/>
+                            <stop stop-color="#3D8B63"/>
+                            <stop offset="1" stop-color="#C4724A"/>
                         </linearGradient>
                     </defs>
                 </svg>
