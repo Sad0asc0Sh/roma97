@@ -62,7 +62,7 @@ $whatsappValue = siteWhatsApp();
                 <ul class="footer-nav">
                     <li><a href="<?php echo e(url('index.php')); ?>">صفحه اصلی</a></li>
                     <li><a href="<?php echo e(url('page.php?slug=about')); ?>">درباره ما</a></li>
-                    <li><a href="<?php echo e(url('page.php?slug=classes')); ?>">کلاس‌ها</a></li>
+                    <li><a href="<?php echo e(url('page.php?slug=classes')); ?>">کلاسها</a></li>
                     <li><a href="<?php echo e(url('news.php')); ?>">اخبار</a></li>
                     <li><a href="<?php echo e(url('page.php?slug=contact')); ?>">تماس با ما</a></li>
                 </ul>
