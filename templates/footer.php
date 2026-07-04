@@ -99,7 +99,7 @@ $whatsappValue = siteWhatsApp();
         </div>
         <div class="footer-bottom">
             <p>&copy; <?php echo e(persianNumber(date('Y'))); ?> <?php echo e($siteNameValue); ?> — تمامی حقوق محفوظ است</p>
-            <p class="footer-credit">طراحی و توسعه با <span class="footer-heart">❤</span></p>
+            <p class="footer-credit">طراحی و توسعه با <span class="footer-heart">SadraSh</span></p>
         </div>
     </div>
 </footer>

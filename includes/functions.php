@@ -97,6 +97,16 @@ function siteAddress(): string
     return getSetting('site_address', 'تهران، خیابان ولیعصر، کوچه گلستان');
 }
 
+function siteTopbarEnabled(): string
+{
+    return getSetting('topbar_enabled', '1');
+}
+
+function siteTopbarText(): string
+{
+    return getSetting('topbar_text', '');
+}
+
 function siteWorkingHours(): string
 {
     return getSetting('working_hours', 'شنبه تا پنجشنبه ۷:۰۰ الی ۱۷:۰۰');

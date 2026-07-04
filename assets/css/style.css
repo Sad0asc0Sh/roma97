@@ -63,7 +63,15 @@ p { margin-bottom: var(--space-sm); line-height: 1.8; }
 .top-bar-social { display: flex; align-items: center; gap: 4px; }
 .top-bar-social-link { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: var(--radius-full); color: rgba(255,255,255,0.6); transition: all var(--transition-fast); text-decoration: none; }
 .top-bar-social-link:hover { color: var(--white); background: rgba(255,255,255,0.12); transform: translateY(-1px); }
-@media (max-width: 767px) { .top-bar { display: none; } }
+@media (max-width: 767px) {
+    .top-bar { display: block; padding: 6px 0; }
+    .top-bar-inner { flex-wrap: wrap; min-height: auto; gap: var(--space-xs); justify-content: center; }
+    .top-bar-info { gap: var(--space-xs); flex-wrap: wrap; justify-content: center; }
+    .top-bar-item span { display: none; }
+    .top-bar-item { gap: 4px; font-size: 0.75rem; }
+    .top-bar-social { justify-content: center; }
+    .top-bar-social-link { width: 26px; height: 26px; }
+}
 
 /* === HEADER === */
 .site-header { background: rgba(255,255,255,0.88); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); box-shadow: 0 1px 0 rgba(61,139,99,0.08); position: sticky; top: 0; z-index: 1000; transition: all var(--transition-base); border-bottom: 1px solid rgba(61,139,99,0.06); }
@@ -370,7 +378,7 @@ textarea.form-control { resize: vertical; min-height: 120px; }
 .site-footer { background: var(--neutral-dark); color: var(--white); padding-top: var(--space-2xl); margin-top: var(--space-2xl); position: relative; }
 .site-footer::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--gradient-primary); }
 .footer-content { display: grid; grid-template-columns: 1fr; gap: var(--space-xl); }
-@media (min-width: 768px) { .footer-content { grid-template-columns: 2fr 1fr 1.2fr; gap: var(--space-2xl); } }
+@media (min-width: 768px) { .footer-content { grid-template-columns: 1.4fr 1fr 1.2fr; gap: var(--space-xl); } }
 .footer-logo { display: flex; align-items: center; gap: var(--space-xs); font-size: 1.25rem; font-weight: 800; margin-bottom: var(--space-sm); }
 .logo-text { background: var(--gradient-primary); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .footer-title { color: var(--white); font-size: 1.0625rem; margin-bottom: var(--space-md); font-weight: 700; position: relative; padding-bottom: var(--space-xs); }

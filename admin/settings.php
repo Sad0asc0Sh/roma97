@@ -30,10 +30,12 @@ function getSettings(PDO $pdo): array
         'instagram' => '',
         'telegram' => '',
         'whatsapp' => '',
+        'topbar_enabled' => '1',
+        'topbar_text' => '',
     ];
 
     $statement = $pdo->prepare(
-        'SELECT meta_key, meta_value FROM settings WHERE meta_key IN (:site_name, :site_description, :logo, :contact_phone, :contact_email, :site_address, :working_hours, :instagram, :telegram, :whatsapp)'
+        'SELECT meta_key, meta_value FROM settings WHERE meta_key IN (:site_name, :site_description, :logo, :contact_phone, :contact_email, :site_address, :working_hours, :instagram, :telegram, :whatsapp, :topbar_enabled, :topbar_text)'
     );
     $statement->execute([
         ':site_name' => 'site_name',
@@ -46,6 +48,8 @@ function getSettings(PDO $pdo): array
         ':instagram' => 'instagram',
         ':telegram' => 'telegram',
         ':whatsapp' => 'whatsapp',
+        ':topbar_enabled' => 'topbar_enabled',
+        ':topbar_text' => 'topbar_text',
     ]);
 
     while ($row = $statement->fetch()) {
@@ -299,6 +303,14 @@ if (isPostRequest()) {
         saveSetting($pdo, 'telegram', $telegram);
         saveSetting($pdo, 'whatsapp', $whatsapp);
 
+        $topbarEnabled = isset($_POST['topbar_enabled']) ? '1' : '0';
+        $topbarText = trim((string) ($_POST['topbar_text'] ?? ''));
+        if (settingsStringLength($topbarText) > 255) {
+            $topbarText = mb_substr($topbarText, 0, 255, 'UTF-8');
+        }
+        saveSetting($pdo, 'topbar_enabled', $topbarEnabled);
+        saveSetting($pdo, 'topbar_text', $topbarText);
+
         if ($newLogo !== null) {
             deleteLogoFile($settings['logo']);
         }
@@ -420,6 +432,23 @@ require_once __DIR__ . '/header.php';
                     <input type="file" id="logo" name="logo" class="form-control"
                         accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif">
                     <small style="color:var(--muted);font-size:0.85rem;">فرمتهای مجاز: JPG، PNG، GIF. حداکثر حجم: ۵۰۰ کیلوبایت.</small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox" name="topbar_enabled" value="1" style="width:18px;height:18px;cursor:pointer;"
+                            <?= ($settings['topbar_enabled'] ?? '1') === '1' ? 'checked' : '' ?>>
+                        فعالسازی نوار بالای سایت (Top Bar)
+                    </label>
+                    <small style="color:var(--muted);font-size:0.85rem;">نمایش نوار تماس و شبکههای اجتماعی در بالای هدر سایت</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="topbar_text" class="form-label">متن نوار بالای سایت</label>
+                    <input type="text" id="topbar_text" name="topbar_text" class="form-control"
+                        maxlength="255" placeholder="متن اختیاری برای نمایش در نوار بالا..."
+                        value="<?= e($settings['topbar_text'] ?? '') ?>">
+                    <small style="color:var(--muted);font-size:0.85rem;">در صورت خالی بودن، اطلاعات تماس و شبکههای اجتماعی نمایش داده میشود.</small>
                 </div>
 
                 <div class="form-actions">
