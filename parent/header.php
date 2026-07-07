@@ -37,6 +37,7 @@ $unreadCountFa = persianNumber((string) $unreadCount);
     <title><?php echo e($pageTitle); ?> | <?php echo e($siteNameValue); ?></title>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
     <link rel="stylesheet" href="<?php echo e(url('assets/css/style.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(url('assets/css/parent-portal.css')); ?>">
 </head>
 <body class="parent-portal-body">
     <header class="parent-header">
