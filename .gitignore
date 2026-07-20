@@ -7,6 +7,23 @@ install.lock
 # Runtime logs
 logs/*.log
 
+# Uploaded assets (exclude from version control but keep directory structure)
+assets/uploads/*
+!assets/uploads/.htaccess
+!assets/uploads/index.html
+!assets/uploads/avatars/
+!assets/uploads/avatars/index.html
+!assets/uploads/avatars/.htaccess
+!assets/uploads/children/
+!assets/uploads/children/index.html
+!assets/uploads/children/.htaccess
+!assets/uploads/certificates/
+!assets/uploads/certificates/index.html
+!assets/uploads/certificates/.htaccess
+!assets/uploads/gallery/
+!assets/uploads/gallery/index.html
+!assets/uploads/gallery/.htaccess
+
 # Editor / OS noise
 .DS_Store
 Thumbs.db

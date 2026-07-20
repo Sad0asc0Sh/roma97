@@ -26,7 +26,13 @@ function url(string $path = ''): string
  */
 function asset(string $path = ''): string
 {
-    return url($path);
+    $url = url($path);
+    $localFile = __DIR__ . '/../' . ltrim($path, '/');
+    if (is_file($localFile)) {
+        $version = filemtime($localFile);
+        $url .= (str_contains($url, '?') ? '&' : '?') . 'v=' . $version;
+    }
+    return $url;
 }
 
 function redirect(string $url): never

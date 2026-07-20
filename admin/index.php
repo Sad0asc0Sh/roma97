@@ -17,6 +17,7 @@ $metrics = [
     'pending_children' => 0,
     'upcoming_events' => 0,
     'monthly_tuition' => 0,
+    'pending_parents' => 0,
 ];
 
 $recentRegistrations = [];
@@ -42,10 +43,15 @@ try {
     $metrics['upcoming_events'] = (int) $stmt->fetchColumn();
     
     // This month's tuition total
-    $currentMonth = date('Y-m');
-    $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM tuition_payments WHERE payment_date LIKE :month");
-    $stmt->execute([':month' => $currentMonth . '%']);
+    $startMonth = date('Y-m-01');
+    $nextMonth = date('Y-m-d', strtotime('first day of next month'));
+    $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM tuition_payments WHERE payment_date >= :start AND payment_date < :next");
+    $stmt->execute([':start' => $startMonth, ':next' => $nextMonth]);
     $metrics['monthly_tuition'] = (float) $stmt->fetchColumn();
+
+    // Pending parents count
+    $stmt = $pdo->query("SELECT COUNT(*) FROM parents WHERE status = 'pending'");
+    $metrics['pending_parents'] = (int) $stmt->fetchColumn();
     
     // Recent registrations (last 5 children)
     $stmt = $pdo->query("SELECT id, first_name, last_name, date_of_birth, status, created_at FROM children ORDER BY created_at DESC LIMIT 5");
@@ -75,7 +81,7 @@ require_once __DIR__ . '/header.php';
         <div class="metric-card metric-primary">
             <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg></div>
             <div class="metric-content">
-                <div class="metric-value"><?= e((string) $metrics['active_children']) ?></div>
+                <div class="metric-value"><?= e(persianNumber((string) $metrics['active_children'])) ?></div>
                 <div class="metric-label">کودکان فعال</div>
             </div>
             <a href="<?= e(url('admin/children.php?status=active')) ?>" class="metric-link">مشاهده همه ←</a>
@@ -84,7 +90,7 @@ require_once __DIR__ . '/header.php';
         <div class="metric-card metric-secondary">
             <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
             <div class="metric-content">
-                <div class="metric-value"><?= e((string) $metrics['total_teachers']) ?></div>
+                <div class="metric-value"><?= e(persianNumber((string) $metrics['total_teachers'])) ?></div>
                 <div class="metric-label">معلمان</div>
             </div>
             <a href="<?= e(url('admin/teachers.php')) ?>" class="metric-link">مدیریت ←</a>
@@ -93,7 +99,7 @@ require_once __DIR__ . '/header.php';
         <div class="metric-card metric-accent">
             <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
             <div class="metric-content">
-                <div class="metric-value">$<?= e(number_format($metrics['monthly_tuition'], 2)) ?></div>
+                <div class="metric-value"><?= e(persianNumber(number_format($metrics['monthly_tuition'], 0))) ?> تومان</div>
                 <div class="metric-label">شهریه این ماه</div>
             </div>
             <a href="<?= e(url('admin/tuition.php')) ?>" class="metric-link">مشاهده جزئیات ←</a>
@@ -102,7 +108,7 @@ require_once __DIR__ . '/header.php';
         <div class="metric-card metric-info">
             <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></div>
             <div class="metric-content">
-                <div class="metric-value"><?= e((string) $metrics['upcoming_events']) ?></div>
+                <div class="metric-value"><?= e(persianNumber((string) $metrics['upcoming_events'])) ?></div>
                 <div class="metric-label">رویدادهای پیش‌رو</div>
             </div>
             <a href="<?= e(url('admin/events.php')) ?>" class="metric-link">مشاهده تقویم ←</a>
@@ -113,7 +119,7 @@ require_once __DIR__ . '/header.php';
     <div class="alert alert-warning" role="alert">
         <span class="alert-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span>
         <div>
-            <strong>ثبتنام جدید والدین:</strong> <?= e((string) $metrics['pending_parents']) ?> والد در انتظار تأیید هویت هستند.
+            <strong>ثبتنام جدید والدین:</strong> <?= e(persianNumber((string) $metrics['pending_parents'])) ?> والد در انتظار تأیید هویت هستند.
             <a href="<?= e(url('admin/parents.php')) ?>" class="alert-link">بررسی و تأیید ←</a>
         </div>
     </div>
@@ -123,7 +129,7 @@ require_once __DIR__ . '/header.php';
     <div class="alert alert-warning" role="alert">
         <span class="alert-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></span>
         <div>
-            <strong>اقدام لازم:</strong> <?= e((string) $metrics['pending_children']) ?> ثبت‌نام در انتظار تأیید است.
+            <strong>اقدام لازم:</strong> <?= e(persianNumber((string) $metrics['pending_children'])) ?> ثبت‌نام در انتظار تأیید است.
             <a href="<?= e(url('admin/children.php?status=pending')) ?>" class="alert-link">بررسی ←</a>
         </div>
     </div>
@@ -196,7 +202,7 @@ require_once __DIR__ . '/header.php';
                                     };
                                     ?>
                                     <span class="badge <?= $statusClass ?>"><?= e(parentChildEnrollmentLabel((string) $child['status'])) ?></span>
-                                    <span class="text-muted">• <?= e(date('M j, Y', strtotime($child['created_at']))) ?></span>
+                                    <span class="text-muted">• <?= e(shamsiDate((string) $child['created_at'])) ?></span>
                                 </div>
                             </div>
                         </div>
@@ -229,10 +235,7 @@ require_once __DIR__ . '/header.php';
                                 </div>
                                 <div class="quick-list-meta">
                                     <span class="text-muted">
-                                        <?= e(date('l, M j, Y', strtotime($event['event_date']))) ?>
-                                        <?php if (!empty($event['location'])): ?>
-                                            • <?= e($event['location']) ?>
-                                        <?php endif; ?>
+                                        <?= e(persianDayName((string) $event['event_date']) . ' ' . shamsiDate((string) $event['event_date'])) ?>
                                     </span>
                                 </div>
                             </div>

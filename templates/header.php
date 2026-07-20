@@ -39,6 +39,7 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="<?php echo e(asset('favicon.ico')); ?>" type="image/x-icon">
     <?php
     // Compute a reliable relative path to the CSS asset that works regardless
     // of how SITE_URL is configured (avoids broken styles on misconfigured servers).
@@ -56,6 +57,10 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
     }
     if ($relativePrefix === '') { $relativePrefix = './'; }
     $cssHref = $relativePrefix . 'assets/css/style.css';
+    $localCssFile = $appRootDir . '/assets/css/style.css';
+    if (is_file($localCssFile)) {
+        $cssHref .= '?v=' . filemtime($localCssFile);
+    }
     ?>
     <link rel="stylesheet" href="<?php echo e($cssHref); ?>">
 </head>

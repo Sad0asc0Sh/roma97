@@ -40,39 +40,6 @@ function homeNewsExcerpt(string $content, int $limit = 150): string
     return strlen($plainText) > $limit ? substr($plainText, 0, $limit) . '...' : $plainText;
 }
 
-function homeNewsDate(string $date): string
-{
-    $timestamp = strtotime($date);
-
-    if ($timestamp === false) {
-        return $date;
-    }
-
-    $months = [
-        'January' => 'ژانویه',
-        'February' => 'فوریه',
-        'March' => 'مارس',
-        'April' => 'آوریل',
-        'May' => 'می',
-        'June' => 'ژوئن',
-        'July' => 'ژوئیه',
-        'August' => 'اوت',
-        'September' => 'سپتامبر',
-        'October' => 'اکتبر',
-        'November' => 'نوامبر',
-        'December' => 'دسامبر',
-    ];
-    $day = (int) date('j', $timestamp);
-    $monthEn = date('F', $timestamp);
-    $year = (int) date('Y', $timestamp);
-    $monthFa = $months[$monthEn] ?? $monthEn;
-
-    $persianDigits = ['0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴',
-                      '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹'];
-
-    return strtr($day . ' ' . $monthFa . ' ' . $year, $persianDigits);
-}
-
 $pageTitle = siteName();
 require_once __DIR__ . '/templates/header.php';
 ?>
@@ -309,7 +276,7 @@ require_once __DIR__ . '/templates/header.php';
                     <div class="news-card-body">
                         <time class="news-date" datetime="<?= e($newsItem['created_at']) ?>">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                            <?= e(homeNewsDate($newsItem['created_at'])) ?>
+                            <?= e(shamsiDate($newsItem['created_at'])) ?>
                         </time>
                         <h3>
                             <a href="<?= e(url('news.php?id=' . $newsItem['id'])) ?>"><?= e($newsItem['title']) ?></a>

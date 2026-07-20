@@ -109,7 +109,7 @@ $parentsStmt->execute([$teacherId]);
 $parents = $parentsStmt->fetchAll();
 
 // Fetch Sent Messages by this teacher (paginated)
-$countStmt = $pdo->prepare('SELECT COUNT(*) FROM messages WHERE sender_type = "teacher" AND sender_id = ?');
+$countStmt = $pdo->prepare("SELECT COUNT(*) FROM messages WHERE sender_type = 'teacher' AND sender_id = ?");
 $countStmt->execute([$teacherId]);
 $pagination = paginate((int) $countStmt->fetchColumn(), currentPageNumber(), 20);
 
@@ -117,7 +117,7 @@ $messagesStmt = $pdo->prepare('
     SELECT m.*, p.first_name, p.last_name 
     FROM messages m 
     LEFT JOIN parents p ON m.parent_id = p.id 
-    WHERE m.sender_type = "teacher" AND m.sender_id = ? 
+    WHERE m.sender_type = \'teacher\' AND m.sender_id = ? 
     ORDER BY m.created_at DESC
     LIMIT ' . $pagination['perPage'] . ' OFFSET ' . $pagination['offset'] . '
 ');
@@ -132,7 +132,7 @@ if (isset($_GET['view'])) {
         SELECT m.*, p.first_name, p.last_name
         FROM messages m
         LEFT JOIN parents p ON m.parent_id = p.id
-        WHERE m.id = ? AND m.sender_type = "teacher" AND m.sender_id = ?
+        WHERE m.id = ? AND m.sender_type = \'teacher\' AND m.sender_id = ?
         LIMIT 1
     ');
     $viewStmt->execute([$viewId, $teacherId]);
@@ -235,7 +235,7 @@ require_once __DIR__ . '/header.php';
                 <a href="<?= e(url('teacher/messages.php')) ?>" class="close-btn">&times;</a>
             </div>
             <div class="card-body">
-                <p><strong>To:</strong> <?= $viewMessage['parent_id'] ? e($viewMessage['first_name'] . ' ' . $viewMessage['last_name']) : 'همه والدین کلاس' ?></p>
+                <p><strong>گیرنده:</strong> <?= $viewMessage['parent_id'] ? e($viewMessage['first_name'] . ' ' . $viewMessage['last_name']) : 'همه والدین کلاس' ?></p>
                 <p><strong>تاریخ:</strong> <?= e(formatPersianDate($viewMessage['created_at'])) ?></p>
                 <p><strong>موضوع:</strong> <?= e($viewMessage['subject']) ?></p>
                 <hr>

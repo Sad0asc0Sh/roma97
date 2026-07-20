@@ -67,7 +67,7 @@ require_once __DIR__ . '/header.php';
     <div class="summary-icon">💰</div>
     <div class="summary-content">
         <span class="summary-label">مجموع پرداخت‌ها تا تاریخ</span>
-        <span class="summary-amount"><?= e(persianNumber(number_format($totalPaid, 2))) ?> <span class="currency-unit">تومان</span></span>
+        <span class="summary-amount"><?= e(persianNumber(number_format($totalPaid, 0))) ?> <span class="currency-unit">تومان</span></span>
    </div>
 </div>
 
@@ -98,17 +98,15 @@ require_once __DIR__ . '/header.php';
                     $paymentMethod = (string) $p['payment_method'];
                     $paymentMethodLabel = match (strtolower($paymentMethod)) {
                         'cash' => 'نقدی',
-                        'card', 'bank_card', 'card_to_card' => 'کارت به کارت',
-                        'transfer', 'bank_transfer' => 'انتقال بانکی',
-                        'online' => 'آنلاین',
+                        'bank_transfer' => 'انتقال بانکی',
                         'check' => 'چک',
-                        default => ucfirst($paymentMethod),
+                        default => $paymentMethod,
                     };
                     ?>
                     <tr>
                         <td><?= e(trim($p['first_name'] . ' ' . $p['last_name']))?></td>
                         <td><?= e(persianNumber((string) $p['month_year']))?></td>
-                        <td class="amount-cell"><?= e(persianNumber(number_format((float) $p['amount'], 2))) ?> <span class="currency-unit-sm">تومان</span></td>
+                        <td class="amount-cell"><?= e(persianNumber(number_format((float) $p['amount'], 0))) ?> <span class="currency-unit-sm">تومان</span></td>
                         <td><?= e(shamsiDate((string) $p['payment_date']))?></td>
                         <td><?= e($paymentMethodLabel) ?></td>
                         <td><?= e(trim((string) ($p['notes'] ?? '')) !== '' ? (string) $p['notes'] : '—') ?></td>
@@ -125,9 +123,7 @@ require_once __DIR__ . '/header.php';
             $paymentMethod = (string) $p['payment_method'];
             $paymentMethodLabel = match (strtolower($paymentMethod)) {
                 'cash' => 'نقدی',
-                'card', 'bank_card', 'card_to_card' => 'کارت به کارت',
-                'transfer', 'bank_transfer' => 'انتقال بانکی',
-                'online' => 'آنلاین',
+                'bank_transfer' => 'انتقال بانکی',
                 'check' => 'چک',
                 default => $paymentMethod,
             };
@@ -135,7 +131,7 @@ require_once __DIR__ . '/header.php';
             <div class="payment-card">
                 <div class="payment-card-header">
                     <span class="payment-child"><?= e(trim($p['first_name'] . ' ' . $p['last_name']))?></span>
-                    <span class="payment-amount"><?= e(persianNumber(number_format((float) $p['amount'], 2))) ?> <span class="currency-unit-sm">تومان</span></span>
+                    <span class="payment-amount"><?= e(persianNumber(number_format((float) $p['amount'], 0))) ?> <span class="currency-unit-sm">تومان</span></span>
                </div>
                 <div class="payment-card-body">
                     <div class="payment-detail">

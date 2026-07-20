@@ -17,6 +17,12 @@ if (is_file($localConfig)) {
     require $localConfig;
 }
 
+// ─── Timezone ──────────────────────────────────────────────────────────────
+// cPanel shared hosting may default to UTC; set explicitly for correct
+// Shamsi/Persian date calculations.
+defined('APP_TIMEZONE') || define('APP_TIMEZONE', 'Asia/Tehran');
+date_default_timezone_set(APP_TIMEZONE);
+
 // ─── Database configuration ────────────────────────────────────────────────
 defined('DB_HOST') || define('DB_HOST', 'localhost');
 defined('DB_NAME') || define('DB_NAME', 'rooma_db');
@@ -105,6 +111,10 @@ defined('ERROR_LOG_PATH') || define('ERROR_LOG_PATH', __DIR__ . '/logs/error.log
 
 // ─── Session configuration ─────────────────────────────────────────────────
 defined('SESSION_LIFETIME') || define('SESSION_LIFETIME', 0); // 0 = until browser closes
+
+// Custom session save path for cPanel shared hosting isolation.
+// Set in config.local.php to a private directory (e.g., /home/user/tmp/sessions).
+defined('SESSION_SAVE_PATH') || define('SESSION_SAVE_PATH', '');
 
 // ─── Upload configuration ──────────────────────────────────────────────────
 defined('MAX_UPLOAD_SIZE') || define('MAX_UPLOAD_SIZE', 512000);   // 500KB in bytes

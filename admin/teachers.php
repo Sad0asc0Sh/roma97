@@ -202,7 +202,14 @@ if (isPostRequest()) {
                 $avatarPath      = handleTeacherUpload('avatar', 'avatars');
                 $certPath        = handleTeacherUpload('certificate_file', 'certificates');
 
-                $salaryVal = $fields['salary'] !== '' ? (float) $fields['salary'] : null;
+                $salaryVal = null;
+                if ($fields['salary'] !== '') {
+                    if (preg_match('/^\d+(\.\d{1,2})?$/', $fields['salary'])) {
+                        $salaryVal = $fields['salary'];
+                    } else {
+                        $formErrors[] = 'حقوق وارد شده نامعتبر است.';
+                    }
+                }
                 $hireDateVal = $fields['hire_date'] !== '' ? $fields['hire_date'] : null;
 
                 if ($postAction === 'add') {

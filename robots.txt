@@ -1,0 +1,18 @@
+# Rooma Daycare — robots.txt
+# Block search engines from indexing admin, parent, and teacher panels
+
+User-agent: *
+Allow: /
+
+# Block admin panel
+Disallow: /admin/
+# Block parent portal
+Disallow: /parent/
+# Block teacher panel
+Disallow: /teacher/
+# Block setup and includes
+Disallow: /setup.php
+Disallow: /includes/
+Disallow: /templates/
+Disallow: /logs/
+Disallow: /docs/

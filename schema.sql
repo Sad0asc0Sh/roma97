@@ -274,6 +274,16 @@ CREATE TABLE IF NOT EXISTS audit_log (
     INDEX idx_audit_entity (entity_type, entity_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS gallery_images (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) DEFAULT NULL,
+    caption VARCHAR(500) DEFAULT NULL,
+    image VARCHAR(255) NOT NULL,
+    sort_order INT DEFAULT 0,
+    is_active TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 ALTER TABLE slides ADD COLUMN IF NOT EXISTS subtitle VARCHAR(500) DEFAULT NULL AFTER title;
 
 -- ─── Post-create migrations for existing installations ────────────────────

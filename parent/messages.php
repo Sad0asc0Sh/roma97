@@ -26,15 +26,15 @@ if (isset($_GET['view'])) {
     $markReadStmt->execute([$viewId, $parentId]);
 
     // Fetch message details
-    $msgStmt = $pdo->prepare('
+    $msgStmt = $pdo->prepare("
         SELECT m.*,
                CASE
-                 WHEN m.sender_type = "admin" THEN "مدیر سیستم"
-                 WHEN m.sender_type = "teacher" THEN (SELECT CONCAT("معلم ", first_name, " ", last_name) FROM teachers WHERE id = m.sender_id)
+                 WHEN m.sender_type = 'admin' THEN 'مدیر سیستم'
+                 WHEN m.sender_type = 'teacher' THEN (SELECT CONCAT('معلم ', first_name, ' ', last_name) FROM teachers WHERE id = m.sender_id)
                END as sender_name
         FROM messages m
         WHERE m.id = ? AND (m.parent_id IS NULL OR m.parent_id = ?)
-    ');
+    ");
     $msgStmt->execute([$viewId, $parentId]);
     $viewMessage = $msgStmt->fetch();
 }
@@ -44,17 +44,17 @@ $countStmt = $pdo->prepare('SELECT COUNT(*) FROM messages WHERE parent_id IS NUL
 $countStmt->execute([$parentId]);
 $pagination = paginate((int) $countStmt->fetchColumn(), currentPageNumber(), 20);
 
-$messagesStmt = $pdo->prepare('
+$messagesStmt = $pdo->prepare("
     SELECT m.*,
            CASE
-             WHEN m.sender_type = "admin" THEN "مدیر سیستم"
-             WHEN m.sender_type = "teacher" THEN (SELECT CONCAT("معلم ", first_name, " ", last_name) FROM teachers WHERE id = m.sender_id)
+             WHEN m.sender_type = 'admin' THEN 'مدیر سیستم'
+             WHEN m.sender_type = 'teacher' THEN (SELECT CONCAT('معلم ', first_name, ' ', last_name) FROM teachers WHERE id = m.sender_id)
            END as sender_name
     FROM messages m
     WHERE m.parent_id IS NULL OR m.parent_id = ?
     ORDER BY m.created_at DESC
-    LIMIT ' . $pagination['perPage'] . ' OFFSET ' . $pagination['offset'] . '
-');
+    LIMIT " . $pagination['perPage'] . " OFFSET " . $pagination['offset'] . "
+");
 $messagesStmt->execute([$parentId]);
 $messages = $messagesStmt->fetchAll();
 
@@ -87,7 +87,7 @@ require_once __DIR__ . '/header.php';
                         </div>
                             <h3 class="message-subject"><?= e($msg['subject'])?></h3>
                             <p class="message-preview">
-                                <?= e(mb_substr($msg['body'], 0, 100)) ?><?= mb_strlen($msg['body']) > 100 ? '...' : '' ?>
+                                <?= e(mb_substr($msg['body'], 0, 100, 'UTF-8')) ?><?= mb_strlen($msg['body'], 'UTF-8') > 100 ? '...' : '' ?>
                         </p>
                      </div>
                         <div class="message-actions">

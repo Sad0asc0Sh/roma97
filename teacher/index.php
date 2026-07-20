@@ -21,7 +21,6 @@ $report     = null;
 $error      = null;
 
 try {
-    initializeTeachersTables();
     $pdo = getDb();
 
     // Fetch assigned classroom

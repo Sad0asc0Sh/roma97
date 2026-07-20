@@ -27,8 +27,14 @@ if (isPostRequest() && $error === '') {
         $email    = trim((string) ($_POST['email'] ?? ''));
         $password = (string) ($_POST['password'] ?? '');
 
-        if ($email === '' || $password === '') {
-            $error = 'لطفاً ایمیل و رمز عبور خود را وارد کنید.';
+        if (
+            $email === ''
+            || strlen($email) > 150
+            || !filter_var($email, FILTER_VALIDATE_EMAIL)
+            || $password === ''
+            || strlen($password) > 255
+        ) {
+            $error = 'ایمیل یا رمز عبور نامعتبر است.';
         } elseif (!checkBruteForce('teacher_login', $email)) {
             $error = 'تعداد تلاشهای ناموفق زیاد است. لطفاً ۱۵ دقیقه دیگر تلاش کنید.';
         } else {

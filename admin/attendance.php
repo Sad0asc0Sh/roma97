@@ -76,10 +76,10 @@ function attendanceAgeFromDob(string $dateOfBirth): string
         $months = $birthDate->diff($today)->m;
 
         if ($years < 1) {
-            return $months . ' ماه';
+            return persianNumber((string) $months) . ' ماه';
         }
 
-        return $years . ' سال';
+        return persianNumber((string) $years) . ' سال';
     } catch (Throwable) {
         return '—';
     }

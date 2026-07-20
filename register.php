@@ -48,7 +48,6 @@ $old = [
 ];
 
 try {
-    initializeParentTables();
     $pdo = getDb();
 } catch (Throwable $exception) {
     error_log($exception->getMessage());

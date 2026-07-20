@@ -16,6 +16,17 @@ function startSecureSession(): void
     ini_set('session.use_only_cookies', '1');
     ini_set('session.use_strict_mode', '1');
 
+    // Use a custom session save path on cPanel shared hosting for isolation.
+    if (defined('SESSION_SAVE_PATH') && SESSION_SAVE_PATH !== '') {
+        $sessionDir = SESSION_SAVE_PATH;
+        if (!is_dir($sessionDir)) {
+            @mkdir($sessionDir, 0700, true);
+        }
+        if (is_dir($sessionDir) && is_writable($sessionDir)) {
+            ini_set('session.save_path', $sessionDir);
+        }
+    }
+
     // Use the isHttps() function for consistency
     $isSecure = isHttps();
 

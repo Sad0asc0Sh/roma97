@@ -52,7 +52,13 @@ Options -Indexes
     RewriteEngine On
     RewriteRule ^(includes|templates)(/|$) - [F,L]
     RewriteRule ^logs(/|$) - [F,L]
+    RewriteRule ^docs(/|$) - [F,L]
     RewriteRule (^|/)\.git(/|$) - [F,L]
+
+    # Block setup.php after installation (install.lock exists)
+    RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_URI}/../install.lock -f [OR]
+    RewriteCond %{REQUEST_FILENAME}/../../install.lock -f
+    RewriteRule ^setup\.php$ - [F,L]
 </IfModule>
 
 # Cache control for static assets
@@ -93,8 +99,29 @@ Options -Indexes
     </FilesMatch>
 </IfModule>
 
-# Prevent access to backup and source files
-<FilesMatch "(^#.*#|\.(bak|config|dist|fla|inc|ini|log|psd|sh|sql|sw[op])|~)$">
+# Enable Gzip Compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/json
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# Disable ETag header
+<IfModule mod_headers.c>
+    Header unset ETag
+</IfModule>
+FileETag None
+
+# Prevent access to backup, source, markdown and lock files
+<FilesMatch "(^#.*#|\.(bak|config|dist|fla|inc|ini|log|psd|sh|sql|sw[op]|md|lock)|~)$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>

@@ -35,7 +35,10 @@ try {
         $monthYear     = (string) ($_POST['month_year'] ?? date('Y-m'));
         $notes         = trim((string) ($_POST['notes'] ?? ''));
 
-        if ($childId === 0 || $amount <= 0 || !preg_match('/^\d{4}-\d{2}$/', $monthYear)) {
+        $dateTimeCheck = DateTime::createFromFormat('Y-m-d', $paymentDate);
+        $isValidDate = $dateTimeCheck && $dateTimeCheck->format('Y-m-d') === $paymentDate;
+
+        if ($childId === 0 || $amount <= 0 || $amount >= 1000000000 || !$isValidDate || !preg_match('/^\d{4}-\d{2}$/', $monthYear)) {
             setFlash('error', 'لطفاً همه فیلدهای الزامی را به‌درستی پر کنید.');
             redirect(url('admin/tuition.php'));
         }

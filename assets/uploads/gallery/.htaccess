@@ -1,4 +1,4 @@
-# ROMA Daycare — Upload Directory Hardening
+# ROMA Daycare — Gallery Upload Directory Hardening
 # Disable directory listing
 Options -Indexes
 

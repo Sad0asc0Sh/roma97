@@ -110,13 +110,13 @@ $parentsStmt = $pdo->query("SELECT id, first_name, last_name, email FROM parents
 $parents = $parentsStmt->fetchAll();
 
 // Fetch Sent Messages (paginated)
-$countStmt = $pdo->prepare('SELECT COUNT(*) FROM messages WHERE sender_type = "admin" AND sender_id = ?');
+$countStmt = $pdo->prepare("SELECT COUNT(*) FROM messages WHERE sender_type = 'admin' AND sender_id = ?");
 $countStmt->execute([$adminId]);
 $pagination = paginate((int) $countStmt->fetchColumn(), currentPageNumber(), 20);
 
 $messagesStmt = $pdo->prepare(
     'SELECT m.*, p.first_name, p.last_name FROM messages m LEFT JOIN parents p ON m.parent_id = p.id'
-    . ' WHERE m.sender_type = "admin" AND m.sender_id = ? ORDER BY m.created_at DESC'
+    . " WHERE m.sender_type = 'admin' AND m.sender_id = ? ORDER BY m.created_at DESC"
     . ' LIMIT ' . $pagination['perPage'] . ' OFFSET ' . $pagination['offset']
 );
 $messagesStmt->execute([$adminId]);
@@ -129,7 +129,7 @@ if (isset($_GET['view'])) {
     $viewId = (int) $_GET['view'];
     $viewStmt = $pdo->prepare(
         'SELECT m.*, p.first_name, p.last_name FROM messages m LEFT JOIN parents p ON m.parent_id = p.id'
-        . ' WHERE m.id = ? AND m.sender_type = "admin" AND m.sender_id = ? LIMIT 1'
+        . " WHERE m.id = ? AND m.sender_type = 'admin' AND m.sender_id = ? LIMIT 1"
     );
     $viewStmt->execute([$viewId, $adminId]);
     $viewMessage = $viewStmt->fetch() ?: null;
@@ -231,7 +231,7 @@ require_once __DIR__ . '/header.php';
                 <a href="<?= e(url('admin/messages.php')) ?>" class="close-btn">&times;</a>
             </div>
             <div class="card-body">
-                <p><strong>To:</strong> <?= $viewMessage['parent_id'] ? e($viewMessage['first_name'] . ' ' . $viewMessage['last_name']) : 'All Parents' ?></p>
+                <p><strong>گیرنده:</strong> <?= $viewMessage['parent_id'] ? e($viewMessage['first_name'] . ' ' . $viewMessage['last_name']) : 'همه والدین' ?></p>
                 <p><strong>تاریخ:</strong> <?= e(formatPersianDate($viewMessage['created_at'])) ?></p>
                 <p><strong>موضوع:</strong> <?= e($viewMessage['subject']) ?></p>
                 <hr>

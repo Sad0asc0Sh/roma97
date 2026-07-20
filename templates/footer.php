@@ -106,6 +106,6 @@ $whatsappValue = siteWhatsApp();
 
 <?php require_once __DIR__ . '/bottom-nav.php'; ?>
 
-    <script src="<?php echo e(url('assets/js/script.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('assets/js/script.js')); ?>" defer></script>
 </body>
 </html>

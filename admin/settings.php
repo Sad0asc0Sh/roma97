@@ -34,23 +34,12 @@ function getSettings(PDO $pdo): array
         'topbar_text' => '',
     ];
 
+    $keys = array_keys($settings);
+    $placeholders = implode(', ', array_fill(0, count($keys), '?'));
     $statement = $pdo->prepare(
-        'SELECT meta_key, meta_value FROM settings WHERE meta_key IN (:site_name, :site_description, :logo, :contact_phone, :contact_email, :site_address, :working_hours, :instagram, :telegram, :whatsapp, :topbar_enabled, :topbar_text)'
+        'SELECT meta_key, meta_value FROM settings WHERE meta_key IN (' . $placeholders . ')'
     );
-    $statement->execute([
-        ':site_name' => 'site_name',
-        ':site_description' => 'site_description',
-        ':logo' => 'logo',
-        ':contact_phone' => 'contact_phone',
-        ':contact_email' => 'contact_email',
-        ':site_address' => 'site_address',
-        ':working_hours' => 'working_hours',
-        ':instagram' => 'instagram',
-        ':telegram' => 'telegram',
-        ':whatsapp' => 'whatsapp',
-        ':topbar_enabled' => 'topbar_enabled',
-        ':topbar_text' => 'topbar_text',
-    ]);
+    $statement->execute($keys);
 
     while ($row = $statement->fetch()) {
         if (array_key_exists($row['meta_key'], $settings)) {
@@ -130,8 +119,13 @@ function handleLogoUpload(array $file): ?string
         throw new RuntimeException('بارگذاری لوگو نامعتبر است.');
     }
 
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $mimeType = $finfo->file($tmpName);
+    $mimeType = null;
+    if (class_exists('finfo')) {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($tmpName);
+    } else {
+        $mimeType = $allowedTypes[$extension][0] ?? null;
+    }
 
     if (!is_string($mimeType) || !in_array($mimeType, $allowedTypes[$extension], true)) {
         throw new RuntimeException('بارگذاری لوگو نامعتبر است.');
