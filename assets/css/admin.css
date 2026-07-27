@@ -77,7 +77,13 @@ a:hover{color:var(--adm-primary-dark)}
 .admin-overlay.active{display:block;opacity:1}
 
 /* ── SIDEBAR ────────────────────────────────────────────────── */
-.admin-sidebar{position:fixed;inset-inline-start:0;top:0;bottom:0;width:var(--adm-sidebar-width);background:var(--adm-sidebar-bg);display:flex;flex-direction:column;z-index:999;transition:transform var(--adm-transition-slow);overflow:hidden;border-inline-end:1px solid rgba(255,255,255,0.04)}
+.admin-sidebar{position:fixed;inset-inline-start:0;top:0;bottom:0;width:var(--adm-sidebar-width);background:var(--adm-sidebar-bg);display:flex;flex-direction:column;z-index:999;transition:transform var(--adm-transition-slow),width var(--adm-transition-slow);overflow:hidden;border-inline-end:1px solid rgba(255,255,255,0.04)}
+.admin-sidebar.collapsed{width:64px}
+.admin-sidebar.collapsed .nav-text,.admin-sidebar.collapsed .nav-arrow,.admin-sidebar.collapsed .admin-logo-badge,.admin-sidebar.collapsed .admin-user-details,.admin-sidebar.collapsed .admin-nav-section{display:none}
+.admin-sidebar.collapsed .admin-nav-submenu{display:none!important}
+.admin-sidebar.collapsed .admin-nav-item{justify-content:center;padding:10px}
+.admin-sidebar.collapsed .admin-logo{justify-content:center}
+.admin-sidebar.collapsed~.admin-main{margin-inline-start:64px}
 .admin-sidebar-header{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,0.06);min-height:72px;flex-shrink:0}
 .admin-logo{display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff;font-weight:800;font-size:1.1rem;letter-spacing:-0.01em;transition:opacity var(--adm-transition)}
 .admin-logo:hover{color:#fff;opacity:0.9}
