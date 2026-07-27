@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Admin submenu accordion
+    // Admin submenu accordion — CSS uses class "open" (admin.css) 
     var adminNavParents = document.querySelectorAll('.admin-nav-parent');
     adminNavParents.forEach(function(parent) {
         parent.addEventListener('click', function(e) {
@@ -198,19 +198,21 @@ document.addEventListener('DOMContentLoaded', function() {
             var submenu = document.getElementById(submenuId);
             
             if (submenu) {
-                var isActive = submenu.classList.contains('active');
+                var isOpen = submenu.classList.contains('open');
                 
                 // Close all other submenus
                 document.querySelectorAll('.admin-nav-submenu').forEach(function(sub) {
-                    sub.classList.remove('active');
+                    sub.classList.remove('open', 'active');
                 });
                 document.querySelectorAll('.admin-nav-parent').forEach(function(p) {
+                    p.removeAttribute('aria-expanded');
                     p.classList.remove('active');
                 });
                 
                 // Toggle current submenu
-                if (!isActive) {
-                    submenu.classList.add('active');
+                if (!isOpen) {
+                    submenu.classList.add('open');
+                    parent.setAttribute('aria-expanded', 'true');
                     parent.classList.add('active');
                 }
             }
@@ -218,13 +220,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Auto-open active submenu on page load
-    var activeSubitem = document.querySelector('.admin-nav-subitem.active');
+    var activeSubitem = document.querySelector('.admin-nav-subitem.active, .admin-nav-submenu .admin-nav-item.active');
     if (activeSubitem) {
         var parentSubmenu = activeSubitem.closest('.admin-nav-submenu');
         if (parentSubmenu) {
-            parentSubmenu.classList.add('active');
+            parentSubmenu.classList.add('open');
             var parentButton = document.querySelector('[data-submenu="' + parentSubmenu.id.replace('submenu-', '') + '"]');
             if (parentButton) {
+                parentButton.setAttribute('aria-expanded', 'true');
                 parentButton.classList.add('active');
             }
         }
@@ -354,4 +357,88 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, { passive: true });
     }
+
+    // ============================================
+    // STAT COUNTER ANIMATION
+    // ============================================
+    var statNumbers = document.querySelectorAll('.stat-number[data-count], .metric-value[data-count]');
+    if (statNumbers.length > 0 && 'IntersectionObserver' in window) {
+        var countObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    var el = entry.target;
+                    var target = parseInt(el.getAttribute('data-count'), 10);
+                    var duration = 1200;
+                    var startTime = null;
+                    var startVal = 0;
+                    function step(timestamp) {
+                        if (!startTime) startTime = timestamp;
+                        var progress = Math.min((timestamp - startTime) / duration, 1);
+                        var eased = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+                        el.textContent = Math.floor(startVal + (target - startVal) * eased).toLocaleString('fa-IR');
+                        if (progress < 1) {
+                            requestAnimationFrame(step);
+                        } else {
+                            el.textContent = target.toLocaleString('fa-IR');
+                        }
+                    }
+                    requestAnimationFrame(step);
+                    countObserver.unobserve(el);
+                }
+            });
+        }, { threshold: 0.3 });
+        statNumbers.forEach(function(el) { countObserver.observe(el); });
+    }
+
+    // ============================================
+    // TOAST NOTIFICATIONS
+    // ============================================
+    // Auto-dismiss flash messages after 5s
+    var alerts = document.querySelectorAll('.alert[role="status"], .notice[role="status"]');
+    alerts.forEach(function(alert) {
+        setTimeout(function() {
+            alert.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            alert.style.opacity = '0';
+            alert.style.transform = 'translateY(-8px)';
+            setTimeout(function() {
+                if (alert.parentNode) alert.parentNode.removeChild(alert);
+            }, 500);
+        }, 5000);
+    });
+
+    // ============================================
+    // ACTIVE NAV LINK HIGHLIGHT (public site)
+    // ============================================
+    // Already set via PHP class="active", but ensure bottom nav matches
+    var currentPath = window.location.pathname;
+    document.querySelectorAll('.bottom-nav-item').forEach(function(item) {
+        var href = item.getAttribute('href');
+        if (href && currentPath.endsWith(href.split('?')[0])) {
+            item.classList.add('active');
+        }
+    });
+
+    // ============================================
+    // FORM SUBMIT LOADING STATES
+    // ============================================
+    document.querySelectorAll('form[data-loading]').forEach(function(form) {
+        form.addEventListener('submit', function() {
+            var btn = form.querySelector('[type="submit"]');
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.7';
+                var original = btn.textContent;
+                btn.setAttribute('data-original', original);
+            }
+        });
+    });
+
+    // ============================================
+    // IMAGE LAZY LOAD FALLBACK
+    // ============================================
+    document.querySelectorAll('img[loading="lazy"]').forEach(function(img) {
+        img.addEventListener('error', function() {
+            this.style.visibility = 'hidden';
+        });
+    });
 });

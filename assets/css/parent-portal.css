@@ -2249,6 +2249,36 @@
   /* form wrapper */
 }
 
+/* ── Mobile: hide header nav, show bottom-nav ───────────── */
+@media (max-width: 991px) {
+  /* Hide desktop nav items — bottom-nav handles navigation */
+  .parent-nav {
+    display: none !important;
+  }
+
+  /* Keep user badge visible */
+  .parent-user {
+    display: flex;
+  }
+
+  /* Space for fixed bottom nav */
+  .parent-main {
+    padding-bottom: 90px;
+  }
+
+  /* Header stays compact */
+  .parent-header-container {
+    justify-content: space-between;
+  }
+}
+
+/* ── Tablet: show nav horizontally scrollable ────────────── */
+@media (min-width: 992px) {
+  .parent-nav {
+    display: flex !important;
+  }
+}
+
 /* ── Print ───────────────────────────────────────────────── */
 @media print {
   .parent-header,

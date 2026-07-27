@@ -152,7 +152,10 @@ require_once __DIR__ . '/templates/header.php';
                                 </time>
                                 <h3><a href="<?= e(url('news.php?id=' . $newsItem['id'])) ?>"><?= e($newsItem['title']) ?></a></h3>
                                 <p><?= e(publicNewsExcerpt($newsItem['content'])) ?></p>
-                                <a href="<?= e(url('news.php?id=' . $newsItem['id'])) ?>" class="news-read-more">ادامه مطلب <span>←</span></a>
+                                <a href="<?= e(url('news.php?id=' . $newsItem['id'])) ?>" class="news-read-more">
+                                    ادامه مطلب
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+                                </a>
                             </div>
                         </article>
                     <?php endforeach; ?>
