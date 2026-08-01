@@ -63,7 +63,7 @@ $fe=getFlash('error');$fs=getFlash('success');
         <a href="<?=$fHref('suspended')?>" class="btn btn-sm <?=$sf==='suspended'?'btn-primary':'btn-outline'?>">&#10060; مسدود</a>
     </p>
     <?php if($parents===[]):?>
-        <div class="empty-state empty-state-sm"><div class="empty-state-icon">&#128101;</div><h3>والدی یافت نشد</h3><p><?=$sf==='pending'?'ثبتنام جدیدی در انتظار تأیید نیست.':'لیست خالی است.'?></p></div>
+        <div class="empty-state empty-state-sm"><div class="empty-state-icon">&#128101;</div><h3>والدی یافت نشد</h3><p><?=$sf==='pending'?'ثبت نام جدیدی در انتظار تأیید نیست.':'لیست خالی است.'?></p></div>
     <?php else:?>
         <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>نام</th><th>ایمیل</th><th>تلفن</th><th>وضعیت</th><th>تاریخ</th><th>عملیات</th></tr></thead><tbody>
         <?php foreach($parents as $p):?>

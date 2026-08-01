@@ -68,7 +68,7 @@ require_once __DIR__ . '/templates/header.php';
                     <p class="hero-fallback-sub">محیطی امن، شاد و پر از یادگیری برای فرزندان دلبندتان</p>
                     <div class="hero-fallback-actions">
                         <a href="<?= e(url('page.php?slug=about')) ?>" class="btn btn-primary btn-lg">آشنایی با ما</a>
-                        <a href="<?= e(url('login.php')) ?>" class="btn btn-outline btn-lg">ثبتنام والدین</a>
+                        <a href="<?= e(url('login.php')) ?>" class="btn btn-outline btn-lg">ثبت نام والدین</a>
                     </div>
                 </div>
             </div>
@@ -370,9 +370,9 @@ try {
                     <path d="M21 25c0 0 1.5 2 3 2s3-2 3-2" stroke="white" stroke-width="1" stroke-linecap="round" fill="none"/>
                 </svg>
                 <h2>فرزندتان را به خانواده <?= e(siteName()) ?> بسپارید</h2>
-                <p>همین امروز برای ثبتنام و بازدید از مهد کودک اقدام کنید</p>
+                <p>همین امروز برای ثبت نام و بازدید از مهد کودک اقدام کنید</p>
                 <div class="cta-actions">
-                    <a href="<?= e(url('login.php')) ?>" class="btn btn-white btn-lg">ثبتنام والدین</a>
+                    <a href="<?= e(url('login.php')) ?>" class="btn btn-white btn-lg">ثبت نام والدین</a>
                     <a href="tel:<?= e(preg_replace('/[^0-9+]/', '', siteContactPhone())) ?>" class="btn btn-outline-white btn-lg">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
                         تماس با ما (<?= e(siteContactPhone()) ?>)

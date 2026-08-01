@@ -201,7 +201,7 @@ require_once __DIR__ . '/header.php';
             <?php if (empty($dashboardStatus)): ?>
                 <div class="empty-state empty-state-sm">
                     <div class="empty-state-icon">&#128102;</div>
-                    <h3>هیچ ثبتنام فعالی یافت نشد</h3>
+                    <h3>هیچ ثبت نام فعالی یافت نشد</h3>
                 </div>
             <?php else: ?>
                 <div class="admin-table-wrap">

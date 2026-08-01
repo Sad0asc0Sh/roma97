@@ -51,7 +51,7 @@ try {
     $pdo = getDb();
 } catch (Throwable $exception) {
     error_log($exception->getMessage());
-    $errors[] = 'ثبتنام موقتاً در دسترس نیست. لطفاً بعداً تلاش کنید.';
+    $errors[] = 'ثبت نام موقتاً در دسترس نیست. لطفاً بعداً تلاش کنید.';
     $pdo = null;
 }
 
@@ -72,7 +72,7 @@ if (isPostRequest()) {
 
     // Rate-limit registrations per IP to prevent bulk account creation.
     if ($errors === [] && !checkBruteForce('parent_register', null)) {
-        $errors[] = 'تعداد دفعات ثبتنام بیش از حد مجاز است. لطفاً چند دقیقه دیگر تلاش کنید.';
+        $errors[] = 'تعداد دفعات ثبت نام بیش از حد مجاز است. لطفاً چند دقیقه دیگر تلاش کنید.';
     }
 
     if (!isValidParentName($old['first_name'])) {
@@ -135,11 +135,11 @@ if (isPostRequest()) {
             $newParentId = (int) $pdo->lastInsertId();
             recordAudit('auth.register', 'parent', $newParentId > 0 ? $newParentId : null, ['email' => $old['email']]);
 
-            setFlash('success', 'ثبتنام شما با موفقیت انجام شد. منتظر تأیید مدیر بمانید.');
+            setFlash('success', 'ثبت نام شما با موفقیت انجام شد. منتظر تأیید مدیر بمانید.');
             redirect(url('login.php'));
         } catch (Throwable $exception) {
             error_log($exception->getMessage());
-            $errors[] = 'ثبتنام با مشکل مواجه شد. لطفاً دوباره تلاش کنید.';
+            $errors[] = 'ثبت نام با مشکل مواجه شد. لطفاً دوباره تلاش کنید.';
         }
     }
 }

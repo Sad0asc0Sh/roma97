@@ -162,6 +162,22 @@ if ($installStep && $installError === '') {
             $mainSql = str_replace($m[0], '', $sql);
         }
 
+        // Remove standalone procedure calls that were inside schema.sql after DELIMITER
+        $mainSql = str_replace([
+            'CALL add_message_index_if_missing();',
+            'DROP PROCEDURE IF EXISTS add_message_index_if_missing;'
+        ], '', $mainSql);
+
+        // Strip SQL comment lines so table statements preceded by comments are NOT skipped
+        $cleanLines = [];
+        foreach (explode("\n", $mainSql) as $line) {
+            $trimmed = trim($line);
+            if ($trimmed !== '' && !str_starts_with($trimmed, '--')) {
+                $cleanLines[] = $line;
+            }
+        }
+        $mainSql = implode("\n", $cleanLines);
+
         out('Creating tables...');
         $statements = array_filter(array_map('trim', preg_split('/;\s*[\r\n]+/', $mainSql)));
         $executed = 0;

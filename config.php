@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 // Application constant to prevent direct file access
-define('ROOMA_APP', true);
+defined('ROOMA_APP') || define('ROOMA_APP', true);
 
 /*
  * Environment-specific overrides.
