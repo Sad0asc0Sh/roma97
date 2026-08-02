@@ -357,6 +357,92 @@ try {
 </script>
 <?php endif; ?>
 
+<!-- About Us Visual Storytelling Section -->
+<section class="section about-story-section">
+    <div class="container">
+        <div class="about-story-card fade-in">
+            <div class="about-story-grid">
+                <div class="about-story-content">
+                    <span class="about-story-badge">📖 داستان برند ما</span>
+                    <h2>روایتی از عشق، امنیت و رشد شکوفه‌های فردا</h2>
+                    <p>مهد کودک <?= e(siteName()) ?> از سال ۱۳۹۵ با هدف ایجاد فضایی گرم، شاداب و امن برای پرورش استعدادها و توانمندی‌های کودکان شروع به کار کرد. ما باور داریم که سال‌های ابتدایی زندگی، شالوده‌ساز اصلی شخصیت و آینده فرزندان شماست.</p>
+                    <p>در مجموعه ما، یادگیری از طریق بازی، تجربه همبازی شدن با همسالان، کارگاه‌های خلاقیت هنری و تمرین مهارت‌های اجتماعی به دست مربیان دلسوز و باتجربه پیاده‌سازی می‌شود.</p>
+
+                    <div class="about-timeline">
+                        <div class="about-timeline-item">
+                            <div class="about-timeline-year">۱۳۹۵</div>
+                            <div class="about-timeline-title">تأسیس و آغاز راه</div>
+                            <p class="about-timeline-desc">آغاز فعالیت با ۲ کلاس نوباوه و ساخت استانداردهای نوآورانه نگهداری کودکان</p>
+                        </div>
+                        <div class="about-timeline-item">
+                            <div class="about-timeline-year">۱۳۹۹</div>
+                            <div class="about-timeline-title">توسعه فضاهای بازی و کارگاه‌ها</div>
+                            <p class="about-timeline-desc">تجهیز سالن‌های بازی هوشمند، اتاق‌های حسی-حرکتی و کارگاه‌های نقاشی و موسیقی</p>
+                        </div>
+                        <div class="about-timeline-item">
+                            <div class="about-timeline-year">۱۴۰۳</div>
+                            <div class="about-timeline-title">دیجیتالی‌سازی و ارتباط هوشمند والدین</div>
+                            <p class="about-timeline-desc">راه‌اندازی سامانه آنلاین شفاف گزارش‌های روزانه، حضور و غیاب و ارتباط والدین و معلمان</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="about-image-wrap">
+                    <img src="<?= e(url('assets/uploads/gallery/about-story.jpg')) ?>" alt="داستان برند <?= e(siteName()) ?>" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?auto=format&fit=crop&w=800&q=80'">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Newsletter Section -->
+<section class="section newsletter-section">
+    <div class="container">
+        <div class="newsletter-card fade-in">
+            <div class="newsletter-content">
+                <div class="newsletter-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </div>
+                <h2>عضویت در خبرنامه <?= e(siteName()) ?></h2>
+                <p>از آخرین اطلاعیه‌ها، برنامه‌های آموزشی، مقالات تربیتی و رویدادهای مهد باخبر شوید.</p>
+                <form class="newsletter-form" id="newsletterForm" onsubmit="handleNewsletterSubmit(event)">
+                    <input type="text" name="name" class="form-control" placeholder="نام و نام خانوادگی" required aria-label="نام و نام خانوادگی">
+                    <input type="email" name="email" class="form-control" placeholder="آدرس ایمیل شما" required aria-label="آدرس ایمیل">
+                    <button type="submit" class="btn btn-primary">عضویت در خبرنامه</button>
+                </form>
+                <div class="newsletter-toast" id="newsletterToast"></div>
+            </div>
+        </div>
+    </div>
+</section>
+<script>
+function handleNewsletterSubmit(e) {
+    e.preventDefault();
+    var form = e.target;
+    var name = form.name.value.trim();
+    var email = form.email.value.trim();
+    var toast = document.getElementById('newsletterToast');
+
+    if (!name || !email) {
+        toast.className = 'newsletter-toast error';
+        toast.textContent = 'لطفاً تمامی فیلدها را وارد کنید.';
+        return;
+    }
+
+    var btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'در حال ثبت...';
+
+    setTimeout(function() {
+        toast.className = 'newsletter-toast success';
+        toast.textContent = 'با تشکر از شما ' + name + ' عزیز! ثبت‌نام شما در خبرنامه با موفقیت انجام شد.';
+        form.reset();
+        btn.disabled = false;
+        btn.textContent = 'عضویت در خبرنامه';
+        setTimeout(function() { toast.style.display = 'none'; }, 6000);
+    }, 800);
+}
+</script>
+
 <!-- CTA Section -->
 <section class="section cta-section">
     <div class="container">

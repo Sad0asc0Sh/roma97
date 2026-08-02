@@ -46,6 +46,35 @@
   --pp-transition-slow: 0.38s cubic-bezier(0.4,0,0.2,1);
 }
 
+/* ── Dark Theme Overrides for Parent Portal ───────────────── */
+[data-theme="dark"] .parent-portal-body {
+  --pp-surface: #1E293B;
+  --pp-surface-raised: #1E293B;
+  --pp-bg: #0B0F19;
+  --pp-bg-warm: #0F172A;
+  --pp-bg-cool: #0F172A;
+  --pp-text: #F8FAFC;
+  --pp-text-secondary: #94A3B8;
+  --pp-text-muted: #64748B;
+  --pp-border: #334155;
+  --pp-border-light: #1E293B;
+  --pp-primary-light: rgba(26,107,82,0.25);
+  --pp-success-bg: rgba(34,160,107,0.15);
+  --pp-warning-bg: rgba(212,148,10,0.15);
+  --pp-danger-bg: rgba(217,79,79,0.15);
+  --pp-info-bg: rgba(59,124,200,0.15);
+}
+
+[data-theme="dark"] .parent-header {
+  background: rgba(15,23,42,0.92);
+  border-bottom-color: var(--pp-border);
+}
+
+[data-theme="dark"] .mobile-bottom-nav.parent-bottom-nav {
+  background: rgba(15,23,42,0.95);
+  border-top-color: var(--pp-border);
+}
+
 /* ── Reset scoped to parent portal ───────────────────────── */
 .parent-portal-body {
   font-family: var(--pp-font);

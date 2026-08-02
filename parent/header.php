@@ -81,6 +81,9 @@ $unreadCountFa = persianNumber((string) $unreadCount);
             </nav>
 
             <div class="parent-user">
+                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" aria-label="تغییر حالت شب/روز" style="margin-inline-end: 8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                </button>
                 <span class="parent-user-avatar">&#128100;</span>
                 <span class="parent-user-name"><?php echo e($_SESSION['parent_first_name'] ?? $_SESSION['parent_name'] ?? 'والد'); ?></span>
             </div>
