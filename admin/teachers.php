@@ -163,6 +163,10 @@ if (isPostRequest()) {
             'national_id'     => trim((string) ($_POST['national_id'] ?? '')),
             'education_level' => trim((string) ($_POST['education_level'] ?? '')),
             'major'           => trim((string) ($_POST['major'] ?? '')),
+            'role_title'      => trim((string) ($_POST['role_title'] ?? '')),
+            'bio'             => trim((string) ($_POST['bio'] ?? '')),
+            'sort_order'      => (int) ($_POST['sort_order'] ?? 0),
+            'show_in_team'    => isset($_POST['show_in_team']) ? 1 : 0,
             'hire_date'       => trim((string) ($_POST['hire_date'] ?? '')),
             'salary'          => trim((string) ($_POST['salary'] ?? '')),
             'password'        => (string) ($_POST['password'] ?? ''),
@@ -216,27 +220,33 @@ if (isPostRequest()) {
                     $stmt = $pdo->prepare(
                         'INSERT INTO teachers
                             (first_name, last_name, email, phone, password, avatar,
-                             national_id, education_level, major, certificate_file,
+                             national_id, education_level, major, role_title, bio,
+                             show_in_team, sort_order, certificate_file,
                              hire_date, salary, status)
                          VALUES
                             (:fn, :ln, :em, :ph, :pw, :av,
-                             :ni, :el, :mj, :cf,
+                             :ni, :el, :mj, :rt, :bio,
+                             :sit, :so, :cf,
                              :hd, :sl, :st)'
                     );
                     $stmt->execute([
-                        ':fn' => $fields['first_name'],
-                        ':ln' => $fields['last_name'],
-                        ':em' => $fields['email'],
-                        ':ph' => $fields['phone'] ?: null,
-                        ':pw' => password_hash($fields['password'], PASSWORD_DEFAULT),
-                        ':av' => $avatarPath,
-                        ':ni' => $fields['national_id'] ?: null,
-                        ':el' => $fields['education_level'] ?: null,
-                        ':mj' => $fields['major'] ?: null,
-                        ':cf' => $certPath,
-                        ':hd' => $hireDateVal,
-                        ':sl' => $salaryVal,
-                        ':st' => $fields['status'],
+                        ':fn'  => $fields['first_name'],
+                        ':ln'  => $fields['last_name'],
+                        ':em'  => $fields['email'],
+                        ':ph'  => $fields['phone'] ?: null,
+                        ':pw'  => password_hash($fields['password'], PASSWORD_DEFAULT),
+                        ':av'  => $avatarPath,
+                        ':ni'  => $fields['national_id'] ?: null,
+                        ':el'  => $fields['education_level'] ?: null,
+                        ':mj'  => $fields['major'] ?: null,
+                        ':rt'  => $fields['role_title'] ?: null,
+                        ':bio' => $fields['bio'] ?: null,
+                        ':sit' => $fields['show_in_team'],
+                        ':so'  => $fields['sort_order'],
+                        ':cf'  => $certPath,
+                        ':hd'  => $hireDateVal,
+                        ':sl'  => $salaryVal,
+                        ':st'  => $fields['status'],
                     ]);
                     recordAudit('teacher.create', 'teacher', (int) $pdo->lastInsertId());
                     setFlash('success', 'حساب معلم با موفقیت ایجاد شد.');
@@ -251,19 +261,23 @@ if (isPostRequest()) {
 
                     $pwClause = '';
                     $params   = [
-                        ':fn' => $fields['first_name'],
-                        ':ln' => $fields['last_name'],
-                        ':em' => $fields['email'],
-                        ':ph' => $fields['phone'] ?: null,
-                        ':av' => $finalAvatar,
-                        ':ni' => $fields['national_id'] ?: null,
-                        ':el' => $fields['education_level'] ?: null,
-                        ':mj' => $fields['major'] ?: null,
-                        ':cf' => $finalCert,
-                        ':hd' => $hireDateVal,
-                        ':sl' => $salaryVal,
-                        ':st' => $fields['status'],
-                        ':id' => $teacherId,
+                        ':fn'  => $fields['first_name'],
+                        ':ln'  => $fields['last_name'],
+                        ':em'  => $fields['email'],
+                        ':ph'  => $fields['phone'] ?: null,
+                        ':av'  => $finalAvatar,
+                        ':ni'  => $fields['national_id'] ?: null,
+                        ':el'  => $fields['education_level'] ?: null,
+                        ':mj'  => $fields['major'] ?: null,
+                        ':rt'  => $fields['role_title'] ?: null,
+                        ':bio' => $fields['bio'] ?: null,
+                        ':sit' => $fields['show_in_team'],
+                        ':so'  => $fields['sort_order'],
+                        ':cf'  => $finalCert,
+                        ':hd'  => $hireDateVal,
+                        ':sl'  => $salaryVal,
+                        ':st'  => $fields['status'],
+                        ':id'  => $teacherId,
                     ];
                     if ($fields['password'] !== '') {
                         $pwClause     = ', password = :pw';
@@ -274,7 +288,9 @@ if (isPostRequest()) {
                         "UPDATE teachers SET
                             first_name = :fn, last_name = :ln, email = :em, phone = :ph,
                             avatar = :av, national_id = :ni, education_level = :el,
-                            major = :mj, certificate_file = :cf, hire_date = :hd,
+                            major = :mj, role_title = :rt, bio = :bio,
+                            show_in_team = :sit, sort_order = :so,
+                            certificate_file = :cf, hire_date = :hd,
                             salary = :sl, status = :st{$pwClause}
                          WHERE id = :id"
                     );
@@ -313,7 +329,7 @@ try {
         $editTeacher = $eStmt->fetch() ?: null;
     }
 
-    $sql = 'SELECT id, first_name, last_name, email, phone, education_level, hire_date, status, avatar
+    $sql = 'SELECT id, first_name, last_name, email, phone, education_level, hire_date, status, avatar, role_title, bio, show_in_team, sort_order
             FROM teachers';
     $countSql = 'SELECT COUNT(*) FROM teachers';
     $params = [];
@@ -416,6 +432,27 @@ require_once __DIR__ . '/header.php';
                            value="<?= e((string) ($editTeacher['major'] ?? $formData['major'] ?? '')) ?>">
                 </div>
                 <div class="form-group">
+                    <label for="tf_role_title">عنوان شغلی / سمت (نمایش در سایت)</label>
+                    <input type="text" id="tf_role_title" name="role_title" class="form-control"
+                           placeholder="مثال: سرپرست مربیان، مربی خردسال"
+                           value="<?= e((string) ($editTeacher['role_title'] ?? $formData['role_title'] ?? '')) ?>">
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label for="tf_bio">توضیحات و تخصص (نمایش در کارت مربیان سایت)</label>
+                    <textarea id="tf_bio" name="bio" class="form-control" rows="2"
+                              placeholder="مثال: کارشناس ارشد روانشناسی کودک با ۸ سال سابقه آموزش"><?= e((string) ($editTeacher['bio'] ?? $formData['bio'] ?? '')) ?></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="tf_sort_order">ترتیب نمایش در سایت (عدد کوچک‌تر اول)</label>
+                    <input type="number" id="tf_sort_order" name="sort_order" class="form-control" min="0"
+                           value="<?= e((string) ($editTeacher['sort_order'] ?? $formData['sort_order'] ?? 0)) ?>">
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-top: 24px;">
+                    <input type="checkbox" id="tf_show_in_team" name="show_in_team" value="1"
+                           <?= (int) ($editTeacher['show_in_team'] ?? $formData['show_in_team'] ?? 1) === 1 ? 'checked' : '' ?>>
+                    <label for="tf_show_in_team" style="margin: 0; cursor: pointer; font-weight: 600;">نمایش در بخش تیم مربیان سایت</label>
+                </div>
+                <div class="form-group">
                     <label for="tf_hire_date">تاریخ استخدام (تاریخ استخدام)</label>
                     <input type="date" id="tf_hire_date" name="hire_date" class="form-control"
                            value="<?= e((string) ($editTeacher['hire_date'] ?? $formData['hire_date'] ?? '')) ?>">
@@ -486,10 +523,10 @@ require_once __DIR__ . '/header.php';
                     <tr>
                         <th>تصویر</th>
                         <th>نام</th>
+                        <th>سمت / عنوان</th>
                         <th>ایمیل</th>
                         <th>تلفن</th>
-                        <th>تحصیلات</th>
-                        <th>تاریخ استخدام</th>
+                        <th>نمایش در سایت</th>
                         <th>وضعیت</th>
                         <th>عملیات</th>
                     </tr>
@@ -505,6 +542,7 @@ require_once __DIR__ . '/header.php';
                         'inactive' => 'badge-inactive',
                         default    => 'badge-pending',
                     };
+                    $inTeam = (int) ($t['show_in_team'] ?? 1) === 1;
                     ?>
                     <tr>
                         <td>
@@ -516,10 +554,14 @@ require_once __DIR__ . '/header.php';
                             <?php endif; ?>
                         </td>
                         <td><strong><?= e($fullName) ?></strong></td>
+                        <td><?= e((string) ($t['role_title'] ?? '—')) ?></td>
                         <td><?= e((string) $t['email']) ?></td>
                         <td><?= e((string) ($t['phone'] ?? '—')) ?></td>
-                        <td><?= e((string) ($t['education_level'] ?? '—')) ?></td>
-                        <td><?= e((string) ($t['hire_date'] ?? '—')) ?></td>
+                        <td>
+                            <span class="badge <?= $inTeam ? 'badge-active' : 'badge-inactive' ?>">
+                                <?= $inTeam ? 'بله' : 'خیر' ?>
+                            </span>
+                        </td>
                         <td><span class="badge <?= e($badgeClass) ?>"><?= ucfirst($tStatus) ?></span></td>
                         <td class="teacher-actions-cell">
                             <a href="<?= e(url('admin/teachers.php?edit=' . (int) $t['id'])) ?>"

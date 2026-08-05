@@ -4,7 +4,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/error_handler.php';
 
-
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
@@ -267,8 +266,10 @@ $pageTitle = 'مدیریت اخبار | ' . siteName();
 require_once __DIR__ . '/header.php';
 ?>
 
-<section class="dashboard">
-    <h1>&#128240; اخبار</h1>
+<div class="admin-content">
+    <div class="admin-page-header">
+        <h1>&#128240; مدیریت اخبار</h1>
+    </div>
 
     <?php if ($successMessage !== null): ?>
         <div class="notice" role="status">&#9989; <?= e($successMessage) ?></div>
@@ -279,10 +280,47 @@ require_once __DIR__ . '/header.php';
     <?php endif; ?>
 
     <div class="admin-section">
-        <div class="admin-section-header">
-            <h2 class="admin-section-title" id="news-form-title">&#10010; <?= $editNewsItem ? 'ویرایش خبر' : 'افزودن خبر' ?></h2>
+        <div style="background: #E8F3EE; border-radius: 16px; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+            <div style="display: flex; align-items: center;">
+                <svg width="100" height="60" viewBox="0 0 160 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Plant in Pot -->
+                    <path d="M25 80 L35 80 L37 92 L23 92 Z" fill="#A8D5BA"/>
+                    <ellipse cx="30" cy="80" rx="6" ry="2" fill="#81C784"/>
+                    <path d="M30 80 Q25 65 20 60 Q26 62 30 70 Q34 60 40 58 Q35 68 30 80 Z" fill="#4CAF50"/>
+                    <path d="M30 70 Q20 72 15 76 Q22 78 30 73 Q38 75 45 72 Q38 70 30 70 Z" fill="#66BB6A"/>
+                    <!-- Books -->
+                    <rect x="42" y="82" width="22" height="10" rx="2" fill="#FFB74D"/>
+                    <rect x="44" y="74" width="18" height="8" rx="2" fill="#64B5F6"/>
+                    <rect x="45" y="67" width="16" height="7" rx="2" fill="#E1BEE7"/>
+                    <!-- Teddy Bear -->
+                    <circle cx="82" cy="46" r="9" fill="#D7CCC8"/>
+                    <circle cx="82" cy="46" r="5" fill="#F8BBD0"/>
+                    <circle cx="118" cy="46" r="9" fill="#D7CCC8"/>
+                    <circle cx="118" cy="46" r="5" fill="#F8BBD0"/>
+                    <circle cx="100" cy="58" r="22" fill="#D7CCC8"/>
+                    <ellipse cx="100" cy="63" rx="9" ry="7" fill="#EFEBE9"/>
+                    <ellipse cx="100" cy="60" rx="3.5" ry="2.5" fill="#5D4037"/>
+                    <path d="M100 62.5 L100 66 Q97 68 95 67 M100 66 Q103 68 105 67" stroke="#5D4037" stroke-width="1.5" stroke-linecap="round"/>
+                    <circle cx="92" cy="55" r="2.5" fill="#3E2723"/>
+                    <circle cx="108" cy="55" r="2.5" fill="#3E2723"/>
+                    <circle cx="93" cy="54" r="0.8" fill="#FFFFFF"/>
+                    <circle cx="109" cy="54" r="0.8" fill="#FFFFFF"/>
+                    <ellipse cx="87" cy="61" rx="3.5" ry="2" fill="#FF8A80" opacity="0.6"/>
+                    <ellipse cx="113" cy="61" rx="3.5" ry="2" fill="#FF8A80" opacity="0.6"/>
+                    <path d="M83 75 C80 88 120 88 117 75 Z" fill="#D7CCC8"/>
+                    <path d="M93 74 L100 77 L107 74 L100 79 Z" fill="#FF8A65"/>
+                    <circle cx="100" cy="76" r="2" fill="#E64A19"/>
+                    <ellipse cx="78" cy="80" rx="5" ry="7" fill="#D7CCC8"/>
+                    <ellipse cx="122" cy="80" rx="5" ry="7" fill="#D7CCC8"/>
+                </svg>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; font-size: 1.3rem; font-weight: 800; color: #1E293B;">
+                <span><?= $editNewsItem ? 'ویرایش خبر' : 'افزودن خبر' ?></span>
+                <div style="width: 36px; height: 36px; border-radius: 50%; background: #FFFFFF; color: #4EAB87; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 700; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">+</div>
+            </div>
         </div>
-        <form method="post" action="<?= e(url('admin/news.php')) ?>" enctype="multipart/form-data" novalidate>
+
+        <form method="post" action="<?= e(url('admin/news.php')) ?>" enctype="multipart/form-data" novalidate style="padding: 10px 0 0;">
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="save_news">
             <?php if ($editNewsItem): ?>
@@ -290,7 +328,7 @@ require_once __DIR__ . '/header.php';
             <?php endif; ?>
 
             <div class="form-group">
-                <label for="title" class="form-label">عنوان خبر</label>
+                <label for="title" class="form-label">عنوان خبر <span style="color:#EF4444;">*</span></label>
                 <input type="text" id="title" name="title" class="form-control"
                     maxlength="255"
                     placeholder="عنوان خبر را وارد کنید..."
@@ -299,8 +337,8 @@ require_once __DIR__ . '/header.php';
             </div>
 
             <div class="form-group">
-                <label for="content" class="form-label">محتوای خبر</label>
-                <textarea id="content" name="content" class="form-control" rows="8"
+                <label for="content" class="form-label">محتوای خبر <span style="color:#EF4444;">*</span></label>
+                <textarea id="content" name="content" class="form-control" rows="6"
                     placeholder="متن خبر را اینجا بنویسید..."
                     required><?= e($editNewsItem['content'] ?? '') ?></textarea>
             </div>
@@ -308,23 +346,45 @@ require_once __DIR__ . '/header.php';
             <?php if ($editNewsItem && !empty($editNewsItem['image'])): ?>
                 <div class="form-group">
                     <label class="form-label">تصویر فعلی</label>
-                    <img src="<?= e(url($editNewsItem['image'])) ?>" alt="<?= e($editNewsItem['title']) ?>" class="admin-image-preview">
+                    <div class="admin-image-preview-wrap">
+                        <img src="<?= e(url($editNewsItem['image'])) ?>" alt="<?= e($editNewsItem['title']) ?>" class="admin-image-preview">
+                    </div>
                 </div>
             <?php endif; ?>
 
             <div class="form-group">
-                <label for="image" class="form-label">تصویر (اختیاری)</label>
-                <input type="file" id="image" name="image" class="form-control"
-                    accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif">
-                <small style="color:var(--muted);font-size:0.85rem;">فرمتهای مجاز: JPG، PNG، GIF. حداکثر حجم: ۵۰۰ کیلوبایت.</small>
+                <label for="image" class="form-label" style="font-weight:700; font-size:0.95rem; color:#475569; margin-bottom:8px; display:block;">تصویر (اختیاری)</label>
+                <div onclick="document.getElementById('image').click()" style="border: 2px dashed #CBD5E1; border-radius: 16px; background: #F8FAFC; padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
+                    <input type="file" id="image" name="image" style="display: none !important;"
+                        accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif"
+                        onchange="document.getElementById('filename-text').textContent = this.files[0] ? this.files[0].name : 'No file chosen'">
+
+                    <!-- Cloud with Image & Green Arrow Icon -->
+                    <div style="margin-bottom: 12px; display: flex; justify-content: center;">
+                        <svg width="100" height="75" viewBox="0 0 100 75" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Soft Purple Cloud -->
+                            <path d="M25 60 C12 60 5 49 10 37 C13 27 25 25 30 27 C34 15 50 11 62 19 C70 13 84 17 86 29 C94 31 98 43 90 55 C86 60 78 60 75 60 Z" fill="#EEF2FF"/>
+                            <!-- Inner Picture Frame -->
+                            <rect x="36" y="28" width="28" height="20" rx="4" fill="#818CF8"/>
+                            <path d="M39 44 L46 36 L52 42 L56 38 L61 44 Z" fill="#C7D2FE"/>
+                            <circle cx="43" cy="33" r="2.5" fill="#FEF08A"/>
+                            <!-- Green Upload Circle Button with White Up Arrow -->
+                            <circle cx="62" cy="50" r="14" fill="#22C55E"/>
+                            <path d="M62 56 L62 44 M56 49 L62 44 L68 49" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+
+                    <div id="filename-text" style="font-size: 0.95rem; font-weight: 500; color: #475569; margin-bottom: 8px;">No file chosen</div>
+                    <div style="font-size: 0.82rem; color: #94A3B8;">فرمت‌های مجاز: <span style="color: #6366F1; font-weight: 600;">JPG, PNG, GIF</span>. حداکثر حجم: ۵۰۰ کیلوبایت.</div>
+                </div>
             </div>
 
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
-                    &#128190; <?= $editNewsItem ? 'بهروزرسانی خبر' : 'افزودن خبر' ?>
+            <div class="form-actions" style="margin-top:20px;">
+                <button type="submit" class="btn btn-primary btn-block" style="background:#4EAB87; border:none; padding:14px; font-size:1rem; font-weight:700; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:8px;">
+                    &#128190; <?= $editNewsItem ? 'به‌روزرسانی خبر' : 'افزودن خبر' ?>
                 </button>
                 <?php if ($editNewsItem): ?>
-                    <a href="<?= e(url('admin/news.php')) ?>" class="btn btn-outline">&#10006; لغو ویرایش</a>
+                    <a href="<?= e(url('admin/news.php')) ?>" class="btn btn-outline" style="border-radius:12px;">&#10006; لغو ویرایش</a>
                 <?php endif; ?>
             </div>
         </form>
@@ -378,6 +438,6 @@ require_once __DIR__ . '/header.php';
             <?php endif; ?>
         <?php endif; ?>
     </div>
-</section>
+</div>
 
 <?php require_once __DIR__ . '/footer.php'; ?>

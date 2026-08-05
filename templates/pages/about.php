@@ -92,6 +92,31 @@
 </section>
 
 <!-- Teachers Team Section -->
+<?php
+$teamTeachers = [];
+try {
+    initializeTeachersTables();
+    $pdo = getDb();
+    $teamStmt = $pdo->prepare(
+        "SELECT first_name, last_name, avatar, role_title, bio, education_level, major
+         FROM teachers
+         WHERE status = 'active' AND (show_in_team = 1 OR show_in_team IS NULL)
+         ORDER BY sort_order ASC, id ASC"
+    );
+    $teamStmt->execute();
+    $teamTeachers = $teamStmt->fetchAll();
+} catch (Throwable $e) {
+    error_log($e->getMessage());
+}
+
+if (!function_exists('getTeacherInitials')) {
+    function getTeacherInitials(string $fn, string $ln): string {
+        $f = mb_substr(trim($fn), 0, 1, 'UTF-8');
+        $l = mb_substr(trim($ln), 0, 1, 'UTF-8');
+        return ($f && $l) ? $f . '‌' . $l : ($f ?: ($l ?: '?'));
+    }
+}
+?>
 <section class="section team-section" style="padding: var(--space-2xl) 0; background: var(--paper);">
     <div class="container">
         <div class="section-header text-center" style="margin-bottom: var(--space-xl);">
@@ -102,41 +127,41 @@
         </div>
 
         <div class="team-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-lg);">
-            <div class="team-card" style="background: var(--white); border-radius: var(--radius-lg); padding: var(--space-lg); text-align: center; box-shadow: var(--shadow-sm); border: 1px solid var(--border);">
-                <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--primary-faint); color: var(--primary-dark); display: flex; align-items: center; justify-content: center; font-size: var(--text-2xl); font-weight: 700; margin: 0 auto var(--space-md) auto; border: 3px solid var(--primary-light);">
-                    م‌ا
-                </div>
-                <h3 style="font-size: var(--text-lg); margin-bottom: 4px;">مریم احمدی</h3>
-                <span class="badge badge-success" style="margin-bottom: var(--space-xs);">سرپرست مربیان</span>
-                <p style="font-size: var(--text-sm); color: var(--muted); margin: 0;">کارشناس ارشد روانشناسی کودک با ۸ سال سابقه آموزش</p>
-            </div>
-
-            <div class="team-card" style="background: var(--white); border-radius: var(--radius-lg); padding: var(--space-lg); text-align: center; box-shadow: var(--shadow-sm); border: 1px solid var(--border);">
-                <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--secondary-faint); color: var(--secondary-dark); display: flex; align-items: center; justify-content: center; font-size: var(--text-2xl); font-weight: 700; margin: 0 auto var(--space-md) auto; border: 3px solid var(--secondary-light);">
-                    س‌ر
-                </div>
-                <h3 style="font-size: var(--text-lg); margin-bottom: 4px;">سارا رضایی</h3>
-                <span class="badge badge-warning" style="margin-bottom: var(--space-xs);">مربی خردسال</span>
-                <p style="font-size: var(--text-sm); color: var(--muted); margin: 0;">مربی رسمی بهزیستی و متخصص بازی‌درمانی</p>
-            </div>
-
-            <div class="team-card" style="background: var(--white); border-radius: var(--radius-lg); padding: var(--space-lg); text-align: center; box-shadow: var(--shadow-sm); border: 1px solid var(--border);">
-                <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--primary-faint); color: var(--primary-dark); display: flex; align-items: center; justify-content: center; font-size: var(--text-2xl); font-weight: 700; margin: 0 auto var(--space-md) auto; border: 3px solid var(--primary-light);">
-                    ن‌ک
-                </div>
-                <h3 style="font-size: var(--text-lg); margin-bottom: 4px;">نرگس کریمی</h3>
-                <span class="badge badge-success" style="margin-bottom: var(--space-xs);">مربی پیش‌دبستانی</span>
-                <p style="font-size: var(--text-sm); color: var(--muted); margin: 0;">کارشناس علوم تربیتی با تخصص مهارتهای قبل از مدرسه</p>
-            </div>
-
-            <div class="team-card" style="background: var(--white); border-radius: var(--radius-lg); padding: var(--space-lg); text-align: center; box-shadow: var(--shadow-sm); border: 1px solid var(--border);">
-                <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--secondary-faint); color: var(--secondary-dark); display: flex; align-items: center; justify-content: center; font-size: var(--text-2xl); font-weight: 700; margin: 0 auto var(--space-md) auto; border: 3px solid var(--secondary-light);">
-                    ز‌م
-                </div>
-                <h3 style="font-size: var(--text-lg); margin-bottom: 4px;">زهرا محمدی</h3>
-                <span class="badge badge-info" style="margin-bottom: var(--space-xs);">مربی هنر و خلاقیت</span>
-                <p style="font-size: var(--text-sm); color: var(--muted); margin: 0;">مجری کارگاه‌های نقاشی، موسیقی و کاردستی ارگانیک</p>
-            </div>
+            <?php if (!empty($teamTeachers)): ?>
+                <?php
+                $badgeColors = ['badge-success', 'badge-warning', 'badge-info', 'badge-primary'];
+                $themeStyles = [
+                    ['bg' => 'var(--primary-faint)', 'color' => 'var(--primary-dark)', 'border' => 'var(--primary-light)'],
+                    ['bg' => 'var(--secondary-faint)', 'color' => 'var(--secondary-dark)', 'border' => 'var(--secondary-light)'],
+                ];
+                ?>
+                <?php foreach ($teamTeachers as $idx => $t): ?>
+                    <?php
+                    $fullName = trim($t['first_name'] . ' ' . $t['last_name']);
+                    $initials = getTeacherInitials((string) $t['first_name'], (string) $t['last_name']);
+                    $roleTitle = !empty($t['role_title']) ? $t['role_title'] : (!empty($t['education_level']) ? $t['education_level'] : 'مربی روما');
+                    $bioText   = !empty($t['bio']) ? $t['bio'] : (!empty($t['major']) ? 'تخصص: ' . $t['major'] : '');
+                    $theme = $themeStyles[$idx % count($themeStyles)];
+                    $badgeClass = $badgeColors[$idx % count($badgeColors)];
+                    ?>
+                    <div class="team-card" style="background: var(--white); border-radius: var(--radius-lg); padding: var(--space-lg); text-align: center; box-shadow: var(--shadow-sm); border: 1px solid var(--border);">
+                        <?php if (!empty($t['avatar'])): ?>
+                            <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; margin: 0 auto var(--space-md) auto; border: 3px solid <?= $theme['border'] ?>;">
+                                <img src="<?= e(url((string) $t['avatar'])) ?>" alt="<?= e($fullName) ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                            </div>
+                        <?php else: ?>
+                            <div style="width: 100px; height: 100px; border-radius: 50%; background: <?= $theme['bg'] ?>; color: <?= $theme['color'] ?>; display: flex; align-items: center; justify-content: center; font-size: var(--text-2xl); font-weight: 700; margin: 0 auto var(--space-md) auto; border: 3px solid <?= $theme['border'] ?>;">
+                                <?= e($initials) ?>
+                            </div>
+                        <?php endif; ?>
+                        <h3 style="font-size: var(--text-lg); margin-bottom: 4px;"><?= e($fullName) ?></h3>
+                        <span class="badge <?= e($badgeClass) ?>" style="margin-bottom: var(--space-xs); display: inline-block;"><?= e($roleTitle) ?></span>
+                        <?php if ($bioText !== ''): ?>
+                            <p style="font-size: var(--text-sm); color: var(--muted); margin: 0;"><?= e($bioText) ?></p>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
 </section>

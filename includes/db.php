@@ -67,7 +67,31 @@ function initializeEventTables(): void
 
 function initializeTeachersTables(): void
 {
-    // Schema is created at install time via setup.php / schema.sql
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+    $initialized = true;
+
+    try {
+        $pdo = getDb();
+        $cols = $pdo->query("SHOW COLUMNS FROM teachers")->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!in_array('role_title', $cols, true)) {
+            $pdo->exec("ALTER TABLE teachers ADD COLUMN role_title VARCHAR(150) DEFAULT NULL AFTER major");
+        }
+        if (!in_array('bio', $cols, true)) {
+            $pdo->exec("ALTER TABLE teachers ADD COLUMN bio TEXT DEFAULT NULL AFTER role_title");
+        }
+        if (!in_array('show_in_team', $cols, true)) {
+            $pdo->exec("ALTER TABLE teachers ADD COLUMN show_in_team TINYINT(1) DEFAULT 1 AFTER status");
+        }
+        if (!in_array('sort_order', $cols, true)) {
+            $pdo->exec("ALTER TABLE teachers ADD COLUMN sort_order INT DEFAULT 0 AFTER show_in_team");
+        }
+    } catch (Throwable $e) {
+        error_log($e->getMessage());
+    }
 }
 
 function initializeFinancialTables(): void

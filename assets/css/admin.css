@@ -494,3 +494,68 @@ code{font-size:0.8rem;background:var(--adm-primary-50);padding:2px 8px;border-ra
 .admin-gallery-thumb{width:80px;height:60px;object-fit:cover;border-radius:var(--adm-radius-xs);border:1px solid var(--adm-border)}
 .admin-image-preview-wrap{margin-top:8px}.admin-image-preview-wrap img{max-width:220px;border-radius:var(--adm-radius-sm);border:1px solid var(--adm-border)}
 .btn-xs{padding:3px 8px;font-size:0.7rem}.btn-success{background:#10B981;color:#fff;border:none}.btn-success:hover{background:#059669}.btn-muted{background:#9CA3AF;color:#fff;border:none}
+
+/* ── NEWS FORM STYLES ────────────────────────────────────────── */
+.news-banner-header {
+    background: #E8F3EE;
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+}
+[data-theme="dark"] .news-banner-header {
+    background: #19382C;
+}
+.news-banner-title {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #1E293B;
+}
+[data-theme="dark"] .news-banner-title {
+    color: #F8FAFC;
+}
+.news-banner-plus-icon {
+    width: 32px;
+    height: 32px;
+    background: #FFFFFF;
+    color: #4EAB87;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+.news-dropzone-box {
+    border: 2px dashed #CBD5E1;
+    border-radius: 16px;
+    background: var(--adm-bg);
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.news-dropzone-box:hover {
+    border-color: #4EAB87;
+    background: rgba(78, 171, 135, 0.05);
+}
+.news-dropzone-input {
+    display: none;
+}
+.news-dropzone-icon {
+    margin-bottom: 8px;
+}
+.news-dropzone-filename {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--adm-text-secondary);
+    margin-bottom: 4px;
+}
+.news-dropzone-hint {
+    font-size: 0.8rem;
+    color: var(--adm-text-muted);
+}

@@ -39,10 +39,14 @@ CREATE TABLE IF NOT EXISTS teachers (
     national_id VARCHAR(20) DEFAULT NULL,
     education_level VARCHAR(100) DEFAULT NULL,
     major VARCHAR(100) DEFAULT NULL,
+    role_title VARCHAR(150) DEFAULT NULL,
+    bio TEXT DEFAULT NULL,
     certificate_file VARCHAR(255) DEFAULT NULL,
     hire_date DATE DEFAULT NULL,
     salary DECIMAL(12,2) DEFAULT NULL,
     status ENUM('pending','active','inactive') DEFAULT 'pending',
+    show_in_team TINYINT(1) DEFAULT 1,
+    sort_order INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
