@@ -139,6 +139,40 @@ require_once __DIR__ . '/header.php';
   </div>
 </section>
 
+<!-- Today's Status Summary Strip (Quick 2-second glance for busy parents) -->
+<?php if ($children !== []): ?>
+<section class="today-summary-strip" style="background: var(--white); padding: var(--space-md); border-radius: var(--radius-lg); margin-bottom: var(--space-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+    <h3 style="font-size: var(--text-base); margin-bottom: var(--space-xs); font-weight: 700; color: var(--neutral-dark);">
+        ☀️ وضعیت امروز فرزندان شما (<?= e(shamsiDate((new DateTimeImmutable('today'))->format('Y-m-d'))) ?>)
+    </h3>
+    <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
+        <?php foreach ($children as $c): ?>
+            <?php
+            $cId = (int) $c['id'];
+            $att = $todayAttendanceByChild[$cId] ?? 'unrecorded';
+            $badgeClass = match($att) {
+                'present' => 'badge-success',
+                'absent' => 'badge-danger',
+                'late', 'excused' => 'badge-warning',
+                default => 'badge-info'
+            };
+            $attText = match($att) {
+                'present' => 'حاضر در مهد',
+                'absent' => 'غایب',
+                'late' => 'تاخیر',
+                'excused' => 'مرخصی',
+                default => 'ثبت نشده'
+            };
+            ?>
+            <div style="display: flex; align-items: center; gap: 8px; background: var(--neutral-light); padding: 8px 14px; border-radius: var(--radius-md);">
+                <strong style="font-size: var(--text-sm); color: var(--neutral-dark);"><?= e($c['first_name']) ?>:</strong>
+                <span class="badge <?= $badgeClass ?>"><?= $attText ?></span>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endif; ?>
+
 <!-- Your Children Section -->
 <section class="parent-section">
     <div class="parent-section-header">

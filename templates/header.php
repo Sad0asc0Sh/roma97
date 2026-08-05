@@ -63,6 +63,33 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
     }
     ?>
     <link rel="stylesheet" href="<?php echo e($cssHref); ?>">
+
+    <!-- Open Graph Metadata -->
+    <meta property="og:title" content="<?php echo $pageTitleValue; ?>">
+    <meta property="og:description" content="<?php echo $pageDescriptionValue; ?>">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="fa_IR">
+    <meta property="og:site_name" content="<?php echo e($siteNameValue); ?>">
+    <meta property="og:image" content="<?php echo e(asset('assets/uploads/slide_6a40973767a173.36208127.png')); ?>">
+
+    <!-- Schema.org Structured Data (ChildCare / LocalBusiness) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "ChildCare",
+      "name": "<?php echo e($siteNameValue); ?>",
+      "description": "<?php echo $pageDescriptionValue; ?>",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "<?php echo e($siteAddressValue); ?>",
+        "addressLocality": "تهران",
+        "addressCountry": "IR"
+      },
+      "telephone": "<?php echo e($contactPhoneValue); ?>",
+      "openingHours": "Sa-We 07:00-16:30, Th 07:00-13:00",
+      "priceRange": "$$"
+    }
+    </script>
 </head>
 <body>
 <?php

@@ -189,11 +189,18 @@ if (isPostRequest()) {
                     <div class="auth-feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
                     <span>ارتباط مستقیم با مربیان و مدیریت</span>
                 </li>
-                <li>
-                    <div class="auth-feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
-                    <span>مدیریت پرداخت شهریه آنلاین</span>
-                </li>
             </ul>
+
+            <!-- Parent Testimonial Quote in Auth Brand -->
+            <div style="background: rgba(255,255,255,0.12); padding: 14px; border-radius: 12px; font-size: 0.85rem; line-height: 1.6; margin-top: 16px;">
+                <p style="margin:0; font-style: italic;">«وقتی اولین بار اومدیم بازدید، پارسا نخواست بره. این از هر تبلیغی مهم‌تر بود.»</p>
+                <span style="display:block; margin-top: 4px; opacity:0.8; font-weight:700;">— پدر پارسا، کلاس نوباوه</span>
+            </div>
+
+            <!-- Bargoo Mascot Guide in Auth Footer -->
+            <div style="margin-top: 24px; text-align: center; opacity: 0.4;">
+                <svg viewBox="0 0 100 100" style="width:50px; height:50px;"><use href="<?= asset('assets/img/bargoo.svg#bargoo-happy') ?>"/></svg>
+            </div>
         </div>
     </aside>
     <main class="auth-form-panel">

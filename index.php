@@ -83,6 +83,11 @@ require_once __DIR__ . '/templates/header.php';
                             <div class="slide-caption">
                                 <h2><?= e($slide['title']) ?></h2>
                                 <?php if (!empty($slide['subtitle'])): ?><span class="slide-subtitle"><?= e($slide['subtitle']) ?></span><?php endif; ?>
+                                <div style="margin-top: var(--space-md);">
+                                    <a href="<?= e(url('page.php?slug=contact')) ?>" class="btn btn-secondary btn-sm" style="padding: 10px 20px;">
+                                        ثبت‌نام و بازدید حضوری ←
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -106,7 +111,32 @@ require_once __DIR__ . '/templates/header.php';
     <?php endif; ?>
 </section>
 
-<!-- Services Section -->
+<!-- Trust Strip (4 Quick Trust Markers) -->
+<div class="trust-strip">
+    <div class="container">
+        <div class="trust-strip-inner">
+            <div class="trust-item">
+                <svg><use href="<?= asset('assets/img/icons.svg#icon-shield') ?>"/></svg>
+                <span>مجوز رسمی بهزیستی</span>
+            </div>
+            <div class="trust-divider"></div>
+            <div class="trust-item">
+                <svg><use href="<?= asset('assets/img/icons.svg#icon-award') ?>"/></svg>
+                <span>۱۰+ سال فعالیت تخصصی</span>
+            </div>
+            <div class="trust-divider"></div>
+            <div class="trust-item">
+                <svg><use href="<?= asset('assets/img/icons.svg#icon-camera') ?>"/></svg>
+                <span>دوربین مداربسته تمام کلاس‌ها</span>
+            </div>
+            <div class="trust-divider"></div>
+            <div class="trust-item">
+                <svg><use href="<?= asset('assets/img/icons.svg#icon-heart') ?>"/></svg>
+                <span>بیمه حوادث کامل کودکان</span>
+            </div>
+        </div>
+    </div>
+</div>
 <section class="section services-section">
     <div class="container">
         <div class="section-header">
@@ -177,22 +207,22 @@ require_once __DIR__ . '/templates/header.php';
         <div class="stats-grid">
             <div class="stat-card fade-in">
                 <svg class="stat-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#statGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/><defs><linearGradient id="statGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
-                <div class="stat-number">۱۰+</div>
+                <div class="stat-number" data-count="10" data-suffix="+">۱۰+</div>
                 <div class="stat-label">سال تجربه</div>
             </div>
             <div class="stat-card fade-in">
                 <svg class="stat-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#statGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/></svg>
-                <div class="stat-number">۵۰۰+</div>
-                <div class="stat-label">کودک فارغالتحصیل</div>
+                <div class="stat-number" data-count="500" data-suffix="+">۵۰۰+</div>
+                <div class="stat-label">کودک فارغ‌التحصیل</div>
             </div>
             <div class="stat-card fade-in">
                 <svg class="stat-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#statGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-                <div class="stat-number">۲۰+</div>
+                <div class="stat-number" data-count="20" data-suffix="+">۲۰+</div>
                 <div class="stat-label">مربی متخصص</div>
             </div>
             <div class="stat-card fade-in">
                 <svg class="stat-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#statGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                <div class="stat-number">۹۸٪</div>
+                <div class="stat-number" data-count="98" data-suffix="٪">۹۸٪</div>
                 <div class="stat-label">رضایت والدین</div>
             </div>
         </div>
@@ -257,6 +287,150 @@ require_once __DIR__ . '/templates/header.php';
     </div>
 </section>
 
+<!-- Parent Testimonials Section -->
+<section class="section testimonials-section" style="background: var(--paper); padding: var(--space-2xl) 0; border-top: 1px solid var(--paper-line); border-bottom: 1px solid var(--paper-line);">
+    <div class="container">
+        <div class="section-header text-center" style="margin-bottom: var(--space-xl);">
+            <h2 style="font-family: var(--font-display); font-size: var(--text-3xl); color: var(--neutral-dark);">
+                تجربه واقعی والدین روما
+            </h2>
+            <p style="color: var(--muted); font-size: var(--text-base);">نظرات خانواده‌هایی که به ما اعتماد کردند</p>
+        </div>
+
+        <div class="testimonials-slider">
+            <div class="testimonial-card">
+                <div>
+                    <div class="testimonial-rating">
+                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                    </div>
+                    <p class="testimonial-quote">
+                        «چیزی که ما رو مطمئن کرد، این بود که هر روز عصر یه گزارش کوتاه از وضعیت غذا و خواب آیدا می‌گرفتیم، نه فقط یه پیام کلی که "روز خوبی داشت".»
+                    </p>
+                </div>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">م‌آ</div>
+                    <div class="testimonial-info">
+                        <h4>مادر آیدا</h4>
+                        <span>کلاس خردسال</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card">
+                <div>
+                    <div class="testimonial-rating">
+                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                    </div>
+                    <p class="testimonial-quote">
+                        «وقتی برای اولین بار اومدیم بازدید، پارسا از همون در ورودی نمی‌خواست بره. این برای ما از هر تبلیغی مهم‌تر بود.»
+                    </p>
+                </div>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">پ‌پ</div>
+                    <div class="testimonial-info">
+                        <h4>پدر پارسا</h4>
+                        <span>کلاس نوباوه</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial-card">
+                <div>
+                    <div class="testimonial-rating">
+                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                    </div>
+                    <p class="testimonial-quote">
+                        «پیش‌دبستانی روما مهارت‌های دست‌ورزی و اعتماد به‌نفس کیان رو عالی بالا برد. الان برای مدرسه کاملاً آماده و مشتاقه.»
+                    </p>
+                </div>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">م‌ک</div>
+                    <div class="testimonial-info">
+                        <h4>مادر کیان</h4>
+                        <span>پیش‌دبستانی</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ Accordion Section -->
+<section class="section faq-section" style="padding: var(--space-2xl) 0;">
+    <div class="container" style="max-width: 800px;">
+        <div class="section-header text-center" style="margin-bottom: var(--space-xl);">
+            <h2 style="font-family: var(--font-display); font-size: var(--text-3xl); color: var(--neutral-dark);">
+                پرسش‌های متداول والدین
+            </h2>
+            <p style="color: var(--muted); font-size: var(--text-base);">پاسخ به سوالاتی که اکثر والدین قبل از ثبت‌نام می‌پرسند</p>
+        </div>
+
+        <div class="faq-accordion">
+            <details class="faq-item">
+                <summary class="faq-summary">
+                    <span>ساعات نگهداری و فعالیت مهدکودک روما چگونه است؟</span>
+                    <svg><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
+                </summary>
+                <div class="faq-content">
+                    مهدکودک روما روزهای شنبه تا چهارشنبه از ساعت ۰۷:۰۰ الی ۱۶:۳۰ و پنج‌شنبه‌ها از ساعت ۰۷:۰۰ الی ۱۳:۰۰ فعال است.
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-summary">
+                    <span>آیا امکان ثبت‌نام نیم‌روزه وجود دارد؟</span>
+                    <svg><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
+                </summary>
+                <div class="faq-content">
+                    بله، والدین عزیز می‌توانند با توجه به شرایط کاری خود، ثبت‌نام نیم‌روزه (۰۷:۰۰ الی ۱۲:۳۰) یا تمام‌روزه را انتخاب نمایند.
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-summary">
+                    <span>غذای کودکانی که آلرژی یا رژیم خاص دارند چطور مدیریت می‌شود؟</span>
+                    <svg><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
+                </summary>
+                <div class="faq-content">
+                    در زمان ثبت‌نام، فرم حساسیت‌های غذایی دریافت می‌شود. آشپزخانه مهد منوی جداگانه و مشخصی طبق نظر مشاور تغذیه برای کودکان دارای آلرژی آماده می‌کند.
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-summary">
+                    <span>چگونه می‌توانم گزارش روزانه فرزندم را مشاهده کنم؟</span>
+                    <svg><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
+                </summary>
+                <div class="faq-content">
+                    از طریق <a href="<?= url('login.php') ?>" style="color: var(--primary); font-weight: 700;">پنل والدین روما</a>، وضعیت تغذیه، ساعت خواب، فعالیت‌های کلاسی و گزارش مربی به‌صورت روزانه قابل مشاهده است.
+                </div>
+            </details>
+
+            <details class="faq-item">
+                <summary class="faq-summary">
+                    <span>مدارک لازم برای ثبت‌نام اولیه چیست؟</span>
+                    <svg><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
+                </summary>
+                <div class="faq-content">
+                    کپی شناسنامه کودک و والدین، ۴ قطعه عکس ۳x۴، کارت واکسیناسیون کامل و فرم معاینه بهداشت اولیه‌الزامی است.
+                </div>
+            </details>
+        </div>
+    </div>
+</section>
+
 <!-- News Section -->
 <?php if ($latestNews !== []): ?>
 <section class="section news-section">
@@ -306,15 +480,24 @@ try {
 <!-- Gallery Section -->
 <section class="section gallery-section">
     <div class="container">
-        <div class="section-header">
+        <div class="section-header text-center">
             <svg class="section-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#galGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/><defs><linearGradient id="galGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
             <h2>گالری تصاویر <?= e(siteName()) ?></h2>
-            <p class="section-subtitle">لحظات شاد و به‌یادماندنی کودکان ما</p>
+            <p class="section-subtitle">لحظات شاد و به‌یادماندنی کودکان ما در فعالیت‌های روزانه</p>
         </div>
-        <div class="gallery-grid">
+
+        <!-- Gallery Filter Buttons -->
+        <div class="gallery-filters" id="galleryFilters" style="display: flex; gap: var(--space-xs); justify-content: center; flex-wrap: wrap; margin-bottom: var(--space-xl);">
+            <button class="btn btn-primary btn-sm gallery-filter-btn is-active" data-filter="all">همه تصاویر</button>
+            <button class="btn btn-outline btn-sm gallery-filter-btn" data-filter="classes">کلاس‌ها</button>
+            <button class="btn btn-outline btn-sm gallery-filter-btn" data-filter="events">جشن‌ها و رویدادها</button>
+            <button class="btn btn-outline btn-sm gallery-filter-btn" data-filter="play">فضای بازی</button>
+        </div>
+
+        <div class="gallery-grid" style="columns: 3 260px; column-gap: var(--space-md);">
             <?php foreach ($galleryItems as $gi): ?>
-                <div class="gallery-item fade-in" data-gallery-item>
-                    <img src="<?= e(url($gi['image'])) ?>" alt="<?= e($gi['title'] ?? '') ?>" loading="lazy" class="gallery-img">
+                <div class="gallery-item fade-in" data-gallery-item data-category="<?= e($gi['category'] ?? 'all') ?>" style="break-inside: avoid; margin-bottom: var(--space-md); position: relative; border-radius: var(--radius-lg); overflow: hidden; cursor: pointer;">
+                    <img src="<?= e(url($gi['image'])) ?>" alt="<?= e($gi['title'] ?? '') ?>" loading="lazy" class="gallery-img" style="width: 100%; display: block; border-radius: var(--radius-lg);">
                     <div class="gallery-overlay">
                         <div class="gallery-overlay-content">
                             <svg class="gallery-zoom-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
@@ -353,41 +536,47 @@ try {
     prev.addEventListener("click",function(e){e.stopPropagation();show((idx-1+items.length)%items.length);});
     next.addEventListener("click",function(e){e.stopPropagation();show((idx+1)%items.length);});
     document.addEventListener("keydown",function(e){if(!lb.classList.contains("active"))return;if(e.key==="Escape")hide();if(e.key==="ArrowLeft")show((idx+1)%items.length);if(e.key==="ArrowRight")show((idx-1+items.length)%items.length);});
+
+    // Gallery Filter Handler
+    var filterBtns = document.querySelectorAll(".gallery-filter-btn");
+    filterBtns.forEach(function(btn){
+        btn.addEventListener("click", function(){
+            var cat = btn.getAttribute("data-filter");
+            filterBtns.forEach(function(b){ b.classList.remove("btn-primary", "is-active"); b.classList.add("btn-outline"); });
+            btn.classList.remove("btn-outline");
+            btn.classList.add("btn-primary", "is-active");
+
+            items.forEach(function(item){
+                var itemCat = item.getAttribute("data-category");
+                if (cat === "all" || itemCat === cat || !itemCat) {
+                    item.style.display = "block";
+                } else {
+                    item.style.display = "none";
+                }
+            });
+        });
+    });
 })();
 </script>
 <?php endif; ?>
 
-<!-- About Us Visual Storytelling Section -->
+<!-- About Us Teaser Section -->
 <section class="section about-story-section">
     <div class="container">
-        <div class="about-story-card fade-in">
+        <div class="about-story-card fade-in" style="background: var(--white); border-radius: var(--radius-xl); padding: var(--space-xl); box-shadow: var(--shadow-md);">
             <div class="about-story-grid">
                 <div class="about-story-content">
-                    <span class="about-story-badge">📖 داستان برند ما</span>
+                    <span class="about-story-badge">📖 درباره روما</span>
                     <h2>روایتی از عشق، امنیت و رشد شکوفه‌های فردا</h2>
                     <p>مهد کودک <?= e(siteName()) ?> از سال ۱۳۹۵ با هدف ایجاد فضایی گرم، شاداب و امن برای پرورش استعدادها و توانمندی‌های کودکان شروع به کار کرد. ما باور داریم که سال‌های ابتدایی زندگی، شالوده‌ساز اصلی شخصیت و آینده فرزندان شماست.</p>
-                    <p>در مجموعه ما، یادگیری از طریق بازی، تجربه همبازی شدن با همسالان، کارگاه‌های خلاقیت هنری و تمرین مهارت‌های اجتماعی به دست مربیان دلسوز و باتجربه پیاده‌سازی می‌شود.</p>
-
-                    <div class="about-timeline">
-                        <div class="about-timeline-item">
-                            <div class="about-timeline-year">۱۳۹۵</div>
-                            <div class="about-timeline-title">تأسیس و آغاز راه</div>
-                            <p class="about-timeline-desc">آغاز فعالیت با ۲ کلاس نوباوه و ساخت استانداردهای نوآورانه نگهداری کودکان</p>
-                        </div>
-                        <div class="about-timeline-item">
-                            <div class="about-timeline-year">۱۳۹۹</div>
-                            <div class="about-timeline-title">توسعه فضاهای بازی و کارگاه‌ها</div>
-                            <p class="about-timeline-desc">تجهیز سالن‌های بازی هوشمند، اتاق‌های حسی-حرکتی و کارگاه‌های نقاشی و موسیقی</p>
-                        </div>
-                        <div class="about-timeline-item">
-                            <div class="about-timeline-year">۱۴۰۳</div>
-                            <div class="about-timeline-title">دیجیتالی‌سازی و ارتباط هوشمند والدین</div>
-                            <p class="about-timeline-desc">راه‌اندازی سامانه آنلاین شفاف گزارش‌های روزانه، حضور و غیاب و ارتباط والدین و معلمان</p>
-                        </div>
+                    <div style="margin-top: var(--space-lg);">
+                        <a href="<?= e(url('page.php?slug=about')) ?>" class="btn btn-primary btn-lg">
+                            داستان کامل ما و آشنایی با روما ←
+                        </a>
                     </div>
                 </div>
                 <div class="about-image-wrap">
-                    <img src="<?= e(url('assets/uploads/gallery/about-story.jpg')) ?>" alt="داستان برند <?= e(siteName()) ?>" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?auto=format&fit=crop&w=800&q=80'">
+                    <img src="<?= e(url('assets/uploads/gallery/about-story.jpg')) ?>?v=<?= filemtime(__DIR__ . '/assets/uploads/gallery/about-story.jpg') ?>" alt="داستان برند <?= e(siteName()) ?>" loading="lazy" decoding="async" width="800" height="533" onerror="this.onerror=null; this.src='<?= e(url('assets/img/about-story.jpg')) ?>?v=<?= filemtime(__DIR__ . '/assets/img/about-story.jpg') ?>';">
                 </div>
             </div>
         </div>
@@ -443,31 +632,8 @@ function handleNewsletterSubmit(e) {
 }
 </script>
 
-<!-- CTA Section -->
-<section class="section cta-section">
-    <div class="container">
-        <div class="cta-box fade-in">
-            <div class="cta-content">
-                <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                    <circle cx="24" cy="24" r="22" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
-                    <path d="M24 14c-4 0-7 2-7 5.5 0 2.5 1.3 4 3 5.2-.8.5-1.9 1.6-2.3 2.8-.5 1.3-.3 2.4.5 3.2.8.8 1.9.8 2.8.5 1-.3 1.6-1.3 1.9-1.9h1.1c.3.6 1 1.6 1.9 1.9.9.3 2 .3 2.8-.5.8-.8 1-1.9.5-3.2-.4-1.2-1.5-2.3-2.3-2.8 1.7-1.2 3-2.7 3-5.2 0-3.5-3-5.5-7-5.5z" fill="rgba(255,255,255,0.9)"/>
-                    <circle cx="21" cy="21.5" r="1.2" fill="white"/>
-                    <circle cx="27" cy="21.5" r="1.2" fill="white"/>
-                    <path d="M21 25c0 0 1.5 2 3 2s3-2 3-2" stroke="white" stroke-width="1" stroke-linecap="round" fill="none"/>
-                </svg>
-                <h2>فرزندتان را به خانواده <?= e(siteName()) ?> بسپارید</h2>
-                <p>همین امروز برای ثبت نام و بازدید از مهد کودک اقدام کنید</p>
-                <div class="cta-actions">
-                    <a href="<?= e(url('login.php')) ?>" class="btn btn-white btn-lg">ثبت نام والدین</a>
-                    <a href="tel:<?= e(preg_replace('/[^0-9+]/', '', siteContactPhone())) ?>" class="btn btn-outline-white btn-lg">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-                        تماس با ما (<?= e(siteContactPhone()) ?>)
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+<!-- Shared Footer CTA -->
+<?php require __DIR__ . '/templates/cta-section.php'; ?>
 
 
 <?php require_once __DIR__ . '/templates/footer.php'; ?>

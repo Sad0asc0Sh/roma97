@@ -107,6 +107,7 @@ require_once __DIR__ . '/header.php';
                         <td><?= e(trim($p['first_name'] . ' ' . $p['last_name']))?></td>
                         <td><?= e(persianNumber((string) $p['month_year']))?></td>
                         <td class="amount-cell"><?= e(persianNumber(number_format((float) $p['amount'], 0))) ?> <span class="currency-unit-sm">تومان</span></td>
+                        <td><span class="badge badge-success">✓ پرداخت شده</span></td>
                         <td><?= e(shamsiDate((string) $p['payment_date']))?></td>
                         <td><?= e($paymentMethodLabel) ?></td>
                         <td><?= e(trim((string) ($p['notes'] ?? '')) !== '' ? (string) $p['notes'] : '—') ?></td>

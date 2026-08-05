@@ -145,6 +145,75 @@ document.addEventListener('DOMContentLoaded', function() {
             fadeObserver.observe(element);
         });
     }
+
+    // ============================================
+    // TAB SWITCHER COMPONENT
+    // ============================================
+    var tabButtons = document.querySelectorAll('.tab-btn[data-target]');
+    tabButtons.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var targetSelector = btn.getAttribute('data-target');
+
+            var tabList = btn.closest('.tabs');
+            if (tabList) {
+                tabList.querySelectorAll('.tab-btn').forEach(function(b) {
+                    b.classList.remove('is-active');
+                    b.setAttribute('aria-selected', 'false');
+                });
+            }
+
+            btn.classList.add('is-active');
+            btn.setAttribute('aria-selected', 'true');
+
+            var container = btn.closest('.container') || document;
+            container.querySelectorAll('.tab-pane').forEach(function(pane) {
+                pane.classList.remove('is-active');
+            });
+
+            var targetPane = document.querySelector(targetSelector);
+            if (targetPane) {
+                targetPane.classList.add('is-active');
+            }
+        });
+    });
+
+    // ============================================
+    // ANIMATED COUNTERS
+    // ============================================
+    function animateCounter(el, target, duration) {
+        var start = 0;
+        var stepTime = Math.abs(Math.floor(duration / target));
+        var timer = setInterval(function() {
+            start += Math.ceil(target / 50);
+            if (start >= target) {
+                start = target;
+                clearInterval(timer);
+            }
+            var text = String(start).replace(/\d/g, function(d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; });
+            var suffix = el.getAttribute('data-suffix') || '';
+            el.textContent = text + suffix;
+        }, Math.max(stepTime, 20));
+    }
+
+    var statNumbers = document.querySelectorAll('.stat-number[data-count]');
+    if (statNumbers.length > 0 && 'IntersectionObserver' in window) {
+        var counterObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    var el = entry.target;
+                    var target = parseInt(el.getAttribute('data-count'), 10);
+                    if (!isNaN(target)) {
+                        animateCounter(el, target, 1000);
+                    }
+                    counterObserver.unobserve(el);
+                }
+            });
+        }, { threshold: 0.5 });
+
+        statNumbers.forEach(function(el) {
+            counterObserver.observe(el);
+        });
+    }
     
     // ============================================
     // ADMIN PANEL FUNCTIONALITY
@@ -237,10 +306,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // FORM ENHANCEMENTS
     // ============================================
 
-    // Auto-focus first empty input in forms
-    var firstInput = document.querySelector('form input:not([type="hidden"]):not([type="submit"])');
-    if (firstInput && !firstInput.value) {
-        firstInput.focus();
+    // Auto-focus first empty input in standalone auth or modal forms (skip public page forms to avoid unwanted scroll)
+    var authForm = document.querySelector('.auth-form-panel form, .modal-content form');
+    if (authForm) {
+        var firstInput = authForm.querySelector('input:not([type="hidden"]):not([type="submit"])');
+        if (firstInput && !firstInput.value) {
+            firstInput.focus({ preventScroll: true });
+        }
     }
 
     // Confirm before delete actions

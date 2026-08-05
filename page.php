@@ -13,6 +13,27 @@ function isValidPublicPageSlug(string $slug): bool
 }
 
 $slug = trim((string) ($_GET['slug'] ?? ''));
+
+// Custom Dedicated Page Templates Router
+$customTemplates = [
+    'about' => 'templates/pages/about.php',
+    'classes' => 'templates/pages/classes.php',
+    'contact' => 'templates/pages/contact.php'
+];
+
+if (isset($customTemplates[$slug]) && is_file(__DIR__ . '/' . $customTemplates[$slug])) {
+    $customPageTitles = [
+        'about' => 'درباره ما | ' . siteName(),
+        'classes' => 'کلاس‌ها و برنامه‌های آموزشی | ' . siteName(),
+        'contact' => 'تماس با ما و بازدید حضوری | ' . siteName()
+    ];
+    $pageTitle = $customPageTitles[$slug] ?? siteName();
+    require_once __DIR__ . '/templates/header.php';
+    require_once __DIR__ . '/' . $customTemplates[$slug];
+    require_once __DIR__ . '/templates/footer.php';
+    exit;
+}
+
 $page = null;
 $notFound = false;
 
@@ -46,11 +67,13 @@ require_once __DIR__ . '/templates/header.php';
 <section class="section cms-page">
     <div class="container">
         <?php if ($notFound): ?>
-            <div class="empty-state">
-                <div class="empty-state-icon">🔍</div>
-                <h1>صفحه یافت نشد</h1>
-                <p>صفحه‌ای که جستجو کردید در سیستم موجود نیست.</p>
-                <a href="<?= e(url('index.php')) ?>" class="btn btn-primary">بازگشت به خانه</a>
+            <div class="empty-state" style="text-align: center; padding: var(--space-2xl) 0;">
+                <div class="empty-state-icon" style="width: 100px; height: 100px; margin: 0 auto var(--space-md) auto;">
+                    <svg viewBox="0 0 100 100" style="width:100%; height:100%;"><use href="<?= asset('assets/img/bargoo.svg#bargoo-surprised') ?>"/></svg>
+                </div>
+                <h1 style="font-family: var(--font-display); font-size: var(--text-3xl); margin-bottom: var(--space-xs);">صفحه مورد نظر یافت نشد</h1>
+                <p style="color: var(--muted); margin-bottom: var(--space-lg);">صفحه‌ای که به دنبال آن بودید پیدا نشد یا حذف شده است.</p>
+                <a href="<?= e(url('index.php')) ?>" class="btn btn-primary">بازگشت به صفحه اصلی</a>
             </div>
         <?php else: ?>
             <div class="breadcrumb">
