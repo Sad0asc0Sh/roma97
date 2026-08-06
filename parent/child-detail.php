@@ -263,7 +263,7 @@ require_once __DIR__ . '/header.php';
     <!-- Allergies -->
     <?php if ($allergiesText !== ''): ?>
         <div class="child-detail-card child-alert-card">
-            <h2>⚠️ حساسیت‌ها</h2>
+            <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: middle; margin-left: 6px;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>حساسیت‌ها</h2>
             <p><?= nl2br(e($allergiesText))?></p>
      </div>
     <?php else: ?>

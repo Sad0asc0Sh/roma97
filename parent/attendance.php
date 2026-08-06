@@ -182,7 +182,7 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <div class="page-header">
-    <h1>حضور و غیاب 📅</h1>
+    <h1>حضور و غیاب <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-left: 6px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></h1>
     <p class="page-subtitle"><?= e($weekRangeLabel)?></p>
 </div>
 
@@ -220,7 +220,7 @@ require_once __DIR__ . '/header.php';
 
 <?php if ($children === []): ?>
     <div class="parent-empty-state">
-        <div class="empty-state-icon">📅</div>
+        <div class="empty-state-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
         <h3>هنوز کودکی ثبت نشده است</h3>
         <p>برای مشاهده سوابق حضور و غیاب، ابتدا یک کودک اضافه کنید</p>
         <a class="btn btn-primary" href="<?= e(url('parent/add-child.php')) ?>">افزودن کودک</a>

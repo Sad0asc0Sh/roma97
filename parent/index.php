@@ -104,7 +104,7 @@ require_once __DIR__ . '/header.php';
 <?php if (isset($unreadCount) && $unreadCount > 0): ?>
     <div class="alert alert-info unread-messages-alert">
         <div class="unread-messages-inner">
-            <span class="unread-messages-icon">🔔</span>
+            <span class="unread-messages-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></span>
             <div>
                 <strong class="unread-messages-title">شما <?= e(persianNumber((string) $unreadCount)) ?> پیام خوانده نشده دارید</strong>
                 <p class="unread-messages-desc">صندوق ورودی خود را برای پیام‌های جدید از مدیران و معلمان بررسی کنید</p>
@@ -125,7 +125,7 @@ require_once __DIR__ . '/header.php';
          </div>
         <?php endif; ?>
         <div class="parent-welcome-text">
-            <h1>خوش آمدید، <?= e($firstName) ?> عزیز! 🌟</h1>
+            <h1>خوش آمدید، <?= e($firstName) ?> عزیز!</h1>
             <p class="parent-welcome-subtitle">امروز کوچولوهای شما چه خبر؟</p>
             <?php
             $statusLabel = match ($parentStatus) {
@@ -143,7 +143,7 @@ require_once __DIR__ . '/header.php';
 <?php if ($children !== []): ?>
 <section class="today-summary-strip" style="background: var(--white); padding: var(--space-md); border-radius: var(--radius-lg); margin-bottom: var(--space-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
     <h3 style="font-size: var(--text-base); margin-bottom: var(--space-xs); font-weight: 700; color: var(--neutral-dark);">
-        ☀️ وضعیت امروز فرزندان شما (<?= e(shamsiDate((new DateTimeImmutable('today'))->format('Y-m-d'))) ?>)
+        وضعیت امروز فرزندان شما (<?= e(shamsiDate((new DateTimeImmutable('today'))->format('Y-m-d'))) ?>)
     </h3>
     <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
         <?php foreach ($children as $c): ?>
@@ -279,14 +279,14 @@ require_once __DIR__ . '/header.php';
 
                         <div class="child-info-row">
                             <div class="child-info-item">
-                                <span class="info-icon">🏫</span>
+                                <span class="info-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/></svg></span>
                                 <span>کلاس: <strong><?= e($classroomDisplay) ?></strong></span>
                          </div>
                       </div>
 
                         <?php if ($hasAllergies): ?>
                             <div class="child-alert-row">
-                                <span class="alert-icon">⚠️</span>
+                                <span class="alert-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
                                 <span class="alert-text">حساسیت دارد</span>
                          </div>
                         <?php endif; ?>
@@ -304,25 +304,25 @@ require_once __DIR__ . '/header.php';
 
 <!-- Quick Actions Section -->
 <section class="parent-section">
-    <h2>دسترسی سریع ⚡</h2>
+    <h2>دسترسی سریع</h2>
     <div class="parent-quick-actions">
         <a class="quick-action-card" href="<?= e(url('parent/add-child.php')) ?>">
-            <span class="quick-action-icon">➕</span>
+            <span class="quick-action-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
             <span class="quick-action-title">افزودن کودک</span>
             <span class="quick-action-desc">ثبت کودک جدید</span>
       </a>
         <a class="quick-action-card" href="<?= e(url('parent/attendance.php')) ?>">
-            <span class="quick-action-icon">📅</span>
+            <span class="quick-action-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
             <span class="quick-action-title">مشاهده حضور و غیاب</span>
             <span class="quick-action-desc">بررسی رکوردهای هفتگی</span>
       </a>
         <a class="quick-action-card" href="<?= e(url('parent/payments.php')) ?>">
-            <span class="quick-action-icon">💳</span>
+            <span class="quick-action-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span>
             <span class="quick-action-title">پرداخت شهریه</span>
             <span class="quick-action-desc">مشاهده تاریخچه پرداخت‌ها</span>
       </a>
         <a class="quick-action-card" href="<?= e(url('parent/profile.php')) ?>">
-            <span class="quick-action-icon">⚙️</span>
+            <span class="quick-action-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
             <span class="quick-action-title">ویرایش پروفایل</span>
             <span class="quick-action-desc">تغییر اطلاعات شخصی</span>
       </a>

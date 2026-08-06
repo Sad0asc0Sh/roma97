@@ -74,7 +74,7 @@ require_once __DIR__ . '/header.php';
 <!-- Payments List -->
 <?php if ($payments === []): ?>
     <div class="parent-empty-state">
-        <div class="empty-state-icon">💳</div>
+        <div class="empty-state-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
         <h3>هنوز سابقه پرداختی ثبت نشده است</h3>
         <p>به محض ثبت پرداخت‌ها، تاریخچه آنها در اینجا نمایش داده می‌شود.</p>
     </div>

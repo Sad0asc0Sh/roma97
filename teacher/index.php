@@ -106,7 +106,7 @@ function attendanceBadge(?string $status): string
 
 <div class="teacher-dashboard">
     <div class="teacher-welcome">
-        <h1>👋 خوش آمدید، <?= e($teacherName) ?></h1>
+        <h1><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 6px;"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 0 1 4 0v6a8 8 0 0 1-16 0v-2"/></svg>خوش آمدید، <?= e($teacherName) ?></h1>
         <p class="text-muted">تاریخ امروز: <?= e(persianDayName($today)) ?> <?= e(shamsiDate($today))?></p>
     </div>
 
@@ -117,7 +117,7 @@ function attendanceBadge(?string $status): string
     <?php if ($classroom === null): ?>
         <!-- No classroom assigned -->
         <div class="teacher-no-classroom">
-            <div class="teacher-no-classroom-icon">🏫</div>
+            <div class="teacher-no-classroom-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/></svg></div>
             <h2>هیچ کلاسی به شما اختصاص داده نشده است</h2>
             <p>هنوز کلاسی به شما اختصاص داده نشده است. لطفاً با مدیر تماس بگیرید.</p>
         </div>
@@ -126,7 +126,7 @@ function attendanceBadge(?string $status): string
         <div class="teacher-section">
             <div class="classroom-info-card">
                 <div class="classroom-info-header">
-                    <h2>🏫 <?= e((string) $classroom['name']) ?></h2>
+                    <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-left: 6px;"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/></svg><?= e((string) $classroom['name']) ?></h2>
                 </div>
                 <div class="classroom-info-grid">
                     <div class="classroom-info-item">
@@ -195,38 +195,38 @@ function attendanceBadge(?string $status): string
 
         <!-- Children Cards -->
         <div class="teacher-section">
-            <h2 class="teacher-section-title">👶 کودکان کلاس شما (<?= count($children) ?>)</h2>
+            <h2 class="teacher-section-title"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-left: 6px;"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg>کودکان کلاس شما (<?= count($children) ?>)</h2>
             <?php if (empty($children)): ?>
                 <p class="text-muted">هیچ کودکی در این کلاس ثبت‌نام نشده است.</p>
             <?php else: ?>
                 <div class="children-grid">
                     <?php foreach ($children as $child): ?>
                         <?php
-                        $childName = e($child['first_name'] . ' ' . $child['last_name']);
-                        $parentName = e($child['parent_first_name'] . ' ' . $child['parent_last_name']);
+                        $childName = $child['first_name'] . ' ' . $child['last_name'];
+                        $parentName = $child['parent_first_name'] . ' ' . $child['parent_last_name'];
                         $age = teacherDashAge((string) $child['date_of_birth']);
                         $hasAllergy = !empty($child['allergies']);
-                        $photoUrl = !empty($child['photo']) ? e(url((string) $child['photo'])) : '';
+                        $photoUrl = !empty($child['photo']) ? url((string) $child['photo']) : '';
                         ?>
                         <div class="child-card">
                             <div class="child-card-header">
                                 <?php if ($photoUrl !== ''): ?>
-                                    <img src="<?= $photoUrl ?>" alt="<?= $childName ?>" class="child-card-photo">
+                                    <img src="<?= e($photoUrl) ?>" alt="<?= e($childName) ?>" class="child-card-photo">
                                 <?php else: ?>
-                                    <div class="child-card-photo-placeholder">👶</div>
+                                    <div class="child-card-photo-placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg></div>
                                 <?php endif; ?>
                                 <?php if ($hasAllergy): ?>
-                                    <span class="child-allergy-badge" title="دارای حساسیت">⚠️</span>
+                                    <span class="child-allergy-badge" title="دارای حساسیت"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
                                 <?php endif; ?>
                             </div>
                             <div class="child-card-body">
-                                <h3 class="child-card-name"><?= $childName ?></h3>
+                                <h3 class="child-card-name"><?= e($childName) ?></h3>
                                 <?php if ($age !== ''): ?>
                                     <p class="child-card-age text-muted"><?= e($age) ?> سن</p>
                                 <?php endif; ?>
                                 <?php if ($hasAllergy): ?>
                                     <div class="child-allergy-note">
-                                        <strong>⚠️ حساسیت‌ها:</strong> <?= e((string) $child['allergies']) ?>
+                                        <strong><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: text-bottom;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> حساسیت‌ها:</strong> <?= e((string) $child['allergies']) ?>
                                     </div>
                                 <?php endif; ?>
                                 <div class="child-card-attendance">
@@ -235,11 +235,11 @@ function attendanceBadge(?string $status): string
                                 </div>
                                 <div class="child-card-parent">
                                     <span class="info-label">والد:</span>
-                                    <strong><?= $parentName ?></strong>
+                                    <strong><?= e($parentName) ?></strong>
                                     <?php if (!empty($child['parent_phone'])): ?>
                                         <a href="tel:<?= e(preg_replace('/\s+/', '', (string) $child['parent_phone'])) ?>"
                                            class="parent-phone-link">
-                                            📞 <?= e((string) $child['parent_phone']) ?>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-left: 2px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> <?= e((string) $child['parent_phone']) ?>
                                         </a>
                                     <?php endif; ?>
                                 </div>

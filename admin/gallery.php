@@ -358,22 +358,31 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="admin-page">
-    <div class="admin-section">
-        <div class="admin-section-header">
-            <h2 class="admin-section-title"><?= $editImage ? 'ویرایش تصویر' : 'افزودن تصویر جدید' ?></h2>
+    <div class="app-toolbar">
+        <h1 style="margin:0;font-size:1.5rem;font-weight:800">گالری تصاویر</h1>
+        <div class="app-toolbar-actions">
+            <button type="button" class="app-btn app-btn-primary" onclick="openGalleryDrawer()">
+                + افزودن تصویر جدید
+            </button>
         </div>
-        <?php $flashError = getFlash('error'); $flashSuccess = getFlash('success'); ?>
-        <?php if ($flashError !== null && $flashError !== ''): ?>
-            <div class="alert alert-error"><?= e($flashError) ?></div>
-        <?php endif; ?>
-        <?php if ($flashSuccess !== null && $flashSuccess !== ''): ?>
-            <div class="alert alert-success"><?= e($flashSuccess) ?></div>
-        <?php endif; ?>
+    </div>
+
+    <?php $flashError = getFlash('error'); $flashSuccess = getFlash('success'); ?>
+    <?php if ($flashSuccess): ?>
+        <script>document.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($flashSuccess) ?>, 'success'));</script>
+        <div class="alert alert-success" role="alert"><?= e($flashSuccess) ?></div>
+    <?php endif; ?>
+    <?php if ($flashError): ?>
+        <script>document.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($flashError) ?>, 'danger'));</script>
+        <div class="alert alert-error" role="alert"><?= e($flashError) ?></div>
+    <?php endif; ?>
+
+    <template id="galleryFormTemplate">
         <form method="post" enctype="multipart/form-data" action="<?= e(url('admin/gallery.php')) ?>" class="admin-form">
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="save_image">
             <?php if ($editImage): ?>
-                <input type="hidden" name="image_id" value="<?= e($editImage['id']) ?>">
+                <input type="hidden" name="image_id" value="<?= e((string) $editImage['id']) ?>">
             <?php endif; ?>
             <div class="form-grid form-grid-2">
                 <div class="form-group">
@@ -382,7 +391,7 @@ require_once __DIR__ . '/header.php';
                 </div>
                 <div class="form-group">
                     <label for="gso" class="form-label">ترتیب نمایش</label>
-                    <input type="number" id="gso" name="sort_order" class="form-control" value="<?= e($editImage['sort_order'] ?? '0') ?>" min="0" step="1" required>
+                    <input type="number" id="gso" name="sort_order" class="form-control" value="<?= e((string) ($editImage['sort_order'] ?? '0')) ?>" min="0" step="1" required>
                 </div>
             </div>
             <div class="form-group">
@@ -408,14 +417,12 @@ require_once __DIR__ . '/header.php';
                     <span class="form-check-label">فعال</span>
                 </label>
             </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary"><?= $editImage ? 'بروزرسانی' : 'افزودن' ?></button>
-                <?php if ($editImage): ?>
-                    <a href="<?= e(url('admin/gallery.php')) ?>" class="btn btn-outline">لغو</a>
-                <?php endif; ?>
+            <div class="form-actions" style="margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary" style="width:100%"><?= $editImage ? 'بروزرسانی تصویر' : 'افزودن تصویر' ?></button>
             </div>
         </form>
-    </div>
+    </template>
+
     <div class="admin-section">
         <div class="admin-section-header">
             <h2 class="admin-section-title">همه تصاویر</h2>
@@ -461,10 +468,10 @@ require_once __DIR__ . '/header.php';
                                 </td>
                                 <td>
                                     <a href="<?= e(url('admin/gallery.php?edit=' . $gi['id'])) ?>" class="btn btn-sm btn-secondary">ویرایش</a>
-                                    <form method="post" action="<?= e(url('admin/gallery.php')) ?>" style="display:inline" onsubmit="return confirm('حذف شود؟')">
+                                    <form method="post" action="<?= e(url('admin/gallery.php')) ?>" style="display:inline" data-confirm="آیا از حذف تصویر «<?= e($gi['title'] ?? 'بدون عنوان') ?>» اطمینان دارید؟ این عملیات قابل بازگشت نیست.">
                                         <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                         <input type="hidden" name="action" value="delete_image">
-                                        <input type="hidden" name="image_id" value="<?= e($gi['id']) ?>">
+                                        <input type="hidden" name="image_id" value="<?= e((string) $gi['id']) ?>">
                                         <button type="submit" class="btn btn-sm btn-reject">حذف</button>
                                     </form>
                                 </td>
@@ -484,4 +491,18 @@ require_once __DIR__ . '/header.php';
         <?php endif; ?>
     </div>
 </section>
+
+<script>
+function openGalleryDrawer() {
+    const tmpl = document.getElementById('galleryFormTemplate');
+    if (tmpl) {
+        openDrawer(<?= $editImage ? json_encode('ویرایش تصویر «' . ($editImage['title'] ?? 'بدون عنوان') . '»') : json_encode('افزودن تصویر جدید') ?>, tmpl.innerHTML);
+    }
+}
+<?php if ($editImage): ?>
+document.addEventListener('DOMContentLoaded', () => {
+    openGalleryDrawer();
+});
+<?php endif; ?>
+</script>
 <?php require_once __DIR__ . '/footer.php'; ?>

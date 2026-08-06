@@ -109,6 +109,11 @@ function uploadChildPhoto(array $file): ?string
         @touch($indexFile);
     }
 
+    $htaccess = dirname($uploadDir) . '/.htaccess';
+    if (!file_exists($htaccess)) {
+        file_put_contents($htaccess, "Options -Indexes\n<FilesMatch \"\\.php$\">\n  Deny from all\n</FilesMatch>\n");
+    }
+
     $fileName = 'child-' . bin2hex(random_bytes(16)) . '.' . $extension;
     $destination = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
 

@@ -240,25 +240,31 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>صفحات</h1>
+    <div class="app-toolbar">
+        <h1 style="margin:0;font-size:1.5rem;font-weight:800">مدیریت صفحات</h1>
+        <div class="app-toolbar-actions">
+            <button type="button" class="app-btn app-btn-primary" onclick="openPageDrawer()">
+                + افزودن صفحه جدید
+            </button>
+        </div>
+    </div>
 
     <?php if ($successMessage !== null): ?>
+        <script>document.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($successMessage) ?>, 'success'));</script>
         <div class="notice" role="status"><?= e($successMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($errorMessage !== null): ?>
+        <script>document.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($errorMessage) ?>, 'danger'));</script>
         <div class="alert alert-danger" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
 
-    <div class="admin-section">
-        <div class="admin-section-header">
-            <h2 class="admin-section-title" id="page-form-title"><?= $editPage ? 'ویرایش صفحه' : 'افزودن صفحه' ?></h2>
-        </div>
+    <template id="pageFormTemplate">
         <form method="post" action="<?= e(url('admin/pages.php')) ?>" novalidate>
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="save_page">
             <?php if ($editPage): ?>
-                <input type="hidden" name="page_id" value="<?= e($editPage['id']) ?>">
+                <input type="hidden" name="page_id" value="<?= e((string) $editPage['id']) ?>">
             <?php endif; ?>
 
             <div class="form-group">
@@ -293,16 +299,15 @@ require_once __DIR__ . '/header.php';
                 <small style="color:var(--muted);font-size:0.85rem;">محتوا به صورت متن ساده با خطوط جدید نمایش داده می‌شود.</small>
             </div>
 
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
-                    <?= $editPage ? 'بهروزرسانی صفحه' : 'افزودن صفحه' ?>
+            <div class="form-actions" style="margin-top:1.5rem;">
+                <button type="submit" class="btn btn-primary" style="width:100%">
+                    <?= $editPage ? 'به‌روزرسانی صفحه' : 'افزودن صفحه' ?>
                 </button>
-                <?php if ($editPage): ?>
-                    <a href="<?= e(url('admin/pages.php')) ?>" class="btn btn-outline">لغو ویرایش</a>
-                <?php endif; ?>
             </div>
         </form>
-    </div>
+    </template>
+
+    <div class="admin-section">
 
     <div class="admin-section">
         <div class="admin-section-header">
@@ -337,11 +342,11 @@ require_once __DIR__ . '/header.php';
                                 <td>
                                     <a href="<?= e(url('page.php?slug=' . $page['slug'])) ?>" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">مشاهده</a>
                                     <a href="<?= e(url('admin/pages.php?edit=' . $page['id'])) ?>" class="btn btn-sm btn-secondary">ویرایش</a>
-                                    <form method="post" action="<?= e(url('admin/pages.php')) ?>" class="form-inline" onsubmit="return confirm('آیا این صفحه حذف شود؟');">
+                                    <form method="post" action="<?= e(url('admin/pages.php')) ?>" class="inline-form" data-confirm="آیا از حذف صفحه «<?= e($page['title']) ?>» اطمینان دارید؟ این عملیات قابل بازگشت نیست.">
                                         <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                         <input type="hidden" name="action" value="delete_page">
-                                        <input type="hidden" name="page_id" value="<?= e($page['id']) ?>">
-                                        <button type="submit" class="btn-reset">حذف</button>
+                                        <input type="hidden" name="page_id" value="<?= e((string) $page['id']) ?>">
+                                        <button type="submit" class="btn btn-sm btn-reject">حذف</button>
                                     </form>
                                 </td>
                             </tr>
@@ -359,4 +364,17 @@ require_once __DIR__ . '/header.php';
     </div>
 </section>
 
+<script>
+function openPageDrawer() {
+    const tmpl = document.getElementById('pageFormTemplate');
+    if (tmpl) {
+        openDrawer(<?= $editPage ? json_encode('ویرایش صفحه «' . $editPage['title'] . '»') : json_encode('افزودن صفحه جدید') ?>, tmpl.innerHTML);
+    }
+}
+<?php if ($editPage): ?>
+document.addEventListener('DOMContentLoaded', () => {
+    openPageDrawer();
+});
+<?php endif; ?>
+</script>
 <?php require_once __DIR__ . '/footer.php'; ?>

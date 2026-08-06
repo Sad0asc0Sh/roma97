@@ -319,39 +319,32 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>اسلایدها</h1>
+    <div class="app-toolbar">
+        <h1 style="margin:0;font-size:1.5rem;font-weight:800">مدیریت اسلایدها</h1>
+        <div class="app-toolbar-actions">
+            <button type="button" class="app-btn app-btn-primary" onclick="openSlideDrawer()">
+                + افزودن اسلاید جدید
+            </button>
+        </div>
+    </div>
 
     <?php if ($successMessage !== null): ?>
+        <script>document.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($successMessage) ?>, 'success'));</script>
         <div class="notice" role="status"><?= e($successMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($errorMessage !== null): ?>
+        <script>document.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($errorMessage) ?>, 'danger'));</script>
         <div class="alert alert-danger" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
 
-    <?php if ($deleteSlide !== null): ?>
-        <div class="alert alert-danger" role="alert">
-            <p>آیا اسلاید «<?= e($deleteSlide['title']) ?>» حذف شود؟</p>
-            <form method="post" action="<?= e(url('admin/slides.php')) ?>" style="margin-top:12px;">
-                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                <input type="hidden" name="action" value="delete_slide">
-                <input type="hidden" name="slide_id" value="<?= e($deleteSlide['id']) ?>">
-                <button type="submit" class="btn btn-danger btn-sm">حذف اسلاید</button>
-                <a href="<?= e(url('admin/slides.php')) ?>" class="btn btn-outline btn-sm" style="margin-inline-start:8px;">انصراف</a>
-            </form>
-        </div>
-    <?php endif; ?>
-
-    <div class="admin-section">
-        <div class="admin-section-header">
-            <h2 class="admin-section-title" id="slide-form-title"><?= $editSlide ? 'ویرایش اسلاید' : 'افزودن اسلاید' ?></h2>
-        </div>
+    <template id="slideFormTemplate">
         <div style="margin-bottom:16px;padding:12px 16px;background:#f0f9f4;border-right:3px solid #3D8B63;border-radius:8px;font-size:0.875rem;line-height:2"><strong>راهنمای ابعاد بنر:</strong> دسکتاپ: ۱۹۲۰×۶۰۰ | تبلت: ۱۰۲۴×۴۵۰ | موبایل: ۷۵۰×۱۰۰۰ — فرمت: JPG/PNG/WebP — حداکثر ۲MB — نسبت ایده‌آل: <strong>۱۶:۵</strong></div>
         <form method="post" action="<?= e(url('admin/slides.php')) ?>" enctype="multipart/form-data" novalidate>
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="save_slide">
             <?php if ($editSlide): ?>
-                <input type="hidden" name="slide_id" value="<?= e($editSlide['id']) ?>">
+                <input type="hidden" name="slide_id" value="<?= e((string) $editSlide['id']) ?>">
             <?php endif; ?>
 
             <div class="form-group">
@@ -376,7 +369,7 @@ require_once __DIR__ . '/header.php';
                 <input type="number" id="sort_order" name="sort_order" class="form-control"
                     style="max-width:150px;"
                     min="0" step="1"
-                    value="<?= e($editSlide['sort_order'] ?? '0') ?>"
+                    value="<?= e((string) ($editSlide['sort_order'] ?? '0')) ?>"
                     required>
             </div>
 
@@ -395,16 +388,13 @@ require_once __DIR__ . '/header.php';
                 <small style="color:var(--muted);font-size:0.85rem;">فرمت: JPG, PNG, WebP — حداکثر ۲ مگابایت — ابعاد پیشنهادی: ۱۹۲۰×۶۰۰ px</small>
             </div>
 
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
-                    <?= $editSlide ? 'بهروزرسانی اسلاید' : 'افزودن اسلاید' ?>
+            <div class="form-actions" style="margin-top:1.5rem;">
+                <button type="submit" class="btn btn-primary" style="width:100%">
+                    <?= $editSlide ? 'به‌روزرسانی اسلاید' : 'افزودن اسلاید' ?>
                 </button>
-                <?php if ($editSlide): ?>
-                    <a href="<?= e(url('admin/slides.php')) ?>" class="btn btn-outline">لغو ویرایش</a>
-                <?php endif; ?>
             </div>
         </form>
-    </div>
+    </template>
 
     <div class="admin-section">
         <div class="admin-section-header">
@@ -451,7 +441,12 @@ require_once __DIR__ . '/header.php';
                                     </td>
                                     <td>
                                         <a href="<?= e(url('admin/slides.php?edit=' . $slide['id'])) ?>" class="btn btn-sm btn-secondary">ویرایش</a>
-                                        <a href="<?= e(url('admin/slides.php?delete=' . $slide['id'])) ?>" class="btn btn-sm btn-reject">حذف</a>
+                                        <form method="post" action="<?= e(url('admin/slides.php')) ?>" class="inline-form" data-confirm="آیا از حذف اسلاید «<?= e($slide['title']) ?>» اطمینان دارید؟ این عملیات قابل بازگشت نیست.">
+                                            <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                                            <input type="hidden" name="action" value="delete_slide">
+                                            <input type="hidden" name="slide_id" value="<?= e((string) $slide['id']) ?>">
+                                            <button type="submit" class="btn btn-sm btn-reject">حذف</button>
+                                        </form>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -473,4 +468,17 @@ require_once __DIR__ . '/header.php';
     </div>
 </section>
 
+<script>
+function openSlideDrawer() {
+    const tmpl = document.getElementById('slideFormTemplate');
+    if (tmpl) {
+        openDrawer(<?= $editSlide ? json_encode('ویرایش اسلاید «' . $editSlide['title'] . '»') : json_encode('افزودن اسلاید جدید') ?>, tmpl.innerHTML);
+    }
+}
+<?php if ($editSlide): ?>
+document.addEventListener('DOMContentLoaded', () => {
+    openSlideDrawer();
+});
+<?php endif; ?>
+</script>
 <?php require_once __DIR__ . '/footer.php'; ?>

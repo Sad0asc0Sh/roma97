@@ -161,13 +161,13 @@ require_once __DIR__ . '/header.php';
 
     <?php if ($classroom === null): ?>
         <div class="teacher-no-classroom">
-            <div class="teacher-no-classroom-icon">🏫</div>
+            <div class="teacher-no-classroom-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/></svg></div>
             <h2>هیچ کلاسی به شما اختصاص داده شده است</h2>
             <p>برای ثبت گزارش روزانه باید به یک کلاس اختصاص داده شده باشید</p>
         </div>
     <?php elseif ($children === []): ?>
         <div class="teacher-no-classroom">
-            <div class="teacher-no-classroom-icon">👶</div>
+            <div class="teacher-no-classroom-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg></div>
             <h2>هنوز کودکی در این کلاس ثبت‌نام نشده است</h2>
             <p>پس از ثبت‌نام کودکان در کلاس، می‌توانید برای هر کودک گزارش روزانه ثبت کنید.</p>
         </div>

@@ -56,7 +56,7 @@ require_once __DIR__ . '/header.php';
 
 <?php if ($children === []): ?>
     <div class="parent-empty-state">
-        <div class="empty-state-icon">👶</div>
+        <div class="empty-state-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg></div>
         <h3>هنوز کودکی ثبت نشده است</h3>
         <p>برای شروع، اولین فرزند خود را ثبت کنید</p>
         <a class="btn btn-primary" href="<?= e(url('parent/add-child.php')) ?>">افزودن کودک</a>
@@ -88,7 +88,7 @@ require_once __DIR__ . '/header.php';
                     <p class="child-age"><?= e(parentChildDisplayAge($child['date_of_birth'])) ?> • <?= e(parentChildGenderLabel(($child['gender'] ?? '') !== '' ? (string) $child['gender'] : null)) ?></p>
                     <span class="status-badge status-badge-<?= e($cs) ?>"><?= e(parentChildEnrollmentLabel($cs))?></span>
                     <?php if ($hasAllergies): ?>
-                        <p class="child-alert-text">⚠️ حساسیت دارد</p>
+                        <p class="child-alert-text"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: text-bottom; margin-left: 2px;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> حساسیت دارد</p>
                     <?php endif; ?>
               </div>
                 <div class="child-list-actions">
