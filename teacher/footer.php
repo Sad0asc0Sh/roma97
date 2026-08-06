@@ -15,6 +15,8 @@ $siteNameValue = siteName();
         </div>
     </footer>
 
+    <?php require_once __DIR__ . '/../templates/app/dialogs.php'; ?>
+
     
 <!-- Mobile Bottom Navigation - Teacher Portal -->
 <nav class="mobile-bottom-nav teacher-bottom-nav" aria-label="منوی ناوبری موبایل معلم">

@@ -13,6 +13,8 @@ $siteNameValue = siteName();
         </div>
     </footer>
 
+    <?php require_once __DIR__ . '/../templates/app/dialogs.php'; ?>
+
     
 <!-- Mobile Bottom Navigation - Parent Portal -->
 <nav class="mobile-bottom-nav parent-bottom-nav" aria-label="منوی ناوبری موبایل والدین">
@@ -20,6 +22,11 @@ $siteNameValue = siteName();
         <span class="bottom-nav-indicator"></span>
         <svg class="bottom-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         <span class="bottom-nav-label">داشبورد</span>
+    </a>
+    <a href="<?php echo e(url('parent/children.php')); ?>" class="bottom-nav-item <?php echo in_array($currentPage, ['children.php', 'child-detail.php', 'add-child.php'], true) ? 'active' : ''; ?>">
+        <span class="bottom-nav-indicator"></span>
+        <svg class="bottom-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg>
+        <span class="bottom-nav-label">فرزندان</span>
     </a>
     <a href="<?php echo e(url('parent/messages.php')); ?>" class="bottom-nav-item <?php echo $currentPage === 'messages.php' ? 'active' : ''; ?>" style="position:relative">
         <span class="bottom-nav-indicator"></span>

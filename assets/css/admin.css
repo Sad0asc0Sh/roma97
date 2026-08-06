@@ -1,63 +1,43 @@
 /* ================================================================
-   ROMA ADMIN PANEL — Premium Design System v2.0
-   A modern, professional admin dashboard with glassmorphism,
-   smooth animations, and polished micro-interactions.
+   ROMA ADMIN PANEL — Enterprise Design System v2.0
    ================================================================ */
 
-/* ── DESIGN TOKENS ───────────────────────────────────────────── */
+@import url('app-shell.css');
+
+/* ── DESIGN TOKENS (Compatibility Layer - Mapped to Brand --app-*) ──── */
 :root {
-    --adm-primary: #7C3AED;
-    --adm-primary-light: #A78BFA;
-    --adm-primary-dark: #5B21B6;
-    --adm-primary-50: #F5F3FF;
-    --adm-primary-100: #EDE9FE;
-    --adm-primary-200: #DDD6FE;
-    --adm-primary-glow: rgba(124,58,237,0.25);
-    --adm-secondary: #EC4899;
-    --adm-accent: #06B6D4;
-    --adm-success: #10B981;
-    --adm-success-50: #ECFDF5;
-    --adm-success-100: #D1FAE5;
-    --adm-warning: #F59E0B;
-    --adm-warning-50: #FFFBEB;
-    --adm-warning-100: #FEF3C7;
-    --adm-danger: #EF4444;
-    --adm-danger-50: #FEF2F2;
-    --adm-danger-100: #FEE2E2;
-    --adm-info: #3B82F6;
-    --adm-info-50: #EFF6FF;
-    --adm-info-100: #DBEAFE;
-    --adm-bg: #F1F5F9;
-    --adm-surface: #FFFFFF;
-    --adm-surface-hover: #FAFBFC;
-    --adm-sidebar-bg: linear-gradient(180deg, #0F172A 0%, #1E293B 100%);
+    --adm-primary: var(--app-primary);
+    --adm-primary-light: var(--app-primary-light);
+    --adm-primary-dark: var(--app-primary-dark);
+    --adm-primary-50: var(--app-primary-50);
+    --adm-primary-100: var(--app-primary-100);
+    --adm-primary-200: var(--app-primary-100);
+    --adm-primary-glow: rgba(61,139,99,0.25);
+    --adm-secondary: var(--app-secondary);
+    --adm-accent: var(--app-accent);
+    --adm-success: var(--app-success);
+    --adm-success-50: var(--app-success-bg);
+    --adm-warning: var(--app-warning);
+    --adm-warning-50: var(--app-warning-bg);
+    --adm-danger: var(--app-danger);
+    --adm-danger-50: var(--app-danger-bg);
+    --adm-info: var(--app-info);
+    --adm-info-50: var(--app-info-bg);
+    --adm-bg: var(--app-bg);
+    --adm-surface: var(--app-surface);
+    --adm-sidebar-bg: var(--app-sidebar-bg);
     --adm-sidebar-hover: rgba(255,255,255,0.06);
-    --adm-sidebar-active: rgba(124,58,237,0.18);
-    --adm-sidebar-active-border: var(--adm-primary);
-    --adm-sidebar-text: #94A3B8;
-    --adm-sidebar-text-active: #FFFFFF;
-    --adm-sidebar-width: 272px;
-    --adm-topbar-height: 64px;
-    --adm-text: #0F172A;
-    --adm-text-secondary: #475569;
-    --adm-text-muted: #94A3B8;
-    --adm-border: #E2E8F0;
-    --adm-border-light: #F1F5F9;
-    --adm-radius-xs: 6px;
-    --adm-radius-sm: 8px;
-    --adm-radius: 12px;
-    --adm-radius-lg: 16px;
-    --adm-radius-xl: 20px;
-    --adm-radius-full: 9999px;
-    --adm-shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
-    --adm-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-    --adm-shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
-    --adm-shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
-    --adm-shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
-    --adm-shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
-    --adm-transition: 0.2s cubic-bezier(0.4,0,0.2,1);
-    --adm-transition-slow: 0.35s cubic-bezier(0.4,0,0.2,1);
-    --adm-font: 'Vazirmatn', 'Tahoma', system-ui, -apple-system, sans-serif;
+    --adm-sidebar-active: var(--app-sidebar-active-bg);
+    --adm-sidebar-active-border: var(--app-primary);
+    --adm-sidebar-text: var(--app-sidebar-text);
+    --adm-sidebar-text-active: var(--app-sidebar-text-active);
+    --adm-sidebar-width: var(--app-sidebar-width);
+    --adm-topbar-height: var(--app-topbar-height);
+    --adm-text: var(--app-text);
+    --adm-text-secondary: var(--app-slate-600);
+    --adm-text-muted: var(--app-text-muted);
+    --adm-border: var(--app-border);
+    --adm-font: var(--app-font);
 }
 
 /* ── DARK MODE OVERRIDES FOR ADMIN ────────────────────────── */

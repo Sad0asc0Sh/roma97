@@ -26,7 +26,9 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?php echo $pageTitleValue; ?></title>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?php echo e(url('assets/css/app-shell.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(url('assets/css/admin.css')); ?>">
+    <script src="<?php echo e(url('assets/js/app-shell.js')); ?>" defer></script>
 </head>
 <body class="admin-layout">
     <div class="admin-overlay" id="adminOverlay"></div>
@@ -65,7 +67,7 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
                         <span class="nav-text">اسلایدها</span>
                     </a>
                     <a href="<?php echo e(url('admin/gallery.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'gallery.php' ? 'active' : ''; ?>">
-                        <span class="nav-text">&#128247; گالری تصاویر</span>
+                        <span class="nav-text">گالری تصاویر</span>
                     </a>
                     <a href="<?php echo e(url('admin/news.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'news.php' ? 'active' : ''; ?>">
                         <span class="nav-text">اخبار</span>
@@ -76,22 +78,14 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
                 </div>
             </div>
 
-            <div class="admin-nav-group">
-                <button class="admin-nav-item admin-nav-parent" data-submenu="users">
-                    <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>
-                    <span class="nav-text">کاربران</span>
-                    <span class="nav-arrow">&#8250;</span>
-                </button>
-                <div class="admin-nav-submenu" id="submenu-users">
-                    <a href="<?php echo e(url('admin/teachers.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'teachers.php' ? 'active' : ''; ?>">
-                        <span class="nav-text">معلمان</span>
-                    </a>
-                </div>
-            </div>
+            <a href="<?php echo e(url('admin/teachers.php')); ?>" class="admin-nav-item <?php echo $currentPage === 'teachers.php' ? 'active' : ''; ?>">
+                <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>
+                <span class="nav-text">معلمان</span>
+            </a>
 
             <div class="admin-nav-group">
                 <button class="admin-nav-item admin-nav-parent" data-submenu="children">
-                    <span class="nav-icon">&#128102;</span>
+                    <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg></span>
                     <span class="nav-text">کودکان</span>
                     <span class="nav-arrow">&#8250;</span>
                 </button>
@@ -107,7 +101,7 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
                     </a>
 
                     <a href="<?php echo e(url('admin/parents.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'parents.php' ? 'active' : ''; ?>">
-                        <span class="nav-text">&#128101; مدیریت والدین</span>
+                        <span class="nav-text">مدیریت والدین</span>
                     </a>                </div>
             </div>
 
@@ -174,24 +168,7 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
     </aside>
 
     <div class="admin-main">
-        <header class="admin-topbar">
-            <button class="admin-mobile-toggle" id="mobileSidebarToggle" aria-label="Toggle menu">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-            <div class="admin-topbar-title">
-                <h1><?php echo $topbarTitle; ?></h1>
-            </div>
-            <div class="admin-topbar-actions">
-                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" aria-label="تغییر حالت شب/روز" style="margin-inline-end: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-                </button>
-                <a href="<?php echo e(url('index.php')); ?>" class="btn btn-outline btn-sm" target="_blank" rel="noopener">
-                    <span>&#128065;</span> مشاهده سایت
-                </a>
-            </div>
-        </header>
+        <?php require_once __DIR__ . '/../templates/app/topbar.php'; ?>
 
         <main class="admin-content">
             <!-- Default-password warning removed (hardened: no hardcoded default password exists) -->

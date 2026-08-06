@@ -25,16 +25,19 @@ $pageTitleValue = isset($pageTitle) ? e($pageTitle) : 'پنل معلم | ' . e($
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?php echo $pageTitleValue; ?></title>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?php echo e(url('assets/css/app-shell.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(url('assets/css/style.css')); ?>">
+    <script src="<?php echo e(url('assets/js/app-shell.js')); ?>" defer></script>
 </head>
 <body class="teacher-layout">
+    <?php require_once __DIR__ . '/../templates/app/topbar.php'; ?>
     <header class="teacher-header">
         <div class="teacher-header-inner">
             <a href="<?php echo e(url('teacher/index.php')); ?>" class="teacher-logo">
                 <?php if ($logo !== ''): ?>
                     <img src="<?php echo e(url($logo)); ?>" alt="<?php echo e($siteNameValue); ?>" class="teacher-logo-img">
                 <?php else: ?>
-                    <span class="teacher-logo-text">&#11088; <?php echo e($siteNameValue); ?></span>
+                    <span class="teacher-logo-text"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> <?php echo e($siteNameValue); ?></span>
                 <?php endif; ?>
                 <span class="teacher-logo-badge">معلم</span>
             </a>
@@ -53,10 +56,7 @@ $pageTitleValue = isset($pageTitle) ? e($pageTitle) : 'پنل معلم | ' . e($
                     <span class="nav-text">پیام‌ها</span>
                 </a>
                 <div class="teacher-nav-user">
-                    <button type="button" class="theme-toggle-btn" id="themeToggleBtn" aria-label="تغییر حالت شب/روز" style="margin-inline-end: 8px;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-                    </button>
-                    <span class="teacher-user-avatar">&#128100;</span>
+                    <span class="app-avatar" style="width:28px;height:28px;font-size:12px"><?php echo e(mb_substr($teacherName, 0, 1, 'UTF-8')); ?></span>
                     <span class="teacher-user-name"><?php echo e($teacherName); ?></span>
                 </div>
                 <form method="post" action="<?php echo e(url('teacher/logout.php')); ?>" class="teacher-nav-logout-form">

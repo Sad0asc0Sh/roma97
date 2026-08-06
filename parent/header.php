@@ -36,16 +36,23 @@ $unreadCountFa = persianNumber((string) $unreadCount);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo e($pageTitle); ?> | <?php echo e($siteNameValue); ?></title>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?php echo e(url('assets/css/app-shell.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(url('assets/css/style.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(url('assets/css/parent-portal.css')); ?>">
+    <script src="<?php echo e(url('assets/js/app-shell.js')); ?>" defer></script>
 </head>
 <body class="parent-portal-body">
+    <?php require_once __DIR__ . '/../templates/app/topbar.php'; ?>
     <header class="parent-header">
         <div class="parent-header-container">
             <nav class="parent-nav" aria-label="منوی والدین">
                 <a href="<?php echo e(url('parent/index.php')); ?>" class="parent-nav-item <?php echo $currentPage === 'index.php' ? 'active' : ''; ?>" <?php echo $currentPage === 'index.php' ? 'aria-current="page"' : ''; ?>>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                     <span>داشبورد</span>
+                </a>
+                <a href="<?php echo e(url('parent/children.php')); ?>" class="parent-nav-item <?php echo in_array($currentPage, ['children.php', 'child-detail.php', 'add-child.php'], true) ? 'active' : ''; ?>">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg>
+                    <span>فرزندان</span>
                 </a>
                 <?php if ($unreadCount > 0): ?>
                 <a href="<?php echo e(url('parent/messages.php')); ?>" class="parent-nav-item nav-messages <?php echo $currentPage === 'messages.php' ? 'active' : ''; ?>" <?php echo $currentPage === 'messages.php' ? 'aria-current="page"' : ''; ?>>
@@ -81,10 +88,7 @@ $unreadCountFa = persianNumber((string) $unreadCount);
             </nav>
 
             <div class="parent-user">
-                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" aria-label="تغییر حالت شب/روز" style="margin-inline-end: 8px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-                </button>
-                <span class="parent-user-avatar">&#128100;</span>
+                <span class="app-avatar" style="width:30px;height:30px;font-size:12px"><?php echo e(mb_substr($_SESSION['parent_first_name'] ?? $_SESSION['parent_name'] ?? 'و', 0, 1, 'UTF-8')); ?></span>
                 <span class="parent-user-name"><?php echo e($_SESSION['parent_first_name'] ?? $_SESSION['parent_name'] ?? 'والد'); ?></span>
             </div>
         </div>

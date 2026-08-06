@@ -1,39 +1,37 @@
 /* ===========================================================
    ROOMA — Parent Portal Redesign
-   Warm, trustworthy, professional dashboard for parents
    =========================================================== */
+
+@import url('app-shell.css');
 
 /* ── Design Tokens ───────────────────────────────────────── */
 :root {
-  /* Palette – deep forest teal meets warm terra-cotta */
-  --pp-primary: #1A6B52;
-  --pp-primary-hover: #145A44;
-  --pp-primary-light: #E6F5EE;
-  --pp-primary-glow: rgba(26,107,82,0.18);
-  --pp-accent: #E07856;
-  --pp-accent-hover: #C96242;
+  --pp-primary: var(--app-primary);
+  --pp-primary-hover: var(--app-primary-dark);
+  --pp-primary-light: var(--app-primary-50);
+  --pp-primary-glow: rgba(61,139,99,0.18);
+  --pp-accent: var(--app-secondary);
+  --pp-accent-hover: #B35E38;
   --pp-accent-light: #FDF0EB;
-  --pp-surface: #FFFFFF;
-  --pp-surface-raised: #FFFFFF;
-  --pp-bg: #F6F1EA;
-  --pp-bg-warm: #FBF7F0;
-  --pp-bg-cool: #EFF6F3;
-  --pp-text: #2A2F2D;
-  --pp-text-secondary: #6B7570;
-  --pp-text-muted: #9CA39E;
-  --pp-border: #E5DED4;
-  --pp-border-light: #F0ECE5;
-  --pp-success: #22A06B;
-  --pp-success-bg: #E6F9F0;
-  --pp-warning: #D4940A;
-  --pp-warning-bg: #FFF8E5;
-  --pp-danger: #D94F4F;
-  --pp-danger-bg: #FDECEC;
-  --pp-info: #3B7CC8;
-  --pp-info-bg: #EBF4FF;
-
-  /* Typography */
-  --pp-font: 'Vazirmatn', 'Tahoma', 'Segoe UI', system-ui, sans-serif;
+  --pp-surface: var(--app-surface);
+  --pp-surface-raised: var(--app-surface);
+  --pp-bg: var(--app-bg);
+  --pp-bg-warm: var(--app-slate-50);
+  --pp-bg-cool: var(--app-slate-50);
+  --pp-text: var(--app-text);
+  --pp-text-secondary: var(--app-slate-600);
+  --pp-text-muted: var(--app-text-muted);
+  --pp-border: var(--app-border);
+  --pp-border-light: var(--app-border);
+  --pp-success: var(--app-success);
+  --pp-success-bg: var(--app-success-bg);
+  --pp-warning: var(--app-warning);
+  --pp-warning-bg: var(--app-warning-bg);
+  --pp-danger: var(--app-danger);
+  --pp-danger-bg: var(--app-danger-bg);
+  --pp-info: var(--app-info);
+  --pp-info-bg: var(--app-info-bg);
+  --pp-font: var(--app-font);
   --pp-radius: 16px;
   --pp-radius-sm: 10px;
   --pp-radius-xs: 8px;
