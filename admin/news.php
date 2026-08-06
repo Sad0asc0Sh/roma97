@@ -268,15 +268,15 @@ require_once __DIR__ . '/header.php';
 
 <div class="admin-content">
     <div class="admin-page-header">
-        <h1>&#128240; مدیریت اخبار</h1>
+        <h1>مدیریت اخبار</h1>
     </div>
 
     <?php if ($successMessage !== null): ?>
-        <div class="notice" role="status">&#9989; <?= e($successMessage) ?></div>
+        <div class="notice" role="status"><?= e($successMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($errorMessage !== null): ?>
-        <div class="alert alert-danger" role="alert">&#10060; <?= e($errorMessage) ?></div>
+        <div class="alert alert-danger" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
 
     <div class="admin-section">
@@ -381,10 +381,10 @@ require_once __DIR__ . '/header.php';
 
             <div class="form-actions" style="margin-top:20px;">
                 <button type="submit" class="btn btn-primary btn-block" style="background:#4EAB87; border:none; padding:14px; font-size:1rem; font-weight:700; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:8px;">
-                    &#128190; <?= $editNewsItem ? 'به‌روزرسانی خبر' : 'افزودن خبر' ?>
+                    <?= $editNewsItem ? 'به‌روزرسانی خبر' : 'افزودن خبر' ?>
                 </button>
                 <?php if ($editNewsItem): ?>
-                    <a href="<?= e(url('admin/news.php')) ?>" class="btn btn-outline" style="border-radius:12px;">&#10006; لغو ویرایش</a>
+                    <a href="<?= e(url('admin/news.php')) ?>" class="btn btn-outline" style="border-radius:12px;">لغو ویرایش</a>
                 <?php endif; ?>
             </div>
         </form>
@@ -392,12 +392,14 @@ require_once __DIR__ . '/header.php';
 
     <div class="admin-section">
         <div class="admin-section-header">
-            <h2 class="admin-section-title">&#128196; همه اخبار</h2>
+            <h2 class="admin-section-title">همه اخبار</h2>
         </div>
 
         <?php if ($newsItems === []): ?>
             <div class="empty-state empty-state-sm">
-                <div class="empty-state-icon">&#128240;</div>
+                <div class="empty-state-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"/></svg>
+                </div>
                 <h3>هنوز خبری اضافه نشده</h3>
                 <p>از فرم بالا اولین خبر خود را اضافه کنید.</p>
             </div>
@@ -417,12 +419,12 @@ require_once __DIR__ . '/header.php';
                                 <td style="font-weight:600;"><?= e($newsItem['title']) ?></td>
                                 <td><?= e(formatAdminNewsDate($newsItem['created_at'])) ?></td>
                                 <td>
-                                    <a href="<?= e(url('admin/news.php?edit=' . $newsItem['id'])) ?>" class="btn btn-sm btn-secondary">&#9998; ویرایش</a>
+                                    <a href="<?= e(url('admin/news.php?edit=' . $newsItem['id'])) ?>" class="btn btn-sm btn-secondary">ویرایش</a>
                                     <form method="post" action="<?= e(url('admin/news.php')) ?>" class="form-inline" onsubmit="return confirm('آیا این خبر حذف شود؟');">
                                         <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                         <input type="hidden" name="action" value="delete_news">
                                         <input type="hidden" name="news_id" value="<?= e($newsItem['id']) ?>">
-                                        <button type="submit" class="btn-reset">&#128465; حذف</button>
+                                        <button type="submit" class="btn-reset">حذف</button>
                                     </form>
                                 </td>
                             </tr>

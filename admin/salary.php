@@ -96,20 +96,20 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>&#128176; مدیریت حقوق</h1>
+    <h1>مدیریت حقوق</h1>
 
     <?php if ($successMessage !== null): ?>
-        <div class="notice" role="status">&#9989; <?= e($successMessage) ?></div>
+        <div class="notice" role="status"><?= e($successMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($errorMessage !== null): ?>
-        <div class="alert alert-danger" role="alert">&#10060; <?= e($errorMessage) ?></div>
+        <div class="alert alert-danger" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
 
     <div class="admin-two-column">
         <div class="admin-section">
             <div class="admin-section-header">
-                <h2 class="admin-section-title">&#10010; ثبت پرداخت حقوق</h2>
+                <h2 class="admin-section-title">ثبت پرداخت حقوق</h2>
             </div>
             <form method="post" action="<?= e(url('admin/salary.php')) ?>" novalidate>
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
@@ -157,18 +157,20 @@ require_once __DIR__ . '/header.php';
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">&#128190; ثبت پرداخت</button>
+                    <button type="submit" class="btn btn-primary">ثبت پرداخت</button>
                 </div>
             </form>
         </div>
 
         <div class="admin-section">
             <div class="admin-section-header">
-                <h2 class="admin-section-title">&#128203; پرداختهای اخیر</h2>
+                <h2 class="admin-section-title">پرداختهای اخیر</h2>
             </div>
             <?php if (empty($recentPayments)): ?>
                 <div class="empty-state empty-state-sm">
-                    <div class="empty-state-icon">&#128176;</div>
+                    <div class="empty-state-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    </div>
                     <h3>هنوز پرداخت حقوقی ثبت نشده</h3>
                 </div>
             <?php else: ?>

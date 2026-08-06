@@ -240,19 +240,19 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>&#128196; صفحات</h1>
+    <h1>صفحات</h1>
 
     <?php if ($successMessage !== null): ?>
-        <div class="notice" role="status">&#9989; <?= e($successMessage) ?></div>
+        <div class="notice" role="status"><?= e($successMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($errorMessage !== null): ?>
-        <div class="alert alert-danger" role="alert">&#10060; <?= e($errorMessage) ?></div>
+        <div class="alert alert-danger" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
 
     <div class="admin-section">
         <div class="admin-section-header">
-            <h2 class="admin-section-title" id="page-form-title">&#10010; <?= $editPage ? 'ویرایش صفحه' : 'افزودن صفحه' ?></h2>
+            <h2 class="admin-section-title" id="page-form-title"><?= $editPage ? 'ویرایش صفحه' : 'افزودن صفحه' ?></h2>
         </div>
         <form method="post" action="<?= e(url('admin/pages.php')) ?>" novalidate>
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
@@ -295,10 +295,10 @@ require_once __DIR__ . '/header.php';
 
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">
-                    &#128190; <?= $editPage ? 'بهروزرسانی صفحه' : 'افزودن صفحه' ?>
+                    <?= $editPage ? 'بهروزرسانی صفحه' : 'افزودن صفحه' ?>
                 </button>
                 <?php if ($editPage): ?>
-                    <a href="<?= e(url('admin/pages.php')) ?>" class="btn btn-outline">&#10006; لغو ویرایش</a>
+                    <a href="<?= e(url('admin/pages.php')) ?>" class="btn btn-outline">لغو ویرایش</a>
                 <?php endif; ?>
             </div>
         </form>
@@ -306,12 +306,14 @@ require_once __DIR__ . '/header.php';
 
     <div class="admin-section">
         <div class="admin-section-header">
-            <h2 class="admin-section-title">&#128196; همه صفحات</h2>
+            <h2 class="admin-section-title">همه صفحات</h2>
         </div>
 
         <?php if ($pages === []): ?>
             <div class="empty-state empty-state-sm">
-                <div class="empty-state-icon">&#128196;</div>
+                <div class="empty-state-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
                 <h3>هنوز صفحه‌ای اضافه نشده</h3>
                 <p>از فرم بالا اولین صفحه خود را اضافه کنید.</p>
             </div>
@@ -333,13 +335,13 @@ require_once __DIR__ . '/header.php';
                                 <td><code style="background:var(--bg-lavender);padding:3px 8px;border-radius:6px;font-size:0.85rem;"><?= e($page['slug']) ?></code></td>
                                 <td><?= e(formatAdminPageDate($page['created_at'])) ?></td>
                                 <td>
-                                    <a href="<?= e(url('page.php?slug=' . $page['slug'])) ?>" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">&#128065; مشاهده</a>
-                                    <a href="<?= e(url('admin/pages.php?edit=' . $page['id'])) ?>" class="btn btn-sm btn-secondary">&#9998; ویرایش</a>
+                                    <a href="<?= e(url('page.php?slug=' . $page['slug'])) ?>" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">مشاهده</a>
+                                    <a href="<?= e(url('admin/pages.php?edit=' . $page['id'])) ?>" class="btn btn-sm btn-secondary">ویرایش</a>
                                     <form method="post" action="<?= e(url('admin/pages.php')) ?>" class="form-inline" onsubmit="return confirm('آیا این صفحه حذف شود؟');">
                                         <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                         <input type="hidden" name="action" value="delete_page">
                                         <input type="hidden" name="page_id" value="<?= e($page['id']) ?>">
-                                        <button type="submit" class="btn-reset">&#128465; حذف</button>
+                                        <button type="submit" class="btn-reset">حذف</button>
                                     </form>
                                 </td>
                             </tr>

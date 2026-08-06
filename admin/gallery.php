@@ -360,7 +360,7 @@ require_once __DIR__ . '/header.php';
 <section class="admin-page">
     <div class="admin-section">
         <div class="admin-section-header">
-            <h2 class="admin-section-title"><?= $editImage ? '&#9998; ویرایش تصویر' : '&#128247; افزودن تصویر جدید' ?></h2>
+            <h2 class="admin-section-title"><?= $editImage ? 'ویرایش تصویر' : 'افزودن تصویر جدید' ?></h2>
         </div>
         <?php $flashError = getFlash('error'); $flashSuccess = getFlash('success'); ?>
         <?php if ($flashError !== null && $flashError !== ''): ?>
@@ -409,20 +409,22 @@ require_once __DIR__ . '/header.php';
                 </label>
             </div>
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary"><?= $editImage ? '&#128190; بروزرسانی' : '&#10010; افزودن' ?></button>
+                <button type="submit" class="btn btn-primary"><?= $editImage ? 'بروزرسانی' : 'افزودن' ?></button>
                 <?php if ($editImage): ?>
-                    <a href="<?= e(url('admin/gallery.php')) ?>" class="btn btn-outline">&#10006; لغو</a>
+                    <a href="<?= e(url('admin/gallery.php')) ?>" class="btn btn-outline">لغو</a>
                 <?php endif; ?>
             </div>
         </form>
     </div>
     <div class="admin-section">
         <div class="admin-section-header">
-            <h2 class="admin-section-title">&#128444; همه تصاویر</h2>
+            <h2 class="admin-section-title">همه تصاویر</h2>
         </div>
         <?php if ($galleryImages === []): ?>
             <div class="empty-state empty-state-sm">
-                <div class="empty-state-icon">&#128247;</div>
+                <div class="empty-state-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </div>
                 <h3>هنوز تصویری نیست</h3>
                 <p>از فرم بالا اضافه کنید.</p>
             </div>
@@ -453,17 +455,17 @@ require_once __DIR__ . '/header.php';
                                         <input type="hidden" name="action" value="toggle_active">
                                         <input type="hidden" name="image_id" value="<?= e($gi['id']) ?>">
                                         <button type="submit" class="btn btn-xs <?= (int) $gi['is_active'] === 1 ? 'btn-success' : 'btn-muted' ?>">
-                                            <?= (int) $gi['is_active'] === 1 ? '&#9989; فعال' : '&#10060; غیرفعال' ?>
+                                            <?= (int) $gi['is_active'] === 1 ? 'فعال' : 'غیرفعال' ?>
                                         </button>
                                     </form>
                                 </td>
                                 <td>
-                                    <a href="<?= e(url('admin/gallery.php?edit=' . $gi['id'])) ?>" class="btn btn-sm btn-secondary">&#9998;</a>
+                                    <a href="<?= e(url('admin/gallery.php?edit=' . $gi['id'])) ?>" class="btn btn-sm btn-secondary">ویرایش</a>
                                     <form method="post" action="<?= e(url('admin/gallery.php')) ?>" style="display:inline" onsubmit="return confirm('حذف شود؟')">
                                         <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                         <input type="hidden" name="action" value="delete_image">
                                         <input type="hidden" name="image_id" value="<?= e($gi['id']) ?>">
-                                        <button type="submit" class="btn btn-sm btn-reject">&#128465;</button>
+                                        <button type="submit" class="btn btn-sm btn-reject">حذف</button>
                                     </form>
                                 </td>
                             </tr>
@@ -472,7 +474,7 @@ require_once __DIR__ . '/header.php';
                     </table>
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary btn-sm">&#128260; بروزرسانی ترتیب</button>
+                    <button type="submit" class="btn btn-primary btn-sm">بروزرسانی ترتیب</button>
                 </div>
             </form>
             <?php if ($pagi['total'] > $pagi['perPage']): ?>

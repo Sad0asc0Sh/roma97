@@ -75,7 +75,7 @@ function initUserDropdown() {
   }
 }
 
-/* ── GLOBAL SEARCH KEYBOARD SHORTCUT (/) ───────────────────── */
+/* ── GLOBAL SEARCH KEYBOARD SHORTCUT (/) & LIVE CLIENT FILTER ──── */
 function initGlobalSearchKeybind() {
   const searchInput = document.getElementById('appSearchInput');
   if (!searchInput) return;
@@ -86,6 +86,30 @@ function initGlobalSearchKeybind() {
       e.preventDefault();
       searchInput.focus();
     }
+  });
+
+  searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim().toLowerCase();
+    const tableRows = document.querySelectorAll('.app-table tbody tr, .admin-table tbody tr, .payments-table tbody tr, .attendance-table tbody tr');
+
+    tableRows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      if (query === '' || text.includes(query)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    const cards = document.querySelectorAll('.admin-child-card, .child-card-large, .child-list-card, .event-card, .admin-event-card, .quick-list-item');
+    cards.forEach(card => {
+      const text = card.textContent.toLowerCase();
+      if (query === '' || text.includes(query)) {
+        card.style.display = '';
+      } else {
+        card.style.display = 'none';
+      }
+    });
   });
 }
 

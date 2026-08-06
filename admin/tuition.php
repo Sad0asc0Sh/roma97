@@ -128,20 +128,20 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>&#128176; مدیریت شهریه</h1>
+    <h1>مدیریت شهریه</h1>
 
     <?php if ($successMessage !== null): ?>
-        <div class="notice" role="status">&#9989; <?= e($successMessage) ?></div>
+        <div class="notice" role="status"><?= e($successMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($errorMessage !== null): ?>
-        <div class="alert alert-danger" role="alert">&#10060; <?= e($errorMessage) ?></div>
+        <div class="alert alert-danger" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
 
     <div class="admin-two-column">
         <div class="admin-section">
             <div class="admin-section-header">
-                <h2 class="admin-section-title" id="recordForm">&#10010; ثبت پرداخت</h2>
+                <h2 class="admin-section-title" id="recordForm">ثبت پرداخت</h2>
             </div>
             <form method="post" action="<?= e(url('admin/tuition.php')) ?>" novalidate>
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
@@ -189,18 +189,20 @@ require_once __DIR__ . '/header.php';
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">&#128190; ذخیره پرداخت شهریه</button>
+                    <button type="submit" class="btn btn-primary">ذخیره پرداخت شهریه</button>
                 </div>
             </form>
         </div>
 
         <div class="admin-section">
             <div class="admin-section-header">
-                <h2 class="admin-section-title">&#128203; وضعیت پرداخت کودکان فعال</h2>
+                <h2 class="admin-section-title">وضعیت پرداخت کودکان فعال</h2>
             </div>
             <?php if (empty($dashboardStatus)): ?>
                 <div class="empty-state empty-state-sm">
-                    <div class="empty-state-icon">&#128102;</div>
+                    <div class="empty-state-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg>
+                    </div>
                     <h3>هیچ ثبت نام فعالی یافت نشد</h3>
                 </div>
             <?php else: ?>
@@ -229,7 +231,7 @@ require_once __DIR__ . '/header.php';
                                     </td>
                                     <td><?= $s['latest_date'] ? e(shamsiDate($s['latest_date'])) : '—' ?></td>
                                     <td>
-                                        <a href="<?= e(url('admin/tuition.php?child_id=' . $s['id'] . '#recordForm')) ?>" class="btn btn-sm btn-secondary">&#128176; پرداخت</a>
+                                        <a href="<?= e(url('admin/tuition.php?child_id=' . $s['id'] . '#recordForm')) ?>" class="btn btn-sm btn-secondary">پرداخت</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

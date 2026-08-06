@@ -371,18 +371,26 @@ require_once __DIR__ . '/header.php';
 <?php endif; ?>
 
 <section class="dashboard">
-    <h1>مدیریت معلمان</h1>
+    <div class="app-toolbar">
+        <h1 style="margin:0;font-size:1.5rem;font-weight:800">مدیریت معلمان</h1>
+        <div class="app-toolbar-actions">
+            <button type="button" class="app-btn app-btn-primary" onclick="openTeacherDrawer()">
+                + افزودن معلم جدید
+            </button>
+        </div>
+    </div>
 
     <?php if ($successMessage !== null): ?>
+        <script>document.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($successMessage) ?>, 'success'));</script>
         <div class="notice" role="status"><?= e($successMessage) ?></div>
     <?php endif; ?>
     <?php if ($errorMessage !== null): ?>
+        <script>document.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($errorMessage) ?>, 'danger'));</script>
         <div class="alert" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
 
-    <!-- ── Add / Edit Form ───────────────────────────────────────────────── -->
-    <div class="admin-form-card">
-        <h2><?= $editTeacher ? 'ویرایش معلم' : 'افزودن معلم جدید' ?></h2>
+    <!-- ── Add / Edit Form Template (Hidden container for Drawer) ──────────────── -->
+    <template id="teacherFormTemplate">
         <form method="post" action="<?= e(url('admin/teachers.php')) ?>" enctype="multipart/form-data" novalidate>
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="<?= $editTeacher ? 'edit' : 'add' ?>">
@@ -390,116 +398,69 @@ require_once __DIR__ . '/header.php';
                 <input type="hidden" name="teacher_id" value="<?= e((string) $editTeacher['id']) ?>">
             <?php endif; ?>
 
-            <div class="form-grid-2">
-                <div class="form-group">
-                    <label for="tf_first_name">نام <span class="req">*</span></label>
-                    <input type="text" id="tf_first_name" name="first_name" class="form-control"
-                           value="<?= e((string) ($editTeacher['first_name'] ?? $formData['first_name'] ?? '')) ?>" required>
-                </div>
-                <div class="form-group">
-                    <label for="tf_last_name">نام خانوادگی <span class="req">*</span></label>
-                    <input type="text" id="tf_last_name" name="last_name" class="form-control"
-                           value="<?= e((string) ($editTeacher['last_name'] ?? $formData['last_name'] ?? '')) ?>" required>
-                </div>
-                <div class="form-group">
-                    <label for="tf_email">ایمیل <span class="req">*</span></label>
-                    <input type="email" id="tf_email" name="email" class="form-control"
-                           value="<?= e((string) ($editTeacher['email'] ?? $formData['email'] ?? '')) ?>" required>
-                </div>
-                <div class="form-group">
-                    <label for="tf_phone">تلفن</label>
-                    <input type="tel" id="tf_phone" name="phone" class="form-control"
-                           value="<?= e((string) ($editTeacher['phone'] ?? $formData['phone'] ?? '')) ?>">
-                </div>
-                <div class="form-group">
-                    <label for="tf_password">رمز عبور <?= $editTeacher ? '(خالی بگذارید تا تغییر نکند)' : '<span class="req">*</span>' ?></label>
-                    <input type="password" id="tf_password" name="password" class="form-control"
-                           autocomplete="new-password" minlength="8">
-                </div>
-                <div class="form-group">
-                    <label for="tf_national_id">کد ملی (کد ملی)</label>
-                    <input type="text" id="tf_national_id" name="national_id" class="form-control"
-                           value="<?= e((string) ($editTeacher['national_id'] ?? $formData['national_id'] ?? '')) ?>">
-                </div>
-                <div class="form-group">
-                    <label for="tf_education_level">مدرک تحصیلی (مدرک تحصیلی)</label>
-                    <input type="text" id="tf_education_level" name="education_level" class="form-control"
-                           value="<?= e((string) ($editTeacher['education_level'] ?? $formData['education_level'] ?? '')) ?>">
-                </div>
-                <div class="form-group">
-                    <label for="tf_major">رشته تحصیلی (رشته)</label>
-                    <input type="text" id="tf_major" name="major" class="form-control"
-                           value="<?= e((string) ($editTeacher['major'] ?? $formData['major'] ?? '')) ?>">
-                </div>
-                <div class="form-group">
-                    <label for="tf_role_title">عنوان شغلی / سمت (نمایش در سایت)</label>
-                    <input type="text" id="tf_role_title" name="role_title" class="form-control"
-                           placeholder="مثال: سرپرست مربیان، مربی خردسال"
-                           value="<?= e((string) ($editTeacher['role_title'] ?? $formData['role_title'] ?? '')) ?>">
-                </div>
-                <div class="form-group" style="grid-column: span 2;">
-                    <label for="tf_bio">توضیحات و تخصص (نمایش در کارت مربیان سایت)</label>
-                    <textarea id="tf_bio" name="bio" class="form-control" rows="2"
-                              placeholder="مثال: کارشناس ارشد روانشناسی کودک با ۸ سال سابقه آموزش"><?= e((string) ($editTeacher['bio'] ?? $formData['bio'] ?? '')) ?></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="tf_sort_order">ترتیب نمایش در سایت (عدد کوچک‌تر اول)</label>
-                    <input type="number" id="tf_sort_order" name="sort_order" class="form-control" min="0"
-                           value="<?= e((string) ($editTeacher['sort_order'] ?? $formData['sort_order'] ?? 0)) ?>">
-                </div>
-                <div class="form-group" style="display: flex; align-items: center; gap: 8px; margin-top: 24px;">
-                    <input type="checkbox" id="tf_show_in_team" name="show_in_team" value="1"
-                           <?= (int) ($editTeacher['show_in_team'] ?? $formData['show_in_team'] ?? 1) === 1 ? 'checked' : '' ?>>
-                    <label for="tf_show_in_team" style="margin: 0; cursor: pointer; font-weight: 600;">نمایش در بخش تیم مربیان سایت</label>
-                </div>
-                <div class="form-group">
-                    <label for="tf_hire_date">تاریخ استخدام (تاریخ استخدام)</label>
-                    <input type="date" id="tf_hire_date" name="hire_date" class="form-control"
-                           value="<?= e((string) ($editTeacher['hire_date'] ?? $formData['hire_date'] ?? '')) ?>">
-                </div>
-                <div class="form-group">
-                    <label for="tf_salary">حقوق (حقوق)</label>
-                    <input type="number" id="tf_salary" name="salary" class="form-control" step="0.01" min="0"
-                           value="<?= e((string) ($editTeacher['salary'] ?? $formData['salary'] ?? '')) ?>">
-                </div>
-                <div class="form-group">
-                    <label for="tf_status">وضعیت</label>
-                    <select id="tf_status" name="status" class="form-control">
-                        <?php foreach (['pending', 'active', 'inactive'] as $s): ?>
-                            <option value="<?= e($s) ?>"
-                                <?= ($editTeacher['status'] ?? $formData['status'] ?? 'pending') === $s ? 'selected' : '' ?>>
-                                <?= ucfirst($s) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="tf_avatar">تصویر پروفایل (JPG/PNG، حداکثر ۲ مگابایت)</label>
-                    <input type="file" id="tf_avatar" name="avatar" class="form-control" accept="image/jpeg,image/png">
-                    <?php if (!empty($editTeacher['avatar'])): ?>
-                        <img src="<?= e(url((string) $editTeacher['avatar'])) ?>" alt="تصویر فعلی" class="teacher-avatar-sm">
-                    <?php endif; ?>
-                </div>
-                <div class="form-group">
-                    <label for="tf_certificate">مدرک (PDF/JPG/PNG، حداکثر ۲ مگابایت)</label>
-                    <input type="file" id="tf_certificate" name="certificate_file" class="form-control"
-                           accept="image/jpeg,image/png,application/pdf">
-                    <?php if (!empty($editTeacher['certificate_file'])): ?>
-                        <a href="<?= e(url((string) $editTeacher['certificate_file'])) ?>" target="_blank" class="teacher-cert-link">📄 مشاهده گواهی فعلی</a>
-                    <?php endif; ?>
-                </div>
+            <div class="form-group">
+                <label for="tf_first_name">نام <span class="req">*</span></label>
+                <input type="text" id="tf_first_name" name="first_name" class="form-control"
+                       value="<?= e((string) ($editTeacher['first_name'] ?? $formData['first_name'] ?? '')) ?>" required>
+            </div>
+            <div class="form-group">
+                <label for="tf_last_name">نام خانوادگی <span class="req">*</span></label>
+                <input type="text" id="tf_last_name" name="last_name" class="form-control"
+                       value="<?= e((string) ($editTeacher['last_name'] ?? $formData['last_name'] ?? '')) ?>" required>
+            </div>
+            <div class="form-group">
+                <label for="tf_email">ایمیل <span class="req">*</span></label>
+                <input type="email" id="tf_email" name="email" class="form-control"
+                       value="<?= e((string) ($editTeacher['email'] ?? $formData['email'] ?? '')) ?>" required>
+            </div>
+            <div class="form-group">
+                <label for="tf_phone">تلفن</label>
+                <input type="tel" id="tf_phone" name="phone" class="form-control"
+                       value="<?= e((string) ($editTeacher['phone'] ?? $formData['phone'] ?? '')) ?>">
+            </div>
+            <div class="form-group">
+                <label for="tf_password">رمز عبور <?= $editTeacher ? '(خالی بگذارید تا تغییر نکند)' : '<span class="req">*</span>' ?></label>
+                <input type="password" id="tf_password" name="password" class="form-control"
+                       autocomplete="new-password" minlength="8">
+            </div>
+            <div class="form-group">
+                <label for="tf_national_id">کد ملی</label>
+                <input type="text" id="tf_national_id" name="national_id" class="form-control"
+                       value="<?= e((string) ($editTeacher['national_id'] ?? $formData['national_id'] ?? '')) ?>">
+            </div>
+            <div class="form-group">
+                <label for="tf_role_title">عنوان شغلی / سمت</label>
+                <input type="text" id="tf_role_title" name="role_title" class="form-control"
+                       placeholder="مثال: سرپرست مربیان"
+                       value="<?= e((string) ($editTeacher['role_title'] ?? $formData['role_title'] ?? '')) ?>">
+            </div>
+            <div class="form-group">
+                <label for="tf_bio">توضیحات و تخصص</label>
+                <textarea id="tf_bio" name="bio" class="form-control" rows="2"><?= e((string) ($editTeacher['bio'] ?? $formData['bio'] ?? '')) ?></textarea>
+            </div>
+            <div class="form-group">
+                <label for="tf_status">وضعیت</label>
+                <select id="tf_status" name="status" class="form-control">
+                    <?php foreach (['pending', 'active', 'inactive'] as $s): ?>
+                        <option value="<?= e($s) ?>"
+                            <?= ($editTeacher['status'] ?? $formData['status'] ?? 'pending') === $s ? 'selected' : '' ?>>
+                            <?= ucfirst($s) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="tf_avatar">تصویر پروفایل</label>
+                <input type="file" id="tf_avatar" name="avatar" class="form-control" accept="image/jpeg,image/png">
             </div>
 
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
+            <div class="form-actions" style="margin-top:20px;">
+                <button type="submit" class="btn btn-primary" style="width:100%">
                     <?= $editTeacher ? 'ذخیره تغییرات' : 'ایجاد حساب معلم' ?>
                 </button>
-                <?php if ($editTeacher): ?>
-                    <a href="<?= e(url('admin/teachers.php')) ?>" class="btn btn-secondary">انصراف</a>
-                <?php endif; ?>
             </div>
         </form>
-    </div>
+    </template>
 
     <!-- ── Filters ───────────────────────────────────────────────────────── -->
     <div class="teacher-filters">
@@ -606,7 +567,7 @@ require_once __DIR__ . '/header.php';
                             <?php endif; ?>
 
                             <form method="post" action="<?= e(url('admin/teachers.php')) ?>" class="inline-form"
-                                  onsubmit="return confirm('این معلم حذف شود؟ این عملیات قابل بازگشت نیست.');">
+                                  data-confirm="آیا از حذف معلم «<?= e($fullName) ?>» اطمینان دارید؟ این عملیات قابل بازگشت نیست.">
                                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
@@ -671,5 +632,19 @@ require_once __DIR__ . '/header.php';
         <?php endif; ?>
     <?php endif; ?>
 </section>
+
+<script>
+function openTeacherDrawer() {
+    const tmpl = document.getElementById('teacherFormTemplate');
+    if (tmpl) {
+        openDrawer(<?= $editTeacher ? json_encode('ویرایش معلم «' . trim($editTeacher['first_name'] . ' ' . $editTeacher['last_name']) . '»') : json_encode('افزودن معلم جدید') ?>, tmpl.innerHTML);
+    }
+}
+<?php if ($editTeacher || !empty($formErrors)): ?>
+document.addEventListener('DOMContentLoaded', () => {
+    openTeacherDrawer();
+});
+<?php endif; ?>
+</script>
 
 <?php require_once __DIR__ . '/footer.php'; ?>

@@ -9,8 +9,19 @@ if (!defined('ROOMA_APP')) {
 $siteNameVal = siteName();
 $currentScript = basename($_SERVER['PHP_SELF']);
 
+$homeUrl = url('admin/index.php');
+$messagesUrl = url('admin/messages.php');
+
+if (isset($_SESSION['teacher_id'])) {
+    $homeUrl = url('teacher/index.php');
+    $messagesUrl = url('teacher/messages.php');
+} elseif (isset($_SESSION['parent_id'])) {
+    $homeUrl = url('parent/index.php');
+    $messagesUrl = url('parent/messages.php');
+}
+
 $breadcrumbs = [
-    ['title' => 'داشبورد', 'url' => url('admin/index.php')],
+    ['title' => 'داشبورد', 'url' => $homeUrl],
 ];
 
 if (isset($pageTitle)) {
@@ -57,7 +68,7 @@ $userFirstChar = mb_substr($userName, 0, 1, 'UTF-8');
 
     <div class="app-topbar-center">
         <div class="app-search-box">
-            <input type="search" id="appSearchInput" class="app-search-input" placeholder="جست‌وجو در پنل..." aria-label="جست‌وجو">
+            <input type="search" id="appSearchInput" class="app-search-input" placeholder="جست‌وجوی زنده در صفحه..." aria-label="جست‌وجوی زنده">
             <kbd class="app-search-kbd">/</kbd>
         </div>
     </div>
@@ -67,7 +78,7 @@ $userFirstChar = mb_substr($userName, 0, 1, 'UTF-8');
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
         </button>
 
-        <a href="<?= e(url('admin/messages.php')) ?>" class="app-topbar-btn" aria-label="اعلان‌ها" title="اعلان‌ها و پیام‌ها">
+        <a href="<?= e($messagesUrl) ?>" class="app-topbar-btn" aria-label="اعلان‌ها" title="اعلان‌ها و پیام‌ها">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
             <?php if (isset($unreadCount) && $unreadCount > 0): ?>
                 <span class="badge-dot"></span>
@@ -86,6 +97,8 @@ $userFirstChar = mb_substr($userName, 0, 1, 'UTF-8');
                 <?php if (isset($_SESSION['admin_id'])): ?>
                     <a href="<?= e(url('admin/settings.php')) ?>" class="app-dropdown-item">تنظیمات و پروفایل</a>
                     <a href="<?= e(url('index.php')) ?>" class="app-dropdown-item" target="_blank" rel="noopener">مشاهده سایت</a>
+                <?php elseif (isset($_SESSION['teacher_id'])): ?>
+                    <a href="<?= e(url('teacher/index.php')) ?>" class="app-dropdown-item">داشبورد معلم</a>
                 <?php elseif (isset($_SESSION['parent_id'])): ?>
                     <a href="<?= e(url('parent/profile.php')) ?>" class="app-dropdown-item">پروفایل من</a>
                 <?php endif; ?>

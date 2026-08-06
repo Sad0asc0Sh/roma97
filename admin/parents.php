@@ -53,17 +53,23 @@ $fHref=static fn(string $v):string=>url('admin/parents.php?'.http_build_query(['
 $fe=getFlash('error');$fs=getFlash('success');
 ?>
 <section class="admin-page">
-    <div class="admin-section-header"><h2 class="admin-section-title">&#128101; مدیریت والدین</h2></div>
+    <div class="admin-section-header"><h2 class="admin-section-title">مدیریت والدین</h2></div>
     <?php if($fe!==''):?><div class="alert alert-error"><?=e($fe)?></div><?php endif;?>
     <?php if($fs!==''):?><div class="alert alert-success"><?=e($fs)?></div><?php endif;?>
     <p style="margin-bottom:16px">
         <a href="<?=$fHref('all')?>" class="btn btn-sm <?=$sf==='all'?'btn-primary':'btn-outline'?>">همه</a>
-        <a href="<?=$fHref('pending')?>" class="btn btn-sm <?=$sf==='pending'?'btn-primary':'btn-outline'?>">&#9203; در انتظار</a>
-        <a href="<?=$fHref('active')?>" class="btn btn-sm <?=$sf==='active'?'btn-primary':'btn-outline'?>">&#9989; فعال</a>
-        <a href="<?=$fHref('suspended')?>" class="btn btn-sm <?=$sf==='suspended'?'btn-primary':'btn-outline'?>">&#10060; مسدود</a>
+        <a href="<?=$fHref('pending')?>" class="btn btn-sm <?=$sf==='pending'?'btn-primary':'btn-outline'?>">در انتظار</a>
+        <a href="<?=$fHref('active')?>" class="btn btn-sm <?=$sf==='active'?'btn-primary':'btn-outline'?>">فعال</a>
+        <a href="<?=$fHref('suspended')?>" class="btn btn-sm <?=$sf==='suspended'?'btn-primary':'btn-outline'?>">مسدود</a>
     </p>
     <?php if($parents===[]):?>
-        <div class="empty-state empty-state-sm"><div class="empty-state-icon">&#128101;</div><h3>والدی یافت نشد</h3><p><?=$sf==='pending'?'ثبت نام جدیدی در انتظار تأیید نیست.':'لیست خالی است.'?></p></div>
+        <div class="empty-state empty-state-sm">
+            <div class="empty-state-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            </div>
+            <h3>والدی یافت نشد</h3>
+            <p><?=$sf==='pending'?'ثبت نام جدیدی در انتظار تأیید نیست.':'لیست خالی است.'?></p>
+        </div>
     <?php else:?>
         <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>نام</th><th>ایمیل</th><th>تلفن</th><th>وضعیت</th><th>تاریخ</th><th>عملیات</th></tr></thead><tbody>
         <?php foreach($parents as $p):?>
@@ -75,8 +81,8 @@ $fe=getFlash('error');$fs=getFlash('success');
                 <td style="font-size:0.85rem;color:var(--muted)"><?=e(date('Y/m/d',strtotime($p['created_at'])))?></td>
                 <td>
                     <?php if($p['status']==='pending'):?>
-                        <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="approve"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-success">&#9989; تأیید</button></form>
-                        <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline" onsubmit="return confirm('رد شود؟')"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="reject"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-reject">&#10060; رد</button></form>
+                        <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="approve"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-success">تأیید</button></form>
+                        <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline" onsubmit="return confirm('رد شود؟')"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="reject"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-reject">رد</button></form>
                     <?php elseif($p['status']==='active'):?>
                         <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline" onsubmit="return confirm('مسدود شود؟')"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="suspend"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-muted">مسدود</button></form>
                     <?php else:?>

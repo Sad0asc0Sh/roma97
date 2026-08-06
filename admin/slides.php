@@ -319,24 +319,24 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>&#127912; اسلایدها</h1>
+    <h1>اسلایدها</h1>
 
     <?php if ($successMessage !== null): ?>
-        <div class="notice" role="status">&#9989; <?= e($successMessage) ?></div>
+        <div class="notice" role="status"><?= e($successMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($errorMessage !== null): ?>
-        <div class="alert alert-danger" role="alert">&#10060; <?= e($errorMessage) ?></div>
+        <div class="alert alert-danger" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($deleteSlide !== null): ?>
         <div class="alert alert-danger" role="alert">
-            <p>&#9888;&#65039; آیا اسلاید «<?= e($deleteSlide['title']) ?>» حذف شود؟</p>
+            <p>آیا اسلاید «<?= e($deleteSlide['title']) ?>» حذف شود؟</p>
             <form method="post" action="<?= e(url('admin/slides.php')) ?>" style="margin-top:12px;">
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <input type="hidden" name="action" value="delete_slide">
                 <input type="hidden" name="slide_id" value="<?= e($deleteSlide['id']) ?>">
-                <button type="submit" class="btn btn-danger btn-sm">&#128465; حذف اسلاید</button>
+                <button type="submit" class="btn btn-danger btn-sm">حذف اسلاید</button>
                 <a href="<?= e(url('admin/slides.php')) ?>" class="btn btn-outline btn-sm" style="margin-inline-start:8px;">انصراف</a>
             </form>
         </div>
@@ -344,9 +344,9 @@ require_once __DIR__ . '/header.php';
 
     <div class="admin-section">
         <div class="admin-section-header">
-            <h2 class="admin-section-title" id="slide-form-title">&#10010; <?= $editSlide ? 'ویرایش اسلاید' : 'افزودن اسلاید' ?></h2>
+            <h2 class="admin-section-title" id="slide-form-title"><?= $editSlide ? 'ویرایش اسلاید' : 'افزودن اسلاید' ?></h2>
         </div>
-        <div style="margin-bottom:16px;padding:12px 16px;background:#f0f9f4;border-right:3px solid #3D8B63;border-radius:8px;font-size:0.875rem;line-height:2"><strong>&#128161; راهنمای ابعاد بنر:</strong> دسکتاپ: ۱۹۲۰×۶۰۰ | تبلت: ۱۰۲۴×۴۵۰ | موبایل: ۷۵۰×۱۰۰۰ — فرمت: JPG/PNG/WebP — حداکثر ۲MB — نسبت ایده‌آل: <strong>۱۶:۵</strong></div>
+        <div style="margin-bottom:16px;padding:12px 16px;background:#f0f9f4;border-right:3px solid #3D8B63;border-radius:8px;font-size:0.875rem;line-height:2"><strong>راهنمای ابعاد بنر:</strong> دسکتاپ: ۱۹۲۰×۶۰۰ | تبلت: ۱۰۲۴×۴۵۰ | موبایل: ۷۵۰×۱۰۰۰ — فرمت: JPG/PNG/WebP — حداکثر ۲MB — نسبت ایده‌آل: <strong>۱۶:۵</strong></div>
         <form method="post" action="<?= e(url('admin/slides.php')) ?>" enctype="multipart/form-data" novalidate>
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="save_slide">
@@ -397,10 +397,10 @@ require_once __DIR__ . '/header.php';
 
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary">
-                    &#128190; <?= $editSlide ? 'بهروزرسانی اسلاید' : 'افزودن اسلاید' ?>
+                    <?= $editSlide ? 'بهروزرسانی اسلاید' : 'افزودن اسلاید' ?>
                 </button>
                 <?php if ($editSlide): ?>
-                    <a href="<?= e(url('admin/slides.php')) ?>" class="btn btn-outline">&#10006; لغو ویرایش</a>
+                    <a href="<?= e(url('admin/slides.php')) ?>" class="btn btn-outline">لغو ویرایش</a>
                 <?php endif; ?>
             </div>
         </form>
@@ -408,12 +408,14 @@ require_once __DIR__ . '/header.php';
 
     <div class="admin-section">
         <div class="admin-section-header">
-            <h2 class="admin-section-title">&#128196; همه اسلایدها</h2>
+            <h2 class="admin-section-title">همه اسلایدها</h2>
         </div>
 
         <?php if ($slides === []): ?>
             <div class="empty-state empty-state-sm">
-                <div class="empty-state-icon">&#128444;</div>
+                <div class="empty-state-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </div>
                 <h3>هنوز اسلایدی اضافه نشده</h3>
                 <p>از فرم بالا اولین اسلاید خود را اضافه کنید.</p>
             </div>
@@ -448,8 +450,8 @@ require_once __DIR__ . '/header.php';
                                             required>
                                     </td>
                                     <td>
-                                        <a href="<?= e(url('admin/slides.php?edit=' . $slide['id'])) ?>" class="btn btn-sm btn-secondary">&#9998; ویرایش</a>
-                                        <a href="<?= e(url('admin/slides.php?delete=' . $slide['id'])) ?>" class="btn btn-sm btn-reject">&#128465; حذف</a>
+                                        <a href="<?= e(url('admin/slides.php?edit=' . $slide['id'])) ?>" class="btn btn-sm btn-secondary">ویرایش</a>
+                                        <a href="<?= e(url('admin/slides.php?delete=' . $slide['id'])) ?>" class="btn btn-sm btn-reject">حذف</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -458,7 +460,7 @@ require_once __DIR__ . '/header.php';
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary btn-sm">&#128260; بهروزرسانی ترتیب نمایش</button>
+                    <button type="submit" class="btn btn-primary btn-sm">بهروزرسانی ترتیب نمایش</button>
                 </div>
             </form>
             <?php if ($pagination['total'] > $pagination['perPage']): ?>

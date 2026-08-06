@@ -449,24 +449,24 @@ $showForm = ($action === 'add' || $action === 'edit');
 ?>
 
 <section class="dashboard admin-events-dashboard">
-    <h1>&#128197; رویدادها</h1>
+    <h1>رویدادها</h1>
 
     <?php if ($successMessage !== null): ?>
-        <div class="notice" role="status">&#9989; <?= e($successMessage) ?></div>
+        <div class="notice" role="status"><?= e($successMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($errorMessage !== null): ?>
-        <div class="alert alert-danger" role="alert">&#10060; <?= e($errorMessage) ?></div>
+        <div class="alert alert-danger" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($deleteEvent !== null): ?>
         <div class="alert alert-danger" role="alert">
-            <p>&#9888;&#65039; آیا رویداد «<?= e((string) $deleteEvent['title']) ?>» (<?= e(shamsiDate((string) $deleteEvent['event_date'] ?? '')) ?>) حذف شود؟</p>
+            <p>آیا رویداد «<?= e((string) $deleteEvent['title']) ?>» (<?= e(shamsiDate((string) $deleteEvent['event_date'] ?? '')) ?>) حذف شود؟</p>
             <form method="post" action="<?= e(url('admin/events.php' . adminEventsBuildQuery($filterCategory, $filterStatus))) ?>" style="margin-top:12px;">
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <input type="hidden" name="form_action" value="delete_event">
                 <input type="hidden" name="event_id" value="<?= e((string) $deleteEvent['id']) ?>">
-                <button type="submit" class="btn btn-danger btn-sm">&#128465; حذف</button>
+                <button type="submit" class="btn btn-danger btn-sm">حذف</button>
                 <a href="<?= e($listUrl) ?>" class="btn btn-outline btn-sm" style="margin-inline-start:8px;">انصراف</a>
             </form>
         </div>
@@ -475,7 +475,7 @@ $showForm = ($action === 'add' || $action === 'edit');
     <?php if ($showForm): ?>
         <div class="admin-section">
             <div class="admin-section-header">
-                <h2 class="admin-section-title" id="event-form-title">&#10010; <?= $formPreset['event_id'] > 0 ? 'ویرایش رویداد' : 'افزودن رویداد' ?></h2>
+                <h2 class="admin-section-title" id="event-form-title"><?= $formPreset['event_id'] > 0 ? 'ویرایش رویداد' : 'افزودن رویداد' ?></h2>
             </div>
             <form class="admin-event-form" method="post" action="<?= e(url('admin/events.php' . $filterQuerySuffix)) ?>" novalidate>
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
@@ -529,8 +529,8 @@ $showForm = ($action === 'add' || $action === 'edit');
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">&#128190; <?= $formPreset['event_id'] > 0 ? 'ذخیره تغییرات' : 'ایجاد رویداد' ?></button>
-                    <a href="<?= e($listUrl) ?>" class="btn btn-outline">&#8592; بازگشت به فهرست</a>
+                    <button type="submit" class="btn btn-primary"><?= $formPreset['event_id'] > 0 ? 'ذخیره تغییرات' : 'ایجاد رویداد' ?></button>
+                    <a href="<?= e($listUrl) ?>" class="btn btn-outline">بازگشت به فهرست</a>
                 </div>
             </form>
         </div>
@@ -538,7 +538,7 @@ $showForm = ($action === 'add' || $action === 'edit');
 
         <div class="admin-section">
             <div class="admin-section-header">
-                <h2 class="admin-section-title">&#128203; فیلتر رویدادها</h2>
+                <h2 class="admin-section-title">فیلتر رویدادها</h2>
             </div>
             <div class="admin-events-toolbar" style="display:flex;align-items:center;gap:var(--space-sm);flex-wrap:wrap;">
                 <form class="events-filter-form" method="get" action="<?= e(url('admin/events.php')) ?>" style="display:flex;align-items:center;gap:var(--space-sm);flex-wrap:wrap;">
@@ -564,13 +564,15 @@ $showForm = ($action === 'add' || $action === 'edit');
                 $addQ['action'] = 'add';
                 $addUrl = url('admin/events.php?' . http_build_query($addQ));
                 ?>
-                <a class="btn btn-primary btn-sm" href="<?= e($addUrl) ?>">&#10010; افزودن رویداد</a>
+                <a class="btn btn-primary btn-sm" href="<?= e($addUrl) ?>">+ افزودن رویداد</a>
             </div>
         </div>
 
         <?php if ($listEvents === []): ?>
             <div class="empty-state empty-state-sm">
-                <div class="empty-state-icon">&#128197;</div>
+                <div class="empty-state-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                </div>
                 <h3>هنوز رویدادی وجود ندارد</h3>
                 <p><a href="<?= e($addUrl) ?>">یک رویداد جدید اضافه کنید</a></p>
             </div>
@@ -620,8 +622,8 @@ $showForm = ($action === 'add' || $action === 'edit');
                                     <td>
                                         <?php $editHref = url('admin/events.php' . $buildManageQuery(['action' => 'edit', 'id' => $eid])); ?>
                                         <?php $delHref = url('admin/events.php' . $buildManageQuery(['action' => 'delete', 'id' => $eid])); ?>
-                                        <a href="<?= e($editHref) ?>" class="btn btn-sm btn-secondary">&#9998; ویرایش</a>
-                                        <a href="<?= e($delHref) ?>" class="btn btn-sm btn-reject">&#128465; حذف</a>
+                                        <a href="<?= e($editHref) ?>" class="btn btn-sm btn-secondary">ویرایش</a>
+                                        <a href="<?= e($delHref) ?>" class="btn btn-sm btn-reject">حذف</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

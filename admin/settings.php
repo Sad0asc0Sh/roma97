@@ -334,17 +334,17 @@ require_once __DIR__ . '/header.php';
     <h1>&#9881; تنظیمات</h1>
 
     <?php if ($successMessage !== null): ?>
-        <div class="notice" role="status">&#9989; <?= e($successMessage) ?></div>
+        <div class="notice" role="status"><?= e($successMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($errorMessage !== null): ?>
-        <div class="alert alert-danger" role="alert">&#10060; <?= e($errorMessage) ?></div>
+        <div class="alert alert-danger" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
 
     <div class="admin-settings-grid">
         <div class="admin-section">
             <div class="admin-section-header">
-                <h2 class="admin-section-title">&#128196; تنظیمات عمومی سایت</h2>
+                <h2 class="admin-section-title">تنظیمات عمومی سایت</h2>
             </div>
             <form method="post" action="<?= e(url('admin/settings.php')) ?>" enctype="multipart/form-data" novalidate>
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
@@ -446,14 +446,14 @@ require_once __DIR__ . '/header.php';
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">&#128190; ذخیره تنظیمات</button>
+                    <button type="submit" class="btn btn-primary">ذخیره تنظیمات</button>
                 </div>
             </form>
         </div>
 
         <div class="admin-section">
             <div class="admin-section-header">
-                <h2 class="admin-section-title">&#128274; تغییر رمز عبور</h2>
+                <h2 class="admin-section-title">تغییر رمز عبور</h2>
             </div>
             <p style="color:var(--muted);margin-bottom:var(--space-md);font-size:0.9rem;">برای امنیت حساب، رمز عبور خود را بهصورت دورهای تغییر دهید.</p>
             <form method="post" action="<?= e(url('admin/settings.php')) ?>" novalidate>
@@ -480,7 +480,7 @@ require_once __DIR__ . '/header.php';
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">&#128274; تغییر رمز عبور</button>
+                    <button type="submit" class="btn btn-primary">تغییر رمز عبور</button>
                 </div>
             </form>
         </div>
