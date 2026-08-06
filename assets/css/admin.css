@@ -139,7 +139,7 @@ a:hover{color:var(--adm-primary-dark)}
 .nav-arrow{font-size:0.7rem;transition:transform var(--adm-transition), opacity var(--adm-transition);opacity:0.4;color:inherit}
 .admin-nav-parent[aria-expanded="true"] .nav-arrow{transform:rotate(90deg);opacity:0.7}
 .admin-nav-submenu{display:none;flex-direction:column;gap:1px;padding:4px 0 4px 0;margin-inline-start:20px;border-inline-start:1px solid rgba(255,255,255,0.06)}
-.admin-nav-submenu.open{display:flex}
+.admin-nav-submenu.open,.admin-nav-submenu.active{display:flex!important}
 .admin-nav-submenu .admin-nav-item{padding:8px 14px;font-size:0.8rem;gap:10px;border-radius:var(--adm-radius-xs);border-inline-start:none;margin-inline-start:0}
 .admin-nav-submenu .admin-nav-item:hover{background:var(--adm-sidebar-hover);border-inline-start:none}
 .admin-nav-submenu .admin-nav-item.active{background:var(--adm-sidebar-active);border-inline-start:none}
@@ -414,16 +414,113 @@ select.form-control{cursor:pointer;appearance:none;background-image:url("data:im
     .admin-child-detail-sidebar{max-width:400px;margin:0 auto}
     .form-row{grid-template-columns:1fr}
 }
-@media(max-width:767px){
-    .admin-sidebar{transform:translateX(-100%)}
-    [dir=rtl] .admin-sidebar{transform:translateX(100%)}
-    .admin-sidebar.active{transform:translateX(0)}
-    .admin-overlay.active{display:block}
-    .admin-main{margin-inline-start:0!important}
-    .admin-topbar{padding:0 16px}
-    .admin-mobile-toggle{display:flex}
-    .admin-content{padding:16px}
-    .metrics-grid{grid-template-columns:1fr 1fr;gap:12px}
+/* ── MOBILE OFF-CANVAS SIDEBAR & TOGGLE ─────────────────────── */
+.admin-sidebar-close {
+    display: none;
+    background: none;
+    border: none;
+    color: #94A3B8;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+.admin-sidebar-close:hover {
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.admin-mobile-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    background: var(--adm-surface, #ffffff);
+    border: 1px solid var(--adm-border, #e2e8f0);
+    border-radius: 10px;
+    color: var(--adm-text, #1e293b);
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.admin-mobile-toggle:hover, .admin-mobile-toggle:active {
+    background: var(--adm-slate-50, #f8fafc);
+    color: var(--adm-primary, #3D8B63);
+    border-color: var(--adm-primary, #3D8B63);
+}
+
+@media(max-width:991px){
+    .admin-mobile-toggle {
+        display: inline-flex !important;
+    }
+    .admin-sidebar-toggle {
+        display: none !important;
+    }
+    .admin-sidebar-close {
+        display: block !important;
+    }
+    .admin-sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        right: -320px !important;
+        left: auto !important;
+        width: 280px !important;
+        max-width: 85vw !important;
+        z-index: 10000 !important;
+        transform: none !important;
+        transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s ease !important;
+        box-shadow: none !important;
+        visibility: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    [dir=rtl] .admin-sidebar {
+        transform: none !important;
+    }
+    .admin-sidebar.active, [dir=rtl] .admin-sidebar.active {
+        right: 0 !important;
+        transform: none !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        box-shadow: -8px 0 25px rgba(0, 0, 0, 0.35) !important;
+    }
+    .admin-overlay {
+        position: fixed !important;
+        inset: 0 !important;
+        background: rgba(15, 23, 42, 0.6) !important;
+        backdrop-filter: blur(4px) !important;
+        -webkit-backdrop-filter: blur(4px) !important;
+        z-index: 9999 !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        transition: opacity 0.3s ease, visibility 0.3s ease !important;
+        display: block !important;
+    }
+    .admin-overlay.active {
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+    }
+    .admin-main {
+        margin-inline-start: 0 !important;
+    }
+    .admin-topbar {
+        padding: 0 16px;
+    }
+    .admin-content {
+        padding: 16px;
+    }
+    .metrics-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
     .metric-card{padding:16px}
     .metric-value{font-size:1.3rem}
     .metric-icon{width:38px;height:38px;font-size:1.1rem}

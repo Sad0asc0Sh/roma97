@@ -315,16 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Confirm before delete actions
-    var deleteButtons = document.querySelectorAll('[data-confirm]');
-    deleteButtons.forEach(function(button) {
-        button.addEventListener('click', function(e) {
-            var message = button.getAttribute('data-confirm') || 'آیا از حذف این مورد اطمینان دارید؟';
-            if (!confirm(message)) {
-                e.preventDefault();
-            }
-        });
-    });
+    // Confirm before delete actions handled by app-shell.js modal (A1 fix)
 
     // ============================================
     // TABLE ENHANCEMENTS

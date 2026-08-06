@@ -570,9 +570,23 @@ textarea.form-control { resize: vertical; min-height: 120px; }
     .footer-content { grid-template-columns: 1fr; }
 }
 @media (max-width: 991px) {
-    .hamburger { display: none !important; }
-    .site-nav { display: none !important; }
-    .header-inner { justify-content: center; }
+    .hamburger { display: flex; }
+    .site-nav { display: none; }
+    .site-nav.mobile-open {
+        display: flex !important;
+        flex-direction: column;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--white);
+        padding: var(--space-md);
+        border-bottom: 1px solid var(--border);
+        box-shadow: var(--shadow-lg);
+        z-index: 999;
+        animation: fadeSlideDown 0.25s ease-out;
+    }
+    .header-inner { justify-content: space-between; }
 
     /* === MOBILE BOTTOM NAVIGATION === */
     @media (max-width: 991px) {
@@ -1297,29 +1311,69 @@ textarea.form-control { resize: vertical; min-height: 120px; }
     }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 991px) {
     .admin-sidebar {
-        transform: translateX(-100%);
+        position: fixed !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        right: -320px !important;
+        left: auto !important;
+        width: 280px !important;
+        max-width: 85vw !important;
+        z-index: 10000 !important;
+        transform: none !important;
+        transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s ease !important;
+        box-shadow: none !important;
+        visibility: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
 
     [dir="rtl"] .admin-sidebar {
-        transform: translateX(100%);
+        transform: none !important;
     }
 
-    .admin-sidebar.active {
-        transform: translateX(0);
+    .admin-sidebar.active, [dir="rtl"] .admin-sidebar.active {
+        right: 0 !important;
+        transform: none !important;
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        box-shadow: -8px 0 25px rgba(0, 0, 0, 0.35) !important;
+    }
+
+    .admin-overlay {
+        position: fixed !important;
+        inset: 0 !important;
+        background: rgba(15, 23, 42, 0.6) !important;
+        backdrop-filter: blur(4px) !important;
+        -webkit-backdrop-filter: blur(4px) !important;
+        z-index: 9999 !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        transition: opacity 0.3s ease, visibility 0.3s ease !important;
+        display: block !important;
+    }
+
+    .admin-overlay.active {
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
     }
 
     .admin-main {
-        margin-inline-start: 0;
+        margin-inline-start: 0 !important;
     }
-    
+
     .admin-mobile-toggle {
-        display: flex;
+        display: inline-flex !important;
     }
-    
+        touch-action: manipulation;
+    }
+
     .admin-sidebar-toggle {
-        display: none;
+        display: none !important;
     }
     
     .metrics-grid {
@@ -3592,13 +3646,41 @@ details[open] .faq-summary svg {
 }
 
 /* Testimonials Slider */
+.testimonials-wrapper {
+    position: relative;
+}
+.testimonials-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: var(--space-md);
+    width: 40px;
+    background: linear-gradient(to right, var(--paper), transparent);
+    pointer-events: none;
+    z-index: 2;
+}
 .testimonials-slider {
     display: flex;
     gap: var(--space-md);
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     padding-bottom: var(--space-md);
+    padding-left: var(--space-md);
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-light) transparent;
+}
+.testimonials-slider::-webkit-scrollbar {
+    height: 6px;
+}
+.testimonials-slider::-webkit-scrollbar-track {
+    background: rgba(61,139,99,0.06);
+    border-radius: 3px;
+}
+.testimonials-slider::-webkit-scrollbar-thumb {
+    background: var(--primary-light);
+    border-radius: 3px;
 }
 
 .testimonial-card {

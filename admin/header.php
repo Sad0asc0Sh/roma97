@@ -29,9 +29,37 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
     <link rel="stylesheet" href="<?php echo e(url('assets/css/app-shell.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(url('assets/css/admin.css')); ?>">
     <script src="<?php echo e(url('assets/js/app-shell.js')); ?>" defer></script>
+    <script>
+    window.toggleMobileSidebar = function(evtOrState) {
+        if (evtOrState && evtOrState.stopPropagation) {
+            evtOrState.stopPropagation();
+        }
+        var sidebar = document.getElementById('adminSidebar');
+        var overlay = document.getElementById('adminOverlay');
+        if (!sidebar || !overlay) return;
+
+        var forceState = typeof evtOrState === 'boolean' ? evtOrState : null;
+        var shouldOpen = forceState !== null ? forceState : !sidebar.classList.contains('active');
+
+        if (shouldOpen) {
+            sidebar.classList.add('active');
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        } else {
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    };
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            window.toggleMobileSidebar(false);
+        }
+    });
+    </script>
 </head>
 <body class="admin-layout">
-    <div class="admin-overlay" id="adminOverlay"></div>
+    <div class="admin-overlay" id="adminOverlay" onclick="window.toggleMobileSidebar(false)"></div>
 
     <aside class="admin-sidebar" id="adminSidebar">
         <div class="admin-sidebar-header">
@@ -43,7 +71,8 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
                 <?php endif; ?>
                 <span class="admin-logo-badge">مدیر</span>
             </a>
-            <button class="admin-sidebar-toggle" id="sidebarToggle" aria-label="Toggle menu">
+            <button type="button" class="admin-sidebar-close" id="adminSidebarClose" onclick="window.toggleMobileSidebar(false)" aria-label="بستن منو">&times;</button>
+            <button type="button" class="admin-sidebar-toggle" id="sidebarToggle" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
                 <span></span>
@@ -56,13 +85,36 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
                 <span class="nav-text">داشبورد</span>
             </a>
 
+<?php
+$isContentActive = in_array($currentPage, ['slides.php', 'gallery.php', 'news.php', 'pages.php'], true);
+$isChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php', 'attendance.php', 'classrooms.php', 'parents.php'], true);
+$isFinanceActive = in_array($currentPage, ['tuition.php', 'salary.php'], true);
+?>
+<script>
+function toggleAdminSubmenu(btn, id) {
+    var sub = document.getElementById('submenu-' + id);
+    if (!sub) return;
+    var isOpen = sub.classList.contains('open') || sub.classList.contains('active') || sub.style.display === 'flex';
+    if (isOpen) {
+        btn.setAttribute('aria-expanded', 'false');
+        btn.classList.remove('active');
+        sub.classList.remove('open', 'active');
+        sub.style.display = 'none';
+    } else {
+        btn.setAttribute('aria-expanded', 'true');
+        btn.classList.add('active');
+        sub.classList.add('open', 'active');
+        sub.style.display = 'flex';
+    }
+}
+</script>
             <div class="admin-nav-group">
-                <button class="admin-nav-item admin-nav-parent" data-submenu="content">
+                <button type="button" class="admin-nav-item admin-nav-parent <?php echo $isContentActive ? 'active' : ''; ?>" onclick="toggleAdminSubmenu(this, 'content')" aria-expanded="<?php echo $isContentActive ? 'true' : 'false'; ?>">
                     <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
                     <span class="nav-text">محتوا</span>
                     <span class="nav-arrow">&#8250;</span>
                 </button>
-                <div class="admin-nav-submenu" id="submenu-content">
+                <div class="admin-nav-submenu <?php echo $isContentActive ? 'open active' : ''; ?>" id="submenu-content" style="<?php echo $isContentActive ? 'display:flex;' : 'display:none;'; ?>">
                     <a href="<?php echo e(url('admin/slides.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'slides.php' ? 'active' : ''; ?>">
                         <span class="nav-text">اسلایدها</span>
                     </a>
@@ -84,12 +136,12 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
             </a>
 
             <div class="admin-nav-group">
-                <button class="admin-nav-item admin-nav-parent" data-submenu="children">
+                <button type="button" class="admin-nav-item admin-nav-parent <?php echo $isChildrenActive ? 'active' : ''; ?>" onclick="toggleAdminSubmenu(this, 'children')" aria-expanded="<?php echo $isChildrenActive ? 'true' : 'false'; ?>">
                     <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg></span>
                     <span class="nav-text">کودکان</span>
                     <span class="nav-arrow">&#8250;</span>
                 </button>
-                <div class="admin-nav-submenu" id="submenu-children">
+                <div class="admin-nav-submenu <?php echo $isChildrenActive ? 'open active' : ''; ?>" id="submenu-children" style="<?php echo $isChildrenActive ? 'display:flex;' : 'display:none;'; ?>">
                     <a href="<?php echo e(url('admin/children.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'children.php' || $currentPage === 'child-detail.php' ? 'active' : ''; ?>">
                         <span class="nav-text">تمام کودکان</span>
                     </a>
@@ -106,12 +158,12 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
             </div>
 
             <div class="admin-nav-group">
-                <button class="admin-nav-item admin-nav-parent" data-submenu="finance">
+                <button type="button" class="admin-nav-item admin-nav-parent <?php echo $isFinanceActive ? 'active' : ''; ?>" onclick="toggleAdminSubmenu(this, 'finance')" aria-expanded="<?php echo $isFinanceActive ? 'true' : 'false'; ?>">
                     <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>
                     <span class="nav-text">مالی</span>
                     <span class="nav-arrow">&#8250;</span>
                 </button>
-                <div class="admin-nav-submenu" id="submenu-finance">
+                <div class="admin-nav-submenu <?php echo $isFinanceActive ? 'open active' : ''; ?>" id="submenu-finance" style="<?php echo $isFinanceActive ? 'display:flex;' : 'display:none;'; ?>">
 
             <a href="<?php echo e(url('admin/tuition.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'tuition.php' ? 'active' : ''; ?>">
                         <span class="nav-text">شهریه</span>

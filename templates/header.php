@@ -40,6 +40,8 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" href="<?php echo e(asset('favicon.ico')); ?>" type="image/x-icon">
+    <link rel="icon" href="<?php echo e(asset('assets/img/favicon.svg')); ?>" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="<?php echo e(asset('assets/img/favicon.svg')); ?>">
     <?php
     // Compute a reliable relative path to the CSS asset that works regardless
     // of how SITE_URL is configured (avoids broken styles on misconfigured servers).

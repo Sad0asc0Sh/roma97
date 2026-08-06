@@ -262,178 +262,199 @@ $pageTitle = 'حضور و غیاب روزانه | ' . siteName();
 require_once __DIR__ . '/header.php';
 ?>
 
-<section class="dashboard">
-    <h1>حضور و غیاب روزانه</h1>
+<section class="admin-page">
+    <div class="app-toolbar">
+        <h1 style="margin:0;font-size:1.5rem;font-weight:800">حضور و غیاب روزانه</h1>
+    </div>
 
     <?php if ($successMessage !== null): ?>
+        <script>document.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($successMessage) ?>, 'success'));</script>
         <div class="notice" role="status"><?= e($successMessage) ?></div>
     <?php endif; ?>
 
     <?php if ($errorMessage !== null): ?>
-        <div class="alert" role="alert"><?= e($errorMessage) ?></div>
+        <script>document.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($errorMessage) ?>, 'danger'));</script>
+        <div class="alert alert-error" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
 
-    <form class="date-selector date-selector-form" method="get" action="<?= e(url('admin/attendance.php')) ?>">
-        <label for="attendance_date_pick">تاریخ</label>
-        <input type="date" id="attendance_date_pick" name="date" value="<?= e($selectedDate) ?>">
-        <button type="submit" class="btn btn-secondary attendance-date-btn">بارگذاری تاریخ</button>
-    </form>
+    <div class="admin-section" style="margin-bottom: 20px;">
+        <form class="date-selector date-selector-form" method="get" action="<?= e(url('admin/attendance.php')) ?>" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <label for="attendance_date_pick" class="form-label" style="margin:0; font-weight:700;">انتخاب تاریخ:</label>
+            <input type="date" id="attendance_date_pick" name="date" class="form-control" style="max-width:200px;" value="<?= e($selectedDate) ?>">
+            <button type="submit" class="btn btn-secondary">بارگذاری تاریخ</button>
+            <span style="margin-inline-start:auto; color:var(--adm-text-muted); font-size:0.9rem;">
+                ثبت برای تاریخ <strong><?= e($displayDateLabel) ?></strong>
+            </span>
+        </form>
+    </div>
 
-    <p class="attendance-date-heading">ثبت برای تاریخ <strong><?= e($displayDateLabel) ?></strong></p>
-
-    <?php if ($rows === []): ?>
-        <p class="attendance-empty-message">هیچ کودک فعالی ثبت‌نام نشده است.</p>
-    <?php else: ?>
-        <form class="attendance-save-form" method="post" action="<?= e(url('admin/attendance.php')) ?>">
-            <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-            <input type="hidden" name="attendance_date" value="<?= e($selectedDate) ?>">
-
-            <div class="attendance-toolbar">
-                <button type="submit" class="btn save-btn">ذخیره حضور و غیاب</button>
+    <div class="admin-section">
+        <?php if ($rows === []): ?>
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                </div>
+                <h3>هیچ کودک فعالی ثبت‌نام نشده است</h3>
+                <p>پس از افزودن کودکان به سیستم، می‌توانید وضعیت حضور و غیاب آن‌ها را ثبت کنید.</p>
+                <a href="<?= e(url('admin/children.php')) ?>" class="btn btn-primary btn-sm" style="margin-top:12px;">مدیریت کودکان</a>
             </div>
+        <?php else: ?>
+            <form class="attendance-save-form" method="post" action="<?= e(url('admin/attendance.php')) ?>">
+                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                <input type="hidden" name="attendance_date" value="<?= e($selectedDate) ?>">
 
-            <div class="attendance-container">
-                <div class="attendance-table-wrap attendance-desktop">
-                    <div class="attendance-table-scroll">
-                        <table class="attendance-table">
-                            <thead>
-                                <tr>
-                                    <th scope="col">تصویر</th>
-                                    <th scope="col">کودک</th>
-                                    <th scope="col">والدین</th>
-                                    <th scope="col">وضعیت</th>
-                                    <th scope="col">ورود</th>
-                                    <th scope="col">خروج</th>
-                                    <th scope="col">یادداشت</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($rows as $child): ?>
-                                    <?php
-                                    $cid = (int) $child['id'];
-                                    $fullName = trim((string) $child['first_name'] . ' ' . (string) $child['last_name']);
-                                    $parentName = trim((string) $child['parent_first_name'] . ' ' . (string) $child['parent_last_name']);
-                                    $initial = strtoupper(substr((string) ($child['first_name'] ?? ''), 0, 1));
-                                    $notesVal = (string) ($child['attendance_notes'] ?? '');
-                                    ?>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h2 class="admin-section-title" style="margin:0;">لیست کودکان (<?= count($rows) ?>)</h2>
+                    <button type="submit" class="btn btn-primary">ذخیره حضور و غیاب</button>
+                </div>
+
+                <div class="attendance-container">
+                    <div class="attendance-table-wrap attendance-desktop admin-table-wrap">
+                        <div class="attendance-table-scroll">
+                            <table class="attendance-table admin-table">
+                                <thead>
                                     <tr>
-                                        <td>
-                                            <?php if (!empty($child['photo'])): ?>
-                                                <img class="child-photo-small" src="<?= e(url((string) $child['photo'])) ?>" alt="">
-                                            <?php else: ?>
-                                                <span class="child-photo-small child-photo-small-placeholder" aria-hidden="true"><?= e($initial ?: '?') ?></span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><?= e($fullName !== '' ? $fullName : 'کودک') ?></td>
-                                        <td><?= e($parentName !== '' ? $parentName : '—') ?></td>
-                                        <td>
-                                            <div class="status-radio-group status-radio-group-table">
-                                                <?php renderAttendanceRadios($child, $cid, 'tbl'); ?>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <input
-                                                class="time-input"
-                                                type="time"
-                                                name="attendance[<?= e((string) $cid) ?>][check_in]"
-                                                value="<?= e(attendanceTimeForInput($child['check_in'] ?? null)) ?>"
-                                            >
-                                        </td>
-                                        <td>
-                                            <input
-                                                class="time-input"
-                                                type="time"
-                                                name="attendance[<?= e((string) $cid) ?>][check_out]"
-                                                value="<?= e(attendanceTimeForInput($child['check_out'] ?? null)) ?>"
-                                            >
-                                        </td>
-                                        <td>
-                                            <textarea
-                                                class="notes-field notes-field-table"
-                                                name="attendance[<?= e((string) $cid) ?>][notes]"
-                                                rows="2"
-                                                maxlength="5000"
-                                            ><?= e($notesVal) ?></textarea>
-                                        </td>
+                                        <th scope="col">تصویر</th>
+                                        <th scope="col">کودک</th>
+                                        <th scope="col">والدین</th>
+                                        <th scope="col">وضعیت</th>
+                                        <th scope="col">ورود</th>
+                                        <th scope="col">خروج</th>
+                                        <th scope="col">یادداشت</th>
                                     </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($rows as $child): ?>
+                                        <?php
+                                        $cid = (int) $child['id'];
+                                        $fullName = trim((string) $child['first_name'] . ' ' . (string) $child['last_name']);
+                                        $parentName = trim((string) $child['parent_first_name'] . ' ' . (string) $child['parent_last_name']);
+                                        $initial = strtoupper(substr((string) ($child['first_name'] ?? ''), 0, 1));
+                                        $notesVal = (string) ($child['attendance_notes'] ?? '');
+                                        ?>
+                                        <tr>
+                                            <td>
+                                                <?php if (!empty($child['photo'])): ?>
+                                                    <img class="child-photo-small" src="<?= e(url((string) $child['photo'])) ?>" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
+                                                <?php else: ?>
+                                                    <span class="child-photo-small child-photo-small-placeholder" aria-hidden="true" style="width:36px;height:36px;border-radius:50%;background:var(--adm-primary-100);color:var(--adm-primary);display:inline-flex;align-items:center;justify-content:center;font-weight:700;"><?= e($initial ?: '?') ?></span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td style="font-weight:600;"><?= e($fullName !== '' ? $fullName : 'کودک') ?></td>
+                                            <td><?= e($parentName !== '' ? $parentName : '—') ?></td>
+                                            <td>
+                                                <div class="status-radio-group status-radio-group-table" style="display:flex;gap:8px;align-items:center;">
+                                                    <?php renderAttendanceRadios($child, $cid, 'tbl'); ?>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <input
+                                                    class="form-control time-input"
+                                                    type="time"
+                                                    name="attendance[<?= e((string) $cid) ?>][check_in]"
+                                                    value="<?= e(attendanceTimeForInput($child['check_in'] ?? null)) ?>"
+                                                    style="padding:4px 8px;"
+                                                >
+                                            </td>
+                                            <td>
+                                                <input
+                                                    class="form-control time-input"
+                                                    type="time"
+                                                    name="attendance[<?= e((string) $cid) ?>][check_out]"
+                                                    value="<?= e(attendanceTimeForInput($child['check_out'] ?? null)) ?>"
+                                                    style="padding:4px 8px;"
+                                                >
+                                            </td>
+                                            <td>
+                                                <textarea
+                                                    class="form-control notes-field notes-field-table"
+                                                    name="attendance[<?= e((string) $cid) ?>][notes]"
+                                                    rows="1"
+                                                    maxlength="5000"
+                                                    style="min-height:36px;font-size:0.85rem;"
+                                                ><?= e($notesVal) ?></textarea>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="attendance-cards attendance-mobile" aria-label="حضور و غیاب بر اساس کودک" data-attendance-mobile>
+                        <?php foreach ($rows as $child): ?>
+                            <?php
+                            $cid = (int) $child['id'];
+                            $fullName = trim((string) $child['first_name'] . ' ' . (string) $child['last_name']);
+                            $parentName = trim((string) $child['parent_first_name'] . ' ' . (string) $child['parent_last_name']);
+                            $initial = strtoupper(substr((string) ($child['first_name'] ?? ''), 0, 1));
+                            $notesVal = (string) ($child['attendance_notes'] ?? '');
+                            ?>
+                            <article class="attendance-card" style="background:#fff;border:1px solid var(--adm-border);border-radius:12px;padding:16px;margin-bottom:12px;">
+                                <div class="attendance-card-top" style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                                    <?php if (!empty($child['photo'])): ?>
+                                        <img class="child-photo-small" src="<?= e(url((string) $child['photo'])) ?>" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                                    <?php else: ?>
+                                        <span class="child-photo-small child-photo-small-placeholder" aria-hidden="true" style="width:40px;height:40px;border-radius:50%;background:var(--adm-primary-100);color:var(--adm-primary);display:inline-flex;align-items:center;justify-content:center;font-weight:700;"><?= e($initial ?: '?') ?></span>
+                                    <?php endif; ?>
+                                    <div>
+                                        <h2 class="attendance-card-name" style="font-size:1rem;font-weight:700;margin:0;"><?= e($fullName !== '' ? $fullName : 'کودک') ?></h2>
+                                        <p class="attendance-card-meta" style="font-size:0.8rem;color:var(--adm-text-muted);margin:2px 0 0;"><?= e(attendanceAgeFromDob((string) ($child['date_of_birth'] ?? ''))) ?> · <?= e($parentName !== '' ? $parentName : '—') ?></p>
+                                    </div>
+                                </div>
+                                <fieldset class="attendance-fieldset" disabled data-mobile-fieldset style="border:none;padding:0;margin:0 0 12px;">
+                                    <legend class="sr-only">وضعیت برای <?= e($fullName) ?></legend>
+                                    <p class="attendance-field-label" style="font-weight:600;font-size:0.85rem;margin-bottom:6px;">وضعیت</p>
+                                    <div class="status-radio-group" style="display:flex;gap:6px;flex-wrap:wrap;">
+                                        <?php renderAttendanceRadios($child, $cid, 'mob'); ?>
+                                    </div>
+                                </fieldset>
+                                <div class="time-inputs" style="display:flex;gap:12px;margin-bottom:12px;">
+                                    <label class="time-input-label" style="font-size:0.85rem;font-weight:600;flex:1;">
+                                        ورود
+                                        <input
+                                            class="form-control time-input"
+                                            type="time"
+                                            name="attendance[<?= e((string) $cid) ?>][check_in]"
+                                            value="<?= e(attendanceTimeForInput($child['check_in'] ?? null)) ?>"
+                                            disabled
+                                            style="margin-top:4px;"
+                                        >
+                                    </label>
+                                    <label class="time-input-label" style="font-size:0.85rem;font-weight:600;flex:1;">
+                                        خروج
+                                        <input
+                                            class="form-control time-input"
+                                            type="time"
+                                            name="attendance[<?= e((string) $cid) ?>][check_out]"
+                                            value="<?= e(attendanceTimeForInput($child['check_out'] ?? null)) ?>"
+                                            disabled
+                                            style="margin-top:4px;"
+                                        >
+                                    </label>
+                                </div>
+                                <label class="notes-field-label" style="font-size:0.85rem;font-weight:600;display:block;">
+                                    یادداشت
+                                    <textarea
+                                        class="form-control notes-field"
+                                        name="attendance[<?= e((string) $cid) ?>][notes]"
+                                        rows="2"
+                                        maxlength="5000"
+                                        disabled
+                                        style="margin-top:4px;"
+                                    ><?= e($notesVal) ?></textarea>
+                                </label>
+                            </article>
+                        <?php endforeach; ?>
                     </div>
                 </div>
 
-                <div class="attendance-cards attendance-mobile" aria-label="حضور و غیاب بر اساس کودک" data-attendance-mobile>
-                    <?php foreach ($rows as $child): ?>
-                        <?php
-                        $cid = (int) $child['id'];
-                        $fullName = trim((string) $child['first_name'] . ' ' . (string) $child['last_name']);
-                        $parentName = trim((string) $child['parent_first_name'] . ' ' . (string) $child['parent_last_name']);
-                        $initial = strtoupper(substr((string) ($child['first_name'] ?? ''), 0, 1));
-                        $notesVal = (string) ($child['attendance_notes'] ?? '');
-                        ?>
-                        <article class="attendance-card">
-                            <div class="attendance-card-top">
-                                <?php if (!empty($child['photo'])): ?>
-                                    <img class="child-photo-small" src="<?= e(url((string) $child['photo'])) ?>" alt="">
-                                <?php else: ?>
-                                    <span class="child-photo-small child-photo-small-placeholder" aria-hidden="true"><?= e($initial ?: '?') ?></span>
-                                <?php endif; ?>
-                                <div>
-                                    <h2 class="attendance-card-name"><?= e($fullName !== '' ? $fullName : 'کودک') ?></h2>
-                                    <p class="attendance-card-meta"><?= e(attendanceAgeFromDob((string) ($child['date_of_birth'] ?? ''))) ?> · <?= e($parentName !== '' ? $parentName : '—') ?></p>
-                                </div>
-                            </div>
-                            <!-- fieldset disabled by default in HTML so controls don't submit without JS;
-                                 JS re-enables on mobile viewport -->
-                            <fieldset class="attendance-fieldset" disabled data-mobile-fieldset>
-                                <legend class="sr-only">وضعیت برای <?= e($fullName) ?></legend>
-                                <p class="attendance-field-label">وضعیت</p>
-                                <div class="status-radio-group">
-                                    <?php renderAttendanceRadios($child, $cid, 'mob'); ?>
-                                </div>
-                            </fieldset>
-                            <div class="time-inputs">
-                                <label class="time-input-label">
-                                    ورود
-                                    <input
-                                        class="time-input"
-                                        type="time"
-                                        name="attendance[<?= e((string) $cid) ?>][check_in]"
-                                        value="<?= e(attendanceTimeForInput($child['check_in'] ?? null)) ?>"
-                                        disabled
-                                    >
-                                </label>
-                                <label class="time-input-label">
-                                    خروج
-                                    <input
-                                        class="time-input"
-                                        type="time"
-                                        name="attendance[<?= e((string) $cid) ?>][check_out]"
-                                        value="<?= e(attendanceTimeForInput($child['check_out'] ?? null)) ?>"
-                                        disabled
-                                    >
-                                </label>
-                            </div>
-                            <label class="notes-field-label">
-                                یادداشت
-                                <textarea
-                                    class="notes-field"
-                                    name="attendance[<?= e((string) $cid) ?>][notes]"
-                                    rows="3"
-                                    maxlength="5000"
-                                    disabled
-                                ><?= e($notesVal) ?></textarea>
-                            </label>
-                        </article>
-                    <?php endforeach; ?>
+                <div style="margin-top:16px;text-align:left;">
+                    <button type="submit" class="btn btn-primary">ذخیره حضور و غیاب</button>
                 </div>
-            </div>
-
-            <div class="attendance-toolbar attendance-toolbar-bottom">
-                <button type="submit" class="btn save-btn">ذخیره حضور و غیاب</button>
-            </div>
-        </form>
-    <?php endif; ?>
+            </form>
+        <?php endif; ?>
+    </div>
 </section>
 
 <script>
