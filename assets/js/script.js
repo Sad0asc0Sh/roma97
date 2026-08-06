@@ -126,23 +126,23 @@ document.addEventListener('DOMContentLoaded', function() {
         window.addEventListener('scroll', scrollHandler, { passive: true });
     }
 
-    // Fade-in animation on scroll
-    var fadeElements = document.querySelectorAll('.fade-in');
-    if (fadeElements.length > 0 && 'IntersectionObserver' in window) {
-        var fadeObserver = new IntersectionObserver(function(entries) {
+    // Enhanced scroll entrance animation observer
+    var motionElements = document.querySelectorAll('.fade-in, .fade-up, .fade-scale, .slide-in-right, .slide-in-left');
+    if (motionElements.length > 0 && 'IntersectionObserver' in window) {
+        var motionObserver = new IntersectionObserver(function(entries) {
             entries.forEach(function(entry) {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('visible');
-                    fadeObserver.unobserve(entry.target);
+                    motionObserver.unobserve(entry.target);
                 }
             });
         }, {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
+            threshold: 0.08,
+            rootMargin: '0px 0px -40px 0px'
         });
 
-        fadeElements.forEach(function(element) {
-            fadeObserver.observe(element);
+        motionElements.forEach(function(element) {
+            motionObserver.observe(element);
         });
     }
 

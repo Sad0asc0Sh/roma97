@@ -81,7 +81,7 @@ require_once __DIR__ . '/header.php';
         <div class="metric-card metric-primary">
             <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg></div>
             <div class="metric-content">
-                <div class="metric-value"><?= e(persianNumber((string) $metrics['active_children'])) ?></div>
+                <div class="metric-value" data-count="<?= (int) $metrics['active_children'] ?>"><?= e(persianNumber((string) $metrics['active_children'])) ?></div>
                 <div class="metric-label">کودکان فعال</div>
             </div>
             <a href="<?= e(url('admin/children.php?status=active')) ?>" class="metric-link">مشاهده همه ←</a>
@@ -90,7 +90,7 @@ require_once __DIR__ . '/header.php';
         <div class="metric-card metric-secondary">
             <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
             <div class="metric-content">
-                <div class="metric-value"><?= e(persianNumber((string) $metrics['total_teachers'])) ?></div>
+                <div class="metric-value" data-count="<?= (int) $metrics['total_teachers'] ?>"><?= e(persianNumber((string) $metrics['total_teachers'])) ?></div>
                 <div class="metric-label">معلمان</div>
             </div>
             <a href="<?= e(url('admin/teachers.php')) ?>" class="metric-link">مدیریت ←</a>
@@ -99,7 +99,7 @@ require_once __DIR__ . '/header.php';
         <div class="metric-card metric-accent">
             <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
             <div class="metric-content">
-                <div class="metric-value"><?= e(persianNumber(number_format($metrics['monthly_tuition'], 0))) ?> تومان</div>
+                <div class="metric-value" data-count="<?= (int) $metrics['monthly_tuition'] ?>" data-suffix=" تومان"><?= e(persianNumber(number_format($metrics['monthly_tuition'], 0))) ?> تومان</div>
                 <div class="metric-label">شهریه این ماه</div>
             </div>
             <a href="<?= e(url('admin/tuition.php')) ?>" class="metric-link">مشاهده جزئیات ←</a>
@@ -108,7 +108,7 @@ require_once __DIR__ . '/header.php';
         <div class="metric-card metric-info">
             <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></div>
             <div class="metric-content">
-                <div class="metric-value"><?= e(persianNumber((string) $metrics['upcoming_events'])) ?></div>
+                <div class="metric-value" data-count="<?= (int) $metrics['upcoming_events'] ?>"><?= e(persianNumber((string) $metrics['upcoming_events'])) ?></div>
                 <div class="metric-label">رویدادهای پیش‌رو</div>
             </div>
             <a href="<?= e(url('admin/events.php')) ?>" class="metric-link">مشاهده تقویم ←</a>

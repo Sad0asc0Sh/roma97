@@ -135,7 +135,7 @@ function attendanceBadge(?string $status): string
                     </div>
                     <div class="classroom-info-item">
                         <span class="info-label">ثبت‌نام شده امروز</span>
-                        <span class="info-value"><?= count($children) ?></span>
+                        <span class="info-value" data-count="<?= count($children) ?>"><?= count($children) ?></span>
                     </div>
                     <?php if (!empty($classroom['description'])): ?>
                     <div class="classroom-info-item classroom-info-full">

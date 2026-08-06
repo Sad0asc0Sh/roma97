@@ -224,6 +224,10 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   background: var(--app-slate-50);
   color: var(--app-text);
   border-color: var(--app-border-strong);
+  transform: translateY(-1px);
+}
+.app-topbar-btn:active {
+  transform: translateY(0) scale(0.96);
 }
 
 .app-topbar-btn .badge-dot {
@@ -605,6 +609,25 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   gap: 12px;
   justify-content: center;
 }
+
+/* ── SKELETON LOADING INFRASTRUCTURE ─────────────────────── */
+.app-skeleton {
+  background: linear-gradient(90deg, var(--app-slate-100) 25%, var(--app-slate-50) 50%, var(--app-slate-100) 75%);
+  background-size: 200% 100%;
+  animation: appShimmer 1.5s infinite linear;
+  border-radius: var(--app-radius-sm);
+  display: inline-block;
+}
+[data-theme="dark"] .app-skeleton {
+  background: linear-gradient(90deg, #1E293B 25%, #334155 50%, #1E293B 75%);
+  background-size: 200% 100%;
+}
+.app-skeleton-avatar { width: 44px; height: 44px; border-radius: 50%; }
+.app-skeleton-title  { height: 22px; width: 65%; margin-bottom: 12px; }
+.app-skeleton-text   { height: 14px; width: 95%; margin-bottom: 8px; }
+.app-skeleton-text.short { width: 45%; }
+.app-skeleton-card   { height: 140px; width: 100%; border-radius: var(--app-radius-lg); }
+@keyframes appShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 /* ── TOAST NOTIFICATIONS (.app-toast) ────────────────────── */
 .app-toast-container {

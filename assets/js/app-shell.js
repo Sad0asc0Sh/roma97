@@ -134,6 +134,7 @@ function initGlobalSearchKeybind() {
       const text = row.textContent.toLowerCase();
       if (query === '' || text.includes(query)) {
         row.style.display = '';
+        row.style.animation = 'fadeIn 0.25s ease-out';
       } else {
         row.style.display = 'none';
       }
@@ -144,6 +145,7 @@ function initGlobalSearchKeybind() {
       const text = card.textContent.toLowerCase();
       if (query === '' || text.includes(query)) {
         card.style.display = '';
+        card.style.animation = 'fadeScale 0.25s ease-out';
       } else {
         card.style.display = 'none';
       }
@@ -167,6 +169,7 @@ function initTabs() {
           contents.forEach(content => {
             if (content.id === targetId) {
               content.style.display = 'block';
+              content.style.animation = 'fadeUp 0.3s ease-out';
             } else {
               content.style.display = 'none';
             }

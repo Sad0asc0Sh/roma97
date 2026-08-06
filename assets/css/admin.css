@@ -4,6 +4,17 @@
 
 @import url('app-shell.css');
 
+/* View Transitions API */
+@view-transition {
+    navigation: auto;
+}
+::view-transition-old(root) {
+    animation: 180ms ease-out cubic-bezier(0.4, 0, 0.2, 1) both fadeOut;
+}
+::view-transition-new(root) {
+    animation: 250ms ease-in cubic-bezier(0.4, 0, 0.2, 1) both fadeIn;
+}
+
 /* ── DESIGN TOKENS (Compatibility Layer - Mapped to Brand --app-*) ──── */
 :root {
     --adm-primary: var(--app-primary);
