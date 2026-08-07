@@ -23,6 +23,7 @@ $pageTitleValue = isset($pageTitle) ? e($pageTitle) : 'پنل معلم | ' . e($
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script>(function(){var t=localStorage.getItem('roma_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
     <title><?php echo $pageTitleValue; ?></title>
     <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
     <link rel="stylesheet" href="<?php echo e(url('assets/css/app-shell.css')); ?>">

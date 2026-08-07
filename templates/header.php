@@ -31,6 +31,7 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script>(function(){var t=localStorage.getItem('roma_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
     <meta name="description" content="<?php echo $pageDescriptionValue; ?>">
     <meta name="theme-color" content="#3D8B63">
     <title><?php echo $pageTitleValue; ?></title>

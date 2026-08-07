@@ -52,16 +52,21 @@ require_once __DIR__.'/header.php';
 $fHref=static fn(string $v):string=>url('admin/parents.php?'.http_build_query(['status'=>$v]));
 $fe=getFlash('error');$fs=getFlash('success');
 ?>
-<section class="admin-page">
-    <div class="admin-section-header"><h2 class="admin-section-title">مدیریت والدین</h2></div>
-    <?php if($fe!==''):?><div class="alert alert-error"><?=e($fe)?></div><?php endif;?>
-    <?php if($fs!==''):?><div class="alert alert-success"><?=e($fs)?></div><?php endif;?>
-    <p style="margin-bottom:16px">
-        <a href="<?=$fHref('all')?>" class="btn btn-sm <?=$sf==='all'?'btn-primary':'btn-outline'?>">همه</a>
-        <a href="<?=$fHref('pending')?>" class="btn btn-sm <?=$sf==='pending'?'btn-primary':'btn-outline'?>">در انتظار</a>
-        <a href="<?=$fHref('active')?>" class="btn btn-sm <?=$sf==='active'?'btn-primary':'btn-outline'?>">فعال</a>
-        <a href="<?=$fHref('suspended')?>" class="btn btn-sm <?=$sf==='suspended'?'btn-primary':'btn-outline'?>">مسدود</a>
-    </p>
+<section class="dashboard">
+    <div class="app-toolbar">
+        <h1 style="margin:0;font-size:1.5rem;font-weight:800">مدیریت والدین</h1>
+    </div>
+
+    <?php if(!empty($fe)):?><div class="alert alert-error" style="margin-bottom:16px;"><?=e($fe)?></div><?php endif;?>
+    <?php if(!empty($fs)):?><div class="alert alert-success" style="margin-bottom:16px;"><?=e($fs)?></div><?php endif;?>
+
+    <div class="teacher-filters" style="margin-bottom:20px;">
+        <strong>فیلتر:</strong>
+        <a href="<?=$fHref('all')?>" class="filter-chip <?=$sf==='all'?'active':''?>">همه</a>
+        <a href="<?=$fHref('pending')?>" class="filter-chip <?=$sf==='pending'?'active':''?>">در انتظار</a>
+        <a href="<?=$fHref('active')?>" class="filter-chip <?=$sf==='active'?'active':''?>">فعال</a>
+        <a href="<?=$fHref('suspended')?>" class="filter-chip <?=$sf==='suspended'?'active':''?>">مسدود</a>
+    </div>
     <?php if($parents===[]):?>
         <div class="empty-state empty-state-sm">
             <div class="empty-state-icon">
