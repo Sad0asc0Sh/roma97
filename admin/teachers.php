@@ -171,7 +171,7 @@ if (isPostRequest()) {
             'salary'          => trim((string) ($_POST['salary'] ?? '')),
             'password'        => (string) ($_POST['password'] ?? ''),
             'status'          => in_array($_POST['status'] ?? '', ['pending', 'active', 'inactive'], true)
-                                    ? (string) $_POST['status'] : 'pending',
+                                    ? (string) $_POST['status'] : 'active',
         ];
         $formData = $fields;
 
@@ -188,6 +188,12 @@ if (isPostRequest()) {
             $formErrors[] = 'رمز عبور باید حداقل ۸ کاراکتر باشد.';
         }
 
+        if ($fields['salary'] !== '') {
+            if (!preg_match('/^\d+(\.\d{1,2})?$/', $fields['salary'])) {
+                $formErrors[] = 'حقوق وارد شده نامعتبر است.';
+            }
+        }
+
         if (empty($formErrors)) {
             try {
                 // Ensure email is unique (exclude the current teacher when editing).
@@ -200,114 +206,107 @@ if (isPostRequest()) {
                 ]);
                 if ($emailCheck->fetchColumn() !== false) {
                     $formErrors[] = 'معلم دیگری با این ایمیل قبلاً ثبت شده است.';
-                    goto skipSave;
-                }
-
-                $avatarPath      = handleTeacherUpload('avatar', 'avatars');
-                $certPath        = handleTeacherUpload('certificate_file', 'certificates');
-
-                $salaryVal = null;
-                if ($fields['salary'] !== '') {
-                    if (preg_match('/^\d+(\.\d{1,2})?$/', $fields['salary'])) {
-                        $salaryVal = $fields['salary'];
-                    } else {
-                        $formErrors[] = 'حقوق وارد شده نامعتبر است.';
-                    }
-                }
-                $hireDateVal = $fields['hire_date'] !== '' ? $fields['hire_date'] : null;
-
-                if ($postAction === 'add') {
-                    $stmt = $pdo->prepare(
-                        'INSERT INTO teachers
-                            (first_name, last_name, email, phone, password, avatar,
-                             national_id, education_level, major, role_title, bio,
-                             show_in_team, sort_order, certificate_file,
-                             hire_date, salary, status)
-                         VALUES
-                            (:fn, :ln, :em, :ph, :pw, :av,
-                             :ni, :el, :mj, :rt, :bio,
-                             :sit, :so, :cf,
-                             :hd, :sl, :st)'
-                    );
-                    $stmt->execute([
-                        ':fn'  => $fields['first_name'],
-                        ':ln'  => $fields['last_name'],
-                        ':em'  => $fields['email'],
-                        ':ph'  => $fields['phone'] ?: null,
-                        ':pw'  => password_hash($fields['password'], PASSWORD_DEFAULT),
-                        ':av'  => $avatarPath,
-                        ':ni'  => $fields['national_id'] ?: null,
-                        ':el'  => $fields['education_level'] ?: null,
-                        ':mj'  => $fields['major'] ?: null,
-                        ':rt'  => $fields['role_title'] ?: null,
-                        ':bio' => $fields['bio'] ?: null,
-                        ':sit' => $fields['show_in_team'],
-                        ':so'  => $fields['sort_order'],
-                        ':cf'  => $certPath,
-                        ':hd'  => $hireDateVal,
-                        ':sl'  => $salaryVal,
-                        ':st'  => $fields['status'],
-                    ]);
-                    recordAudit('teacher.create', 'teacher', (int) $pdo->lastInsertId());
-                    setFlash('success', 'حساب معلم با موفقیت ایجاد شد.');
                 } else {
-                    // Edit: fetch existing for avatar/cert preservation
-                    $existing = $pdo->prepare('SELECT avatar, certificate_file FROM teachers WHERE id = :id LIMIT 1');
-                    $existing->execute([':id' => $teacherId]);
-                    $old = $existing->fetch();
+                    $avatarPath = handleTeacherUpload('avatar', 'avatars');
+                    $certPath   = handleTeacherUpload('certificate_file', 'certificates');
 
-                    $finalAvatar = $avatarPath ?? ($old['avatar'] ?? null);
-                    $finalCert   = $certPath   ?? ($old['certificate_file'] ?? null);
+                    $salaryVal   = $fields['salary'] !== '' ? $fields['salary'] : null;
+                    $hireDateVal = $fields['hire_date'] !== '' ? $fields['hire_date'] : null;
 
-                    $pwClause = '';
-                    $params   = [
-                        ':fn'  => $fields['first_name'],
-                        ':ln'  => $fields['last_name'],
-                        ':em'  => $fields['email'],
-                        ':ph'  => $fields['phone'] ?: null,
-                        ':av'  => $finalAvatar,
-                        ':ni'  => $fields['national_id'] ?: null,
-                        ':el'  => $fields['education_level'] ?: null,
-                        ':mj'  => $fields['major'] ?: null,
-                        ':rt'  => $fields['role_title'] ?: null,
-                        ':bio' => $fields['bio'] ?: null,
-                        ':sit' => $fields['show_in_team'],
-                        ':so'  => $fields['sort_order'],
-                        ':cf'  => $finalCert,
-                        ':hd'  => $hireDateVal,
-                        ':sl'  => $salaryVal,
-                        ':st'  => $fields['status'],
-                        ':id'  => $teacherId,
-                    ];
-                    if ($fields['password'] !== '') {
-                        $pwClause     = ', password = :pw';
-                        $params[':pw'] = password_hash($fields['password'], PASSWORD_DEFAULT);
+                    if ($postAction === 'add') {
+                        $stmt = $pdo->prepare(
+                            'INSERT INTO teachers
+                                (first_name, last_name, email, phone, password, avatar,
+                                 national_id, education_level, major, role_title, bio,
+                                 show_in_team, sort_order, certificate_file,
+                                 hire_date, salary, status)
+                             VALUES
+                                (:fn, :ln, :em, :ph, :pw, :av,
+                                 :ni, :el, :mj, :rt, :bio,
+                                 :sit, :so, :cf,
+                                 :hd, :sl, :st)'
+                        );
+                        $stmt->execute([
+                            ':fn'  => $fields['first_name'],
+                            ':ln'  => $fields['last_name'],
+                            ':em'  => $fields['email'],
+                            ':ph'  => $fields['phone'] ?: null,
+                            ':pw'  => password_hash($fields['password'], PASSWORD_DEFAULT),
+                            ':av'  => $avatarPath,
+                            ':ni'  => $fields['national_id'] ?: null,
+                            ':el'  => $fields['education_level'] ?: null,
+                            ':mj'  => $fields['major'] ?: null,
+                            ':rt'  => $fields['role_title'] ?: null,
+                            ':bio' => $fields['bio'] ?: null,
+                            ':sit' => $fields['show_in_team'],
+                            ':so'  => $fields['sort_order'],
+                            ':cf'  => $certPath,
+                            ':hd'  => $hireDateVal,
+                            ':sl'  => $salaryVal,
+                            ':st'  => $fields['status'],
+                        ]);
+                        recordAudit('teacher.create', 'teacher', (int) $pdo->lastInsertId());
+                        setFlash('success', 'حساب معلم با موفقیت ایجاد شد.');
+                        redirect(url('admin/teachers.php'));
+                    } else {
+                        // Edit: fetch existing for avatar/cert preservation
+                        $existing = $pdo->prepare('SELECT avatar, certificate_file FROM teachers WHERE id = :id LIMIT 1');
+                        $existing->execute([':id' => $teacherId]);
+                        $old = $existing->fetch();
+
+                        $finalAvatar = $avatarPath ?? ($old['avatar'] ?? null);
+                        $finalCert   = $certPath   ?? ($old['certificate_file'] ?? null);
+
+                        $pwClause = '';
+                        $params   = [
+                            ':fn'  => $fields['first_name'],
+                            ':ln'  => $fields['last_name'],
+                            ':em'  => $fields['email'],
+                            ':ph'  => $fields['phone'] ?: null,
+                            ':av'  => $finalAvatar,
+                            ':ni'  => $fields['national_id'] ?: null,
+                            ':el'  => $fields['education_level'] ?: null,
+                            ':mj'  => $fields['major'] ?: null,
+                            ':rt'  => $fields['role_title'] ?: null,
+                            ':bio' => $fields['bio'] ?: null,
+                            ':sit' => $fields['show_in_team'],
+                            ':so'  => $fields['sort_order'],
+                            ':cf'  => $finalCert,
+                            ':hd'  => $hireDateVal,
+                            ':sl'  => $salaryVal,
+                            ':st'  => $fields['status'],
+                            ':id'  => $teacherId,
+                        ];
+                        if ($fields['password'] !== '') {
+                            $pwClause     = ', password = :pw';
+                            $params[':pw'] = password_hash($fields['password'], PASSWORD_DEFAULT);
+                        }
+
+                        $stmt = $pdo->prepare(
+                            "UPDATE teachers SET
+                                first_name = :fn, last_name = :ln, email = :em, phone = :ph,
+                                avatar = :av, national_id = :ni, education_level = :el,
+                                major = :mj, role_title = :rt, bio = :bio,
+                                show_in_team = :sit, sort_order = :so,
+                                certificate_file = :cf, hire_date = :hd,
+                                salary = :sl, status = :st{$pwClause}
+                             WHERE id = :id"
+                        );
+                        $stmt->execute($params);
+                        recordAudit('teacher.update', 'teacher', (int) $teacherId);
+                        setFlash('success', 'اطلاعات معلم با موفقیت به‌روزرسانی شد.');
+                        redirect(url('admin/teachers.php'));
                     }
-
-                    $stmt = $pdo->prepare(
-                        "UPDATE teachers SET
-                            first_name = :fn, last_name = :ln, email = :em, phone = :ph,
-                            avatar = :av, national_id = :ni, education_level = :el,
-                            major = :mj, role_title = :rt, bio = :bio,
-                            show_in_team = :sit, sort_order = :so,
-                            certificate_file = :cf, hire_date = :hd,
-                            salary = :sl, status = :st{$pwClause}
-                         WHERE id = :id"
-                    );
-                    $stmt->execute($params);
-                    recordAudit('teacher.update', 'teacher', (int) $teacherId);
-                    setFlash('success', 'اطلاعات معلم با موفقیت به‌روزرسانی شد.');
                 }
             } catch (Throwable $e) {
                 error_log($e->getMessage());
-                setFlash('error', 'ذخیره معلم ممکن نیست. لطفاً دوباره تلاش کنید.');
+                $formErrors[] = 'ذخیره معلم ممکن نیست: ' . $e->getMessage();
             }
-
-            skipSave:
-            redirect(url('admin/teachers.php'));
         }
-        // Fall through to show form with errors
-        $errorMessage = implode(' ', $formErrors);
+
+        if (!empty($formErrors)) {
+            $errorMessage = implode(' ', $formErrors);
+        }
     }
 }
 
@@ -435,19 +434,44 @@ require_once __DIR__ . '/header.php';
                        value="<?= e((string) ($editTeacher['role_title'] ?? $formData['role_title'] ?? '')) ?>">
             </div>
             <div class="form-group">
+                <label for="tf_education_level">مدرک تحصیلی</label>
+                <input type="text" id="tf_education_level" name="education_level" class="form-control"
+                       placeholder="مثال: کارشناسی ارشد"
+                       value="<?= e((string) ($editTeacher['education_level'] ?? $formData['education_level'] ?? '')) ?>">
+            </div>
+            <div class="form-group">
+                <label for="tf_major">رشته تحصیلی</label>
+                <input type="text" id="tf_major" name="major" class="form-control"
+                       placeholder="مثال: روانشناسی کودک"
+                       value="<?= e((string) ($editTeacher['major'] ?? $formData['major'] ?? '')) ?>">
+            </div>
+            <div class="form-group">
                 <label for="tf_bio">توضیحات و تخصص</label>
                 <textarea id="tf_bio" name="bio" class="form-control" rows="2"><?= e((string) ($editTeacher['bio'] ?? $formData['bio'] ?? '')) ?></textarea>
             </div>
             <div class="form-group">
+                <label for="tf_sort_order">ترتیب نمایش</label>
+                <input type="number" id="tf_sort_order" name="sort_order" class="form-control"
+                       value="<?= e((string) ($editTeacher['sort_order'] ?? $formData['sort_order'] ?? 0)) ?>">
+            </div>
+            <div class="form-group">
                 <label for="tf_status">وضعیت</label>
                 <select id="tf_status" name="status" class="form-control">
-                    <?php foreach (['pending', 'active', 'inactive'] as $s): ?>
-                        <option value="<?= e($s) ?>"
-                            <?= ($editTeacher['status'] ?? $formData['status'] ?? 'pending') === $s ? 'selected' : '' ?>>
-                            <?= ucfirst($s) ?>
+                    <?php
+                    $statusLabels = ['active' => 'فعال', 'pending' => 'در انتظار', 'inactive' => 'غیرفعال'];
+                    $curStatus = $editTeacher['status'] ?? $formData['status'] ?? 'active';
+                    foreach ($statusLabels as $sVal => $sLabel):
+                    ?>
+                        <option value="<?= e($sVal) ?>" <?= $curStatus === $sVal ? 'selected' : '' ?>>
+                            <?= e($sLabel) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+            <div class="form-group" style="display:flex; align-items:center; gap:8px; margin: 15px 0;">
+                <input type="checkbox" id="tf_show_in_team" name="show_in_team" value="1"
+                       <?= (int) ($editTeacher['show_in_team'] ?? $formData['show_in_team'] ?? 1) === 1 ? 'checked' : '' ?>>
+                <label for="tf_show_in_team" style="margin:0; cursor:pointer; font-weight: 600;">نمایش در بخش «تیم مربیان» درباره ما</label>
             </div>
             <div class="form-group">
                 <label for="tf_avatar">تصویر پروفایل</label>
