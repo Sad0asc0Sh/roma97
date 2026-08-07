@@ -87,6 +87,7 @@ require_once __DIR__ . '/header.php';
                     <th>کودک</th>
                     <th>ماه</th>
                     <th>مبلغ</th>
+                    <th>وضعیت</th>
                     <th>تاریخ</th>
                     <th>روش پرداخت</th>
                     <th>یادداشت</th>

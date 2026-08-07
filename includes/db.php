@@ -96,7 +96,54 @@ function initializeTeachersTables(): void
 
 function initializeFinancialTables(): void
 {
-    // Schema is created at install time via setup.php / schema.sql
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+    $initialized = true;
+
+    try {
+        $pdo = getDb();
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS salary_payments (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                teacher_id INT NOT NULL,
+                amount DECIMAL(12,2) NOT NULL,
+                payment_date DATE NOT NULL,
+                payment_method ENUM('cash','bank_transfer','check') DEFAULT 'bank_transfer',
+                month_year VARCHAR(7) NOT NULL,
+                notes TEXT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_teacher_month (teacher_id, month_year),
+                CONSTRAINT fk_salary_teacher
+                    FOREIGN KEY (teacher_id) REFERENCES teachers(id)
+                    ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS tuition_payments (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                parent_id INT NOT NULL,
+                child_id INT NOT NULL,
+                amount DECIMAL(12,2) NOT NULL,
+                payment_date DATE NOT NULL,
+                payment_method ENUM('cash','bank_transfer','check') DEFAULT 'cash',
+                month_year VARCHAR(7) NOT NULL,
+                notes TEXT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_child_month (child_id, month_year),
+                CONSTRAINT fk_tuition_parent
+                    FOREIGN KEY (parent_id) REFERENCES parents(id)
+                    ON DELETE CASCADE,
+                CONSTRAINT fk_tuition_child
+                    FOREIGN KEY (child_id) REFERENCES children(id)
+                    ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+    } catch (Throwable $e) {
+        error_log($e->getMessage());
+    }
 }
 
 function initializeMessagingTable(): void

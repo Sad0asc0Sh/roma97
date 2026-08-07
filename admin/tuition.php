@@ -15,7 +15,7 @@ requireLogin();
 $successMessage = getFlash('success');
 $errorMessage = getFlash('error');
 
-$selectedChildId = filter_input(INPUT_GET, 'child_id', FILTER_VALIDATE_INT) ?? 0;
+$selectedChildId = max(0, (int) ($_GET['child_id'] ?? 0));
 
 try {
     initializeFinancialTables();
@@ -30,7 +30,8 @@ try {
 
         $childId       = (int) ($_POST['child_id'] ?? 0);
         $amount        = (float) ($_POST['amount'] ?? 0);
-        $paymentDate   = (string) ($_POST['payment_date'] ?? date('Y-m-d'));
+        $paymentDateRaw = (string) ($_POST['payment_date'] ?? date('Y-m-d'));
+        $paymentDate   = parseJalaliDate($paymentDateRaw) ?? $paymentDateRaw;
         $paymentMethod = (string) ($_POST['payment_method'] ?? 'cash');
         $monthYear     = (string) ($_POST['month_year'] ?? date('Y-m'));
         $notes         = trim((string) ($_POST['notes'] ?? ''));
@@ -38,7 +39,8 @@ try {
         $dateTimeCheck = DateTime::createFromFormat('Y-m-d', $paymentDate);
         $isValidDate = $dateTimeCheck && $dateTimeCheck->format('Y-m-d') === $paymentDate;
 
-        if ($childId === 0 || $amount <= 0 || $amount >= 1000000000 || !$isValidDate || !preg_match('/^\d{4}-\d{2}$/', $monthYear)) {
+        $validMethods = ['cash', 'bank_transfer', 'check'];
+        if ($childId === 0 || $amount <= 0 || $amount >= 1000000000 || !$isValidDate || !preg_match('/^\d{4}-\d{2}$/', $monthYear) || !in_array($paymentMethod, $validMethods, true)) {
             setFlash('error', 'لطفاً همه فیلدهای الزامی را به‌درستی پر کنید.');
             redirect(url('admin/tuition.php'));
         }
@@ -100,11 +102,11 @@ SQL;
         20
     );
     $statusStmt = $pdo->query("
-        SELECT 
-            c.id, c.first_name, c.last_name, 
+        SELECT
+            c.id, c.first_name, c.last_name,
             p.first_name AS p_first, p.last_name AS p_last,
-            (SELECT month_year FROM tuition_payments WHERE child_id = c.id ORDER BY month_year DESC LIMIT 1) AS latest_month,
-            (SELECT payment_date FROM tuition_payments WHERE child_id = c.id ORDER BY month_year DESC LIMIT 1) AS latest_date
+            (SELECT month_year FROM tuition_payments WHERE child_id = c.id ORDER BY month_year DESC, payment_date DESC, id DESC LIMIT 1) AS latest_month,
+            (SELECT payment_date FROM tuition_payments WHERE child_id = c.id ORDER BY month_year DESC, payment_date DESC, id DESC LIMIT 1) AS latest_date
         FROM children c
         INNER JOIN parents p ON p.id = c.parent_id
         WHERE c.status = 'active'
@@ -161,7 +163,13 @@ require_once __DIR__ . '/header.php';
 
                 <div class="form-group">
                     <label for="month_year" class="form-label">ماه شهریه</label>
-                    <input type="month" name="month_year" id="month_year" class="form-control" value="<?= e(date('Y-m')) ?>" required>
+                    <select name="month_year" id="month_year" class="form-control" required>
+                        <?php foreach (getShamsiMonthYearChoices(24, 24) as $choice): ?>
+                            <option value="<?= e($choice['value']) ?>" <?= $choice['is_current'] ? 'selected' : '' ?>>
+                                <?= e($choice['label']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -171,7 +179,7 @@ require_once __DIR__ . '/header.php';
 
                 <div class="form-group">
                     <label for="payment_date" class="form-label">تاریخ پرداخت</label>
-                    <input type="date" name="payment_date" id="payment_date" class="form-control" value="<?= e(date('Y-m-d')) ?>" required>
+                    <input type="text" name="payment_date" id="payment_date" class="form-control shamsi-datepicker" value="<?= e(shamsiDate(date('Y-m-d'), 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸" required>
                 </div>
 
                 <div class="form-group">
@@ -224,7 +232,7 @@ require_once __DIR__ . '/header.php';
                                     <td><?= e(trim($s['p_first'] . ' ' . $s['p_last'])) ?></td>
                                     <td>
                                         <?php if ($s['latest_month']): ?>
-                                            <span class="badge badge-success"><?= e($s['latest_month']) ?></span>
+                                            <span class="badge badge-success"><?= e(formatShamsiMonthYear($s['latest_month'])) ?></span>
                                         <?php else: ?>
                                             <span class="badge badge-danger">ندارد</span>
                                         <?php endif; ?>

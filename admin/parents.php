@@ -83,7 +83,7 @@ $fe=getFlash('error');$fs=getFlash('success');
                 <td style="font-size:0.85rem"><?=e($p['email'])?></td>
                 <td><?=e($p['phone']??'—')?></td>
                 <td><?php $bc=match($p['status']){'active'=>'badge-success','pending'=>'badge-warning','suspended'=>'badge-danger',default=>'badge-info'};$sl=match($p['status']){'active'=>'فعال','pending'=>'در انتظار تأیید','suspended'=>'مسدود',default=>$p['status']};?><span class="badge <?=$bc?>"><?=$sl?></span></td>
-                <td style="font-size:0.85rem;color:var(--muted)"><?=e(date('Y/m/d',strtotime($p['created_at'])))?></td>
+                <td style="font-size:0.85rem;color:var(--muted)"><?=e(shamsiDate((string)$p['created_at']))?></td>
                 <td>
                     <?php if($p['status']==='pending'):?>
                         <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="approve"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-success">تأیید</button></form>

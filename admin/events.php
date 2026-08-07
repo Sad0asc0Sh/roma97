@@ -71,6 +71,11 @@ function parseAdminEventDate(string $raw): ?string
 {
     $raw = trim($raw);
 
+    $parsed = parseJalaliDate($raw);
+    if ($parsed !== null) {
+        return $parsed;
+    }
+
     if (preg_match('/\A\d{4}-\d{2}-\d{2}\z/', $raw) !== 1) {
         return null;
     }
@@ -496,7 +501,7 @@ $showForm = ($action === 'add' || $action === 'edit');
 
                 <div class="form-group">
                     <label for="event_date" class="form-label">تاریخ رویداد</label>
-                    <input type="date" id="event_date" name="event_date" class="form-control" value="<?= e($formPreset['event_date']) ?>" required>
+                    <input type="text" id="event_date" name="event_date" class="form-control shamsi-datepicker" value="<?= e(shamsiDate($formPreset['event_date'], 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸" required>
                 </div>
 
                 <div class="admin-event-times">
@@ -611,7 +616,7 @@ $showForm = ($action === 'add' || $action === 'edit');
                                 $timeStr = $st !== '' ? $st . ($et !== '' ? ' – ' . $et : '') : ($et !== '' ? $et : '—');
                                 ?>
                                 <tr>
-                                    <td><?= e((string) $ev['event_date']) ?></td>
+                                    <td><?= e(shamsiDate((string) $ev['event_date'])) ?></td>
                                     <td><?= e((string) $ev['title']) ?></td>
                                     <td><?= e($timeStr) ?></td>
                                     <td>

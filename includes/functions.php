@@ -348,72 +348,45 @@ function persianNumber(string|int|float $value): string
 }
 
 /**
- * Persian day names.
+ * Convert a Jalali (Shamsi) date to Gregorian date.
+ *
+ * @return array{0: int, 1: int, 2: int} [year, month, day]
  */
-function persianDayName(string $date): string
+function jalaliToGregorian(int $jy, int $jm, int $jd): array
 {
-    $timestamp = strtotime($date);
-    if ($timestamp === false) {
-        return $date;
+    $jy += 1595;
+    $days = -355668 + (365 * $jy) + ((int) ($jy / 33) * 8) + (int) ((($jy % 33) + 3) / 4) + $jd
+        + (($jm < 7) ? ($jm - 1) * 31 : (($jm - 7) * 30) + 186);
+    $gy = 400 * (int) ($days / 146097);
+    $days %= 146097;
+    if ($days > 36524) {
+        $gy += 100 * (int) (--$days / 36524);
+        $days %= 36524;
+        if ($days >= 365) {
+            $days++;
+        }
+    }
+    $gy += 4 * (int) ($days / 1461);
+    $days %= 1461;
+    if ($days > 365) {
+        $gy += (int) (($days - 1) / 365);
+        $days = ($days - 1) % 365;
+    }
+    $gd = $days + 1;
+    $sal_a = [0, 31, (($gy % 4 === 0 && $gy % 100 !== 0) || ($gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    $gm = 0;
+    while ($gm < 13 && $gd > $sal_a[$gm]) {
+        $gd -= $sal_a[$gm];
+        $gm++;
     }
 
-    $days = [
-        'Saturday' => 'شنبه',
-        'Sunday' => 'یکشنبه',
-        'Monday' => 'دوشنبه',
-        'Tuesday' => 'سه‌شنبه',
-        'Wednesday' => 'چهارشنبه',
-        'Thursday' => 'پنج‌شنبه',
-        'Friday' => 'جمعه',
-    ];
-
-    $dayEn = date('l', $timestamp);
-
-    return $days[$dayEn] ?? $dayEn;
-}
-
-/**
- * Persian month names.
- */
-function persianMonthName(int $month): string
-{
-    $months = [
-        1 => 'ژانویه',
-        2 => 'فوریه',
-        3 => 'مارس',
-        4 => 'آوریل',
-        5 => 'می',
-        6 => 'ژوئن',
-        7 => 'ژوئیه',
-        8 => 'اوت',
-        9 => 'سپتامبر',
-        10 => 'اکتبر',
-        11 => 'نوامبر',
-        12 => 'دسامبر',
-    ];
-
-    return $months[$month] ?? '';
-}
-
-/**
- * Format date with Persian month names and Persian digits.
- */
-function formatPersianDate(string $date): string
-{
-    $timestamp = strtotime($date);
-    if ($timestamp === false) {
-        return $date;
-    }
-
-    $day = (int) date('j', $timestamp);
-    $month = (int) date('n', $timestamp);
-    $year = (int) date('Y', $timestamp);
-
-    return persianNumber($day . ' ' . persianMonthName($month) . ' ' . $year);
+    return [$gy, $gm, $gd];
 }
 
 /**
  * Convert a Gregorian date to Jalali (Shamsi / Persian) date.
+ *
+ * @return array{0: int, 1: int, 2: int} [year, month, day]
  */
 function gregorianToJalali(int $gy, int $gm, int $gd): array
 {
@@ -436,13 +409,106 @@ function gregorianToJalali(int $gy, int $gm, int $gd): array
 }
 
 /**
- * Format a date as Shamsi (Jalali) date with Persian digits.
+ * Shamsi (Persian) month names.
  */
-function shamsiDate(string $date): string
+function shamsiMonthName(int $month): string
 {
-    $timestamp = strtotime($date);
+    $months = [
+        1  => 'فروردین',
+        2  => 'اردیبهشت',
+        3  => 'خرداد',
+        4  => 'تیر',
+        5  => 'مرداد',
+        6  => 'شهریور',
+        7  => 'مهر',
+        8  => 'آبان',
+        9  => 'آذر',
+        10 => 'دی',
+        11 => 'بهمن',
+        12 => 'اسفند',
+    ];
+
+    return $months[$month] ?? '';
+}
+
+/**
+ * Gregorian month names in Persian (e.g. ژانویه، فوریه).
+ */
+function gregorianMonthName(int $month): string
+{
+    $months = [
+        1  => 'ژانویه',
+        2  => 'فوریه',
+        3  => 'مارس',
+        4  => 'آوریل',
+        5  => 'می',
+        6  => 'ژوئن',
+        7  => 'ژوئیه',
+        8  => 'اوت',
+        9  => 'سپتامبر',
+        10 => 'اکتبر',
+        11 => 'نوامبر',
+        12 => 'دسامبر',
+    ];
+
+    return $months[$month] ?? '';
+}
+
+/**
+ * Persian day names.
+ */
+function persianDayName(string|int $date): string
+{
+    $timestamp = is_numeric($date) ? (int) $date : strtotime((string) $date);
     if ($timestamp === false) {
-        return $date;
+        return (string) $date;
+    }
+
+    $days = [
+        'Saturday'  => 'شنبه',
+        'Sunday'    => 'یکشنبه',
+        'Monday'    => 'دوشنبه',
+        'Tuesday'   => 'سه‌شنبه',
+        'Wednesday' => 'چهارشنبه',
+        'Thursday'  => 'پنج‌شنبه',
+        'Friday'    => 'جمعه',
+    ];
+
+    $dayEn = date('l', $timestamp);
+
+    return $days[$dayEn] ?? $dayEn;
+}
+
+/**
+ * Format date with Persian month names and Persian digits (legacy alias for shamsiDate).
+ */
+function formatPersianDate(string $date): string
+{
+    return shamsiDate($date, 'full');
+}
+
+/**
+ * Format a date string or timestamp as Shamsi (Jalali) date with Persian digits.
+ *
+ * Supported formats:
+ *   - 'full'          => "۱۶ مرداد ۱۴۰۵"
+ *   - 'with_time'     => "۱۶ مرداد ۱۴۰۵ - ۱۴:۳۰"
+ *   - 'with_day'      => "جمعه ۱۶ مرداد ۱۴۰۵"
+ *   - 'with_day_time' => "جمعه ۱۶ مرداد ۱۴۰۵ - ۱۴:۳۰"
+ *   - 'short'         => "۱۴۰۵/۰۵/۱۶"
+ *   - 'time'          => "۱۴:۳۰"
+ *   - 'Y-m-d'         => "1405-05-16"
+ *   - 'Y-m'           => "1405-05"
+ */
+function shamsiDate(string|int|null $date, string $format = 'full'): string
+{
+    if ($date === null || $date === '' || $date === '0000-00-00' || $date === '0000-00-00 00:00:00') {
+        return '—';
+    }
+
+    $timestamp = is_numeric($date) ? (int) $date : strtotime((string) $date);
+    if ($timestamp === false) {
+        return (string) $date;
     }
 
     [$jy, $jm, $jd] = gregorianToJalali(
@@ -451,22 +517,109 @@ function shamsiDate(string $date): string
         (int) date('j', $timestamp)
     );
 
-    $months = [
-        1 => 'فروردین',
-        2 => 'اردیبهشت',
-        3 => 'خرداد',
-        4 => 'تیر',
-        5 => 'مرداد',
-        6 => 'شهریور',
-        7 => 'مهر',
-        8 => 'آبان',
-        9 => 'آذر',
-        10 => 'دی',
-        11 => 'بهمن',
-        12 => 'اسفند',
-    ];
+    $monthName = shamsiMonthName($jm);
+    $dayName = persianDayName($timestamp);
+    $timeStr = persianNumber(date('H:i', $timestamp));
 
-    return persianNumber($jd . ' ' . ($months[$jm] ?? '') . ' ' . $jy);
+    return match ($format) {
+        'with_time'     => persianNumber($jd) . ' ' . $monthName . ' ' . persianNumber($jy) . ' - ' . $timeStr,
+        'with_day'      => $dayName . ' ' . persianNumber($jd) . ' ' . $monthName . ' ' . persianNumber($jy),
+        'with_day_time' => $dayName . ' ' . persianNumber($jd) . ' ' . $monthName . ' ' . persianNumber($jy) . ' - ' . $timeStr,
+        'short', 'numeric' => persianNumber(sprintf('%04d/%02d/%02d', $jy, $jm, $jd)),
+        'time'          => $timeStr,
+        'Y'             => persianNumber($jy),
+        'Y-m-d'         => sprintf('%04d-%02d-%02d', $jy, $jm, $jd),
+        'Y-m'           => sprintf('%04d-%02d', $jy, $jm),
+        default         => persianNumber($jd) . ' ' . $monthName . ' ' . persianNumber($jy),
+    };
+}
+
+/**
+ * Generate a list of Shamsi Month-Year choices for dropdowns.
+ * Dynamic: Automatically shifts as years change (e.g. 1405, 1406, 1407, etc.).
+ *
+ * Returns array of ['value' => '1405-05', 'label' => 'مرداد ۱۴۰۵', 'is_current' => bool].
+ */
+function getShamsiMonthYearChoices(int $pastMonths = 24, int $futureMonths = 24): array
+{
+    [$currentJy, $currentJm] = gregorianToJalali(
+        (int) date('Y'),
+        (int) date('n'),
+        (int) date('j')
+    );
+
+    $choices = [];
+    for ($i = -$pastMonths; $i <= $futureMonths; $i++) {
+        $m = $currentJm + $i;
+        $y = $currentJy;
+
+        while ($m < 1) {
+            $m += 12;
+            $y -= 1;
+        }
+        while ($m > 12) {
+            $m -= 12;
+            $y += 1;
+        }
+
+        $val = sprintf('%04d-%02d', $y, $m);
+        $label = shamsiMonthName($m) . ' ' . persianNumber($y);
+        $choices[] = ['value' => $val, 'label' => $label, 'is_current' => ($i === 0)];
+    }
+
+    return array_reverse($choices);
+}
+
+/**
+ * Format a YYYY-MM string (Gregorian or Jalali) into Shamsi Month Name + Year.
+ * e.g. '2026-08' or '1405-05' => "مرداد ۱۴۰۵"
+ */
+function formatShamsiMonthYear(string|null $monthYear): string
+{
+    if ($monthYear === null || $monthYear === '') {
+        return '—';
+    }
+
+    if (preg_match('/^(\d{4})-(\d{2})$/', $monthYear, $m)) {
+        $year = (int) $m[1];
+        $month = (int) $m[2];
+
+        if ($year > 1700) {
+            [$jy, $jm] = gregorianToJalali($year, $month, 15);
+            return shamsiMonthName($jm) . ' ' . persianNumber($jy);
+        }
+
+        return shamsiMonthName($month) . ' ' . persianNumber($year);
+    }
+
+    return persianNumber($monthYear);
+}
+
+/**
+ * Parse a Jalali date string (e.g. "1405/05/16" or "1405-05-16") to Gregorian "YYYY-MM-DD".
+ */
+function parseJalaliDate(string $jDate): ?string
+{
+    $jDate = trim($jDate);
+    if (!preg_match('/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/', $jDate, $m)) {
+        return null;
+    }
+
+    $jy = (int) $m[1];
+    $jm = (int) $m[2];
+    $jd = (int) $m[3];
+
+    if ($jm < 1 || $jm > 12 || $jd < 1 || $jd > 31) {
+        return null;
+    }
+
+    if ($jy > 1700) {
+        return sprintf('%04d-%02d-%02d', $jy, $jm, $jd);
+    }
+
+    [$gy, $gm, $gd] = jalaliToGregorian($jy, $jm, $jd);
+
+    return sprintf('%04d-%02d-%02d', $gy, $gm, $gd);
 }
 
 /**

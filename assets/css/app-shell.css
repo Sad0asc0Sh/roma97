@@ -838,6 +838,117 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   background: var(--app-slate-200);
 }
 
+/* ── SHAMSI DATEPICKER COMPONENT ───────────────────────────── */
+.shamsi-datepicker-container {
+  position: absolute;
+  z-index: 9999;
+  background: var(--app-surface, #ffffff);
+  border: 1px solid var(--app-border, #d7dcd9);
+  border-radius: var(--app-radius-md, 10px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+  padding: 16px;
+  width: 290px;
+  direction: rtl;
+  font-family: var(--app-font, 'Vazirmatn', sans-serif);
+  color: var(--app-text, #1b2622);
+  margin-top: 4px;
+}
+
+[data-theme="dark"] .shamsi-datepicker-container {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+.sdp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.sdp-nav-btn {
+  background: var(--app-slate-100, #e9ecea);
+  border: none;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: bold;
+  color: var(--app-text, #1b2622);
+}
+
+[data-theme="dark"] .sdp-nav-btn {
+  background: #334155;
+  color: #f8fafc;
+}
+
+.sdp-nav-btn:hover {
+  background: var(--app-primary, #3d8b63);
+  color: #ffffff;
+}
+
+.sdp-title {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.sdp-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text-muted, #5c6b64);
+  margin-bottom: 8px;
+}
+
+.sdp-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.sdp-day-btn {
+  background: none;
+  border: none;
+  height: 34px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--app-text, #1b2622);
+  font-family: inherit;
+}
+
+[data-theme="dark"] .sdp-day-btn {
+  color: #f8fafc;
+}
+
+.sdp-day-btn:hover {
+  background: var(--app-slate-100, #e9ecea);
+}
+
+[data-theme="dark"] .sdp-day-btn:hover {
+  background: #334155;
+}
+
+.sdp-day-btn.selected {
+  background: var(--app-primary, #3d8b63) !important;
+  color: #ffffff !important;
+  font-weight: 700;
+}
+
+.sdp-day-btn.empty {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .app-btn-danger {
   background: var(--app-danger);
   color: #FFFFFF;

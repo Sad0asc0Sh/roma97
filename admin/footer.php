@@ -9,7 +9,7 @@ if (!defined('ROOMA_APP')) {
 
         <footer class="admin-footer">
             <div class="admin-footer-content">
-                <p>© <?= e(persianNumber(date('Y'))) ?> <?= e(siteName()) ?> — تمامی حقوق محفوظ است</p>
+                <p>© <?= e(shamsiDate(date('Y-m-d'), 'Y')) ?> <?= e(siteName()) ?> — تمامی حقوق محفوظ است</p>
                 <p class="admin-footer-version">نسخه ۱.۰</p>
             </div>
       </footer>

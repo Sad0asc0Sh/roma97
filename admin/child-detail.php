@@ -163,7 +163,7 @@ require_once __DIR__ . '/header.php';
                     · <?= e(adminDetailGenderLabel(($row['gender'] ?? '') !== '' ? (string) $row['gender'] : null)) ?>
                 </p>
                 <p class="child-detail-meta">
-                    تاریخ تولد: <strong><?= e((string) ($row['date_of_birth'] ?? '')) ?></strong>
+                    تاریخ تولد: <strong><?= e(shamsiDate((string) ($row['date_of_birth'] ?? ''))) ?></strong>
                 </p>
                 <p class="child-detail-meta">
                     وضعیت ثبت‌نام:

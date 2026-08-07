@@ -33,6 +33,11 @@ function isValidChildPhone(string $phone): bool
 
 function validChildDateOfBirth(string $value): ?string
 {
+    $parsed = parseJalaliDate($value);
+    if ($parsed !== null) {
+        $value = $parsed;
+    }
+
     if (preg_match('/\A\d{4}-\d{2}-\d{2}\z/', $value) !== 1) {
         return null;
     }
@@ -339,7 +344,7 @@ require_once __DIR__ . '/header.php';
 
                 <div class="form-group">
                     <label for="date_of_birth">تاریخ تولد</label>
-                    <input type="date" id="date_of_birth" name="date_of_birth" value="<?= e($old['date_of_birth']) ?>" required>
+                    <input type="text" id="date_of_birth" name="date_of_birth" class="shamsi-datepicker" value="<?= e($old['date_of_birth']) ?>" placeholder="۱۳۹۹/۰۵/۱۸" required>
              </div>
          </div>
 

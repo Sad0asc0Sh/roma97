@@ -17,6 +17,11 @@ $allowedStatuses = ['present', 'absent', 'late', 'excused'];
 
 function parseAttendanceDateString(string $raw): ?string
 {
+    $parsed = parseJalaliDate($raw);
+    if ($parsed !== null) {
+        return $parsed;
+    }
+
     if (preg_match('/\A\d{4}-\d{2}-\d{2}\z/', $raw) !== 1) {
         return null;
     }
@@ -280,7 +285,7 @@ require_once __DIR__ . '/header.php';
     <div class="admin-section" style="margin-bottom: 20px;">
         <form class="date-selector date-selector-form" method="get" action="<?= e(url('admin/attendance.php')) ?>" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
             <label for="attendance_date_pick" class="form-label" style="margin:0; font-weight:700;">انتخاب تاریخ:</label>
-            <input type="date" id="attendance_date_pick" name="date" class="form-control" style="max-width:200px;" value="<?= e($selectedDate) ?>">
+            <input type="text" id="attendance_date_pick" name="date" class="form-control shamsi-datepicker" style="max-width:200px;" value="<?= e(shamsiDate($selectedDate, 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸">
             <button type="submit" class="btn btn-secondary">بارگذاری تاریخ</button>
             <span style="margin-inline-start:auto; color:var(--adm-text-muted); font-size:0.9rem;">
                 ثبت برای تاریخ <strong><?= e($displayDateLabel) ?></strong>

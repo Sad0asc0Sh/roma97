@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initConfirmDialogs();
   initDrawers();
+  initShamsiDatePicker();
 });
 
 /* ── SIDEBAR TOGGLE & COLLAPSE ─────────────────────────────── */
@@ -316,3 +317,189 @@ window.showToast = function(message, type = 'success') {
     setTimeout(() => toast.remove(), 300);
   }, 4000);
 };
+
+/* ── SHAMSI DATEPICKER COMPONENT ───────────────────────────── */
+function initShamsiDatePicker() {
+  const monthNames = [
+    'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+    'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+  ];
+  const faDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+
+  function toFa(num) {
+    return String(num).replace(/\d/g, d => faDigits[d]);
+  }
+
+  function toEn(str) {
+    return String(str).replace(/[۰-۹]/g, d => faDigits.indexOf(d));
+  }
+
+  function gregorianToJalali(gy, gm, gd) {
+    const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    let gy2 = (gm > 2) ? (gy + 1) : gy;
+    let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100)
+      + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+    let jy = -1595 + (33 * Math.floor(days / 12053));
+    days %= 12053;
+    jy += 4 * Math.floor(days / 1461);
+    days %= 1461;
+    if (days > 365) {
+      jy += Math.floor((days - 1) / 365);
+      days = (days - 1) % 365;
+    }
+    let jm = (days < 186) ? (1 + Math.floor(days / 31)) : (7 + Math.floor((days - 186) / 30));
+    let jd = 1 + ((days < 186) ? (days % 31) : ((days - 186) % 30));
+    return [jy, jm, jd];
+  }
+
+  function jalaliToGregorian(jy, jm, jd) {
+    jy += 1595;
+    let days = -355668 + (365 * jy) + (Math.floor(jy / 33) * 8) + Math.floor(((jy % 33) + 3) / 4) + jd
+      + ((jm < 7) ? (jm - 1) * 31 : ((jm - 7) * 30) + 186);
+    let gy = 400 * Math.floor(days / 146097);
+    days %= 146097;
+    if (days > 36524) {
+      gy += 100 * Math.floor(--days / 36524);
+      days %= 36524;
+      if (days >= 365) days++;
+    }
+    gy += 4 * Math.floor(days / 1461);
+    days %= 1461;
+    if (days > 365) {
+      gy += Math.floor((days - 1) / 365);
+      days = (days - 1) % 365;
+    }
+    let gd = days + 1;
+    let sal_a = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let gm = 0;
+    while (gm < 13 && gd > sal_a[gm]) {
+      gd -= sal_a[gm];
+      gm++;
+    }
+    return [gy, gm, gd];
+  }
+
+  let activePicker = null;
+
+  function closeActivePicker() {
+    if (activePicker) {
+      activePicker.remove();
+      activePicker = null;
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    if (activePicker && !activePicker.contains(e.target) && !e.target.classList.contains('shamsi-datepicker') && !e.target.hasAttribute('data-jdp')) {
+      closeActivePicker();
+    }
+  });
+
+  const inputs = document.querySelectorAll('.shamsi-datepicker, [data-jdp]');
+  inputs.forEach(input => {
+    input.setAttribute('autocomplete', 'off');
+
+    input.addEventListener('focus', () => renderPicker(input));
+    input.addEventListener('click', (e) => {
+      e.stopPropagation();
+      renderPicker(input);
+    });
+  });
+
+  function renderPicker(input) {
+    closeActivePicker();
+
+    const today = new Date();
+    const [tJy, tJm, tJd] = gregorianToJalali(today.getFullYear(), today.getMonth() + 1, today.getDate());
+
+    let curJy = tJy;
+    let curJm = tJm;
+
+    let val = toEn(input.value.trim());
+    let m = val.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    if (m) {
+      curJy = parseInt(m[1], 10);
+      curJm = parseInt(m[2], 10);
+    }
+
+    const container = document.createElement('div');
+    container.className = 'shamsi-datepicker-container';
+
+    const rect = input.getBoundingClientRect();
+    container.style.top = `${rect.bottom + window.scrollY}px`;
+    container.style.left = `${rect.left + window.scrollX}px`;
+
+    function updateCalendar() {
+      const daysInMonth = curJm <= 6 ? 31 : (curJm <= 11 ? 30 : 29);
+      const [gY, gM, gD] = jalaliToGregorian(curJy, curJm, 1);
+      const firstDayOfWeek = (new Date(gY, gM - 1, gD).getDay() + 1) % 7;
+
+      container.innerHTML = `
+        <div class="sdp-header">
+          <button type="button" class="sdp-nav-btn sdp-prev">&gt;</button>
+          <div class="sdp-title">${monthNames[curJm - 1]} ${toFa(curJy)}</div>
+          <button type="button" class="sdp-nav-btn sdp-next">&lt;</button>
+        </div>
+        <div class="sdp-weekdays">
+          <div>ش</div><div>۱ش</div><div>۲ش</div><div>۳ش</div><div>۴ش</div><div>۵ش</div><div>ج</div>
+        </div>
+        <div class="sdp-days"></div>
+      `;
+
+      const daysGrid = container.querySelector('.sdp-days');
+      for (let i = 0; i < firstDayOfWeek; i++) {
+        const emptyBtn = document.createElement('button');
+        emptyBtn.type = 'button';
+        emptyBtn.className = 'sdp-day-btn empty';
+        daysGrid.appendChild(emptyBtn);
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayBtn = document.createElement('button');
+        dayBtn.type = 'button';
+        dayBtn.className = 'sdp-day-btn';
+        dayBtn.textContent = toFa(day);
+
+        const formattedMonth = String(curJm).padStart(2, '0');
+        const formattedDay = String(day).padStart(2, '0');
+        const dateStr = `${curJy}/${formattedMonth}/${formattedDay}`;
+
+        if (input.value && toEn(input.value).includes(`${curJy}/${formattedMonth}/${formattedDay}`)) {
+          dayBtn.classList.add('selected');
+        }
+
+        dayBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          input.value = toFa(dateStr);
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          closeActivePicker();
+        });
+
+        daysGrid.appendChild(dayBtn);
+      }
+
+      container.querySelector('.sdp-prev').addEventListener('click', (e) => {
+        e.stopPropagation();
+        curJm--;
+        if (curJm < 1) {
+          curJm = 12;
+          curJy--;
+        }
+        updateCalendar();
+      });
+
+      container.querySelector('.sdp-next').addEventListener('click', (e) => {
+        e.stopPropagation();
+        curJm++;
+        if (curJm > 12) {
+          curJm = 1;
+          curJy++;
+        }
+        updateCalendar();
+      });
+    }
+
+    updateCalendar();
+    document.body.appendChild(container);
+    activePicker = container;
+  }
+}
