@@ -247,6 +247,12 @@ function initDrawers() {
     closeBtn.addEventListener('click', window.closeDrawer);
   }
   overlay.addEventListener('click', window.closeDrawer);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      window.closeDrawer();
+    }
+  });
 }
 
 window.openDrawer = function(title, contentHtml) {
@@ -270,6 +276,20 @@ window.closeDrawer = function() {
 
   if (overlay) overlay.classList.remove('active');
   if (drawer) drawer.classList.remove('open');
+
+  if (window.history && window.history.replaceState) {
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('edit')) {
+        url.searchParams.delete('edit');
+        const search = url.searchParams.toString();
+        const newUrl = url.pathname + (search ? '?' + search : '');
+        window.history.replaceState(null, '', newUrl);
+      }
+    } catch (e) {}
+  }
+
+  document.querySelectorAll('.tr-editing').forEach(el => el.classList.remove('tr-editing'));
 };
 
 /* ── TOAST COMPONENT ──────────────────────────────────────── */

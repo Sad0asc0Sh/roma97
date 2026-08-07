@@ -503,9 +503,10 @@ require_once __DIR__ . '/header.php';
                         'inactive' => 'badge-inactive',
                         default    => 'badge-pending',
                     };
-                    $inTeam = (int) ($t['show_in_team'] ?? 1) === 1;
+                    $inTeam    = (int) ($t['show_in_team'] ?? 1) === 1;
+                    $isEditing = $editId === (int) $t['id'];
                     ?>
-                    <tr>
+                    <tr<?= $isEditing ? ' class="tr-editing"' : '' ?>>
                         <td>
                             <?php if (!empty($t['avatar'])): ?>
                                 <img src="<?= e(url((string) $t['avatar'])) ?>" alt="<?= e($fullName) ?>"
@@ -592,8 +593,9 @@ require_once __DIR__ . '/header.php';
                     'inactive' => 'badge-inactive',
                     default    => 'badge-pending',
                 };
+                $isEditing  = $editId === (int) $t['id'];
                 ?>
-                <div class="teacher-mobile-card">
+                <div class="teacher-mobile-card<?= $isEditing ? ' tr-editing' : '' ?>">
                     <div class="tmc-header">
                         <?php if (!empty($t['avatar'])): ?>
                             <img src="<?= e(url((string) $t['avatar'])) ?>" alt="<?= e($fullName) ?>"

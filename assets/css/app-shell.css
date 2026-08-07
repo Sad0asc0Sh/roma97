@@ -83,10 +83,20 @@
   --app-slate-600: #A3B5AC;
   --app-slate-900: #F0F4F2;
 
+  --app-primary-50: rgba(61, 139, 99, 0.22);
+  --app-primary-100: rgba(61, 139, 99, 0.35);
+
   --app-success-bg: rgba(46, 125, 91, 0.2);
   --app-warning-bg: rgba(184, 121, 26, 0.2);
   --app-danger-bg: rgba(184, 64, 64, 0.2);
   --app-info-bg: rgba(62, 111, 168, 0.2);
+}
+
+[data-theme="dark"] .app-tab-btn.active,
+[data-theme="dark"] .app-breadcrumb-item.active,
+[data-theme="dark"] .filter-chip.active,
+[data-theme="dark"] .filter-nav a.active {
+  color: #FFFFFF !important;
 }
 
 /* ── BASE & RESET SCOPE ─────────────────────────────────────── */
@@ -873,6 +883,12 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
 *:focus-visible {
   outline: 2px solid var(--app-primary);
   outline-offset: 2px;
+}
+
+@media (max-width: 991px) {
+  .admin-mobile-toggle {
+    display: inline-flex !important;
+  }
 }
 
 @media (max-width: 768px) {

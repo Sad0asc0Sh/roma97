@@ -107,10 +107,6 @@
     border-inline-start-color: rgba(255, 255, 255, 0.15);
 }
 
-[data-theme="dark"] .hamburger span {
-    background: #FFFFFF;
-}
-
 [data-theme="dark"] .site-footer {
     background: #142921;
     color: #FFFFFF;
@@ -270,8 +266,6 @@ p { margin-bottom: var(--space-sm); line-height: 1.8; }
 .nav-link.active .nav-icon-svg, .nav-link:hover .nav-icon-svg { opacity: 1; }
 .nav-auth { display: flex; align-items: center; gap: var(--space-xs); margin-inline-start: var(--space-sm); padding-inline-start: var(--space-sm); border-inline-start: 1px solid var(--border); }
 .logout-form { display: inline; }
-.hamburger { display: none; background: none; border: none; cursor: pointer; padding: var(--space-xs); flex-direction: column; gap: 5px; z-index: 1001; }
-.hamburger span { display: block; width: 22px; height: 2.5px; background: var(--neutral-dark); border-radius: 2px; transition: all var(--transition-fast); }
 
 /* === BUTTONS === */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-xs); padding: 12px 28px; font-family: var(--font-base); font-size: 0.9375rem; font-weight: 600; border: 2px solid transparent; border-radius: var(--radius-full); cursor: pointer; transition: transform 0.15s cubic-bezier(0.4,0,0.2,1), box-shadow 0.2s cubic-bezier(0.4,0,0.2,1), background 0.2s cubic-bezier(0.4,0,0.2,1), border-color 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s cubic-bezier(0.4,0,0.2,1); text-decoration: none; white-space: nowrap; line-height: 1.4; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -764,22 +758,7 @@ textarea.form-control { resize: vertical; min-height: 120px; }
     .footer-content { grid-template-columns: 1fr; }
 }
 @media (max-width: 991px) {
-    .hamburger { display: flex; }
-    .site-nav { display: none; }
-    .site-nav.mobile-open {
-        display: flex !important;
-        flex-direction: column;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background: var(--white);
-        padding: var(--space-md);
-        border-bottom: 1px solid var(--border);
-        box-shadow: var(--shadow-lg);
-        z-index: 999;
-        animation: fadeSlideDown 0.25s ease-out;
-    }
+    .site-nav .nav-link { display: none; }
     .header-inner { justify-content: space-between; }
 
     /* === MOBILE BOTTOM NAVIGATION === */
@@ -1562,7 +1541,6 @@ textarea.form-control { resize: vertical; min-height: 120px; }
 
     .admin-mobile-toggle {
         display: inline-flex !important;
-    }
         touch-action: manipulation;
     }
 

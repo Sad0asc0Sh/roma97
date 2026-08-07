@@ -152,9 +152,6 @@ $topbarText = siteTopbarText();
 
 <header class="site-header" id="siteHeader">
     <div class="container header-inner">
-        <button class="hamburger" id="hamburger" aria-label="منو" aria-expanded="false">
-            <span></span><span></span><span></span>
-        </button>
         <a class="logo" href="<?php echo e(url('index.php')); ?>">
             <?php if ($logo !== ''): ?>
                 <img src="<?php echo e(url($logo)); ?>" alt="<?php echo e($siteNameValue); ?>" class="site-logo">

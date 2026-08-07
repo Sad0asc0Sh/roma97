@@ -45,7 +45,7 @@ $userFirstChar = mb_substr($userName, 0, 1, 'UTF-8');
 <header class="app-topbar">
     <div class="app-topbar-right">
         <?php if (isset($_SESSION['admin_id']) || isset($_SESSION['teacher_id']) || isset($_SESSION['parent_id'])): ?>
-            <button class="admin-mobile-toggle" id="mobileSidebarToggle" type="button" aria-label="باز کردن منو">
+            <button class="admin-mobile-toggle" id="mobileSidebarToggle" type="button" onclick="window.toggleMobileSidebar(event)" aria-label="باز کردن منو">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             </button>
         <?php endif; ?>

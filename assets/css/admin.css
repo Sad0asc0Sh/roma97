@@ -76,6 +76,9 @@
     --adm-bg: #0B0F19;
     --adm-surface: #1E293B;
     --adm-surface-hover: #334155;
+    --adm-primary-50: rgba(61, 139, 99, 0.22);
+    --adm-primary-100: rgba(61, 139, 99, 0.35);
+    --adm-primary-200: rgba(61, 139, 99, 0.50);
     --adm-text: #F8FAFC;
     --adm-text-secondary: #CBD5E1;
     --adm-text-muted: #64748B;
@@ -98,6 +101,24 @@
 [data-theme="dark"] .metric-card {
     background: var(--adm-surface);
     border-color: var(--adm-border);
+}
+
+[data-theme="dark"] .filter-nav a.active,
+[data-theme="dark"] .filter-nav a.is-active,
+[data-theme="dark"] .filter-chip.active,
+[data-theme="dark"] .admin-tab.active,
+[data-theme="dark"] .app-tab-btn.active,
+[data-theme="dark"] .tab.active,
+[data-theme="dark"] .tab-btn.is-active,
+[data-theme="dark"] .admin-nav-item.active,
+[data-theme="dark"] .admin-nav-subitem.active,
+[data-theme="dark"] .nav-link.active,
+[data-theme="dark"] .teacher-nav-item.active,
+[data-theme="dark"] .parent-nav-item.active,
+[data-theme="dark"] .bottom-nav-item.active,
+[data-theme="dark"] .badge-active,
+[data-theme="dark"] .badge-success {
+    color: #FFFFFF !important;
 }
 
 /* ── RESET & BASE ───────────────────────────────────────────── */
@@ -281,8 +302,9 @@ a:hover{color:var(--adm-primary-dark)}
 .admin-table th{background:var(--adm-bg);padding:12px 18px;text-align:start;font-weight:700;color:var(--adm-text-secondary);border-bottom:2px solid var(--adm-border);white-space:nowrap;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em}
 .admin-table td{padding:14px 18px;border-bottom:1px solid var(--adm-border-light);vertical-align:middle}
 .admin-table tr:last-child td{border-bottom:none}
-.admin-table tr{transition:background var(--adm-transition)}
-.admin-table tr:hover td{background:var(--adm-primary-50)}
+.admin-table tr{transition:background var(--adm-transition);-webkit-tap-highlight-color:transparent}
+.admin-table tr:hover td, .admin-table tr:active td, .admin-table tr.tr-editing td, .admin-table tr.active td, .admin-table tr.selected td{background:var(--adm-primary-50)}
+[data-theme="dark"] .admin-table tr:hover td, [data-theme="dark"] .admin-table tr:active td, [data-theme="dark"] .admin-table tr.tr-editing td, [data-theme="dark"] .admin-table tr.active td, [data-theme="dark"] .admin-table tr.selected td{background:rgba(61, 139, 99, 0.22)!important}
 
 /* ── FORMS ──────────────────────────────────────────────────── */
 .form-group{margin-bottom:20px}
@@ -323,7 +345,9 @@ select.form-control{cursor:pointer;appearance:none;background-image:url("data:im
 .teacher-avatar-thumb{width:40px;height:40px;border-radius:var(--adm-radius-sm);object-fit:cover;border:2px solid var(--adm-border)}
 .teacher-avatar-placeholder{width:40px;height:40px;border-radius:var(--adm-radius-sm);background:linear-gradient(135deg,var(--adm-primary-50),var(--adm-primary-100));color:var(--adm-primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;flex-shrink:0}
 .teacher-mobile-cards{display:none}
-.teacher-mobile-card{background:var(--adm-surface);border:1px solid var(--adm-border);border-radius:var(--adm-radius);padding:18px;margin-bottom:12px}
+.teacher-mobile-card{background:var(--adm-surface);border:1px solid var(--adm-border);border-radius:var(--adm-radius);padding:18px;margin-bottom:12px;transition:all var(--adm-transition);-webkit-tap-highlight-color:transparent}
+.teacher-mobile-card:hover, .teacher-mobile-card:active, .teacher-mobile-card.tr-editing{border-color:var(--adm-primary);background:var(--adm-primary-50)}
+[data-theme="dark"] .teacher-mobile-card:hover, [data-theme="dark"] .teacher-mobile-card:active, [data-theme="dark"] .teacher-mobile-card.tr-editing{background:rgba(61, 139, 99, 0.22)!important;border-color:var(--adm-primary)}
 .tmc-header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
 .tmc-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 
