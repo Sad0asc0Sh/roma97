@@ -178,14 +178,14 @@ require_once __DIR__ . '/header.php';
             </div>
             <?php if (empty($recentRegistrations)): ?>
                 <div class="empty-state empty-state-sm">
-                    <div class="empty-state-icon">📭</div>
+                    <div class="empty-state-icon"><svg width="24" height="24" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-file-text')) ?>"/></svg></div>
                     <p>ثبت‌نام اخیری وجود ندارد.</p>
                 </div>
             <?php else: ?>
                 <div class="quick-list">
                     <?php foreach ($recentRegistrations as $child): ?>
                         <div class="quick-list-item">
-                            <div class="quick-list-avatar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg></div>
+                            <div class="quick-list-avatar"><svg width="22" height="22" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-user')) ?>"/></svg></div>
                             <div class="quick-list-content">
                                 <div class="quick-list-title">
                                     <a href="<?= e(url('admin/child-detail.php?id=' . $child['id'])) ?>">
@@ -219,14 +219,14 @@ require_once __DIR__ . '/header.php';
             </div>
             <?php if (empty($upcomingEvents)): ?>
                 <div class="empty-state empty-state-sm">
-                    <div class="empty-state-icon">📭</div>
+                    <div class="empty-state-icon"><svg width="24" height="24" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-calendar')) ?>"/></svg></div>
                     <p>هیچ رویداد آینده‌ای برنامه‌ریزی نشده است.</p>
                 </div>
             <?php else: ?>
                 <div class="quick-list">
                     <?php foreach ($upcomingEvents as $event): ?>
                         <div class="quick-list-item">
-                            <div class="quick-list-avatar"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></div>
+                            <div class="quick-list-avatar"><svg width="22" height="22" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-calendar')) ?>"/></svg></div>
                             <div class="quick-list-content">
                                 <div class="quick-list-title">
                                     <a href="<?= e(url('admin/events.php')) ?>">

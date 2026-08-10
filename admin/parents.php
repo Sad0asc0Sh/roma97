@@ -54,7 +54,7 @@ $fe=getFlash('error');$fs=getFlash('success');
 ?>
 <section class="dashboard">
     <div class="app-toolbar">
-        <h1 style="margin:0;font-size:1.5rem;font-weight:800">مدیریت والدین</h1>
+        <h1 class="m-0 font-bold">مدیریت والدین</h1>
     </div>
 
     <?php if(!empty($fe)):?><div class="alert alert-error" style="margin-bottom:16px;"><?=e($fe)?></div><?php endif;?>

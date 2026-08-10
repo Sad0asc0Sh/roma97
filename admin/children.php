@@ -202,7 +202,7 @@ $filterHref = static fn (string $value): string => url(
                             <div class="admin-child-card-badges">
                                 <span class="badge <?= e($badgeClass) ?>"><?= e($cs) ?></span>
                                 <?php if ($hasAllergies): ?>
-                                    <span class="allergy-indicator" title="حساسیت گزارش شده">⚠️</span>
+                                    <span class="allergy-indicator" title="حساسیت گزارش شده"><svg width="14" height="14" aria-hidden="true" style="vertical-align:middle;"><use href="<?= e(asset('assets/img/icons.svg#icon-alert-triangle')) ?>"/></svg></span>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -240,7 +240,7 @@ $filterHref = static fn (string $value): string => url(
                                 <?php endif; ?>
 
                                 <a class="btn btn-secondary" href="<?= e(url('admin/child-detail.php?id=' . $cid)) ?>">مشاهده جزئیات</a>
-                                <a class="btn btn-secondary" href="<?= e(url('admin/child-detail.php?id=' . $cid)) ?>">ویرایش</a>
+                                <a class="btn btn-secondary" href="<?= e(url('admin/edit-child.php?id=' . $cid)) ?>">ویرایش</a>
                             <?php endif; ?>
                         </div>
                     </div>

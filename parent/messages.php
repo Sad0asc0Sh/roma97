@@ -64,14 +64,14 @@ require_once __DIR__ . '/header.php';
 
 <div class="parent-card">
     <div class="parent-card-header d-flex justify-content-between align-items-center">
-        <h2><span class="header-icon">📧</span> صندوق ورودی</h2>
+        <h2><span class="header-icon"><svg width="20" height="20" aria-hidden="true" style="vertical-align:middle;"><use href="<?= e(asset('assets/img/icons.svg#icon-message-square')) ?>"/></svg></span> صندوق ورودی</h2>
         <span class="badge badge-info"><?= e(persianNumber((string) $pagination['total'])) ?> پیام</span>
   </div>
 
     <div class="parent-card-body">
         <?php if (empty($messages)): ?>
             <div class="empty-state">
-                <div class="empty-icon">📂</div>
+                <div class="empty-icon"><svg width="32" height="32" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-file-text')) ?>"/></svg></div>
                 <p>هنوز پیامی ندارید. بعداً دوباره بررسی کنید</p>
         </div>
         <?php else: ?>

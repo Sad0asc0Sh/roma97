@@ -268,7 +268,7 @@ require_once __DIR__ . '/header.php';
 
 <div class="admin-content">
     <div class="app-toolbar">
-        <h1 style="margin:0;font-size:1.5rem;font-weight:800">مدیریت اخبار</h1>
+        <h1 class="m-0 font-bold">مدیریت اخبار</h1>
         <div class="app-toolbar-actions">
             <button type="button" class="app-btn app-btn-primary" onclick="openNewsDrawer()">
                 + افزودن خبر جدید

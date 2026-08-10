@@ -17,7 +17,7 @@
     --font-size-base: 16px; --line-height-base: 1.8;
     --text-xs: 0.75rem; --text-sm: 0.875rem; --text-base: 1rem; --text-lg: 1.125rem;
     --text-xl: 1.375rem; --text-2xl: 1.75rem; --text-3xl: 2.25rem; --text-4xl: 3rem; --text-5xl: 3.75rem;
-    --space-xs: 8px; --space-sm: 16px; --space-md: 24px; --space-lg: 32px; --space-xl: 48px; --space-2xl: 64px;
+    --space-3xs: 2px; --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 32px; --space-2xl: 48px; --space-3xl: 64px;
     --radius-sm: 10px; --radius-md: 14px; --radius-lg: 20px; --radius-xl: 28px; --radius-full: 9999px;
     --shadow-sm: 0 2px 12px rgba(44,62,58,0.06); --shadow-md: 0 8px 24px rgba(44,62,58,0.08);
     --shadow-lg: 0 16px 40px rgba(44,62,58,0.10); --shadow-xl: 0 24px 56px rgba(44,62,58,0.12);
@@ -452,6 +452,13 @@ p { margin-bottom: var(--space-sm); line-height: 1.8; }
 
 /* === CTA === */
 .cta-section { margin: var(--space-xl) 0; }
+.cta-banner { background: var(--ink-night); color: var(--white); padding: var(--space-2xl) 0; position: relative; overflow: hidden; }
+.cta-banner-content { max-width: 720px; margin: 0 auto; text-align: center; position: relative; z-index: 2; }
+.cta-banner-title { font-family: var(--font-display); font-size: var(--text-3xl); color: var(--white); margin-bottom: var(--space-sm); }
+.cta-banner-text { font-size: var(--text-lg); opacity: 0.9; margin-bottom: var(--space-lg); line-height: 1.8; }
+.cta-btn-phone { color: var(--white); border-color: rgba(255,255,255,0.4); padding: 14px 28px; font-size: var(--text-base); }
+.cta-mascot-corner { position: absolute; bottom: -10px; inset-inline-end: 20px; width: 90px; height: 90px; opacity: 0.25; pointer-events: none; }
+.cta-mascot-svg { width: 100%; height: 100%; }
 .cta-box { background: var(--gradient-forest); border-radius: var(--radius-xl); padding: var(--space-2xl); position: relative; overflow: hidden; box-shadow: var(--shadow-green); }
 .cta-box::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 10% 50%, rgba(232,168,56,0.15) 0%, transparent 50%), radial-gradient(circle at 90% 20%, rgba(255,255,255,0.05) 0%, transparent 40%); pointer-events: none; }
 .cta-content { position: relative; z-index: 1; text-align: center; color: var(--white); max-width: 600px; margin: 0 auto; }

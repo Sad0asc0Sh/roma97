@@ -64,7 +64,7 @@ require_once __DIR__ . '/header.php';
 
 <!-- Total Paid Summary -->
 <div class="payment-summary-card">
-    <div class="summary-icon">💰</div>
+    <div class="summary-icon"><svg width="24" height="24" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-wallet')) ?>"/></svg></div>
     <div class="summary-content">
         <span class="summary-label">مجموع پرداخت‌ها تا تاریخ</span>
         <span class="summary-amount"><?= e(persianNumber(number_format($totalPaid, 0))) ?> <span class="currency-unit">تومان</span></span>
@@ -108,7 +108,7 @@ require_once __DIR__ . '/header.php';
                         <td><?= e(trim($p['first_name'] . ' ' . $p['last_name']))?></td>
                         <td><?= e(persianNumber((string) $p['month_year']))?></td>
                         <td class="amount-cell"><?= e(persianNumber(number_format((float) $p['amount'], 0))) ?> <span class="currency-unit-sm">تومان</span></td>
-                        <td><span class="badge badge-success">✓ پرداخت شده</span></td>
+                        <td><span class="badge badge-success">پرداخت شده</span></td>
                         <td><?= e(shamsiDate((string) $p['payment_date']))?></td>
                         <td><?= e($paymentMethodLabel) ?></td>
                         <td><?= e(trim((string) ($p['notes'] ?? '')) !== '' ? (string) $p['notes'] : '—') ?></td>

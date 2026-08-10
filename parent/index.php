@@ -141,11 +141,11 @@ require_once __DIR__ . '/header.php';
 
 <!-- Today's Status Summary Strip (Quick 2-second glance for busy parents) -->
 <?php if ($children !== []): ?>
-<section class="today-summary-strip" style="background: var(--white); padding: var(--space-md); border-radius: var(--radius-lg); margin-bottom: var(--space-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
-    <h3 style="font-size: var(--text-base); margin-bottom: var(--space-xs); font-weight: 700; color: var(--neutral-dark);">
+<section class="today-summary-strip">
+    <h3 class="today-summary-title">
         وضعیت امروز فرزندان شما (<?= e(shamsiDate((new DateTimeImmutable('today'))->format('Y-m-d'))) ?>)
     </h3>
-    <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
+    <div class="today-summary-items">
         <?php foreach ($children as $c): ?>
             <?php
             $cId = (int) $c['id'];
@@ -164,8 +164,8 @@ require_once __DIR__ . '/header.php';
                 default => 'ثبت نشده'
             };
             ?>
-            <div style="display: flex; align-items: center; gap: 8px; background: var(--neutral-light); padding: 8px 14px; border-radius: var(--radius-md);">
-                <strong style="font-size: var(--text-sm); color: var(--neutral-dark);"><?= e($c['first_name']) ?>:</strong>
+            <div class="today-summary-chip">
+                <strong class="today-summary-name"><?= e($c['first_name']) ?>:</strong>
                 <span class="badge <?= $badgeClass ?>"><?= $attText ?></span>
             </div>
         <?php endforeach; ?>
@@ -176,7 +176,7 @@ require_once __DIR__ . '/header.php';
 <!-- Your Children Section -->
 <section class="parent-section">
     <div class="parent-section-header">
-        <h2>فرزندان شما 👨‍👩‍👧‍👦</h2>
+        <h2>فرزندان شما</h2>
         <?php if ($children !== []): ?>
             <a class="btn-text" href="<?= e(url('parent/add-child.php')) ?>">+ افزودن کودک</a>
         <?php endif; ?>
@@ -184,7 +184,7 @@ require_once __DIR__ . '/header.php';
 
     <?php if ($children === []): ?>
         <div class="parent-empty-state">
-            <div class="empty-state-icon">🌟</div>
+            <div class="empty-state-icon"><svg width="32" height="32" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-star')) ?>"/></svg></div>
             <h3>هنوز کودکی ثبت نشده است</h3>
             <p>برای شروع، کوچولوی خود را در <?= e(siteName()) ?> ثبت کنید</p>
             <a class="btn btn-primary" href="<?= e(url('parent/add-child.php')) ?>">افزودن کودک</a>
@@ -200,11 +200,7 @@ require_once __DIR__ . '/header.php';
                 $initial = strtoupper(substr((string) ($child['first_name'] ?? ''), 0, 1));
                 $hasAllergies = trim((string) ($child['allergies'] ?? '')) !== '';
                 $gender = (string) ($child['gender'] ?? '');
-                $genderIcon = match($gender) {
-                    'male' => '👦',
-                    'female' => '👧',
-                    default => '👤'
-                };
+                $genderIconSvg = '<svg class="icon icon-sm" aria-hidden="true" style="vertical-align:middle;margin-inline-end:4px;width:16px;height:16px;"><use href="' . e(asset('assets/img/icons.svg#icon-user')) . '"/></svg>';
                 $genderLabel = match($gender) {
                     'male' => 'پسر',
                     'female' => 'دختر',
@@ -260,7 +256,7 @@ require_once __DIR__ . '/header.php';
                                 <p class="child-nickname">«<?= e($preferredName) ?>»</p>
                             <?php endif; ?>
                             <div class="child-meta">
-                                <span><?= e($genderIcon) ?> <?= e($genderLabel)?></span>
+                                <span><?= $genderIconSvg ?> <?= e($genderLabel)?></span>
                                 <?php if ($age !== ''): ?>
                                     <span>•</span>
                                     <span><?= e($age)?></span>

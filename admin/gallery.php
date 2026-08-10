@@ -359,7 +359,7 @@ require_once __DIR__ . '/header.php';
 
 <section class="admin-page">
     <div class="app-toolbar">
-        <h1 style="margin:0;font-size:1.5rem;font-weight:800">گالری تصاویر</h1>
+        <h1 class="m-0 font-bold">گالری تصاویر</h1>
         <div class="app-toolbar-actions">
             <button type="button" class="app-btn app-btn-primary" onclick="openGalleryDrawer()">
                 + افزودن تصویر جدید

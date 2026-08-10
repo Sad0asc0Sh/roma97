@@ -282,12 +282,12 @@ require_once __DIR__ . '/header.php';
         <div class="alert alert-error" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
 
-    <div class="admin-section" style="margin-bottom: 20px;">
-        <form class="date-selector date-selector-form" method="get" action="<?= e(url('admin/attendance.php')) ?>" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-            <label for="attendance_date_pick" class="form-label" style="margin:0; font-weight:700;">انتخاب تاریخ:</label>
-            <input type="text" id="attendance_date_pick" name="date" class="form-control shamsi-datepicker" style="max-width:200px;" value="<?= e(shamsiDate($selectedDate, 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸">
+    <div class="admin-section mb-md">
+        <form class="date-selector date-selector-form attendance-filter-bar" method="get" action="<?= e(url('admin/attendance.php')) ?>">
+            <label for="attendance_date_pick" class="form-label m-0 font-bold">انتخاب تاریخ:</label>
+            <input type="text" id="attendance_date_pick" name="date" class="form-control shamsi-datepicker date-picker-compact" value="<?= e(shamsiDate($selectedDate, 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸">
             <button type="submit" class="btn btn-secondary">بارگذاری تاریخ</button>
-            <span style="margin-inline-start:auto; color:var(--adm-text-muted); font-size:0.9rem;">
+            <span class="attendance-filter-date-info">
                 ثبت برای تاریخ <strong><?= e($displayDateLabel) ?></strong>
             </span>
         </form>
@@ -301,15 +301,15 @@ require_once __DIR__ . '/header.php';
                 </div>
                 <h3>هیچ کودک فعالی ثبت‌نام نشده است</h3>
                 <p>پس از افزودن کودکان به سیستم، می‌توانید وضعیت حضور و غیاب آن‌ها را ثبت کنید.</p>
-                <a href="<?= e(url('admin/children.php')) ?>" class="btn btn-primary btn-sm" style="margin-top:12px;">مدیریت کودکان</a>
+                <a href="<?= e(url('admin/children.php')) ?>" class="btn btn-primary btn-sm mt-sm">مدیریت کودکان</a>
             </div>
         <?php else: ?>
             <form class="attendance-save-form" method="post" action="<?= e(url('admin/attendance.php')) ?>">
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <input type="hidden" name="attendance_date" value="<?= e($selectedDate) ?>">
 
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                    <h2 class="admin-section-title" style="margin:0;">لیست کودکان (<?= count($rows) ?>)</h2>
+                <div class="flex-between-center mb-md">
+                    <h2 class="admin-section-title m-0">لیست کودکان (<?= count($rows) ?>)</h2>
                     <button type="submit" class="btn btn-primary">ذخیره حضور و غیاب</button>
                 </div>
 
@@ -340,15 +340,15 @@ require_once __DIR__ . '/header.php';
                                         <tr>
                                             <td>
                                                 <?php if (!empty($child['photo'])): ?>
-                                                    <img class="child-photo-small" src="<?= e(url((string) $child['photo'])) ?>" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
+                                                    <img class="child-photo-small avatar-circle" src="<?= e(url((string) $child['photo'])) ?>" alt="">
                                                 <?php else: ?>
-                                                    <span class="child-photo-small child-photo-small-placeholder" aria-hidden="true" style="width:36px;height:36px;border-radius:50%;background:var(--adm-primary-100);color:var(--adm-primary);display:inline-flex;align-items:center;justify-content:center;font-weight:700;"><?= e($initial ?: '?') ?></span>
+                                                    <span class="child-photo-small child-photo-small-placeholder avatar-placeholder-circle" aria-hidden="true"><?= e($initial ?: '?') ?></span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td style="font-weight:600;"><?= e($fullName !== '' ? $fullName : 'کودک') ?></td>
+                                            <td class="font-semibold"><?= e($fullName !== '' ? $fullName : 'کودک') ?></td>
                                             <td><?= e($parentName !== '' ? $parentName : '—') ?></td>
                                             <td>
-                                                <div class="status-radio-group status-radio-group-table" style="display:flex;gap:8px;align-items:center;">
+                                                <div class="status-radio-group status-radio-group-table flex-items-center gap-xs">
                                                     <?php renderAttendanceRadios($child, $cid, 'tbl'); ?>
                                                 </div>
                                             </td>

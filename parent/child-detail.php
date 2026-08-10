@@ -24,6 +24,9 @@ function parseParentChildId(mixed $value): int
 $parentId = (int) $_SESSION['parent_id'];
 $childId = parseParentChildId($_GET['id'] ?? null);
 
+$successMessage = getFlash('success');
+$errorMessage = getFlash('error');
+
 if ($childId === 0) {
     setFlash('error', 'کودک مورد نظر یافت نشد.');
     redirect(url('parent/index.php'));
@@ -150,6 +153,14 @@ require_once __DIR__ . '/header.php';
     <a href="<?= e(url('parent/index.php')) ?>">← بازگشت به داشبورد</a>
 </p>
 
+<?php if ($successMessage !== null): ?>
+    <div class="notice" role="status"><?= e($successMessage) ?></div>
+<?php endif; ?>
+
+<?php if ($errorMessage !== null): ?>
+    <div class="alert" role="alert"><?= e($errorMessage) ?></div>
+<?php endif; ?>
+
 <div class="child-detail-container">
     <!-- Main Info Card -->
     <div class="child-detail-card">
@@ -167,6 +178,9 @@ require_once __DIR__ . '/header.php';
                     <p class="child-nickname">«<?= e($preferredName) ?>»</p>
                 <?php endif; ?>
                 <span class="status-badge status-badge-<?= e($status) ?>"><?= e($statusLabel) ?></span>
+                <p style="margin-top: 0.75rem;">
+                    <a class="btn btn-outline btn-sm" href="<?= e(url('parent/edit-child.php?id=' . $childId)) ?>">✏️ ویرایش اطلاعات کودک</a>
+                </p>
           </div>
       </div>
 

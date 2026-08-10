@@ -46,7 +46,7 @@ require_once __DIR__ . '/header.php';
 <?php endif; ?>
 
 <div class="page-header">
-    <h1>فرزندان من 👨‍👩‍👧‍👦</h1>
+    <h1>فرزندان من</h1>
     <p class="page-subtitle">تمام کودکان ثبت‌شده در حساب شما</p>
 </div>
 
@@ -93,6 +93,7 @@ require_once __DIR__ . '/header.php';
               </div>
                 <div class="child-list-actions">
                     <a class="btn btn-primary" href="<?= e(url('parent/child-detail.php?id=' . (int) $child['id'])) ?>">مشاهده جزئیات</a>
+                    <a class="btn btn-outline" href="<?= e(url('parent/edit-child.php?id=' . (int) $child['id'])) ?>">ویرایش</a>
               </div>
           </div>
         <?php endforeach; ?>

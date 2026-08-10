@@ -165,7 +165,7 @@ function handleContactSubmit(event) {
         msg.style.background = 'var(--primary-faint)';
         msg.style.color = 'var(--primary-dark)';
         msg.style.border = '1px solid var(--primary)';
-        msg.innerHTML = '✓ پیام شما با موفقیت ثبت شد. کارشناسان روما به زودی با شما تماس خواهند گرفت.';
+        msg.innerHTML = 'پیام شما با موفقیت ثبت شد. کارشناسان روما به زودی با شما تماس خواهند گرفت.';
         document.getElementById('contactForm').reset();
     }, 800);
 }

@@ -123,7 +123,7 @@ require_once __DIR__ . '/templates/header.php';
 
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-sm);">
                         <time class="news-article-date" datetime="<?= e($singleNewsItem['created_at']) ?>" style="color: var(--muted); font-size: var(--text-sm);">
-                            📅 <?= e(formatPublicNewsDate($singleNewsItem['created_at'])) ?>
+                            <svg width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-inline-end:4px;"><use href="<?= e(asset('assets/img/icons.svg#icon-calendar')) ?>"/></svg> <?= e(formatPublicNewsDate($singleNewsItem['created_at'])) ?>
                         </time>
 
                         <!-- Share Buttons -->
@@ -211,7 +211,7 @@ require_once __DIR__ . '/templates/header.php';
                             <?php endif; ?>
                             <div class="news-list-content" style="padding: var(--space-md); flex: 1; display: flex; flex-direction: column;">
                                 <time class="news-list-date" datetime="<?= e($newsItem['created_at']) ?>" style="font-size: var(--text-xs); color: var(--muted); margin-bottom: 6px;">
-                                    📅 <?= e(formatPublicNewsDate($newsItem['created_at'])) ?>
+                                    <svg width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-inline-end:4px;"><use href="<?= e(asset('assets/img/icons.svg#icon-calendar')) ?>"/></svg> <?= e(formatPublicNewsDate($newsItem['created_at'])) ?>
                                 </time>
                                 <h3 style="font-size: var(--text-lg); margin-bottom: var(--space-xs); line-height: 1.5;">
                                     <a href="<?= e(url('news.php?id=' . $newsItem['id'])) ?>" style="color: var(--neutral-dark); text-decoration: none;"><?= e($newsItem['title']) ?></a>

@@ -371,7 +371,7 @@ require_once __DIR__ . '/header.php';
 
 <section class="dashboard">
     <div class="app-toolbar">
-        <h1 style="margin:0;font-size:1.5rem;font-weight:800">مدیریت معلمان</h1>
+        <h1 class="m-0 font-bold">مدیریت معلمان</h1>
         <div class="app-toolbar-actions">
             <button type="button" class="app-btn app-btn-primary" onclick="openTeacherDrawer()">
                 + افزودن معلم جدید
@@ -586,7 +586,7 @@ require_once __DIR__ . '/header.php';
                                     <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
                                     <button type="submit" class="btn btn-sm btn-login-as"
                                             title="ایجاد لینک ورود یکباره ۱۵ دقیقه‌ای برای این معلم">
-                                        🔑 ورود به‌عنوان معلم
+                                        <svg width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-inline-end:4px;"><use href="<?= e(asset('assets/img/icons.svg#icon-key')) ?>"/></svg> ورود به‌عنوان معلم
                                     </button>
                                 </form>
                             <?php endif; ?>
@@ -633,8 +633,8 @@ require_once __DIR__ . '/header.php';
                         </div>
                     </div>
                     <p><?= e((string) $t['email']) ?></p>
-                    <?php if (!empty($t['phone'])): ?><p>📞 <?= e((string) $t['phone']) ?></p><?php endif; ?>
-                    <?php if (!empty($t['education_level'])): ?><p>🎓 <?= e((string) $t['education_level']) ?></p><?php endif; ?>
+                    <?php if (!empty($t['phone'])): ?><p><svg width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-inline-end:4px;"><use href="<?= e(asset('assets/img/icons.svg#icon-phone')) ?>"/></svg> <?= e((string) $t['phone']) ?></p><?php endif; ?>
+                    <?php if (!empty($t['education_level'])): ?><p><svg width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-inline-end:4px;"><use href="<?= e(asset('assets/img/icons.svg#icon-academic-cap')) ?>"/></svg> <?= e((string) $t['education_level']) ?></p><?php endif; ?>
                     <div class="tmc-actions">
                         <a href="<?= e(url('admin/teachers.php?edit=' . (int) $t['id'])) ?>" class="btn btn-sm btn-secondary">ویرایش</a>
                         <?php if ($tStatus === 'active'): ?>
@@ -642,7 +642,7 @@ require_once __DIR__ . '/header.php';
                                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                 <input type="hidden" name="action" value="login_as">
                                 <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
-                                <button type="submit" class="btn btn-sm btn-login-as">🔑 ورود به‌جای معلم</button>
+                                <button type="submit" class="btn btn-sm btn-login-as"><svg width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-inline-end:4px;"><use href="<?= e(asset('assets/img/icons.svg#icon-key')) ?>"/></svg> ورود به‌جای معلم</button>
                             </form>
                         <?php endif; ?>
                     </div>

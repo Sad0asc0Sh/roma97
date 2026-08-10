@@ -125,15 +125,15 @@ $siteNameValue = e(siteName());
             <p class="auth-brand-subtitle">پنل هوشمند والدین برای پیگیری وضعیت فرزندان</p>
             <ul class="auth-brand-features">
                 <li>
-                    <div class="auth-feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                    <div class="auth-feature-icon"><svg width="20" height="20" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-check-circle')) ?>"/></svg></div>
                     <span>پیگیری لحظه‌ای وضعیت حضور و غیاب</span>
                 </li>
                 <li>
-                    <div class="auth-feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+                    <div class="auth-feature-icon"><svg width="20" height="20" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-file-text')) ?>"/></svg></div>
                     <span>مشاهده گزارش‌های روزانه مربیان</span>
                 </li>
                 <li>
-                    <div class="auth-feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+                    <div class="auth-feature-icon"><svg width="20" height="20" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-message-square')) ?>"/></svg></div>
                     <span>ارتباط مستقیم با مربیان و مدیریت</span>
                 </li>
             </ul>
@@ -171,14 +171,14 @@ $siteNameValue = e(siteName());
 
             <?php if ($successMessage !== null): ?>
                 <div class="auth-alert auth-alert--success auth-anim-2" role="status">
-                    <svg class="auth-alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <svg class="auth-alert-icon" width="20" height="20" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-check-circle')) ?>"/></svg>
                     <span><?= e($successMessage) ?></span>
                 </div>
             <?php endif; ?>
 
             <?php if ($error !== ''): ?>
                 <div class="auth-alert auth-alert--danger auth-anim-2" role="alert">
-                    <svg class="auth-alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <svg class="auth-alert-icon" width="20" height="20" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-alert-triangle')) ?>"/></svg>
                     <span><?= e($error) ?></span>
                 </div>
             <?php endif; ?>

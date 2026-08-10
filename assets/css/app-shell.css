@@ -6,13 +6,34 @@
 
 :root {
   /* Brand Tokens - Synced with main site brand */
-  --app-primary: #3D8B63;
-  --app-primary-dark: #2E6B4C;
-  --app-primary-light: #6AAF8A;
+  --app-primary: var(--primary, #3D8B63);
+  --app-primary-dark: var(--primary-dark, #2E6B4C);
+  --app-primary-light: var(--primary-light, #6AAF8A);
   --app-primary-50: #EAF4EE;
   --app-primary-100: #D3E9DC;
-  --app-secondary: #C4724A;
-  --app-accent: #E8A838;
+  --app-secondary: var(--secondary, #C4724A);
+  --app-accent: var(--accent, #E8A838);
+
+  /* Spacing Scale Tokens - Synced with root design scale */
+  --space-3xs: 2px;
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  --app-space-3xs: var(--space-3xs);
+  --app-space-2xs: var(--space-2xs);
+  --app-space-xs: var(--space-xs);
+  --app-space-sm: var(--space-sm);
+  --app-space-md: var(--space-md);
+  --app-space-lg: var(--space-lg);
+  --app-space-xl: var(--space-xl);
+  --app-space-2xl: var(--space-2xl);
+  --app-space-3xl: var(--space-3xl);
 
   /* Neutral Slate Palette for Enterprise Data-Dense UI */
   --app-slate-25: #FAFBFA;
@@ -91,6 +112,13 @@
   --app-danger-bg: rgba(184, 64, 64, 0.2);
   --app-info-bg: rgba(62, 111, 168, 0.2);
 }
+
+/* Parent Dashboard Today Summary Strip */
+.today-summary-strip { background: var(--app-surface); padding: var(--space-md); border-radius: var(--app-radius-lg); margin-bottom: var(--space-lg); border: 1px solid var(--app-border); box-shadow: var(--app-shadow-sm); }
+.today-summary-title { font-size: var(--app-text-base); margin-bottom: var(--space-xs); font-weight: 700; color: var(--app-text); }
+.today-summary-items { display: flex; gap: var(--space-md); flex-wrap: wrap; }
+.today-summary-chip { display: flex; align-items: center; gap: 8px; background: var(--app-slate-50); padding: 8px 14px; border-radius: var(--app-radius-sm); }
+.today-summary-name { font-size: var(--app-text-sm); color: var(--app-text); font-weight: 700; }
 
 [data-theme="dark"] .app-tab-btn.active,
 [data-theme="dark"] .app-breadcrumb-item.active,

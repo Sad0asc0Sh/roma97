@@ -584,7 +584,7 @@ try {
         <div class="about-story-card fade-in" style="background: var(--white); border-radius: var(--radius-xl); padding: var(--space-xl); box-shadow: var(--shadow-md);">
             <div class="about-story-grid">
                 <div class="about-story-content">
-                    <span class="about-story-badge">📖 درباره روما</span>
+                    <span class="about-story-badge">درباره روما</span>
                     <h2>روایتی از عشق، امنیت و رشد شکوفه‌های فردا</h2>
                     <p>مهد کودک <?= e(siteName()) ?> از سال ۱۳۹۵ با هدف ایجاد فضایی گرم، شاداب و امن برای پرورش استعدادها و توانمندی‌های کودکان شروع به کار کرد. ما باور داریم که سال‌های ابتدایی زندگی، شالوده‌ساز اصلی شخصیت و آینده فرزندان شماست.</p>
                     <div style="margin-top: var(--space-lg);">
