@@ -32,6 +32,7 @@ function getSettings(PDO $pdo): array
         'whatsapp' => '',
         'topbar_enabled' => '1',
         'topbar_text' => '',
+        'default_tuition_amount' => '0',
     ];
 
     $keys = array_keys($settings);
@@ -299,6 +300,7 @@ if (isPostRequest()) {
     $instagram = trim((string) ($_POST['instagram'] ?? ''));
     $telegram = trim((string) ($_POST['telegram'] ?? ''));
     $whatsapp = trim((string) ($_POST['whatsapp'] ?? ''));
+    $defaultTuitionAmountRaw = trim((string) ($_POST['default_tuition_amount'] ?? '0'));
     $newLogo = null;
 
     if ($siteName === '' || settingsStringLength($siteName) > 100) {
@@ -326,8 +328,14 @@ if (isPostRequest()) {
         redirect(url('admin/settings.php'));
     }
 
-    if (settingsStringLength($workingHours) > 100) {
+    if ($workingHours !== '' && settingsStringLength($workingHours) > 100) {
         setFlash('error', 'ساعت کاری بسیار طولانی است.');
+        redirect(url('admin/settings.php'));
+    }
+
+    $defaultTuitionVal = filter_var($defaultTuitionAmountRaw, FILTER_VALIDATE_FLOAT);
+    if ($defaultTuitionVal === false || $defaultTuitionVal < 0 || $defaultTuitionVal >= 1000000000) {
+        setFlash('error', 'لطفاً مبلغ شهریه ثابت پیش‌فرض معتبر (عدد مثبت تا ۱,۰۰۰,۰۰۰,۰۰۰ تومان) وارد کنید.');
         redirect(url('admin/settings.php'));
     }
 
@@ -345,6 +353,7 @@ if (isPostRequest()) {
         saveSetting($pdo, 'instagram', $instagram);
         saveSetting($pdo, 'telegram', $telegram);
         saveSetting($pdo, 'whatsapp', $whatsapp);
+        saveSetting($pdo, 'default_tuition_amount', (string) $defaultTuitionVal);
 
         $topbarEnabled = isset($_POST['topbar_enabled']) ? '1' : '0';
         $topbarText = trim((string) ($_POST['topbar_text'] ?? ''));
@@ -461,6 +470,14 @@ require_once __DIR__ . '/header.php';
                     <input type="text" id="whatsapp" name="whatsapp" class="form-control"
                         maxlength="30" placeholder="+98 912 ..."
                         value="<?= e($settings['whatsapp'] ?? '') ?>">
+                </div>
+
+                <div class="form-group">
+                    <label for="default_tuition_amount" class="form-label">شهریه ثابت پیش‌فرض ماهانه (تومان)</label>
+                    <input type="number" step="0.01" id="default_tuition_amount" name="default_tuition_amount" class="form-control"
+                        placeholder="۰"
+                        value="<?= e($settings['default_tuition_amount'] ?? '0') ?>" required min="0">
+                    <small style="color:var(--muted);font-size:0.85rem;">مبلغ پیش‌فرض شهریه برای محاسبات مانده بدهی و یادآوری خودکار</small>
                 </div>
 
                 <?php if ($settings['logo'] !== ''): ?>

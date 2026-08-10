@@ -28,6 +28,38 @@ try {
             redirect(url('admin/tuition.php'));
         }
 
+        $formAction = (string) ($_POST['form_action'] ?? 'record_payment');
+
+        if ($formAction === 'set_plan') {
+            $childId        = (int) ($_POST['plan_child_id'] ?? 0);
+            $monthYear      = (string) ($_POST['plan_month_year'] ?? date('Y-m'));
+            $expectedAmount = (float) ($_POST['expected_amount'] ?? 0);
+
+            if ($childId === 0 || $expectedAmount < 0 || $expectedAmount >= 1000000000 || !preg_match('/^\d{4}-\d{2}$/', $monthYear)) {
+                setFlash('error', 'لطفاً مقادیر معتبر برای تعیین شهریه مورد انتظار وارد کنید.');
+                redirect(url('admin/tuition.php'));
+            }
+
+            $planStmt = $pdo->prepare(
+                'INSERT INTO tuition_plans (child_id, month_year, expected_amount)
+                 VALUES (:cid, :myear, :exp)
+                 ON DUPLICATE KEY UPDATE expected_amount = :exp'
+            );
+            $planStmt->execute([
+                ':cid'   => $childId,
+                ':myear' => $monthYear,
+                ':exp'   => $expectedAmount,
+            ]);
+
+            recordAudit('tuition_plan.set', 'child', $childId, [
+                'month_year'      => $monthYear,
+                'expected_amount' => $expectedAmount,
+            ]);
+
+            setFlash('success', 'مبلغ شهریه مورد انتظار با موفقیت ذخیره شد.');
+            redirect(url('admin/tuition.php'));
+        }
+
         $childId       = (int) ($_POST['child_id'] ?? 0);
         $amount        = (float) ($_POST['amount'] ?? 0);
         $paymentDateRaw = (string) ($_POST['payment_date'] ?? date('Y-m-d'));
@@ -146,6 +178,7 @@ require_once __DIR__ . '/header.php';
             </div>
             <form method="post" action="<?= e(url('admin/tuition.php')) ?>" novalidate>
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                <input type="hidden" name="form_action" value="record_payment">
 
                 <div class="form-group">
                     <label for="child_id" class="form-label">کودک / والدین</label>
@@ -199,6 +232,49 @@ require_once __DIR__ . '/header.php';
                     <button type="submit" class="btn btn-primary">ذخیره پرداخت شهریه</button>
                 </div>
             </form>
+
+            <!-- Dedicated Plan Setting Form -->
+            <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--adm-border-light, #e2e8f0);">
+                <div class="admin-section-header">
+                    <h3 style="font-size: 1rem; font-weight: 700; margin: 0;">تعیین مبلغ مورد انتظار این کودک برای این ماه</h3>
+                </div>
+                <form method="post" action="<?= e(url('admin/tuition.php')) ?>" novalidate>
+                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                    <input type="hidden" name="form_action" value="set_plan">
+
+                    <div class="form-group">
+                        <label for="plan_child_id" class="form-label">کودک</label>
+                        <select name="plan_child_id" id="plan_child_id" class="form-control" required>
+                            <option value="">-- انتخاب کودک --</option>
+                            <?php foreach ($children as $c): ?>
+                                <option value="<?= e((string) $c['id']) ?>" <?= $selectedChildId === (int) $c['id'] ? 'selected' : '' ?>>
+                                    <?= e(trim($c['first_name'] . ' ' . $c['last_name'])) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="plan_month_year" class="form-label">ماه شهریه</label>
+                        <select name="plan_month_year" id="plan_month_year" class="form-control" required>
+                            <?php foreach (getShamsiMonthYearChoices(24, 24) as $choice): ?>
+                                <option value="<?= e($choice['value']) ?>" <?= $choice['is_current'] ? 'selected' : '' ?>>
+                                    <?= e($choice['label']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expected_amount" class="form-label">مبلغ مورد انتظار (تومان)</label>
+                        <input type="number" step="0.01" name="expected_amount" id="expected_amount" class="form-control" placeholder="۰" required min="0">
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-secondary">ذخیره مبلغ مورد انتظار</button>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <div class="admin-section">
@@ -220,13 +296,30 @@ require_once __DIR__ . '/header.php';
                                 <th>نام کودک</th>
                                 <th>والدین</th>
                                 <th>آخرین ماه پرداخت</th>
-                                <th>مجموع پرداختی این ماه</th>
+                                <th>مجموع پرداختی ماه</th>
+                                <th>مبلغ مورد انتظار</th>
+                                <th>مانده بدهی / تسویه</th>
                                 <th>تاریخ آخرین پرداخت</th>
                                 <th>عملیات</th>
                             </tr>
                         </thead>
                         <tbody>
+                            <?php
+                            [$curJy, $curJm] = gregorianToJalali((int)date('Y'), (int)date('n'), (int)date('j'));
+                            $currentMonthYearStr = sprintf('%04d-%02d', $curJy, $curJm);
+                            ?>
                             <?php foreach ($dashboardStatus as $s): ?>
+                                <?php
+                                $sCid = (int) $s['id'];
+                                $sMonth = $s['latest_month'] ?: $currentMonthYearStr;
+                                $balance = childOutstandingBalance($pdo, $sCid, $sMonth);
+
+                                // Expected amount for this child & month
+                                $planStmt = $pdo->prepare('SELECT expected_amount FROM tuition_plans WHERE child_id = :cid AND month_year = :myear LIMIT 1');
+                                $planStmt->execute([':cid' => $sCid, ':myear' => $sMonth]);
+                                $expVal = $planStmt->fetchColumn();
+                                $expectedAmount = ($expVal !== false && $expVal !== null) ? (float)$expVal : (float)getSetting('default_tuition_amount', '0');
+                                ?>
                                 <tr>
                                     <td style="font-weight:600;"><?= e(trim($s['first_name'] . ' ' . $s['last_name'])) ?></td>
                                     <td><?= e(trim($s['p_first'] . ' ' . $s['p_last'])) ?></td>
@@ -242,6 +335,16 @@ require_once __DIR__ . '/header.php';
                                             <strong><?= e(persianNumber(number_format((float) $s['latest_month_total']))) ?> تومان</strong>
                                         <?php else: ?>
                                             <span class="muted">—</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?= e(persianNumber(number_format($expectedAmount))) ?> تومان</td>
+                                    <td>
+                                        <?php if ($balance > 0): ?>
+                                            <span class="badge badge-danger" style="font-weight:700;">بدهکار: <?= e(persianNumber(number_format($balance))) ?> تومان</span>
+                                        <?php elseif ($balance < 0): ?>
+                                            <span class="badge badge-info" style="font-weight:700;">بستانکار: <?= e(persianNumber(number_format(abs($balance)))) ?> تومان</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-success" style="font-weight:700;">تسویه کامل</span>
                                         <?php endif; ?>
                                     </td>
                                     <td><?= $s['latest_date'] ? e(shamsiDate($s['latest_date'])) : '—' ?></td>

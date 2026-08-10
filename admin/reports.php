@@ -58,26 +58,21 @@ try {
     $sStmt->execute([':myear' => $selectedMonthYear]);
     $totalSalaries = (float) ($sStmt->fetchColumn() ?: 0);
 
-    // 3. Total General Expenses in selected month_year
-    // Note: expenses table has expense_date (DATE). We compare year & month.
-    // Convert selectedMonthYear (Shamsi or Gregorian format string) to date range or filter.
-    // In ROMA, month_year is stored as '1405-05' (Jalali string) in tuition_payments & salary_payments.
-    // For expenses, expense_date is a DATE column (Gregorian).
-    // Let's filter expenses by converting Gregorian date to Shamsi Y-m in query or PHP.
-    $expStmt = $pdo->query('SELECT id, category, title, amount, expense_date FROM expenses');
-    $allExpenses = $expStmt ? $expStmt->fetchAll() : [];
+    // 3. Total General Expenses in selected month_year using Gregorian date range
+    [$gregStart, $gregEnd] = jalaliMonthToGregorianRange($selectedMonthYear);
 
-    foreach ($allExpenses as $exp) {
-        $expShamsiMonthYear = shamsiDate($exp['expense_date'], 'Y-m');
-        if ($expShamsiMonthYear === $selectedMonthYear) {
-            $amt = (float) $exp['amount'];
-            $totalGeneralExpenses += $amt;
-            $cat = (string) $exp['category'];
-            if (!isset($expensesByCategory[$cat])) {
-                $expensesByCategory[$cat] = 0.0;
-            }
-            $expensesByCategory[$cat] += $amt;
+    $expStmt = $pdo->prepare('SELECT category, amount FROM expenses WHERE expense_date BETWEEN :gstart AND :gend');
+    $expStmt->execute([':gstart' => $gregStart, ':gend' => $gregEnd]);
+    $monthExpenses = $expStmt->fetchAll();
+
+    foreach ($monthExpenses as $exp) {
+        $amt = (float) $exp['amount'];
+        $totalGeneralExpenses += $amt;
+        $cat = (string) $exp['category'];
+        if (!isset($expensesByCategory[$cat])) {
+            $expensesByCategory[$cat] = 0.0;
         }
+        $expensesByCategory[$cat] += $amt;
     }
 
     $totalExpenses = $totalSalaries + $totalGeneralExpenses;

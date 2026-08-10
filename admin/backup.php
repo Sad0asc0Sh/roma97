@@ -103,7 +103,7 @@ if (isPostRequest() && isset($_POST['action']) && $_POST['action'] === 'download
         }
 
         fwrite($out, "SET FOREIGN_KEY_CHECKS = 1;\n");
-        fwrite($out, "-- End of backup\n");
+        fwrite($out, "-- BACKUP COMPLETE SUCCESSFULLY\n");
 
         fclose($out);
         recordAudit('backup.download', 'database', null, ['filename' => $filename]);
@@ -111,6 +111,13 @@ if (isPostRequest() && isset($_POST['action']) && $_POST['action'] === 'download
 
     } catch (Throwable $e) {
         error_log($e->getMessage());
+        if (headers_sent()) {
+            if (isset($out) && is_resource($out)) {
+                fwrite($out, "\n-- ERROR: Backup was interrupted and is INCOMPLETE. Do not use this file. Error: " . $e->getMessage() . "\n");
+                fclose($out);
+            }
+            exit;
+        }
         setFlash('error', 'ایجاد نسخه پشتیبان دیتابیس با مشکل مواجه شد: ' . $e->getMessage());
         redirect(url('admin/backup.php'));
     }

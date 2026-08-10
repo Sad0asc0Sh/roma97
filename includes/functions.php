@@ -596,6 +596,50 @@ function formatShamsiMonthYear(string|null $monthYear): string
 }
 
 /**
+ * Convert a Shamsi Month-Year string (e.g. "1405-05") to start and end Gregorian dates (YYYY-MM-DD).
+ *
+ * @return array{0: string, 1: string} [gregorian_start_date, gregorian_end_date]
+ */
+function jalaliMonthToGregorianRange(string $monthYear): array
+{
+    if (preg_match('/^(\d{4})-(\d{2})$/', trim($monthYear), $m)) {
+        $jy = (int) $m[1];
+        $jm = (int) $m[2];
+
+        if ($jy > 1700) {
+            // Already Gregorian YYYY-MM
+            $start = sprintf('%04d-%02d-01', $jy, $jm);
+            $lastDay = (int) date('t', strtotime($start));
+            $end = sprintf('%04d-%02d-%02d', $jy, $jm, $lastDay);
+            return [$start, $end];
+        }
+
+        // Shamsi YYYY-MM
+        // First day of Shamsi month is $jy/$jm/1
+        [$gYearStart, $gMonthStart, $gDayStart] = jalaliToGregorian($jy, $jm, 1);
+        $startDate = sprintf('%04d-%02d-%02d', $gYearStart, $gMonthStart, $gDayStart);
+
+        // Next Shamsi month first day minus 1 day
+        $nextJm = $jm + 1;
+        $nextJy = $jy;
+        if ($nextJm > 12) {
+            $nextJm = 1;
+            $nextJy++;
+        }
+        [$gYearNext, $gMonthNext, $gDayNext] = jalaliToGregorian($nextJy, $nextJm, 1);
+        $nextMonthFirstDate = new DateTimeImmutable(sprintf('%04d-%02d-%02d', $gYearNext, $gMonthNext, $gDayNext));
+        $endDate = $nextMonthFirstDate->modify('-1 day')->format('Y-m-d');
+
+        return [$startDate, $endDate];
+    }
+
+    // Default fallback to current Gregorian month range
+    $start = date('Y-m-01');
+    $end = date('Y-m-t');
+    return [$start, $end];
+}
+
+/**
  * Parse a Jalali date string (e.g. "1405/05/16" or "1405-05-16") to Gregorian "YYYY-MM-DD".
  */
 function parseJalaliDate(string $jDate): ?string

@@ -9,12 +9,16 @@ declare(strict_types=1);
 
 define('ROOMA_APP', true);
 
+$isCli = php_sapi_name() === 'cli';
+if (!$isCli) {
+    http_response_code(403);
+    die('این اسکریپت فقط از طریق خط فرمان (CLI) یا Cron Job قابل اجراست.');
+}
+
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/audit.php';
-
-$isCli = php_sapi_name() === 'cli';
 
 function cliLog(string $msg): void
 {
