@@ -33,12 +33,22 @@ if (isPostRequest()) {
     if ($postAction === 'delete') {
         $classroomId = filter_var($_POST['classroom_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $classroomId = is_int($classroomId) ? $classroomId : 0;
+        $forceDelete = isset($_POST['force_delete']) && (string) $_POST['force_delete'] === '1';
 
         if ($classroomId > 0) {
             try {
-                $pdo->prepare('DELETE FROM classrooms WHERE id = :id')->execute([':id' => $classroomId]);
-                recordAudit('classroom.delete', 'classroom', (int) $classroomId);
-                setFlash('success', 'کلاس با موفقیت حذف شد.');
+                // Server-side check for enrolled children
+                $countStmt = $pdo->prepare('SELECT COUNT(*) FROM child_classroom WHERE classroom_id = :id');
+                $countStmt->execute([':id' => $classroomId]);
+                $enrolledCount = (int) $countStmt->fetchColumn();
+
+                if ($enrolledCount > 0 && !$forceDelete) {
+                    setFlash('error', "این کلاس دارای {$enrolledCount} کودک ثبت‌شده است. حذف آن باعث لغو اختصاص کلاس این کودکان خواهد شد.");
+                } else {
+                    $pdo->prepare('DELETE FROM classrooms WHERE id = :id')->execute([':id' => $classroomId]);
+                    recordAudit('classroom.delete', 'classroom', (int) $classroomId, ['enrolled_affected' => $enrolledCount]);
+                    setFlash('success', 'کلاس با موفقیت حذف شد.');
+                }
             } catch (Throwable $e) {
                 error_log($e->getMessage());
                 setFlash('error', 'حذف کلاس امکان‌پذیر نیست.');
@@ -150,6 +160,19 @@ try {
     $activeTeachers = $pdo->query(
         "SELECT id, first_name, last_name FROM teachers WHERE status = 'active' ORDER BY last_name, first_name"
     )->fetchAll();
+
+    // Fetch waitlist entries grouped by classroom
+    $waitlistStmt = $pdo->query(
+        "SELECT cw.id, cw.classroom_id, cw.requested_at, CONCAT(c.first_name, ' ', c.last_name) AS child_name, c.id AS child_id
+         FROM classroom_waitlist cw
+         INNER JOIN children c ON c.id = cw.child_id
+         ORDER BY cw.requested_at ASC"
+    );
+    $allWaitlist = $waitlistStmt ? $waitlistStmt->fetchAll() : [];
+    $waitlistByClassroom = [];
+    foreach ($allWaitlist as $wRow) {
+        $waitlistByClassroom[(int)$wRow['classroom_id']][] = $wRow;
+    }
 } catch (Throwable $e) {
     error_log($e->getMessage());
     $classrooms     = [];
@@ -259,6 +282,10 @@ require_once __DIR__ . '/header.php';
                         <td>
                             <span class="enrolled-count"><?= (int) $cl['enrolled_count'] ?></span>
                             / <?= (int) $cl['capacity'] ?>
+                            <?php $wlEntries = $waitlistByClassroom[(int)$cl['id']] ?? []; ?>
+                            <?php if (!empty($wlEntries)): ?>
+                                <br><span class="badge badge-warning" style="font-size:0.75rem; margin-top:4px;">📋 لیست انتظار: <?= count($wlEntries) ?> کودک</span>
+                            <?php endif; ?>
                         </td>
                         <td class="schedule-cell">
                             <?= $cl['schedule'] ? nl2br(e((string) $cl['schedule'])) : '<span class="muted">—</span>' ?>
@@ -266,11 +293,13 @@ require_once __DIR__ . '/header.php';
                         <td class="teacher-actions-cell">
                             <a href="<?= e(url('admin/classrooms.php?edit=' . (int) $cl['id'])) ?>"
                                class="btn btn-sm btn-secondary">ویرایش</a>
+                            <?php $enrolled = (int) $cl['enrolled_count']; ?>
                             <form method="post" action="<?= e(url('admin/classrooms.php')) ?>" class="inline-form"
-                                  onsubmit="return confirm('این کلاس حذف شود؟');">
+                                  onsubmit="return confirm(<?= $enrolled > 0 ? json_encode('این کلاس ' . $enrolled . ' کودک ثبت‌شده دارد. با حذف کلاس، تخصیص همه آن‌ها هم حذف می‌شود. ادامه می‌دهید؟') : json_encode('این کلاس حذف شود؟') ?>);">
                                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="classroom_id" value="<?= (int) $cl['id'] ?>">
+                                <input type="hidden" name="force_delete" value="1">
                                 <button type="submit" class="btn btn-sm btn-reject">حذف</button>
                             </form>
                         </td>
@@ -285,6 +314,42 @@ require_once __DIR__ . '/header.php';
             </p>
             <?= renderPagination($pagination, url('admin/classrooms.php')) ?>
         <?php endif; ?>
+    <?php endif; ?>
+
+    <!-- Waitlist Overview Section -->
+    <?php if (!empty($allWaitlist)): ?>
+        <div class="admin-section" style="margin-top:28px;">
+            <div class="admin-section-header">
+                <h2 class="admin-section-title">📋 لیست انتظار کلاس‌ها (Waiting List)</h2>
+            </div>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>نام کودک</th>
+                            <th>کلاس درخواستی</th>
+                            <th>تاریخ ثبت درخواست</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($allWaitlist as $w): ?>
+                            <?php
+                            $cName = $pdo->query("SELECT name FROM classrooms WHERE id = " . (int)$w['classroom_id'])->fetchColumn() ?: 'نامشخص';
+                            ?>
+                            <tr>
+                                <td style="font-weight:600;"><a href="<?= e(url('admin/child-detail.php?id=' . (int)$w['child_id'])) ?>"><?= e((string)$w['child_name']) ?></a></td>
+                                <td><span class="badge badge-info"><?= e((string)$cName) ?></span></td>
+                                <td style="font-size:0.85rem; color:var(--adm-text-muted);"><?= e(shamsiDate((string)$w['requested_at'], 'with_time')) ?></td>
+                                <td>
+                                    <a href="<?= e(url('admin/child-detail.php?id=' . (int)$w['child_id'])) ?>" class="btn btn-sm btn-primary">مشاهده و تخصیص</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     <?php endif; ?>
 </section>
 

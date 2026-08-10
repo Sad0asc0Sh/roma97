@@ -48,6 +48,8 @@ function parentChildEnrollmentLabel(string $status): string
         'pending' => 'در انتظار تأیید',
         'active' => 'ثبت‌نام شده',
         'inactive' => 'غیرفعال',
+        'graduated' => 'فارغ‌التحصیل',
+        'withdrawn' => 'انصراف داده',
         default => $status,
     };
 }
@@ -60,7 +62,7 @@ function parentChildEnrollmentClass(string $status): string
     return match ($status) {
         'pending' => 'enrollment-awaiting',
         'active' => 'enrollment-enrolled',
-        'inactive' => 'enrollment-inactive',
+        'inactive', 'graduated', 'withdrawn' => 'enrollment-inactive',
         default => 'enrollment-inactive',
     };
 }

@@ -83,7 +83,7 @@ if (isPostRequest()) {
     $pdo = getDb();
 
     // ── Status change (approve/activate/deactivate) ──────────────────────────
-    if (in_array($postAction, ['approve', 'activate', 'deactivate', 'delete', 'login_as'], true)) {
+    if (in_array($postAction, ['approve', 'activate', 'deactivate', 'delete', 'login_as', 'generate_reset_link'], true)) {
         $teacherId = filter_var($_POST['teacher_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $teacherId = is_int($teacherId) ? $teacherId : 0;
 
@@ -102,6 +102,23 @@ if (isPostRequest()) {
                                     ->execute([':s' => 'inactive', ':id' => $teacherId]),
                 'delete'     => $pdo->prepare('DELETE FROM teachers WHERE id = :id')
                                     ->execute([':id' => $teacherId]),
+                'generate_reset_link' => (function () use ($pdo, $teacherId, $currentAdminId): never {
+                    $token = bin2hex(random_bytes(32));
+                    $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
+                    $ins = $pdo->prepare(
+                        'INSERT INTO password_reset_tokens (token, account_type, account_id, created_by_admin_id, expires_at)
+                         VALUES (:token, "teacher", :tid, :aid, :exp)'
+                    );
+                    $ins->execute([
+                        ':token' => $token,
+                        ':tid'   => $teacherId,
+                        ':aid'   => $currentAdminId > 0 ? $currentAdminId : null,
+                        ':exp'   => $expires,
+                    ]);
+                    recordAudit('teacher.generate_reset_link', 'teacher', (int) $teacherId);
+                    setFlash('reset_link_url', url('reset-password.php?token=' . urlencode($token)));
+                    redirect(url('admin/teachers.php'));
+                })(),
                 'login_as'   => (function () use ($pdo, $teacherId, $currentAdminId): never {
                     // Check teacher is active
                     $check = $pdo->prepare('SELECT status FROM teachers WHERE id = :id LIMIT 1');
@@ -354,6 +371,7 @@ try {
 
 // Login-As URL from flash
 $loginAsUrl = getFlash('login_as_url');
+$resetLinkUrl = getFlash('reset_link_url');
 
 $pageTitle = 'معلمان | ' . siteName();
 require_once __DIR__ . '/header.php';
@@ -366,6 +384,16 @@ require_once __DIR__ . '/header.php';
 <div class="notice" role="status">
     لینک ورود معلم در تب جدیدی باز شد.
     <a href="<?= e($loginAsUrl) ?>" target="_blank">اگر باز نشد اینجا کلیک کنید.</a>
+</div>
+<?php endif; ?>
+
+<?php if ($resetLinkUrl !== null): ?>
+<div class="card" style="padding:16px; margin-bottom:20px; border-right:4px solid var(--adm-primary,#3182ce);">
+    <div style="font-weight:700; margin-bottom:8px;">🔑 لینک بازیابی رمز عبور معلم تولید شد (اعتبار: ۱ ساعت):</div>
+    <div style="display:flex; gap:10px; align-items:center;">
+        <input type="text" value="<?= e($resetLinkUrl) ?>" readonly onclick="this.select()" style="flex:1; padding:8px 12px; border-radius:6px; border:1px solid #cbd5e0; font-family:monospace; direction:ltr;">
+        <button type="button" class="btn btn-secondary" onclick="navigator.clipboard.writeText('<?= e($resetLinkUrl) ?>'); alert('لینک در حافظه کپی شد.');">کپی لینک</button>
+    </div>
 </div>
 <?php endif; ?>
 
@@ -577,6 +605,16 @@ require_once __DIR__ . '/header.php';
                                     <input type="hidden" name="action" value="deactivate">
                                     <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
                                     <button type="submit" class="btn btn-sm btn-secondary">غیرفعال‌سازی</button>
+                                </form>
+
+                                <!-- Generate Password Reset Link -->
+                                <form method="post" action="<?= e(url('admin/teachers.php')) ?>" class="inline-form">
+                                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                                    <input type="hidden" name="action" value="generate_reset_link">
+                                    <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
+                                    <button type="submit" class="btn btn-sm btn-secondary" title="ساخت لینک بازیابی رمز عبور معلم">
+                                        🔑 بازیابی رمز
+                                    </button>
                                 </form>
 
                                 <!-- Login As Teacher -->

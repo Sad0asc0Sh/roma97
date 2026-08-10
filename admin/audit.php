@@ -49,6 +49,8 @@ function auditActionLabel(string $action): string
         'teacher.login_as'       => 'ورود به‌عنوان معلم',
         'salary.payment'         => 'ثبت پرداخت حقوق',
         'tuition.payment'        => 'ثبت پرداخت شهریه',
+        'expense.create'         => 'ثبت هزینه جدید',
+        'expense.delete'         => 'حذف هزینه',
         'message.send'           => 'ارسال پیام',
         'daily_report.save'      => 'ثبت گزارش روزانه',
         'attendance.save'        => 'ثبت حضور و غیاب',
@@ -57,6 +59,17 @@ function auditActionLabel(string $action): string
         'child.activate'         => 'فعال‌سازی کودک',
         'child.reject'           => 'رد ثبت‌نام کودک',
         'child.deactivate'       => 'غیرفعال‌سازی کودک',
+        'child.update_admin'     => 'ویرایش اطلاعات کودک توسط مدیر',
+        'child.update_by_parent' => 'ویرایش اطلاعات کودک توسط والد',
+        'export.tuition_csv'     => 'دریافت خروجی CSV شهریه',
+        'export.salary_csv'      => 'دریافت خروجی CSV حقوق',
+        'export.children_csv'    => 'دریافت خروجی CSV کودکان',
+        'backup.download'        => 'دانلود پشتیبان دیتابیس (SQL)',
+        'auth.password_reset_request' => 'درخواست بازیابی رمز عبور',
+        'auth.password_reset'    => 'تغییر رمز عبور با توکن بازیابی',
+        'parent.generate_reset_link' => 'تولید لینک بازیابی رمز والد توسط مدیر',
+        'teacher.generate_reset_link' => 'تولید لینک بازیابی رمز معلم توسط مدیر',
+        'admin.create'           => 'ایجاد کاربر جدید مدیر سیستم',
     ];
 
     return $labels[$action] ?? $action;

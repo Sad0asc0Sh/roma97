@@ -39,16 +39,10 @@ try {
             redirect(url('admin/salary.php'));
         }
 
-        $sql = <<<SQL
-INSERT INTO salary_payments (teacher_id, amount, payment_date, payment_method, month_year, notes)
-VALUES (:tid, :amount, :pdate, :pmeth, :myear, :notes) AS new
-ON DUPLICATE KEY UPDATE
-    amount         = new.amount,
-    payment_date   = new.payment_date,
-    payment_method = new.payment_method,
-    notes          = new.notes
-SQL;
-        $stmt = $pdo->prepare($sql);
+        $stmt = $pdo->prepare(
+            'INSERT INTO salary_payments (teacher_id, amount, payment_date, payment_method, month_year, notes)
+             VALUES (:tid, :amount, :pdate, :pmeth, :myear, :notes)'
+        );
         $stmt->execute([
             ':tid'    => $teacherId,
             ':amount' => $amount,
@@ -58,7 +52,9 @@ SQL;
             ':notes'  => $notes === '' ? null : $notes,
         ]);
 
-        recordAudit('salary.payment', 'salary_payment', (int) $pdo->lastInsertId(), ['teacher_id' => $teacherId, 'month' => $monthYear]);
+        $salaryId = (int) $pdo->lastInsertId();
+
+        recordAudit('salary.payment', 'salary_payment', $salaryId, ['teacher_id' => $teacherId, 'month' => $monthYear, 'amount' => $amount]);
         setFlash('success', 'پرداخت حقوق با موفقیت ثبت شد.');
         redirect(url('admin/salary.php'));
     }
@@ -97,7 +93,10 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>مدیریت حقوق</h1>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
+        <h1 style="margin:0;">مدیریت حقوق</h1>
+        <a href="<?= e(url('admin/export-csv.php?type=salary')) ?>" class="btn btn-secondary">📥 دریافت خروجی CSV حقوق</a>
+    </div>
 
     <?php if ($successMessage !== null): ?>
         <div class="notice" role="status"><?= e($successMessage) ?></div>
@@ -200,7 +199,7 @@ require_once __DIR__ . '/header.php';
                                     <td style="font-weight:600;"><?= e(trim($pay['first_name'] . ' ' . $pay['last_name'])) ?></td>
                                     <td><?= e(formatShamsiMonthYear($pay['month_year'])) ?></td>
                                     <td class="amount-highlight"><?= e(number_format((float) $pay['amount'], 2)) ?> ت</td>
-                                    <td><?= e(ucwords(str_replace('_', ' ', $pay['payment_method']))) ?></td>
+                                    <td><?= e(match((string) $pay['payment_method']) { 'cash' => 'نقدی', 'bank_transfer' => 'انتقال بانکی', 'check' => 'چک', default => $pay['payment_method'] }) ?></td>
                                     <td class="notes-ellipsis"><?= e($pay['notes'] ?? '—') ?></td>
                                 </tr>
                             <?php endforeach; ?>

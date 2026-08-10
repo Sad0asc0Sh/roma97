@@ -197,6 +197,8 @@ require_once __DIR__ . '/header.php';
                                     $statusClass = match($child['status']) {
                                         'active' => 'badge-success',
                                         'pending' => 'badge-warning',
+                                        'graduated' => 'badge-graduated',
+                                        'withdrawn' => 'badge-withdrawn',
                                         'inactive' => 'badge-danger',
                                         default => 'badge-info'
                                     };

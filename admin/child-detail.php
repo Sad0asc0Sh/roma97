@@ -124,6 +124,8 @@ $allergiesText = trim((string) ($row['allergies'] ?? ''));
 $badgeClass = match ($status) {
     'active' => 'badge-active',
     'inactive' => 'badge-inactive',
+    'graduated' => 'badge-graduated',
+    'withdrawn' => 'badge-withdrawn',
     default => 'badge-pending',
 };
 
@@ -180,6 +182,25 @@ $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
     <div class="alert" role="alert" style="margin-bottom: 20px;"><?= e($errorMessage) ?></div>
 <?php endif; ?>
 
+<?php if (isset($_SESSION['waitlist_offer']) && (int)($_SESSION['waitlist_offer']['child_id'] ?? 0) === $childId): ?>
+    <?php $wlClassId = (int) $_SESSION['waitlist_offer']['classroom_id']; unset($_SESSION['waitlist_offer']); ?>
+    <div class="card" style="padding:16px; margin-bottom:20px; background:#FEF3C7; border-right:4px solid #F59E0B;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div style="font-size:0.9rem; font-weight:600; color:#92400E;">
+                ظرفیت کلاس انتخابی تکمیل است. آیا مایلید این کودک به لیست انتظار این کلاس اضافه شود؟
+            </div>
+            <form method="post" action="<?= e(url('admin/child-action.php')) ?>" style="margin:0;">
+                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                <input type="hidden" name="action" value="add_waitlist">
+                <input type="hidden" name="child_id" value="<?= e($childId) ?>">
+                <input type="hidden" name="classroom_id" value="<?= e($wlClassId) ?>">
+                <input type="hidden" name="redirect" value="<?= e($detailRedirect) ?>">
+                <button type="submit" class="btn btn-primary btn-sm">📋 افزودن به لیست انتظار این کلاس</button>
+            </form>
+        </div>
+    </div>
+<?php endif; ?>
+
 <div class="admin-child-detail">
     <!-- Sidebar: Profile Summary & Quick Actions -->
     <div class="admin-child-detail-sidebar">
@@ -214,31 +235,27 @@ $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
                     <input type="hidden" name="child_id" value="<?= e($childId) ?>">
                     <input type="hidden" name="action" value="approve">
                     <input type="hidden" name="redirect" value="<?= e($detailRedirect) ?>">
-                    <button type="submit" class="btn btn-approve" style="width: 100%; justify-content: center;">✅ تأیید ثبت‌نام</button>
-                </form>
-            <?php endif; ?>
-
-            <?php if ($status !== 'inactive'): ?>
-                <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form" onsubmit="return confirm('این ثبت‌نام رد / غیرفعال شود؟');">
-                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                    <input type="hidden" name="child_id" value="<?= e($childId) ?>">
-                    <input type="hidden" name="action" value="reject">
-                    <input type="hidden" name="redirect" value="<?= e($detailRedirect) ?>">
-                    <button type="submit" class="btn btn-reject btn-secondary" style="width: 100%; justify-content: center;">❌ رد ثبت‌نام</button>
-                </form>
-            <?php endif; ?>
-
-            <?php if ($status === 'inactive'): ?>
-                <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form" onsubmit="return confirm('این کودک به وضعیت فعال برگردد؟');">
-                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                    <input type="hidden" name="child_id" value="<?= e($childId) ?>">
-                    <input type="hidden" name="action" value="activate">
-                    <input type="hidden" name="redirect" value="<?= e($detailRedirect) ?>">
-                    <button type="submit" class="btn btn-approve" style="width: 100%; justify-content: center;">⚡ فعال‌سازی مجدد</button>
+                    <button type="submit" class="btn btn-approve" style="width: 100%; justify-content: center;">✅ تأیید ثبت‌نام / فعال‌سازی</button>
                 </form>
             <?php endif; ?>
 
             <?php if ($status === 'active'): ?>
+                <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form" onsubmit="return confirm('این کودک فارغ‌التحصیل شود؟');">
+                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                    <input type="hidden" name="child_id" value="<?= e($childId) ?>">
+                    <input type="hidden" name="action" value="graduate">
+                    <input type="hidden" name="redirect" value="<?= e($detailRedirect) ?>">
+                    <button type="submit" class="btn btn-secondary" style="width: 100%; justify-content: center; background:#F3E8FF; color:#6B21A8; border-color:#E9D5FF;">🎓 تغییر به فارغ‌التحصیل</button>
+                </form>
+
+                <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form" onsubmit="return confirm('ثبت انصراف این کودک انجام شود؟');">
+                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                    <input type="hidden" name="child_id" value="<?= e($childId) ?>">
+                    <input type="hidden" name="action" value="withdraw">
+                    <input type="hidden" name="redirect" value="<?= e($detailRedirect) ?>">
+                    <button type="submit" class="btn btn-secondary" style="width: 100%; justify-content: center;">🚪 ثبت انصراف</button>
+                </form>
+
                 <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form" onsubmit="return confirm('ثبت‌نام این کودک غیرفعال شود؟');">
                     <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                     <input type="hidden" name="child_id" value="<?= e($childId) ?>">
@@ -345,7 +362,7 @@ $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
                     </div>
 
                     <?php if (!empty($allClassrooms) && $status === 'active'): ?>
-                        <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form classroom-assign-form" style="display: flex; gap: 10px; align-items: center;">
+                        <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form classroom-assign-form" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                             <input type="hidden" name="action" value="assign_classroom">
                             <input type="hidden" name="child_id" value="<?= e((string) $childId) ?>">
@@ -360,6 +377,10 @@ $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
                                     </option>
                                 <?php endforeach; ?>
                             </select>
+                            <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; cursor: pointer; color: var(--adm-text-muted);">
+                                <input type="checkbox" name="force_over_capacity" value="1">
+                                تخصیص خارج از ظرفیت (نیاز فوری)
+                            </label>
                             <button type="submit" class="btn btn-secondary">ذخیره تغییرات</button>
                         </form>
                     <?php endif; ?>

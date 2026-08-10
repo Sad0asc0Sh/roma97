@@ -318,7 +318,30 @@ if (isPostRequest()) {
                 deleteChildPhoto($currentPhoto);
             }
 
-            recordAudit('child.update', 'child', $childId);
+            $oldAllergies = (string) ($child['allergies'] ?? '');
+            $newAllergies = $old['allergies'] === '' ? '' : $old['allergies'];
+            $oldMedicalNotes = (string) ($child['medical_notes'] ?? '');
+            $newMedicalNotes = $old['medical_notes'] === '' ? '' : $old['medical_notes'];
+
+            $auditDetails = [];
+
+            if ($oldAllergies !== $newAllergies) {
+                $auditDetails['allergies'] = [
+                    'field' => 'allergies',
+                    'old' => $oldAllergies,
+                    'new' => $newAllergies,
+                ];
+            }
+
+            if ($oldMedicalNotes !== $newMedicalNotes) {
+                $auditDetails['medical_notes'] = [
+                    'field' => 'medical_notes',
+                    'old' => $oldMedicalNotes,
+                    'new' => $newMedicalNotes,
+                ];
+            }
+
+            recordAudit('child.update_by_parent', 'child', $childId, $auditDetails);
 
             setFlash('success', 'اطلاعات کودک با موفقیت به‌روزرسانی شد.');
             redirect(url('parent/child-detail.php?id=' . $childId));

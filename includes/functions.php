@@ -729,3 +729,29 @@ function renderPagination(array $meta, string $baseUrl, array $query = [], strin
 
     return $html;
 }
+
+/**
+ * Calculate the outstanding tuition balance for a child in a given month.
+ * Returns expected_amount (from tuition_plans or default_tuition_amount setting) minus SUM(amount) paid.
+ * A positive result means outstanding debt; zero means paid in full; negative means overpayment/credit.
+ */
+function childOutstandingBalance(PDO $pdo, int $childId, string $monthYear): float
+{
+    // 1. Get expected amount from tuition_plans for this child and month_year
+    $planStmt = $pdo->prepare('SELECT expected_amount FROM tuition_plans WHERE child_id = :cid AND month_year = :myear LIMIT 1');
+    $planStmt->execute([':cid' => $childId, ':myear' => $monthYear]);
+    $expectedRaw = $planStmt->fetchColumn();
+
+    if ($expectedRaw !== false && $expectedRaw !== null) {
+        $expectedAmount = (float) $expectedRaw;
+    } else {
+        $expectedAmount = (float) getSetting('default_tuition_amount', '0');
+    }
+
+    // 2. Get SUM of payments for this child and month_year
+    $paidStmt = $pdo->prepare('SELECT SUM(amount) FROM tuition_payments WHERE child_id = :cid AND month_year = :myear');
+    $paidStmt->execute([':cid' => $childId, ':myear' => $monthYear]);
+    $totalPaid = (float) ($paidStmt->fetchColumn() ?: 0);
+
+    return $expectedAmount - $totalPaid;
+}

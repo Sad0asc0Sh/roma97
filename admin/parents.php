@@ -9,17 +9,38 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
 
 requireLogin();
+$currentAdminId = (int) ($_SESSION['admin_id'] ?? 0);
 if (isPostRequest()) {
     $csrf=$_POST['csrf_token']??''; $action=(string)($_POST['action']??'');
     $pid=filter_var($_POST['parent_id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
     $pid=is_int($pid)?$pid:0;
     if (!validateCsrfToken($csrf)){setFlash('error','درخواست نامعتبر.');redirect(url('admin/parents.php'));}
     try {
+        initializeFinancialTables();
         $pdo=getDb();
         if($pid===0){setFlash('error','شناسه نامعتبر.');redirect(url('admin/parents.php'));}
         $chk=$pdo->prepare('SELECT id,first_name,last_name,email,status FROM parents WHERE id=:id LIMIT 1');
         $chk->execute([':id'=>$pid]); $par=$chk->fetch();
         if(!$par){setFlash('error','یافت نشد.');redirect(url('admin/parents.php'));}
+
+        if ($action === 'generate_reset_link') {
+            $token = bin2hex(random_bytes(32));
+            $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
+            $ins = $pdo->prepare(
+                'INSERT INTO password_reset_tokens (token, account_type, account_id, created_by_admin_id, expires_at)
+                 VALUES (:token, "parent", :pid, :aid, :exp)'
+            );
+            $ins->execute([
+                ':token' => $token,
+                ':pid' => $pid,
+                ':aid' => $currentAdminId > 0 ? $currentAdminId : null,
+                ':exp' => $expires,
+            ]);
+            recordAudit('parent.generate_reset_link', 'parent', $pid);
+            setFlash('reset_link_url', url('reset-password.php?token=' . urlencode($token)));
+            redirect(url('admin/parents.php'));
+        }
+
         $updates=['approve'=>'active','reject'=>'suspended','suspend'=>'suspended','activate'=>'active'];
         if(array_key_exists($action,$updates)){
             $ns=$updates[$action];
@@ -50,12 +71,22 @@ $pagi=['current'=>$cp,'totalPages'=>$tp,'total'=>$total,'perPage'=>$pp,'from'=>$
 $pageTitle='parents | '.siteName();
 require_once __DIR__.'/header.php';
 $fHref=static fn(string $v):string=>url('admin/parents.php?'.http_build_query(['status'=>$v]));
-$fe=getFlash('error');$fs=getFlash('success');
+$fe=getFlash('error');$fs=getFlash('success');$resetLinkUrl=getFlash('reset_link_url');
 ?>
 <section class="dashboard">
     <div class="app-toolbar">
         <h1 class="m-0 font-bold">مدیریت والدین</h1>
     </div>
+
+    <?php if(!empty($resetLinkUrl)):?>
+        <div class="card" style="padding:16px; margin-bottom:20px; border-right:4px solid var(--adm-primary,#3182ce);">
+            <div style="font-weight:700; margin-bottom:8px;">🔑 لینک بازیابی رمز عبور تولید شد (اعتبار: ۱ ساعت):</div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <input type="text" value="<?=e($resetLinkUrl)?>" readonly onclick="this.select()" style="flex:1; padding:8px 12px; border-radius:6px; border:1px solid #cbd5e0; font-family:monospace; direction:ltr;">
+                <button type="button" class="btn btn-secondary" onclick="navigator.clipboard.writeText('<?=e($resetLinkUrl)?>'); alert('لینک در حافظه کپی شد.');">کپی لینک</button>
+            </div>
+        </div>
+    <?php endif;?>
 
     <?php if(!empty($fe)):?><div class="alert alert-error" style="margin-bottom:16px;"><?=e($fe)?></div><?php endif;?>
     <?php if(!empty($fs)):?><div class="alert alert-success" style="margin-bottom:16px;"><?=e($fs)?></div><?php endif;?>
@@ -93,6 +124,7 @@ $fe=getFlash('error');$fs=getFlash('success');
                     <?php else:?>
                         <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="activate"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-success">فعال‌سازی</button></form>
                     <?php endif;?>
+                    <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="generate_reset_link"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-secondary" title="ساخت لینک بازیابی رمز عبور">🔑 بازیابی رمز</button></form>
                 </td>
             </tr>
         <?php endforeach;?>

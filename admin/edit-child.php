@@ -250,7 +250,7 @@ if (isPostRequest()) {
     ];
     $removePhoto = isset($_POST['remove_photo']) && $_POST['remove_photo'] === '1';
     $allowedGenders = ['', 'male', 'female', 'other'];
-    $allowedStatuses = ['pending', 'active', 'inactive'];
+    $allowedStatuses = ['pending', 'active', 'inactive', 'graduated', 'withdrawn'];
     $newPhotoPath = null;
 
     if (!validateCsrfToken($csrfToken)) {
@@ -350,6 +350,25 @@ if (isPostRequest()) {
             ]);
 
             // Classroom update
+            $forceOverCapacity = isset($_POST['force_over_capacity']) && (string) $_POST['force_over_capacity'] === '1';
+
+            if ($old['classroom_id'] > 0 && $old['status'] === 'active') {
+                $clStmt = $pdo->prepare('SELECT capacity FROM classrooms WHERE id = :clid LIMIT 1');
+                $clStmt->execute([':clid' => $old['classroom_id']]);
+                $clRow = $clStmt->fetch();
+
+                if ($clRow) {
+                    $capacity = (int) $clRow['capacity'];
+                    $countStmt = $pdo->prepare('SELECT COUNT(*) FROM child_classroom WHERE classroom_id = :clid AND child_id != :cid');
+                    $countStmt->execute([':clid' => $old['classroom_id'], ':cid' => $childId]);
+                    $enrolledCount = (int) $countStmt->fetchColumn();
+
+                    if ($enrolledCount >= $capacity && !$forceOverCapacity) {
+                        throw new RuntimeException("ظرفیت این کلاس تکمیل است ({$enrolledCount} از {$capacity} نفر). ابتدا ظرفیت را افزایش دهید یا تیک تخصیص خارج از ظرفیت را بزنید.");
+                    }
+                }
+            }
+
             $delCl = $pdo->prepare('DELETE FROM child_classroom WHERE child_id = :cid');
             $delCl->execute([':cid' => $childId]);
 
@@ -367,10 +386,33 @@ if (isPostRequest()) {
                 deleteAdminChildPhoto($currentPhoto);
             }
 
-            recordAudit('child.update_admin', 'child', $childId, [
+            $oldAllergies = (string) ($child['allergies'] ?? '');
+            $newAllergies = $old['allergies'] === '' ? '' : $old['allergies'];
+            $oldMedicalNotes = (string) ($child['medical_notes'] ?? '');
+            $newMedicalNotes = $old['medical_notes'] === '' ? '' : $old['medical_notes'];
+
+            $auditDetails = [
                 'status' => $old['status'],
                 'classroom_id' => $old['classroom_id'],
-            ]);
+            ];
+
+            if ($oldAllergies !== $newAllergies) {
+                $auditDetails['allergies'] = [
+                    'field' => 'allergies',
+                    'old' => $oldAllergies,
+                    'new' => $newAllergies,
+                ];
+            }
+
+            if ($oldMedicalNotes !== $newMedicalNotes) {
+                $auditDetails['medical_notes'] = [
+                    'field' => 'medical_notes',
+                    'old' => $oldMedicalNotes,
+                    'new' => $newMedicalNotes,
+                ];
+            }
+
+            recordAudit('child.update_admin', 'child', $childId, $auditDetails);
 
             setFlash('success', 'اطلاعات کودک با موفقیت به‌روزرسانی شد.');
             redirect(url('admin/child-detail.php?id=' . $childId));
@@ -457,6 +499,8 @@ require_once __DIR__ . '/header.php';
                         <select id="status" name="status">
                             <option value="pending" <?= $old['status'] === 'pending' ? 'selected' : '' ?>>در انتظار (Pending)</option>
                             <option value="active" <?= $old['status'] === 'active' ? 'selected' : '' ?>>فعال (Active)</option>
+                            <option value="graduated" <?= $old['status'] === 'graduated' ? 'selected' : '' ?>>فارغ‌التحصیل (Graduated)</option>
+                            <option value="withdrawn" <?= $old['status'] === 'withdrawn' ? 'selected' : '' ?>>انصراف‌داده (Withdrawn)</option>
                             <option value="inactive" <?= $old['status'] === 'inactive' ? 'selected' : '' ?>>غیرفعال (Inactive)</option>
                         </select>
                     </div>
@@ -481,6 +525,10 @@ require_once __DIR__ . '/header.php';
                             </option>
                         <?php endforeach; ?>
                     </select>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; color: var(--adm-text-muted); margin-top: 6px;">
+                        <input type="checkbox" name="force_over_capacity" value="1">
+                        تخصیص خارج از ظرفیت (نیاز فوری)
+                    </label>
                 </div>
             </div>
 

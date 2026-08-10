@@ -290,6 +290,35 @@ function requireLogin(): void
     if (!isLoggedIn()) {
         redirect(url('admin/login.php'));
     }
+
+    $currentPage = 'admin/' . basename($_SERVER['PHP_SELF'] ?? '');
+    if (!isPageAllowedForRole($currentPage, currentAdminRole())) {
+        setFlash('error', 'شما دسترسی به این بخش را ندارید.');
+        redirect(url('admin/index.php'));
+    }
+}
+
+function currentAdminRole(): string
+{
+    return (string) ($_SESSION['admin_role'] ?? 'owner');
+}
+
+function requireAdminRole(array $allowedRoles): void
+{
+    requireLogin();
+    if (!in_array(currentAdminRole(), $allowedRoles, true)) {
+        setFlash('error', 'شما دسترسی به این بخش را ندارید.');
+        redirect(url('admin/index.php'));
+    }
+}
+
+function isPageAllowedForRole(string $pagePath, string $role): bool
+{
+    require_once __DIR__ . '/permissions.php';
+    $matrix = adminPermissionsMatrix();
+    $allowedPages = $matrix[$role] ?? $matrix['owner'];
+
+    return in_array($pagePath, $allowedPages, true);
 }
 
 function isParentLoggedIn(): bool

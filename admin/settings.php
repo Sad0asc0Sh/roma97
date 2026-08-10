@@ -205,6 +205,55 @@ if (isPostRequest()) {
         redirect(url('admin/settings.php'));
     }
 
+    if ($action === 'create_admin') {
+        if (currentAdminRole() !== 'owner') {
+            setFlash('error', 'تنها مدیر ارشد (Owner) می‌تواند کاربر جدید پنل تعریف کند.');
+            redirect(url('admin/settings.php'));
+        }
+
+        $newUsername = trim((string) ($_POST['new_admin_username'] ?? ''));
+        $newPassword = (string) ($_POST['new_admin_password'] ?? '');
+        $newRole     = (string) ($_POST['new_admin_role'] ?? 'manager');
+
+        $allowedRoles = ['owner', 'manager', 'accountant', 'receptionist'];
+
+        if (!preg_match('/\A[A-Za-z0-9_]{3,50}\z/', $newUsername)) {
+            setFlash('error', 'نام کاربری باید ۳ تا ۵۰ کاراکتر و شامل حروف، اعداد یا زیرخط باشد.');
+            redirect(url('admin/settings.php'));
+        }
+
+        if (!isStrongAdminPassword($newPassword)) {
+            setFlash('error', 'رمز عبور باید حداقل ۸ کاراکتر و شامل حرف و عدد باشد.');
+            redirect(url('admin/settings.php'));
+        }
+
+        if (!in_array($newRole, $allowedRoles, true)) {
+            setFlash('error', 'نقش انتخابی نامعتبر است.');
+            redirect(url('admin/settings.php'));
+        }
+
+        $chkStmt = $pdo->prepare('SELECT id FROM admins WHERE username = :u LIMIT 1');
+        $chkStmt->execute([':u' => $newUsername]);
+
+        if ($chkStmt->fetchColumn() !== false) {
+            setFlash('error', 'این نام کاربری قبلاً استفاده شده است.');
+            redirect(url('admin/settings.php'));
+        }
+
+        $insStmt = $pdo->prepare(
+            'INSERT INTO admins (username, password, role) VALUES (:u, :p, :r)'
+        );
+        $insStmt->execute([
+            ':u' => $newUsername,
+            ':p' => password_hash($newPassword, PASSWORD_DEFAULT),
+            ':r' => $newRole,
+        ]);
+
+        recordAudit('admin.create', 'admin', (int) $pdo->lastInsertId(), ['username' => $newUsername, 'role' => $newRole]);
+        setFlash('success', 'حساب مدیر جدید با موفقیت ایجاد شد.');
+        redirect(url('admin/settings.php'));
+    }
+
     if ($action === 'change_password') {
         if ($admin === null) {
             setFlash('error', 'حساب کاربری شما پیدا نشد. لطفاً دوباره وارد شوید.');
@@ -484,6 +533,46 @@ require_once __DIR__ . '/header.php';
                 </div>
             </form>
         </div>
+
+        <?php if (currentAdminRole() === 'owner'): ?>
+            <div class="admin-section">
+                <div class="admin-section-header">
+                    <h2 class="admin-section-title">افزودن کاربر جدید پنل مدیریت</h2>
+                </div>
+                <p style="color:var(--muted);margin-bottom:var(--space-md);font-size:0.9rem;">تعریف حساب کاربری جدید برای کارمندان با نقش‌های دسترسی مشخص.</p>
+                <form method="post" action="<?= e(url('admin/settings.php')) ?>" novalidate>
+                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                    <input type="hidden" name="action" value="create_admin">
+
+                    <div class="form-group">
+                        <label for="new_admin_username" class="form-label">نام کاربری <span class="req">*</span></label>
+                        <input type="text" id="new_admin_username" name="new_admin_username" class="form-control"
+                            maxlength="50" placeholder="مثال: accountant1" required pattern="[A-Za-z0-9_]{3,50}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="new_admin_password" class="form-label">رمز عبور <span class="req">*</span></label>
+                        <input type="password" id="new_admin_password" name="new_admin_password" class="form-control"
+                            autocomplete="new-password" minlength="8" required>
+                        <small style="color:var(--muted);font-size:0.85rem;">حداقل ۸ کاراکتر، شامل حداقل یک حرف و یک عدد.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="new_admin_role" class="form-label">نقش دسترسی <span class="req">*</span></label>
+                        <select id="new_admin_role" name="new_admin_role" class="form-control" required>
+                            <option value="manager">مدیر داخلی (Manager) - همه صفحات به‌جز تنظیمات کل</option>
+                            <option value="accountant">حسابدار (Accountant) - فقط صفحات مالی و گزارشات</option>
+                            <option value="receptionist">مسئول پذیرش (Receptionist) - مدیریت کودکان، حضور و غیاب و پیام‌ها</option>
+                            <option value="owner">مدیر ارشد (Owner) - دسترسی کامل به تمامی بخش‌ها</option>
+                        </select>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">ایجاد حساب کاربر</button>
+                    </div>
+                </form>
+            </div>
+        <?php endif; ?>
     </div>
 </section>
 

@@ -236,6 +236,22 @@ sudo chmod -R 775 /var/www/rooma/assets/uploads
 
 ---
 
+## 11. Automatic Overdue Tuition Reminders (Cron Job Setup)
+
+ROMA includes an automated background script to send polite in-app message reminders to parents who have overdue tuition for the current Shamsi month (with built-in anti-spam logic restricting reminders to once every 7 days).
+
+### cPanel Cron Job Configuration:
+1. Log into your **cPanel** dashboard.
+2. Navigate to **Advanced → Cron Jobs**.
+3. Under **Add New Cron Job**, set the schedule (recommended: Daily at 9:00 AM — `0 9 * * *`).
+4. Set the command to run PHP CLI against the script:
+   ```bash
+   php /home/username/public_html/bin/send-overdue-reminders.php >/dev/null 2>&1
+   ```
+   *(Replace `/home/username/public_html` with the absolute path to your site installation).*
+
+---
+
 ## 10. Audit Log
 
 All sensitive mutations are recorded in the `audit_log` table and viewable at

@@ -371,8 +371,21 @@
 
 .status-badge-active,
 .status-badge-pending,
+.status-badge-inactive,
+.status-badge-graduated,
+.status-badge-withdrawn,
 .status-badge-suspended {
   border: none;
+}
+
+.status-badge-graduated {
+  background: #F3E8FF;
+  color: #6B21A8;
+}
+
+.status-badge-withdrawn {
+  background: #F1F5F9;
+  color: #64748B;
 }
 
 .status-badge-active {

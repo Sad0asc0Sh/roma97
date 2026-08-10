@@ -89,7 +89,7 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
 <?php
 $isContentActive = in_array($currentPage, ['slides.php', 'gallery.php', 'news.php', 'pages.php'], true);
 $isChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php', 'attendance.php', 'classrooms.php', 'parents.php'], true);
-$isFinanceActive = in_array($currentPage, ['tuition.php', 'salary.php'], true);
+$isFinanceActive = in_array($currentPage, ['tuition.php', 'salary.php', 'expenses.php', 'reports.php'], true);
 ?>
 <script>
 function toggleAdminSubmenu(btn, id) {
@@ -166,11 +166,17 @@ function toggleAdminSubmenu(btn, id) {
                 </button>
                 <div class="admin-nav-submenu <?php echo $isFinanceActive ? 'open active' : ''; ?>" id="submenu-finance" style="<?php echo $isFinanceActive ? 'display:flex;' : 'display:none;'; ?>">
 
-            <a href="<?php echo e(url('admin/tuition.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'tuition.php' ? 'active' : ''; ?>">
+                    <a href="<?php echo e(url('admin/tuition.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'tuition.php' ? 'active' : ''; ?>">
                         <span class="nav-text">شهریه</span>
                     </a>
                     <a href="<?php echo e(url('admin/salary.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'salary.php' ? 'active' : ''; ?>">
                         <span class="nav-text">حقوق</span>
+                    </a>
+                    <a href="<?php echo e(url('admin/expenses.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'expenses.php' ? 'active' : ''; ?>">
+                        <span class="nav-text">هزینه‌ها</span>
+                    </a>
+                    <a href="<?php echo e(url('admin/reports.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'reports.php' ? 'active' : ''; ?>">
+                        <span class="nav-text">گزارش مالی</span>
                     </a>
                 </div>
             </div>
@@ -191,6 +197,11 @@ function toggleAdminSubmenu(btn, id) {
             <a href="<?php echo e(url('admin/audit.php')); ?>" class="admin-nav-item <?php echo $currentPage === 'audit.php' ? 'active' : ''; ?>">
                 <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
                 <span class="nav-text">گزارش فعالیت‌ها</span>
+            </a>
+
+            <a href="<?php echo e(url('admin/backup.php')); ?>" class="admin-nav-item <?php echo $currentPage === 'backup.php' ? 'active' : ''; ?>">
+                <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span>
+                <span class="nav-text">پشتیبان‌گیری</span>
             </a>
 
             <div class="admin-nav-divider"></div>
@@ -214,7 +225,7 @@ function toggleAdminSubmenu(btn, id) {
                 <div class="admin-user-avatar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
                 <div class="admin-user-details">
                     <div class="admin-user-name"><?php echo e($adminUsername); ?></div>
-                    <div class="admin-user-role">مدیر سیستم</div>
+                    <div class="admin-user-role"><?php echo e(adminRoleLabel(currentAdminRole())); ?></div>
                 </div>
             </div>
         </div>

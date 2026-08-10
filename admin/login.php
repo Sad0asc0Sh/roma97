@@ -52,7 +52,7 @@ if ($lockedOut) {
         try {
             $pdo = getDb();
             $statement = $pdo->prepare(
-                'SELECT id, username, password FROM admins WHERE username = :username LIMIT 1'
+                'SELECT id, username, password, role FROM admins WHERE username = :username LIMIT 1'
             );
             $statement->execute([':username' => $username]);
             $admin = $statement->fetch();
@@ -64,6 +64,7 @@ if ($lockedOut) {
                 $_SESSION['admin_logged_in'] = true;
                 $_SESSION['admin_id'] = (int) $admin['id'];
                 $_SESSION['admin_username'] = $admin['username'];
+                $_SESSION['admin_role'] = (string) ($admin['role'] ?? 'owner');
                 recordAudit('auth.login', 'admin', (int) $admin['id']);
                 rotateCsrfToken();
                 redirect(url('admin/index.php'));

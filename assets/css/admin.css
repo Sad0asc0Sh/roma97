@@ -282,6 +282,8 @@ a:hover{color:var(--adm-primary-dark)}
 .badge-active{background:var(--adm-success-50);color:#065F46;border:1px solid var(--adm-success-100)}
 .badge-inactive{background:#F1F5F9;color:#475569;border:1px solid #E2E8F0}
 .badge-pending{background:var(--adm-warning-50);color:#92400E;border:1px solid var(--adm-warning-100)}
+.badge-graduated{background:#F3E8FF;color:#6B21A8;border:1px solid #E9D5FF}
+.badge-withdrawn{background:#F1F5F9;color:#64748B;border:1px solid #CBD5E1}
 
 /* ── ALERTS ─────────────────────────────────────────────────── */
 .alert{padding:14px 18px;border-radius:var(--adm-radius);font-size:0.85rem;font-weight:500;margin-bottom:20px;display:flex;align-items:center;gap:10px;border:1px solid;animation:slideIn 0.3s ease-out}

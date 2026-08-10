@@ -12,7 +12,7 @@ require_once __DIR__ . '/../includes/db.php';
 requireLogin();
 
 /** @var list<string> $allowedStatuses */
-$allowedStatuses = ['all', 'pending', 'active', 'inactive'];
+$allowedStatuses = ['all', 'pending', 'active', 'inactive', 'graduated', 'withdrawn'];
 $statusFilter = strtolower(trim((string) ($_GET['status'] ?? '')));
 
 if ($statusFilter === '') {
@@ -130,7 +130,10 @@ $filterHref = static fn (string $value): string => url(
 ?>
 
 <section class="dashboard">
-    <h1>ثبت‌نام کودکان</h1>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:12px;">
+        <h1 style="margin:0;">ثبت‌نام کودکان</h1>
+        <a href="<?= e(url('admin/export-csv.php?' . http_build_query(['type' => 'children', 'status' => $statusFilter]))) ?>" class="btn btn-secondary">📥 دریافت خروجی CSV کودکان</a>
+    </div>
 
     <p class="admin-attendance-quick">
         <a href="<?= e(url('admin/attendance.php')) ?>">حضور و غیاب امروز</a>
@@ -145,7 +148,7 @@ $filterHref = static fn (string $value): string => url(
     <?php endif; ?>
 
     <nav class="filter-nav" aria-label="فیلتر بر اساس وضعیت ثبت‌نام کودکان">
-        <?php foreach (['all' => 'همه', 'pending' => 'در انتظار', 'active' => 'فعال', 'inactive' => 'غیرفعال'] as $value => $label): ?>
+        <?php foreach (['all' => 'همه', 'pending' => 'در انتظار', 'active' => 'فعال', 'graduated' => 'فارغ‌التحصیل', 'withdrawn' => 'انصراف داده', 'inactive' => 'غیرفعال'] as $value => $label): ?>
             <a
                 href="<?= e($filterHref($value)) ?>"
                 class="<?= $statusFilter === $value ? 'is-active' : '' ?>"
@@ -168,7 +171,17 @@ $filterHref = static fn (string $value): string => url(
                 $badgeClass = match ($cs) {
                     'active' => 'badge-active',
                     'inactive' => 'badge-inactive',
+                    'graduated' => 'badge-graduated',
+                    'withdrawn' => 'badge-withdrawn',
                     default => 'badge-pending',
+                };
+                $statusText = match ($cs) {
+                    'active' => 'فعال',
+                    'pending' => 'در انتظار',
+                    'graduated' => 'فارغ‌التحصیل',
+                    'withdrawn' => 'انصراف داده',
+                    'inactive' => 'غیرفعال',
+                    default => $cs,
                 };
                 ?>
                 <article class="admin-child-card">
@@ -200,7 +213,7 @@ $filterHref = static fn (string $value): string => url(
                                 </p>
                             </div>
                             <div class="admin-child-card-badges">
-                                <span class="badge <?= e($badgeClass) ?>"><?= e($cs) ?></span>
+                                <span class="badge <?= e($badgeClass) ?>"><?= e($statusText) ?></span>
                                 <?php if ($hasAllergies): ?>
                                     <span class="allergy-indicator" title="حساسیت گزارش شده"><svg width="14" height="14" aria-hidden="true" style="vertical-align:middle;"><use href="<?= e(asset('assets/img/icons.svg#icon-alert-triangle')) ?>"/></svg></span>
                                 <?php endif; ?>

@@ -55,16 +55,10 @@ try {
             redirect(url('admin/tuition.php'));
         }
 
-        $sql = <<<SQL
-INSERT INTO tuition_payments (parent_id, child_id, amount, payment_date, payment_method, month_year, notes)
-VALUES (:pid, :cid, :amount, :pdate, :pmeth, :myear, :notes) AS new
-ON DUPLICATE KEY UPDATE
-    amount         = new.amount,
-    payment_date   = new.payment_date,
-    payment_method = new.payment_method,
-    notes          = new.notes
-SQL;
-        $stmt = $pdo->prepare($sql);
+        $stmt = $pdo->prepare(
+            'INSERT INTO tuition_payments (parent_id, child_id, amount, payment_date, payment_method, month_year, notes)
+             VALUES (:pid, :cid, :amount, :pdate, :pmeth, :myear, :notes)'
+        );
         $stmt->execute([
             ':pid'    => $parentId,
             ':cid'    => $childId,
@@ -75,12 +69,13 @@ SQL;
             ':notes'  => $notes === '' ? null : $notes,
         ]);
 
-        // lastInsertId() returns 0 on UPDATE (ON DUPLICATE KEY UPDATE), so fetch the real id
-        $idStmt = $pdo->prepare('SELECT id FROM tuition_payments WHERE child_id = :cid AND month_year = :myear LIMIT 1');
-        $idStmt->execute([':cid' => $childId, ':myear' => $monthYear]);
-        $tuitionId = (int) $idStmt->fetchColumn();
+        $tuitionId = (int) $pdo->lastInsertId();
 
-        recordAudit('tuition.payment', 'tuition_payment', $tuitionId);
+        recordAudit('tuition.payment', 'tuition_payment', $tuitionId, [
+            'child_id' => $childId,
+            'amount' => $amount,
+            'month' => $monthYear,
+        ]);
         setFlash('success', 'پرداخت شهریه با موفقیت ثبت شد.');
         redirect(url('admin/tuition.php'));
     }
@@ -106,7 +101,8 @@ SQL;
             c.id, c.first_name, c.last_name,
             p.first_name AS p_first, p.last_name AS p_last,
             (SELECT month_year FROM tuition_payments WHERE child_id = c.id ORDER BY month_year DESC, payment_date DESC, id DESC LIMIT 1) AS latest_month,
-            (SELECT payment_date FROM tuition_payments WHERE child_id = c.id ORDER BY month_year DESC, payment_date DESC, id DESC LIMIT 1) AS latest_date
+            (SELECT payment_date FROM tuition_payments WHERE child_id = c.id ORDER BY month_year DESC, payment_date DESC, id DESC LIMIT 1) AS latest_date,
+            (SELECT SUM(amount) FROM tuition_payments WHERE child_id = c.id AND month_year = (SELECT month_year FROM tuition_payments WHERE child_id = c.id ORDER BY month_year DESC, payment_date DESC, id DESC LIMIT 1)) AS latest_month_total
         FROM children c
         INNER JOIN parents p ON p.id = c.parent_id
         WHERE c.status = 'active'
@@ -130,7 +126,10 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>مدیریت شهریه</h1>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
+        <h1 style="margin:0;">مدیریت شهریه</h1>
+        <a href="<?= e(url('admin/export-csv.php?type=tuition')) ?>" class="btn btn-secondary">📥 دریافت خروجی CSV شهریه</a>
+    </div>
 
     <?php if ($successMessage !== null): ?>
         <div class="notice" role="status"><?= e($successMessage) ?></div>
@@ -221,6 +220,7 @@ require_once __DIR__ . '/header.php';
                                 <th>نام کودک</th>
                                 <th>والدین</th>
                                 <th>آخرین ماه پرداخت</th>
+                                <th>مجموع پرداختی این ماه</th>
                                 <th>تاریخ آخرین پرداخت</th>
                                 <th>عملیات</th>
                             </tr>
@@ -235,6 +235,13 @@ require_once __DIR__ . '/header.php';
                                             <span class="badge badge-success"><?= e(formatShamsiMonthYear($s['latest_month'])) ?></span>
                                         <?php else: ?>
                                             <span class="badge badge-danger">ندارد</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($s['latest_month_total'] !== null): ?>
+                                            <strong><?= e(persianNumber(number_format((float) $s['latest_month_total']))) ?> تومان</strong>
+                                        <?php else: ?>
+                                            <span class="muted">—</span>
                                         <?php endif; ?>
                                     </td>
                                     <td><?= $s['latest_date'] ? e(shamsiDate($s['latest_date'])) : '—' ?></td>

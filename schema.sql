@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS admins (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
+    role ENUM('owner','manager','accountant','receptionist') NOT NULL DEFAULT 'owner',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -92,7 +93,7 @@ CREATE TABLE IF NOT EXISTS children (
     second_guardian_name VARCHAR(200) DEFAULT NULL,
     second_guardian_phone VARCHAR(20) DEFAULT NULL,
     photo VARCHAR(255) DEFAULT NULL,
-    status ENUM('pending','active','inactive') DEFAULT 'pending',
+    status ENUM('pending','active','inactive','graduated','withdrawn') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_children_parent_id (parent_id),
     CONSTRAINT fk_children_parent
@@ -165,7 +166,7 @@ CREATE TABLE IF NOT EXISTS daily_reports (
     activities TEXT NULL,
     notes TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_child_report (child_id, report_date),
+    UNIQUE KEY unique_classroom_child_report (classroom_id, child_id, report_date),
     CONSTRAINT fk_dr_teacher
         FOREIGN KEY (teacher_id) REFERENCES teachers(id)
         ON DELETE CASCADE,
@@ -175,6 +176,17 @@ CREATE TABLE IF NOT EXISTS daily_reports (
     CONSTRAINT fk_dr_child
         FOREIGN KEY (child_id) REFERENCES children(id)
         ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS classroom_waitlist (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    child_id INT NOT NULL,
+    classroom_id INT NOT NULL,
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    notes TEXT NULL,
+    UNIQUE KEY unique_child_waitlist (child_id, classroom_id),
+    CONSTRAINT fk_cw_child FOREIGN KEY (child_id) REFERENCES children(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cw_classroom FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ─── CMS Domain ────────────────────────────────────────────────────────────
@@ -221,7 +233,7 @@ CREATE TABLE IF NOT EXISTS salary_payments (
     month_year VARCHAR(7) NOT NULL,
     notes TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_teacher_month (teacher_id, month_year),
+    INDEX idx_salary_teacher_month (teacher_id, month_year),
     CONSTRAINT fk_salary_teacher
         FOREIGN KEY (teacher_id) REFERENCES teachers(id)
         ON DELETE CASCADE
@@ -237,13 +249,64 @@ CREATE TABLE IF NOT EXISTS tuition_payments (
     month_year VARCHAR(7) NOT NULL,
     notes TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_child_month (child_id, month_year),
+    INDEX idx_tuition_child_month (child_id, month_year),
     CONSTRAINT fk_tuition_parent
         FOREIGN KEY (parent_id) REFERENCES parents(id)
         ON DELETE CASCADE,
     CONSTRAINT fk_tuition_child
         FOREIGN KEY (child_id) REFERENCES children(id)
         ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS tuition_plans (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    child_id INT NOT NULL,
+    month_year VARCHAR(7) NOT NULL,
+    expected_amount DECIMAL(12,2) NOT NULL,
+    notes TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_plan_child_month (child_id, month_year),
+    CONSTRAINT fk_plan_child
+        FOREIGN KEY (child_id) REFERENCES children(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS expenses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category ENUM('rent','utilities','food','maintenance','supplies','insurance','other') NOT NULL DEFAULT 'other',
+    title VARCHAR(255) NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    expense_date DATE NOT NULL,
+    payment_method ENUM('cash','bank_transfer','check') DEFAULT 'cash',
+    notes TEXT NULL,
+    created_by_admin_id INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_expense_admin
+        FOREIGN KEY (created_by_admin_id) REFERENCES admins(id)
+        ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    token VARCHAR(64) UNIQUE NOT NULL,
+    account_type ENUM('parent','teacher') NOT NULL,
+    account_id INT NOT NULL,
+    created_by_admin_id INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    used TINYINT(1) DEFAULT 0,
+    INDEX idx_prt_account (account_type, account_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS tuition_reminder_log (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    child_id INT NOT NULL,
+    parent_id INT NOT NULL,
+    month_year VARCHAR(7) NOT NULL,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_trl_child_sent (child_id, sent_at),
+    CONSTRAINT fk_trl_child FOREIGN KEY (child_id) REFERENCES children(id) ON DELETE CASCADE,
+    CONSTRAINT fk_trl_parent FOREIGN KEY (parent_id) REFERENCES parents(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ─── Messaging Domain ──────────────────────────────────────────────────────
@@ -325,5 +388,6 @@ INSERT INTO settings (meta_key, meta_value) VALUES
     ('working_hours', 'شنبه تا پنجشنبه ۷:۰۰ الی ۱۷:۰۰'),
     ('instagram', ''),
     ('telegram', ''),
-    ('whatsapp', '')
+    ('whatsapp', ''),
+    ('default_tuition_amount', '0')
 ON DUPLICATE KEY UPDATE meta_value = meta_value;

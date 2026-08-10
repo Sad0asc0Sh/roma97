@@ -194,7 +194,10 @@ $siteNameValue = e(siteName());
                 </div>
 
                 <div class="auth-field auth-anim-4">
-                    <label for="password" class="auth-field-label">رمز عبور</label>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <label for="password" class="auth-field-label">رمز عبور</label>
+                        <a href="<?= e(url('forgot-password.php?type=parent')) ?>" style="font-size:0.8rem; color:var(--adm-primary,#3182ce); text-decoration:none;">رمز عبور را فراموش کرده‌اید؟</a>
+                    </div>
                     <div class="auth-field-wrap">
                         <svg class="auth-field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
                         <input type="password" id="password" name="password" class="auth-input<?= $error !== '' ? ' has-error' : '' ?>" placeholder="رمز عبور خود را وارد کنید" autocomplete="current-password" required>

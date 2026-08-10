@@ -142,6 +142,8 @@ $statusLabel = match ($status) {
     'pending' => 'در انتظار تأیید',
     'active' => 'ثبت‌نام شده',
     'inactive' => 'غیرفعال',
+    'graduated' => 'فارغ‌التحصیل',
+    'withdrawn' => 'انصراف داده',
     default => $status,
 };
 

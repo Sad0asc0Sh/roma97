@@ -78,11 +78,42 @@ if (!validateCsrfToken($csrfToken)) {
 }
 
 $statusUpdates = [
-    'approve' => 'active',
-    'activate' => 'active',
-    'reject' => 'inactive',
-    'deactivate' => 'inactive',
+    'approve'   => 'active',
+    'activate'  => 'active',
+    'reject'    => 'inactive',
+    'deactivate'=> 'inactive',
+    'graduate'  => 'graduated',
+    'withdraw'  => 'withdrawn',
 ];
+
+if ($action === 'add_waitlist') {
+    $classroomIdRaw = $_POST['classroom_id'] ?? null;
+    $classroomId = filter_var($classroomIdRaw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    $classroomId = is_int($classroomId) ? $classroomId : 0;
+
+    if ($childId === 0 || $classroomId === 0) {
+        setFlash('error', 'افزودن به لیست انتظار امکان‌پذیر نیست.');
+        redirect($destination);
+    }
+
+    try {
+        require_once __DIR__ . '/../includes/db.php';
+        initializeFinancialTables();
+        $pdo = getDb();
+
+        $insWl = $pdo->prepare(
+            'INSERT INTO classroom_waitlist (child_id, classroom_id) VALUES (:cid, :clid)
+             ON DUPLICATE KEY UPDATE requested_at = CURRENT_TIMESTAMP'
+        );
+        $insWl->execute([':cid' => $childId, ':clid' => $classroomId]);
+        recordAudit('classroom.add_waitlist', 'child', (int) $childId, ['classroom_id' => $classroomId]);
+        setFlash('success', 'کودک با موفقیت به لیست انتظار این کلاس اضافه شد.');
+    } catch (Throwable $e) {
+        error_log($e->getMessage());
+        setFlash('error', 'افزودن به لیست انتظار با مشکل مواجه شد.');
+    }
+    redirect($destination);
+}
 
 if ($action === 'assign_classroom') {
     $classroomIdRaw = $_POST['classroom_id'] ?? null;
@@ -94,30 +125,47 @@ if ($action === 'assign_classroom') {
         redirect($destination);
     }
 
+    $forceOverCapacity = isset($_POST['force_over_capacity']) && (string) $_POST['force_over_capacity'] === '1';
+
     try {
         require_once __DIR__ . '/../includes/db.php';
         initializeTeachersTables();
         $pdo = getDb();
-        
+
+        if ($classroomId > 0) {
+            // Verify classroom exists & check capacity
+            $clStmt = $pdo->prepare('SELECT capacity FROM classrooms WHERE id = :clid LIMIT 1');
+            $clStmt->execute([':clid' => $classroomId]);
+            $clRow = $clStmt->fetch();
+
+            if (!$clRow) {
+                setFlash('error', 'کلاس انتخاب‌شده معتبر نیست.');
+                redirect($destination);
+            }
+
+            $capacity = (int) $clRow['capacity'];
+
+            // Count current enrolled children excluding the current child
+            $countStmt = $pdo->prepare('SELECT COUNT(*) FROM child_classroom WHERE classroom_id = :clid AND child_id != :cid');
+            $countStmt->execute([':clid' => $classroomId, ':cid' => $childId]);
+            $enrolledCount = (int) $countStmt->fetchColumn();
+
+            if ($enrolledCount >= $capacity && !$forceOverCapacity) {
+                $_SESSION['waitlist_offer'] = [
+                    'child_id' => $childId,
+                    'classroom_id' => $classroomId,
+                ];
+                setFlash('error', "ظرفیت این کلاس تکمیل است ({$enrolledCount} از {$capacity} نفر). می‌توانید کودک را به لیست انتظار اضافه کنید یا تیک تخصیص خارج از ظرفیت را بزنید.");
+                redirect($destination);
+            }
+        }
+
         $pdo->beginTransaction();
 
         $del = $pdo->prepare('DELETE FROM child_classroom WHERE child_id = :cid');
         $del->execute([':cid' => $childId]);
 
         if ($classroomId > 0) {
-            // Verify the classroom exists before assigning (defensive: avoids an FK
-            // error surfacing as a confusing generic message if an invalid id is posted).
-            $existsCl = $pdo->prepare('SELECT id FROM classrooms WHERE id = :clid LIMIT 1');
-            $existsCl->execute([':clid' => $classroomId]);
-
-            if ($existsCl->fetchColumn() === false) {
-                if ($pdo->inTransaction()) {
-                    $pdo->rollBack();
-                }
-                setFlash('error', 'کلاس انتخاب‌شده معتبر نیست.');
-                redirect($destination);
-            }
-
             // enrollment_date is NOT NULL with no default — must be supplied explicitly.
             $ins = $pdo->prepare(
                 'INSERT INTO child_classroom (child_id, classroom_id, enrollment_date)
@@ -127,7 +175,11 @@ if ($action === 'assign_classroom') {
         }
 
         $pdo->commit();
-        recordAudit('child.assign_classroom', 'child', (int) $childId, ['classroom_id' => $classroomId]);
+        $auditDetails = ['classroom_id' => $classroomId];
+        if ($forceOverCapacity) {
+            $auditDetails['over_capacity'] = true;
+        }
+        recordAudit('child.assign_classroom', 'child', (int) $childId, $auditDetails);
         setFlash('success', 'اختصاص کلاس با موفقیت ذخیره شد.');
     } catch (Throwable $exception) {
         if (isset($pdo) && $pdo->inTransaction()) {
@@ -167,10 +219,12 @@ try {
     ]);
 
     $messages = [
-        'approve' => 'ثبت‌نام تأیید شد. کودک اکنون فعال است.',
-        'activate' => 'وضعیت به فعال تغییر کرد.',
-        'reject' => 'ثبت‌نام رد شد. وضعیت به غیرفعال تغییر کرد.',
-        'deactivate' => 'وضعیت به غیرفعال تغییر کرد.',
+        'approve'   => 'ثبت‌نام تأیید شد. کودک اکنون فعال است.',
+        'activate'  => 'وضعیت به فعال تغییر کرد.',
+        'reject'    => 'ثبت‌نام رد شد. وضعیت به غیرفعال تغییر کرد.',
+        'deactivate'=> 'وضعیت به غیرفعال تغییر کرد.',
+        'graduate'  => 'وضعیت کودک به فارغ‌التحصیل تغییر یافت.',
+        'withdraw'  => 'وضعیت کودک به انصراف‌داده تغییر یافت.',
     ];
     recordAudit('child.' . $action, 'child', (int) $childId, ['status' => $newStatus]);
     setFlash('success', $messages[$action]);
