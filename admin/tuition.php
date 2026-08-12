@@ -311,10 +311,10 @@ require_once __DIR__ . '/header.php';
                             <?php foreach ($dashboardStatus as $s): ?>
                                 <?php
                                 $sCid = (int) $s['id'];
-                                $sMonth = $s['latest_month'] ?: $currentMonthYearStr;
+                                $sMonth = $currentMonthYearStr;
                                 $balance = childOutstandingBalance($pdo, $sCid, $sMonth);
 
-                                // Expected amount for this child & month
+                                // Expected amount for this child & current month
                                 $planStmt = $pdo->prepare('SELECT expected_amount FROM tuition_plans WHERE child_id = :cid AND month_year = :myear LIMIT 1');
                                 $planStmt->execute([':cid' => $sCid, ':myear' => $sMonth]);
                                 $expVal = $planStmt->fetchColumn();
