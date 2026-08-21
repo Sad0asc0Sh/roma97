@@ -1,0 +1,19 @@
+[package]
+name = "Sad0asc0Sh/roma97"
+version = "0.1.0"
+description = "Rooma daycare management system running on Wasmer Edge"
+repository = "https://github.com/Sad0asc0Sh/roma97"
+
+[dependencies]
+"php/php" = "=8.3.4"
+
+[fs]
+"/app" = "."
+
+[[command]]
+name = "run"
+module = "php/php:php"
+runner = "wasi"
+
+[command.annotations.wasi]
+main-args = ["-t", "/app", "-S", "localhost:8080"]
