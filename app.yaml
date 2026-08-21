@@ -1,0 +1,7 @@
+kind: wasmer.io/App.v0
+owner: Sad0asc0Sh
+name: roma97
+package: .
+
+scaling:
+  mode: single_concurrency
