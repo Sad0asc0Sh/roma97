@@ -1,0 +1,37 @@
+<?php
+declare(strict_types=1);
+
+/*
+ * Rooma — environment-specific configuration template.
+ *
+ * Copy this file to config.local.php and fill in the real values for your
+ * hosting environment. config.local.php is loaded BEFORE the defaults in
+ * config.php, so any constant defined here wins.
+ *
+ * NEVER commit config.local.php to version control — it contains secrets.
+ * It is already listed in .gitignore.
+ */
+
+// ─── Database (get these from cPanel → MySQL Databases) ────────────────────
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'cpaneluser_rooma');
+define('DB_USER', 'cpaneluser_rooma');
+define('DB_PASS', 'CHANGE-ME-strong-password');
+
+// ─── Public base URL (no trailing slash) ───────────────────────────────────
+// Root domain example:        https://your-domain.com
+// Subfolder deployment:       https://your-domain.com/rooma
+define('SITE_URL', 'https://your-domain.com');
+
+// ─── Security ──────────────────────────────────────────────────────────────
+// Production: DEVELOPMENT_MODE MUST stay false (detailed errors are hidden).
+define('DEVELOPMENT_MODE', false);
+
+// Force HTTPS redirect. Requires a valid SSL certificate (Let's Encrypt is
+// free in cPanel). Keep false until SSL is verified working.
+define('FORCE_HTTPS', true);
+
+// ─── Optional hardening for shared hosting ─────────────────────────────────
+// Private session directory outside public_html (recommended on cPanel):
+//   e.g. /home/cpaneluser/sessions  (create it, chmod 700)
+defined('SESSION_SAVE_PATH') || define('SESSION_SAVE_PATH', '');

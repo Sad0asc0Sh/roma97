@@ -153,10 +153,8 @@ if (isPostRequest()) {
     <meta name="description" content="ثبت‌نام والدین در مهد کودک <?= e(siteName()) ?>">
     <meta name="theme-color" content="#3D8B63">
     <title>ثبت‌نام | <?= e(siteName()) ?></title>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+    <link rel="preload" href="<?= e(url('assets/fonts/Vazirmatn-Regular.woff2')) ?>" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="<?= e(url('assets/css/fonts.css')) ?>">
     <link rel="stylesheet" href="<?= e(url('assets/css/auth.css')) ?>">
 </head>
 <body class="auth-standalone">

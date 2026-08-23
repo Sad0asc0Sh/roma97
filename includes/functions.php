@@ -180,15 +180,14 @@ function sendSecurityHeaders(): void
         header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
     }
     
-    // Content Security Policy
-    // Note: the Vazirmatn font is loaded from cdn.jsdelivr.net (see header
-    // templates), so that origin must be allowed in style-src and font-src.
+    // Content Security Policy — all assets (fonts included) are self-hosted.
     $csp = "default-src 'self'; " .
            "script-src 'self' 'unsafe-inline'; " .
-           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " .
+           "style-src 'self' 'unsafe-inline'; " .
            "img-src 'self' data:; " .
-           "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; " .
+           "font-src 'self'; " .
            "connect-src 'self'; " .
+           "frame-src https://maps.google.com https://www.google.com; " .
            "frame-ancestors 'none'; " .
            "base-uri 'self'; " .
            "form-action 'self';";

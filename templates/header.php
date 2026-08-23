@@ -35,11 +35,8 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
     <meta name="description" content="<?php echo $pageDescriptionValue; ?>">
     <meta name="theme-color" content="#3D8B63">
     <title><?php echo $pageTitleValue; ?></title>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preload" href="<?php echo e($relativePrefix ?? './'); ?>assets/fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="<?php echo e($relativePrefix ?? './'); ?>assets/css/fonts.css">
     <link rel="icon" href="<?php echo e(asset('favicon.ico')); ?>" type="image/x-icon">
     <link rel="icon" href="<?php echo e(asset('assets/img/favicon.svg')); ?>" type="image/svg+xml">
     <link rel="apple-touch-icon" href="<?php echo e(asset('assets/img/favicon.svg')); ?>">
@@ -73,7 +70,7 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
     <meta property="og:type" content="website">
     <meta property="og:locale" content="fa_IR">
     <meta property="og:site_name" content="<?php echo e($siteNameValue); ?>">
-    <meta property="og:image" content="<?php echo e(asset('assets/uploads/slide_6a40973767a173.36208127.png')); ?>">
+    <meta property="og:image" content="<?php echo e(asset('assets/img/about-story.jpg')); ?>">
 
     <!-- Schema.org Structured Data (ChildCare / LocalBusiness) -->
     <script type="application/ld+json">

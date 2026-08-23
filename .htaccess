@@ -114,6 +114,12 @@ Options -Indexes
     AddOutputFilterByType DEFLATE image/svg+xml
 </IfModule>
 
+# Correct MIME types for web fonts (some shared hosts miss these)
+<IfModule mod_mime.c>
+    AddType font/woff2 .woff2
+    AddType image/svg+xml .svg
+</IfModule>
+
 # Disable ETag header
 <IfModule mod_headers.c>
     Header unset ETag

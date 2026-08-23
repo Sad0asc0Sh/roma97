@@ -89,10 +89,8 @@ $siteNameValue = e(siteName());
     <meta name="description" content="ورود مدیر مهد کودک <?= $siteNameValue ?>">
     <meta name="theme-color" content="#3D8B63">
     <title>ورود مدیر | <?= $siteNameValue ?></title>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+    <link rel="preload" href="<?= e(url('assets/fonts/Vazirmatn-Regular.woff2')) ?>" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="<?= e(url('assets/css/fonts.css')) ?>">
     <?php
     $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_FILENAME'] ?? ''));
     $appRootDir = str_replace('\\', '/', realpath(__DIR__ . '/..') ?: __DIR__ . '/..');

@@ -1,0 +1,11 @@
+{
+    "version": "0.0.1",
+    "configurations": [
+        {
+            "name": "roma97",
+            "runtimeExecutable": "C:\\xampp\\php\\php.exe",
+            "runtimeArgs": ["-S", "localhost:8765", "-t", "C:\\xampp\\htdocs\\roma97"],
+            "port": 8765
+        }
+    ]
+}
