@@ -33,35 +33,27 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script>(function(){var t=localStorage.getItem('roma_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
     <meta name="description" content="<?php echo $pageDescriptionValue; ?>">
-    <meta name="theme-color" content="#3D8B63">
+    <?php
+    // Canonical URL: derive the app-relative script path by stripping the base
+    // path portion of SCRIPT_NAME that is already part of SITE_URL (avoids
+    // doubling the subfolder when the app lives under /subdir/).
+    $canonicalScript = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+    $siteUrlPath = basePath();
+    if ($siteUrlPath !== '' && str_starts_with($canonicalScript, $siteUrlPath)) {
+        $canonicalScript = substr($canonicalScript, strlen($siteUrlPath));
+    }
+    $canonicalUrl = absoluteUrl(ltrim($canonicalScript, '/'));
+    ?>
+    <link rel="canonical" href="<?php echo e($canonicalUrl); ?>">
+    <meta name="theme-color" content="#3D8B63" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0B0F19" media="(prefers-color-scheme: dark)">
     <title><?php echo $pageTitleValue; ?></title>
-    <link rel="preload" href="<?php echo e($relativePrefix ?? './'); ?>assets/fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="<?php echo e($relativePrefix ?? './'); ?>assets/css/fonts.css">
+    <link rel="preload" href="<?php echo e(asset('assets/fonts/Vazirmatn-Regular.woff2')); ?>" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="<?php echo e(url('assets/css/fonts.css')); ?>">
     <link rel="icon" href="<?php echo e(asset('favicon.ico')); ?>" type="image/x-icon">
     <link rel="icon" href="<?php echo e(asset('assets/img/favicon.svg')); ?>" type="image/svg+xml">
     <link rel="apple-touch-icon" href="<?php echo e(asset('assets/img/favicon.svg')); ?>">
-    <?php
-    // Compute a reliable relative path to the CSS asset that works regardless
-    // of how SITE_URL is configured (avoids broken styles on misconfigured servers).
-    $scriptDir  = str_replace('\\', '/', dirname($_SERVER['SCRIPT_FILENAME'] ?? ''));
-    $appRootDir = str_replace('\\', '/', __DIR__ . '/..');
-    $appRootDir = realpath($appRootDir) ?: $appRootDir;
-    $scriptDirReal = realpath($scriptDir) ?: $scriptDir;
-    // Count how many directory levels the current script is below the app root
-    $relativePrefix = '';
-    $tmp = $scriptDirReal;
-    $appNorm = str_replace('\\', '/', $appRootDir);
-    while (strlen($tmp) > strlen($appNorm) && str_starts_with(str_replace('\\', '/', $tmp), $appNorm)) {
-        $relativePrefix .= '../';
-        $tmp = dirname($tmp);
-    }
-    if ($relativePrefix === '') { $relativePrefix = './'; }
-    $cssHref = $relativePrefix . 'assets/css/style.css';
-    $localCssFile = $appRootDir . '/assets/css/style.css';
-    if (is_file($localCssFile)) {
-        $cssHref .= '?v=' . filemtime($localCssFile);
-    }
-    ?>
+    <?php $cssHref = asset('assets/css/style.css'); ?>
     <link rel="stylesheet" href="<?php echo e($cssHref); ?>">
 
     <!-- Open Graph Metadata -->

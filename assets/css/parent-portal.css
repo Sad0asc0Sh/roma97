@@ -2291,9 +2291,26 @@
 
 /* ── Mobile: hide header nav, show bottom-nav ───────────── */
 @media (max-width: 991px) {
-  /* Hide desktop nav items — bottom-nav handles navigation */
-  .parent-nav {
+  /* Hide desktop nav items — bottom-nav handles navigation.
+     The hamburger button can still reveal it via .is-open. */
+  .parent-nav:not(.is-open) {
     display: none !important;
+  }
+
+  .parent-nav.is-open {
+    display: flex !important;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    background: var(--app-surface, #fff);
+    padding: 12px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+    z-index: 998;
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
   }
 
   /* Keep user badge visible */

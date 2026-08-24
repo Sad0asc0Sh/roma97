@@ -66,15 +66,33 @@ try {
             }
         }
     } else {
+        // Paginated list — the news table grows over time; never select all rows.
+        $newsPage = max(1, (int) ($_GET['p'] ?? 1));
+        $perPage = 9;
+
+        $countStmt = $catFilter !== ''
+            ? $pdo->prepare('SELECT COUNT(*) FROM news WHERE category = :cat')
+            : $pdo->query('SELECT COUNT(*) FROM news');
+        if ($catFilter !== '') {
+            $countStmt->execute([':cat' => $catFilter]);
+        }
+        $totalNews = (int) $countStmt->fetchColumn();
+        $newsPagination = paginate($totalNews, $newsPage, $perPage);
+
         if ($catFilter !== '') {
             $statement = $pdo->prepare(
-                'SELECT id, title, content, image, category, created_at FROM news WHERE category = :cat ORDER BY created_at DESC'
+                'SELECT id, title, content, image, category, created_at FROM news WHERE category = :cat ORDER BY created_at DESC LIMIT :lim OFFSET :off'
             );
-            $statement->execute([':cat' => $catFilter]);
+            $statement->bindValue(':cat', $catFilter, PDO::PARAM_STR);
+            $statement->bindValue(':lim', $perPage, PDO::PARAM_INT);
+            $statement->bindValue(':off', $newsPagination['offset'], PDO::PARAM_INT);
+            $statement->execute();
         } else {
             $statement = $pdo->prepare(
-                'SELECT id, title, content, image, category, created_at FROM news ORDER BY created_at DESC'
+                'SELECT id, title, content, image, category, created_at FROM news ORDER BY created_at DESC LIMIT :lim OFFSET :off'
             );
+            $statement->bindValue(':lim', $perPage, PDO::PARAM_INT);
+            $statement->bindValue(':off', $newsPagination['offset'], PDO::PARAM_INT);
             $statement->execute();
         }
         $newsItems = $statement->fetchAll();
@@ -224,6 +242,12 @@ require_once __DIR__ . '/templates/header.php';
                         </article>
                     <?php endforeach; ?>
                 </div>
+
+                <?php if (!empty($newsPagination) && $newsPagination['totalPages'] > 1): ?>
+                    <nav class="news-pagination" style="margin-top: var(--space-xl); display:flex; justify-content:center;" aria-label="صفحه‌بندی اخبار">
+                        <?= renderPagination($newsPagination, url('news.php'), $catFilter !== '' ? ['cat' => $catFilter] : []) ?>
+                    </nav>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </section>

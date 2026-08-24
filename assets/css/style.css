@@ -58,6 +58,9 @@
     --shadow-lg: 0 16px 40px rgba(0,0,0,0.5);
     --paper: #142921;
     --paper-line: #24473A;
+    /* Dark remap of the light-theme greens used inline on contact hours etc. */
+    --primary-dark: #7FC9A4;
+    color-scheme: dark;
 }
 
 [data-theme="dark"] .top-bar {
@@ -351,8 +354,8 @@ p { margin-bottom: var(--space-sm); line-height: 1.8; }
 @media (min-width: 768px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
 .stat-item { text-align: center; padding: var(--space-lg); }
 .stat-number { font-size: clamp(2rem, 6vw, 3rem); font-weight: 900; line-height: 1; margin-bottom: var(--space-xs); display: block; }
-.stat-number::after { content: '+'; font-size: 0.65em; opacity: 0.7; }
-.stat-label { font-size: 0.9375rem; opacity: 0.85; font-weight: 500; }
+/* Suffix comes from data-suffix (markup/JS); no ::after so "٪" stats don't get a stray "+" */
+.stat-label { font-size: 0.9375rem; opacity: 0.85; font-weight: 500; color: var(--white) !important; }
 /* stat-card: same as stat-item but with icon */
 .stat-card { text-align: center; padding: var(--space-lg); display: flex; flex-direction: column; align-items: center; gap: var(--space-xs); }
 .stat-icon-svg { opacity: 0.8; flex-shrink: 0; }
@@ -650,15 +653,18 @@ textarea.form-control { resize: vertical; min-height: 120px; }
 .mb-0 { margin-bottom: 0; } .mb-1 { margin-bottom: var(--space-xs); } .mb-2 { margin-bottom: var(--space-sm); } .mb-3 { margin-bottom: var(--space-md); } .mb-4 { margin-bottom: var(--space-lg); }
 .page-404 { padding: var(--space-2xl) 0; }
 
-/* View Transitions API for Multi-page PHP */
-@view-transition {
-    navigation: auto;
-}
-::view-transition-old(root) {
-    animation: 180ms ease-out cubic-bezier(0.4, 0, 0.2, 1) both fadeOut;
-}
-::view-transition-new(root) {
-    animation: 250ms ease-in cubic-bezier(0.4, 0, 0.2, 1) both fadeIn;
+/* View Transitions API for Multi-page PHP (skipped when the user prefers reduced motion,
+   which is also the main source of harmless "Transition was skipped" aborts) */
+@media (prefers-reduced-motion: no-preference) {
+    @view-transition {
+        navigation: auto;
+    }
+    ::view-transition-old(root) {
+        animation: 180ms ease-out cubic-bezier(0.4, 0, 0.2, 1) both fadeOut;
+    }
+    ::view-transition-new(root) {
+        animation: 250ms ease-in cubic-bezier(0.4, 0, 0.2, 1) both fadeIn;
+    }
 }
 
 /* Keyframes Library */
@@ -768,6 +774,15 @@ textarea.form-control { resize: vertical; min-height: 120px; }
     .site-nav .nav-link { display: none; }
     .header-inner { justify-content: space-between; }
 
+    /* Compact header actions on small screens so logo + auth fit without overflow */
+    .nav-auth {
+        margin-inline-start: var(--space-xs);
+        padding-inline-start: var(--space-xs);
+        gap: 4px;
+    }
+    .nav-auth .btn-sm { padding: 8px 12px; font-size: 0.8125rem; }
+    .nav-auth .logout-form { display: none; }
+
     /* === MOBILE BOTTOM NAVIGATION === */
     @media (max-width: 991px) {
         body {
@@ -797,14 +812,14 @@ textarea.form-control { resize: vertical; min-height: 120px; }
         flex-direction: column;
         align-items: center;
         gap: 3px;
-        padding: 10px 6px 8px;
+        padding: 10px 2px 8px;
         color: var(--muted);
         font-size: 0.625rem;
         text-decoration: none;
         transition: all var(--transition-fast);
         border-radius: var(--radius-sm);
         min-width: 0;
-        flex: 1;
+        flex: 1 1 0;
         max-width: 72px;
         position: relative;
         -webkit-tap-highlight-color: transparent;
@@ -3016,7 +3031,7 @@ input[type="file"].form-control {
     margin-bottom: 4px;
 }
 
-.stat-label {
+.stats-section .stat-label {
     display: block;
     font-size: 0.875rem;
     color: var(--muted);
@@ -3302,6 +3317,12 @@ input[type="file"].form-control {
         visibility: hidden;
         transition: all var(--transition-base);
         z-index: 99;
+    }
+
+    .parent-nav.is-open {
+        transform: translateY(0);
+        opacity: 1;
+        visibility: visible;
     }
     
     .parent-nav a,
@@ -4743,17 +4764,23 @@ details[open] .faq-summary svg {
     padding: var(--space-lg) 0;
 }
 
-.teacher-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 var(--space-md);
-}
-
-.teacher-footer {
-    background: var(--white);
-    border-top: 1px solid var(--border);
-    padding: var(--space-md);
-    text-align: center;
+/* Teacher nav on small screens: allow horizontal scroll instead of page overflow */
+@media (max-width: 767px) {
+    .teacher-header-inner {
+        flex-wrap: wrap;
+        padding: var(--space-xs) var(--space-md);
+        gap: var(--space-xs);
+    }
+    .teacher-nav {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .teacher-nav::-webkit-scrollbar { display: none; }
+    .teacher-nav .nav-text {
+        white-space: nowrap;
+    }
 }
 
 .teacher-footer-content {

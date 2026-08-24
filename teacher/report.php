@@ -62,15 +62,17 @@ SQL
             $activities = (array) ($_POST['activities'] ?? []);
             $notes      = (array) ($_POST['notes'] ?? []);
 
+            // VALUES() syntax: the row-alias form ("AS new") is MySQL 8+ only and
+            // fails on MariaDB (the typical shared-hosting database).
             $upsertSql = <<<'SQL'
 INSERT INTO daily_reports (teacher_id, classroom_id, child_id, report_date, mood, activities, notes)
-VALUES (:tid, :cid, :child_id, :rdate, :mood, :activities, :notes) AS new
+VALUES (:tid, :cid, :child_id, :rdate, :mood, :activities, :notes)
 ON DUPLICATE KEY UPDATE
-    teacher_id   = new.teacher_id,
-    classroom_id = new.classroom_id,
-    mood         = new.mood,
-    activities   = new.activities,
-    notes        = new.notes
+    teacher_id   = VALUES(teacher_id),
+    classroom_id = VALUES(classroom_id),
+    mood         = VALUES(mood),
+    activities   = VALUES(activities),
+    notes        = VALUES(notes)
 SQL;
 
             try {

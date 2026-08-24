@@ -32,6 +32,7 @@ function adminPermissionsMatrix(): array
             'admin/reports.php',
             'admin/events.php',
             'admin/messages.php',
+            'admin/contact-messages.php',
             'admin/audit.php',
             'admin/backup.php',
             'admin/export-csv.php',
@@ -56,6 +57,7 @@ function adminPermissionsMatrix(): array
             'admin/reports.php',
             'admin/events.php',
             'admin/messages.php',
+            'admin/contact-messages.php',
             'admin/audit.php',
             'admin/backup.php',
             'admin/export-csv.php',
@@ -80,6 +82,7 @@ function adminPermissionsMatrix(): array
             'admin/parents.php',
             'admin/events.php',
             'admin/messages.php',
+            'admin/contact-messages.php',
             'admin/export-csv.php',
         ],
     ];

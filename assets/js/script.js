@@ -431,6 +431,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (entry.isIntersecting) {
                     var el = entry.target;
                     var target = parseInt(el.getAttribute('data-count'), 10);
+                    var suffix = el.getAttribute('data-suffix') || '';
                     var duration = 1200;
                     var startTime = null;
                     var startVal = 0;
@@ -438,11 +439,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (!startTime) startTime = timestamp;
                         var progress = Math.min((timestamp - startTime) / duration, 1);
                         var eased = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
-                        el.textContent = Math.floor(startVal + (target - startVal) * eased).toLocaleString('fa-IR');
+                        el.textContent = Math.floor(startVal + (target - startVal) * eased).toLocaleString('fa-IR') + suffix;
                         if (progress < 1) {
                             requestAnimationFrame(step);
                         } else {
-                            el.textContent = target.toLocaleString('fa-IR');
+                            el.textContent = target.toLocaleString('fa-IR') + suffix;
                         }
                     }
                     requestAnimationFrame(step);
@@ -472,11 +473,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // ============================================
     // ACTIVE NAV LINK HIGHLIGHT (public site)
     // ============================================
-    // Already set via PHP class="active", but ensure bottom nav matches
-    var currentPath = window.location.pathname;
+    // PHP already sets class="active" per page+slug. JS fallback compares the
+    // full query string too, so page.php?slug=about / classes / contact don't
+    // all match each other.
+    var currentLocation = window.location.pathname + window.location.search;
     document.querySelectorAll('.bottom-nav-item').forEach(function(item) {
         var href = item.getAttribute('href');
-        if (href && currentPath.endsWith(href.split('?')[0])) {
+        if (!href || item.classList.contains('active')) return;
+        var resolved = new URL(href, window.location.origin);
+        var itemPath = resolved.pathname + resolved.search;
+        if (currentLocation === itemPath) {
             item.classList.add('active');
         }
     });

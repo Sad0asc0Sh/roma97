@@ -471,6 +471,9 @@ require_once __DIR__ . '/templates/header.php';
 <?php
 // Roma Gallery
 try {
+    if (empty($pdo)) {
+        $pdo = getDb();
+    }
     $gStmt = $pdo->prepare('SELECT id, title, caption, image FROM gallery_images WHERE is_active = 1 ORDER BY sort_order ASC, created_at DESC LIMIT 12');
     $gStmt->execute();
     $galleryItems = $gStmt->fetchAll();
@@ -517,7 +520,7 @@ try {
     <button class="gallery-lightbox-prev" aria-label="قبلی">&#8249;</button>
     <button class="gallery-lightbox-next" aria-label="بعدی">&#8250;</button>
     <div class="gallery-lightbox-content">
-        <img src="" alt="" class="gallery-lightbox-img">
+        <img alt="" class="gallery-lightbox-img">
         <div class="gallery-lightbox-info"><h3 class="gallery-lightbox-title"></h3><p class="gallery-lightbox-caption"></p></div>
     </div>
 </div>
@@ -528,14 +531,17 @@ try {
     var img=lb.querySelector(".gallery-lightbox-img"),ttl=lb.querySelector(".gallery-lightbox-title"),cap=lb.querySelector(".gallery-lightbox-caption");
     var close=lb.querySelector(".gallery-lightbox-close"),prev=lb.querySelector(".gallery-lightbox-prev"),next=lb.querySelector(".gallery-lightbox-next");
     var idx=0;
-    function show(i){idx=i;var el=items[i];img.src=el.querySelector("img").src;ttl.textContent=el.querySelector(".gallery-title")?el.querySelector(".gallery-title").textContent:"";cap.textContent=el.querySelector(".gallery-caption")?el.querySelector(".gallery-caption").textContent:"";lb.classList.add("active");document.body.style.overflow="hidden";}
+    // Only cycle through items currently visible under the active filter.
+    function visibleItems(){return Array.prototype.filter.call(items,function(el){return el.style.display!=="none";});}
+    function show(i){var vis=visibleItems();if(!vis.length)return;if(i<0)i=0;if(i>=vis.length)i=vis.length-1;idx=i;var el=vis[i];img.src=el.querySelector("img").src;ttl.textContent=el.querySelector(".gallery-title")?el.querySelector(".gallery-title").textContent:"";cap.textContent=el.querySelector(".gallery-caption")?el.querySelector(".gallery-caption").textContent:"";lb.classList.add("active");document.body.style.overflow="hidden";}
+    function step(dir){var vis=visibleItems();if(!vis.length)return;var pos=vis.indexOf(items[idx]);show(((pos===-1?0:pos)+dir+vis.length)%vis.length);}
     function hide(){lb.classList.remove("active");document.body.style.overflow="";}
-    items.forEach(function(el,i){el.addEventListener("click",function(){show(i);});});
+    items.forEach(function(el,i){el.addEventListener("click",function(){var vis=visibleItems();show(vis.indexOf(el));});});
     close.addEventListener("click",hide);
     lb.addEventListener("click",function(e){if(e.target===lb)hide();});
-    prev.addEventListener("click",function(e){e.stopPropagation();show((idx-1+items.length)%items.length);});
-    next.addEventListener("click",function(e){e.stopPropagation();show((idx+1)%items.length);});
-    document.addEventListener("keydown",function(e){if(!lb.classList.contains("active"))return;if(e.key==="Escape")hide();if(e.key==="ArrowLeft")show((idx+1)%items.length);if(e.key==="ArrowRight")show((idx-1+items.length)%items.length);});
+    prev.addEventListener("click",function(e){e.stopPropagation();step(-1);});
+    next.addEventListener("click",function(e){e.stopPropagation();step(1);});
+    document.addEventListener("keydown",function(e){if(!lb.classList.contains("active"))return;if(e.key==="Escape")hide();if(e.key==="ArrowLeft")step(1);if(e.key==="ArrowRight")step(-1);});
 
     // Gallery Filter Handler with Smooth Transition
     var filterBtns = document.querySelectorAll(".gallery-filter-btn");
@@ -640,12 +646,14 @@ function handleNewsletterSubmit(e) {
     btn.textContent = 'در حال ثبت...';
 
     setTimeout(function() {
+        toast.style.display = '';
         toast.className = 'newsletter-toast success';
         toast.textContent = 'با تشکر از شما ' + name + ' عزیز! ثبت‌نام شما در خبرنامه با موفقیت انجام شد.';
         form.reset();
         btn.disabled = false;
         btn.textContent = 'عضویت در خبرنامه';
-        setTimeout(function() { toast.style.display = 'none'; }, 6000);
+        clearTimeout(toast.__hideTimer);
+        toast.__hideTimer = setTimeout(function() { toast.style.display = 'none'; }, 6000);
     }, 800);
 }
 </script>

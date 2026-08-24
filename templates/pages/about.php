@@ -5,7 +5,7 @@
  */
 ?>
 <!-- Inner Hero Banner -->
-<section class="inner-hero" style="position: relative; background: var(--gradient-hero), url('<?php echo asset('assets/uploads/slide_6a40973767a173.36208127.png'); ?>') center/cover no-repeat; padding: var(--space-2xl) 0 var(--space-xl) 0; color: var(--white); text-align: center;">
+<section class="inner-hero" style="position: relative; background: var(--gradient-hero), url('<?php echo asset('assets/uploads/slide-hero-legacy.jpg'); ?>') center/cover no-repeat; padding: var(--space-2xl) 0 var(--space-xl) 0; color: var(--white); text-align: center;">
     <div class="container">
         <div class="breadcrumb" style="display: flex; justify-content: center; gap: 8px; font-size: var(--text-sm); margin-bottom: var(--space-sm); opacity: 0.9;">
             <a href="<?php echo e(url('index.php')); ?>" style="color: var(--white); text-decoration: none;">خانه</a>

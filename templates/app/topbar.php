@@ -42,6 +42,18 @@ if (isset($_SESSION['teacher_id'])) {
 
 $userFirstChar = mb_substr($userName, 0, 1, 'UTF-8');
 ?>
+<script>
+// Shared mobile menu toggle for portals without an admin sidebar (parent/teacher).
+// Admin defines its own version in admin/header.php; this fallback only runs there
+// if that one hasn't been registered yet (script order safe).
+window.toggleMobileSidebar = window.toggleMobileSidebar || function(evtOrState) {
+    var nav = document.querySelector('.parent-nav, #teacherNav');
+    if (!nav) return;
+    var forceState = typeof evtOrState === 'boolean' ? evtOrState : null;
+    var shouldOpen = forceState !== null ? forceState : !nav.classList.contains('is-open');
+    nav.classList.toggle('is-open', shouldOpen);
+};
+</script>
 <header class="app-topbar">
     <div class="app-topbar-right">
         <?php if (isset($_SESSION['admin_id']) || isset($_SESSION['teacher_id']) || isset($_SESSION['parent_id'])): ?>

@@ -12,17 +12,65 @@ function e(mixed $value): string
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/**
+ * Base URL path of the app (e.g. "/roma97" or "" when served from the domain
+ * root). Detected per-request from where the running script sits relative to
+ * the server's document root, so URLs stay same-origin under any host or port
+ * and the CSP ("self") can never block assets. Falls back to SITE_URL's path.
+ */
+function basePath(): string
+{
+    static $base = null;
+
+    if ($base !== null) {
+        return $base;
+    }
+
+    $appRoot = str_replace('\\', '/', realpath(__DIR__ . '/..') ?: __DIR__ . '/..');
+    $docRoot = str_replace('\\', '/', (string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
+    $docRoot = rtrim($docRoot, '/');
+
+    if ($docRoot !== '' && str_starts_with($appRoot . '/', $docRoot . '/')) {
+        $base = rtrim(substr($appRoot, strlen($docRoot)), '/');
+        if ($base === '' || $base === '/' || !str_starts_with($base, '/')) {
+            $base = '';
+        }
+        return $base;
+    }
+
+    // CLI (no DOCUMENT_ROOT) or doc-root mismatch: fall back to SITE_URL's path.
+    $path = parse_url(SITE_URL, PHP_URL_PATH);
+    $base = rtrim((string) $path, '/');
+
+    return $base;
+}
+
 function url(string $path = ''): string
 {
+    return basePath() . '/' . ltrim($path, '/');
+}
+
+/**
+ * Fully-qualified absolute URL (scheme + host + base path). Only needed where
+ * the URL leaves the page context: canonical link, Open Graph tags, share
+ * buttons, and links generated in CLI/email contexts.
+ */
+function absoluteUrl(string $path = ''): string
+{
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? '');
+
+    if ($host !== '') {
+        $scheme = isHttps() ? 'https' : 'http';
+        return $scheme . '://' . $host . url($path);
+    }
+
     return rtrim(SITE_URL, '/') . '/' . ltrim($path, '/');
 }
 
 /**
- * Build a fully-qualified URL for a static asset (CSS, JS, image, font).
- *
- * Currently equivalent to url(), but kept as a separate helper so that
- * asset-specific logic (e.g. cache-busting, CDN switching) can be added
- * later without touching every call site.
+ * URL for a static asset (CSS, JS, image, font) with cache-busting based on
+ * the file's modification time. Host-relative (see url()) so assets stay
+ * same-origin under any host/port and are never blocked by CSP.
  */
 function asset(string $path = ''): string
 {

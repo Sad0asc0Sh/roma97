@@ -37,12 +37,67 @@ function getDb(): PDO
  */
 function initializeDatabase(): bool
 {
+    // Migration 005 (admins.role) must exist before admin login runs, because
+    // the login query selects `role`. Older installs created via an earlier
+    // schema.sql lack the column until an admin page calls
+    // initializeFinancialTables() — which never happens pre-login. Add it
+    // idempotently here so login never fatals into "ورود موقتاً در دسترس نیست".
+    static $checked = false;
+    if ($checked) {
+        return false;
+    }
+    $checked = true;
+
+    try {
+        $pdo = getDb();
+        $cols = $pdo->query("SHOW COLUMNS FROM admins")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('role', $cols, true)) {
+            $pdo->exec(
+                "ALTER TABLE admins ADD COLUMN role ENUM('owner','manager','accountant','receptionist') NOT NULL DEFAULT 'owner' AFTER password"
+            );
+        }
+    } catch (Throwable $e) {
+        error_log($e->getMessage());
+    }
+
     return false;
 }
 
 function initializeCmsTables(): void
 {
     // Schema is created at install time via setup.php / schema.sql
+}
+
+/**
+ * Idempotently ensure the public contact-form table exists. Older installs
+ * created before the contact feature lack it; page.php writes to it on POST
+ * and admin/contact-messages.php reads from it.
+ */
+function ensureContactMessagesTable(PDO $pdo): void
+{
+    static $checked = false;
+    if ($checked) {
+        return;
+    }
+    $checked = true;
+
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS contact_messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                phone VARCHAR(20) NOT NULL,
+                email VARCHAR(150) DEFAULT NULL,
+                subject VARCHAR(50) NOT NULL DEFAULT 'other',
+                message TEXT NOT NULL,
+                is_read TINYINT(1) DEFAULT 0,
+                ip_address VARCHAR(45) DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+    } catch (Throwable $e) {
+        error_log($e->getMessage());
+    }
 }
 
 function initializeParentTables(): void

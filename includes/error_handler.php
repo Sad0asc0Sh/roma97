@@ -131,7 +131,7 @@ function showGenericErrorPage(?Throwable $exception = null): void
         || ($exception !== null && strpos((string) $exception->getMessage(), 'SQLSTATE') !== false)
         || ($exception !== null && stripos((string) $exception->getMessage(), 'mysql') !== false);
 
-    $homeUrl = defined('SITE_URL') ? htmlspecialchars(SITE_URL, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '/';
+    $homeUrl = function_exists('url') ? url() : '/';
 
     // In development mode, include the actual error text for fast debugging.
     $detailBlock = '';
@@ -150,7 +150,7 @@ function showGenericErrorPage(?Throwable $exception = null): void
         $message = 'اتصال به پایگاه داده ممکن نیست. لطفاً اطمینان حاصل کنید که:';
         $hint = '<ul class="hint-list">
             <li>سرویس MySQL (یا MariaDB) در حال اجراست.</li>
-            <li>پایگاه داده <code>rooma_db</code> ایجاد شده است — برای راه‌اندازی اولیه به <a href="' . $homeUrl . '/setup.php">صفحه نصب</a> بروید.</li>
+            <li>پایگاه داده <code>rooma_db</code> ایجاد شده است — برای راه‌اندازی اولیه به <a href="' . $homeUrl . 'setup.php">صفحه نصب</a> بروید.</li>
             <li>اعتبارنامه‌های پایگاه داده در <code>config.local.php</code> صحیح است.</li>
         </ul>';
     } else {

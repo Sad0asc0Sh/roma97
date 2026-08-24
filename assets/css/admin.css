@@ -25,15 +25,17 @@
 .font-bold { font-weight:700 !important; }
 .font-semibold { font-weight:600 !important; }
 
-/* View Transitions API */
-@view-transition {
-    navigation: auto;
-}
-::view-transition-old(root) {
-    animation: 180ms ease-out cubic-bezier(0.4, 0, 0.2, 1) both fadeOut;
-}
-::view-transition-new(root) {
-    animation: 250ms ease-in cubic-bezier(0.4, 0, 0.2, 1) both fadeIn;
+/* View Transitions API (respects reduced-motion preference) */
+@media (prefers-reduced-motion: no-preference) {
+    @view-transition {
+        navigation: auto;
+    }
+    ::view-transition-old(root) {
+        animation: 180ms ease-out cubic-bezier(0.4, 0, 0.2, 1) both fadeOut;
+    }
+    ::view-transition-new(root) {
+        animation: 250ms ease-in cubic-bezier(0.4, 0, 0.2, 1) both fadeIn;
+    }
 }
 
 /* ── DESIGN TOKENS (Compatibility Layer - Mapped to Brand --app-*) ──── */
@@ -389,6 +391,12 @@ select.form-control{cursor:pointer;appearance:none;background-image:url("data:im
 .attendance-toolbar-bottom{margin-bottom:0;margin-top:20px;justify-content:flex-end}
 .save-btn{background:linear-gradient(135deg,var(--adm-success),#059669);color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(16,185,129,0.3)}
 .save-btn:hover{box-shadow:0 4px 14px rgba(16,185,129,0.4);transform:translateY(-1px)}
+/* Desktop table / mobile card toggle (attendance.php renders both) */
+.attendance-mobile{display:none}
+@media (max-width:767px){
+  .attendance-desktop{display:none}
+  .attendance-mobile{display:block}
+}
 
 /* ── AMOUNT & NOTES ─────────────────────────────────────────── */
 .amount-highlight{font-weight:700;color:var(--adm-success);font-variant-numeric:tabular-nums}

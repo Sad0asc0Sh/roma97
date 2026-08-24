@@ -106,7 +106,7 @@ require_once __DIR__ . '/header.php';
                     ?>
                     <tr>
                         <td><?= e(trim($p['first_name'] . ' ' . $p['last_name']))?></td>
-                        <td><?= e(persianNumber((string) $p['month_year']))?></td>
+                        <td><?= e(formatShamsiMonthYear((string) $p['month_year']))?></td>
                         <td class="amount-cell"><?= e(persianNumber(number_format((float) $p['amount'], 0))) ?> <span class="currency-unit-sm">تومان</span></td>
                         <td><span class="badge badge-success">پرداخت شده</span></td>
                         <td><?= e(shamsiDate((string) $p['payment_date']))?></td>
@@ -138,7 +138,7 @@ require_once __DIR__ . '/header.php';
                 <div class="payment-card-body">
                     <div class="payment-detail">
                         <span class="detail-label">ماه</span>
-                        <span class="detail-value"><?= e(persianNumber((string) $p['month_year'])) ?></span>
+                        <span class="detail-value"><?= e(formatShamsiMonthYear((string) $p['month_year'])) ?></span>
                     </div>
                     <div class="payment-detail">
                         <span class="detail-label">تاریخ:</span>

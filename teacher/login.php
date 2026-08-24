@@ -85,21 +85,7 @@ $siteNameValue = e(siteName());
     <title>ورود معلم | <?= $siteNameValue ?></title>
     <link rel="preload" href="<?= e(url('assets/fonts/Vazirmatn-Regular.woff2')) ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?= e(url('assets/css/fonts.css')) ?>">
-    <?php
-    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_FILENAME'] ?? ''));
-    $appRootDir = str_replace('\\', '/', realpath(__DIR__ . '/..') ?: __DIR__ . '/..');
-    $appRootDir = realpath($appRootDir) ?: $appRootDir;
-    $scriptDirReal = realpath($scriptDir) ?: $scriptDir;
-    $relativePrefix = '';
-    $tmp = $scriptDirReal;
-    $appNorm = str_replace('\\', '/', $appRootDir);
-    while (strlen($tmp) > strlen($appNorm) && str_starts_with(str_replace('\\', '/', $tmp), $appNorm)) {
-        $relativePrefix .= '../';
-        $tmp = dirname($tmp);
-    }
-    if ($relativePrefix === '') { $relativePrefix = './'; }
-    ?>
-    <link rel="stylesheet" href="<?= e($relativePrefix . 'assets/css/auth.css') ?>">
+    <link rel="stylesheet" href="<?= e(asset('assets/css/auth.css')) ?>">
 </head>
 <body class="auth-standalone">
 <div class="auth-wrapper">

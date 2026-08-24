@@ -5,7 +5,7 @@
  */
 ?>
 <!-- Inner Hero Banner -->
-<section class="inner-hero" style="position: relative; background: var(--gradient-hero), url('<?php echo asset('assets/uploads/slide_6a40973767a173.36208127.png'); ?>') center/cover no-repeat; padding: var(--space-2xl) 0 var(--space-xl) 0; color: var(--white); text-align: center;">
+<section class="inner-hero" style="position: relative; background: var(--gradient-hero), url('<?php echo asset('assets/uploads/slide-hero-legacy.jpg'); ?>') center/cover no-repeat; padding: var(--space-2xl) 0 var(--space-xl) 0; color: var(--white); text-align: center;">
     <div class="container">
         <div class="breadcrumb" style="display: flex; justify-content: center; gap: 8px; font-size: var(--text-sm); margin-bottom: var(--space-sm); opacity: 0.9;">
             <a href="<?php echo e(url('index.php')); ?>" style="color: var(--white); text-decoration: none;">خانه</a>
@@ -33,7 +33,13 @@
                     فرم زیر را پر کنید؛ کارشناسان ما در سریع‌ترین زمان با شما تماس می‌گیرند.
                 </p>
 
-                <form id="contactForm" onsubmit="handleContactSubmit(event)" style="display: grid; gap: var(--space-md);">
+                <form id="contactForm" method="post" action="<?php echo e(url('page.php?slug=contact')); ?>" style="display: grid; gap: var(--space-md);">
+                    <input type="hidden" name="csrf_token" value="<?php echo e(generateCsrfToken()); ?>">
+                    <?php if (!empty($contactFormStatus)): ?>
+                        <div role="<?= $contactFormStatus['ok'] ? 'status' : 'alert' ?>" style="padding: 12px; border-radius: var(--radius-sm); font-size: var(--text-sm); background: <?= $contactFormStatus['ok'] ? 'var(--primary-faint)' : 'rgba(220,38,38,0.08)' ?>; color: <?= $contactFormStatus['ok'] ? 'var(--primary-dark)' : 'var(--danger)' ?>; border: 1px solid <?= $contactFormStatus['ok'] ? 'var(--primary)' : 'var(--danger)' ?>;">
+                            <?php echo e($contactFormStatus['text']); ?>
+                        </div>
+                    <?php endif; ?>
                     <div>
                         <label for="contact_name" style="display: block; font-weight: 600; font-size: var(--text-sm); margin-bottom: 6px;">نام و نام خانوادگی <span style="color: var(--danger);">*</span></label>
                         <input type="text" id="contact_name" name="name" required placeholder="مثال: مریم محمدی" class="form-control" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit;">
@@ -65,9 +71,7 @@
                         <textarea id="contact_message" name="message" rows="4" required placeholder="پیام خود را اینجا بنویسید..." class="form-control" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; resize: vertical;"></textarea>
                     </div>
 
-                    <div id="contactFormMessage" style="display: none; padding: 12px; border-radius: var(--radius-sm); font-size: var(--text-sm);"></div>
-
-                    <button type="submit" id="contactSubmitBtn" class="btn btn-primary btn-lg" style="width: 100%; padding: 14px;">
+                    <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; padding: 14px;">
                         ارسال پیام و هماهنگی
                     </button>
                 </form>
@@ -148,28 +152,6 @@
         </div>
     </div>
 </section>
-
-<script>
-function handleContactSubmit(event) {
-    event.preventDefault();
-    const btn = document.getElementById('contactSubmitBtn');
-    const msg = document.getElementById('contactFormMessage');
-
-    btn.disabled = true;
-    btn.innerHTML = 'در حال ارسال...';
-
-    setTimeout(() => {
-        btn.disabled = false;
-        btn.innerHTML = 'ارسال پیام و هماهنگی';
-        msg.style.display = 'block';
-        msg.style.background = 'var(--primary-faint)';
-        msg.style.color = 'var(--primary-dark)';
-        msg.style.border = '1px solid var(--primary)';
-        msg.innerHTML = 'پیام شما با موفقیت ثبت شد. کارشناسان روما به زودی با شما تماس خواهند گرفت.';
-        document.getElementById('contactForm').reset();
-    }, 800);
-}
-</script>
 
 <!-- Shared Footer CTA -->
 <?php require __DIR__ . '/../cta-section.php'; ?>

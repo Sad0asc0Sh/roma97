@@ -22,8 +22,10 @@ function adminChildActionRedirect(string $fallback): string
         $_SERVER['HTTP_REFERER'] ?? null,
     ];
 
-    $siteParts = parse_url(SITE_URL);
-    $siteHost = $siteParts['host'] ?? '';
+    // Accept same-host redirects; the app path prefix is stripped so any host
+    // the site is served under (not just SITE_URL's configured host) works.
+    $siteBasePath = basePath();
+    $selfHost = (string) parse_url((string) ($_SERVER['HTTP_HOST'] ?? ''), PHP_URL_HOST);
 
     foreach ($candidates as $candidate) {
         if (!is_string($candidate) || $candidate === '') {
@@ -35,11 +37,11 @@ function adminChildActionRedirect(string $fallback): string
             continue;
         }
 
-        if (($refParts['host'] ?? '') !== $siteHost) {
+        if (($refParts['host'] ?? '') !== $selfHost) {
             continue;
         }
 
-        $basePath = rtrim($siteParts['path'] ?? '', '/');
+        $basePath = $siteBasePath;
         $refPath = $refParts['path'] ?? '/';
 
         if ($basePath !== '' && !str_starts_with($refPath, $basePath . '/') && $refPath !== $basePath) {

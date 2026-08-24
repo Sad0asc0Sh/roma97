@@ -167,15 +167,17 @@ try {
             $attendanceData = [];
         }
 
+        // VALUES() syntax: the row-alias form ("AS new") is MySQL 8+ only and
+        // fails on MariaDB (the typical shared-hosting database).
         $upsert = $pdo->prepare(
             <<<'SQL'
 INSERT INTO attendance (child_id, attendance_date, status, check_in, check_out, notes)
-VALUES (:child_id, :attendance_date, :status, :check_in, :check_out, :notes) AS new
+VALUES (:child_id, :attendance_date, :status, :check_in, :check_out, :notes)
 ON DUPLICATE KEY UPDATE
-    status    = new.status,
-    check_in  = new.check_in,
-    check_out = new.check_out,
-    notes     = new.notes
+    status    = VALUES(status),
+    check_in  = VALUES(check_in),
+    check_out = VALUES(check_out),
+    notes     = VALUES(notes)
 SQL
         );
 
