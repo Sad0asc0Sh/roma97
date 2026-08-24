@@ -4,6 +4,18 @@
 
 @import url('app-shell.css');
 
+/* ── Soft page entrance (JS fallback layer) ──────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  .js-enabled.page-entering .parent-main {
+    animation: pageIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Design Tokens ───────────────────────────────────────── */
 :root {
   --pp-primary: var(--app-primary);

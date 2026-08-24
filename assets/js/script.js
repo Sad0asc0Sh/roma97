@@ -1,5 +1,115 @@
 document.documentElement.classList.add('js-enabled');
 
+// ============================================
+// SCROLL PROGRESS RIBBON
+// Thin gradient bar pinned to the top edge that
+// fills as the user scrolls down the page.
+// ============================================
+(function() {
+    var bar = document.getElementById('scrollProgress');
+    if (!bar) return;
+    var ticking = false;
+    window.addEventListener('scroll', function() {
+        if (!ticking) {
+            window.requestAnimationFrame(function() {
+                var doc = document.documentElement;
+                var max = doc.scrollHeight - window.innerHeight;
+                var pct = max > 0 ? (window.scrollY / max) * 100 : 0;
+                bar.style.width = Math.min(pct, 100) + '%';
+                ticking = false;
+            });
+            ticking = true;
+        }
+    }, { passive: true });
+})();
+
+// ============================================
+// SECTION HEADER ENTRANCE TRIGGER
+// Adds .in-view to .section-header elements when they
+// scroll into the viewport so the drawn-underline and
+// icon-pop animations in enhance.css fire once.
+// ============================================
+(function() {
+    var headers = document.querySelectorAll('.section-header');
+    if (!headers.length || !('IntersectionObserver' in window)) return;
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('in-view');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.35 });
+    headers.forEach(function(h) { observer.observe(h); });
+})();
+
+// ============================================
+// SOFT PAGE TRANSITIONS
+// Fade+slide the main content in on every page load, and fade the
+// whole page out when an internal link is clicked — so multi-page
+// navigation feels smooth instead of an abrupt white flash.
+// Skipped for users with reduced-motion preference and for
+// modifier-click / target-blank / download links.
+// ============================================
+(function() {
+    var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) return;
+
+    // Entrance: mark the page on DOM-ready so the CSS animation runs.
+    document.addEventListener('DOMContentLoaded', function() {
+        document.documentElement.classList.add('page-entering');
+        // Clean the class up after the animation so it never re-triggers.
+        setTimeout(function() {
+            document.documentElement.classList.remove('page-entering');
+        }, 600);
+    });
+
+    // Exit: intercept internal link clicks and form submits.
+    var isLeaving = false;
+
+    function shouldIgnore(el) {
+        if (!el || isLeaving) return true;
+        if (el.target && el.target !== '_self') return true;
+        if (el.hasAttribute('download')) return true;
+        if (el.protocol !== window.location.protocol || el.host !== window.location.host) return true;
+        var href = el.getAttribute('href');
+        if (!href || href.charAt(0) === '#') return true;
+        if (el.hasAttribute('data-no-transition')) return true;
+        // Modifier clicks open new tabs — let the browser handle them.
+        if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)) return true;
+        return false;
+    }
+
+    document.addEventListener('click', function(e) {
+        var link = e.target.closest ? e.target.closest('a[href]') : null;
+        if (!shouldIgnore(link)) {
+            e.preventDefault();
+            isLeaving = true;
+            document.documentElement.classList.add('page-leaving');
+            // Match the CSS exit duration before navigating.
+            setTimeout(function() { window.location.href = link.href; }, 160);
+        }
+    }, true);
+
+    document.addEventListener('submit', function(e) {
+        var form = e.target;
+        if (isLeaving) return;
+        // Only same-document GET navigations get the fade; POSTs often
+        // stay on the same URL or trigger downloads.
+        if (form.method && form.method.toLowerCase() === 'post') return;
+        var actionUrl = form.getAttribute('action');
+        if (!actionUrl || actionUrl.charAt(0) === '#') return;
+        try {
+            var resolved = new URL(actionUrl, window.location.href);
+            if (resolved.origin !== window.location.origin) return;
+        } catch (err) { return; }
+        e.preventDefault();
+        isLeaving = true;
+        document.documentElement.classList.add('page-leaving');
+        setTimeout(function() { form.submit(); }, 160);
+    }, true);
+})();
+
 // Mobile Menu Toggle (Public Site)
 document.addEventListener('DOMContentLoaded', function() {
     // ============================================

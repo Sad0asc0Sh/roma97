@@ -55,6 +55,8 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
     <link rel="apple-touch-icon" href="<?php echo e(asset('assets/img/favicon.svg')); ?>">
     <?php $cssHref = asset('assets/css/style.css'); ?>
     <link rel="stylesheet" href="<?php echo e($cssHref); ?>">
+    <link rel="stylesheet" href="<?php echo e(asset('assets/css/enhance.css')); ?>">
+    <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
 
     <!-- Open Graph Metadata -->
     <meta property="og:title" content="<?php echo $pageTitleValue; ?>">

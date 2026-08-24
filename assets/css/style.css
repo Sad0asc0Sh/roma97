@@ -653,18 +653,30 @@ textarea.form-control { resize: vertical; min-height: 120px; }
 .mb-0 { margin-bottom: 0; } .mb-1 { margin-bottom: var(--space-xs); } .mb-2 { margin-bottom: var(--space-sm); } .mb-3 { margin-bottom: var(--space-md); } .mb-4 { margin-bottom: var(--space-lg); }
 .page-404 { padding: var(--space-2xl) 0; }
 
-/* View Transitions API for Multi-page PHP (skipped when the user prefers reduced motion,
-   which is also the main source of harmless "Transition was skipped" aborts) */
+/* === SOFT PAGE TRANSITIONS =====================================
+   Driven by script.js: fade out on internal navigation, fade+slide
+   in on load. Implemented purely with CSS classes so it behaves
+   identically in every browser (cross-document View Transitions
+   conflicted with the JS delay and spammed AbortErrors). */
 @media (prefers-reduced-motion: no-preference) {
-    @view-transition {
-        navigation: auto;
+    .js-enabled.page-entering main.site-main,
+    .js-enabled.page-entering .admin-content,
+    .js-enabled.page-entering .parent-main,
+    .js-enabled.page-entering .teacher-container {
+        animation: pageIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
-    ::view-transition-old(root) {
-        animation: 180ms ease-out cubic-bezier(0.4, 0, 0.2, 1) both fadeOut;
-    }
-    ::view-transition-new(root) {
-        animation: 250ms ease-in cubic-bezier(0.4, 0, 0.2, 1) both fadeIn;
-    }
+}
+
+@keyframes pageIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Exit fade — applied to the whole document right before navigating away */
+.js-enabled.page-leaving {
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 0.16s ease-in, transform 0.16s ease-in;
 }
 
 /* Keyframes Library */
