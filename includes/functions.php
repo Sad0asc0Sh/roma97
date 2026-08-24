@@ -148,7 +148,47 @@ function siteContactEmail(): string
 
 function siteAddress(): string
 {
-    return getSetting('site_address', 'تهران، خیابان ولیعصر، کوچه گلستان');
+    return trim(getSetting('site_address', ''));
+}
+
+/**
+ * Share link of the kindergarten location pin from a map app
+ * (Neshan / Google Maps / Balad). Set by the admin in settings.
+ * Returns '' when the admin has not configured it yet.
+ */
+function siteMapLink(): string
+{
+    return trim(getSetting('map_link', ''));
+}
+
+/**
+ * Build an embeddable map iframe URL from the stored share link.
+ * Supports Neshan, Google Maps and Balad share URLs; returns null
+ * for unknown formats so the frontend can show a fallback button.
+ */
+function siteMapEmbedUrl(): ?string
+{
+    $link = siteMapLink();
+    if ($link === '') {
+        return null;
+    }
+
+    $host = strtolower((string) parse_url($link, PHP_URL_HOST));
+    $host = preg_replace('/^www\./', '', $host) ?? $host;
+
+    // Google Maps: the output=embed variant works without an API key.
+    if (str_contains($host, 'google.com/maps') || str_contains($host, 'maps.google.com')
+        || str_contains($host, 'maps.app.goo.gl') || str_contains($host, 'goo.gl')) {
+        return 'https://maps.google.com/maps?q=' . urlencode($link) . '&output=embed';
+    }
+
+    // Neshan embed player.
+    if (str_contains($host, 'neshan.org')) {
+        return $link;
+    }
+
+    // Balad: no public iframe embed; fall back to link-only mode.
+    return null;
 }
 
 function siteTopbarEnabled(): string

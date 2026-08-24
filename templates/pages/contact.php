@@ -93,6 +93,7 @@
             <div style="display: grid; gap: var(--space-lg);">
 
                 <!-- Address & Map Embed Card -->
+                <?php $mapEmbedUrl = siteMapEmbedUrl(); ?>
                 <div style="background: var(--paper); padding: var(--space-xl); border-radius: var(--radius-xl); border: 1px solid var(--paper-line);">
                     <div style="display: flex; gap: var(--space-sm); margin-bottom: var(--space-md);">
                         <div style="color: var(--primary); flex-shrink: 0; margin-top: 2px;">
@@ -101,25 +102,36 @@
                         <div>
                             <h3 style="font-size: var(--text-lg); font-weight: 700; margin-bottom: 4px; color: var(--neutral-dark);">نشانی مهدکودک روما</h3>
                             <p style="color: var(--neutral-medium); font-size: var(--text-base); margin: 0; line-height: 1.7;">
-                                <?php echo e(siteAddress()); ?>
-
+                                <?php if (siteAddress() !== ''): ?>
+                                    <?php echo e(siteAddress()); ?>
+                                <?php else: ?>
+                                    به‌زودی نشانی دقیق مجموعه در این بخش اعلام می‌شود. برای اطلاع از موقعیت، با ما تماس بگیرید.
+                                <?php endif; ?>
                             </p>
                         </div>
                     </div>
 
-                    <!-- Map Embed Container -->
-                    <div style="width: 100%; height: 220px; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--paper-line); margin-top: var(--space-md);">
-                        <iframe
-                            title="نقشه موقعیت روما"
-                            src="https://maps.google.com/maps?q=Tehran,Valiasr&t=&z=14&ie=UTF8&iwloc=&output=embed"
-                            width="100%"
-                            height="100%"
-                            style="border:0;"
-                            allowfullscreen=""
-                            loading="lazy"
-                            referrerpolicy="no-referrer-when-downgrade">
-                        </iframe>
-                    </div>
+                    <?php if ($mapEmbedUrl !== null): ?>
+                        <!-- Map Embed Container (from admin-set share link) -->
+                        <div style="width: 100%; height: 220px; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--paper-line); margin-top: var(--space-md);">
+                            <iframe
+                                title="نقشه موقعیت روما"
+                                src="<?php echo e($mapEmbedUrl); ?>"
+                                width="100%"
+                                height="100%"
+                                style="border:0;"
+                                allowfullscreen=""
+                                loading="lazy"
+                                referrerpolicy="no-referrer-when-downgrade">
+                            </iframe>
+                        </div>
+                    <?php elseif (siteMapLink() !== ''): ?>
+                        <!-- Provider without iframe support (e.g. Balad): open-in-app button -->
+                        <a href="<?php echo e(siteMapLink()); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="margin-top: var(--space-md); gap: 8px;">
+                            <svg style="width: 18px; height: 18px;"><use href="<?php echo asset('assets/img/icons.svg#icon-map-pin'); ?>"/></svg>
+                            مشاهده موقعیت روی نقشه ↗
+                        </a>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Working Hours Table Card -->

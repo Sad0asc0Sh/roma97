@@ -26,6 +26,7 @@ function getSettings(PDO $pdo): array
         'contact_phone' => '+98 21 1234 5678',
         'contact_email' => 'info@rooma.ir',
         'site_address' => '',
+        'map_link' => '',
         'working_hours' => '',
         'instagram' => '',
         'telegram' => '',
@@ -53,15 +54,14 @@ function getSettings(PDO $pdo): array
 
 function saveSetting(PDO $pdo, string $key, string $value): void
 {
+    // Named placeholders cannot repeat when PDO::ATTR_EMULATE_PREPARES is
+    // false (native prepares), so positional ? markers are used instead.
     $statement = $pdo->prepare(
-        "INSERT INTO settings (meta_key, meta_value) VALUES (:meta_key, :meta_value)
-         ON DUPLICATE KEY UPDATE meta_value = :meta_value"
+        "INSERT INTO settings (meta_key, meta_value) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)"
     );
 
-    $statement->execute([
-        ':meta_key' => $key,
-        ':meta_value' => $value,
-    ]);
+    $statement->execute([$key, $value]);
 }
 
 function deleteLogoFile(string $relativePath): void
@@ -178,6 +178,7 @@ try {
         'contact_phone' => '+98 21 1234 5678',
         'contact_email' => 'info@rooma.ir',
         'site_address' => '',
+        'map_link' => '',
         'working_hours' => '',
         'instagram' => '',
         'telegram' => '',
@@ -296,6 +297,7 @@ if (isPostRequest()) {
     $contactPhone = trim((string) ($_POST['contact_phone'] ?? ''));
     $contactEmail = trim((string) ($_POST['contact_email'] ?? ''));
     $siteAddressVal = trim((string) ($_POST['site_address'] ?? ''));
+    $mapLink = trim((string) ($_POST['map_link'] ?? ''));
     $workingHours = trim((string) ($_POST['working_hours'] ?? ''));
     $instagram = trim((string) ($_POST['instagram'] ?? ''));
     $telegram = trim((string) ($_POST['telegram'] ?? ''));
@@ -328,6 +330,35 @@ if (isPostRequest()) {
         redirect(url('admin/settings.php'));
     }
 
+    // Map share link: optional, but must point at a known map provider.
+    $mapLinkValid = true;
+    if ($mapLink !== '') {
+        if (settingsStringLength($mapLink) > 500 || !filter_var($mapLink, FILTER_VALIDATE_URL)) {
+            $mapLinkValid = false;
+        } else {
+            $host = strtolower((string) parse_url($mapLink, PHP_URL_HOST));
+            $host = preg_replace('/^www\./', '', $host) ?? $host;
+            $allowedHosts = [
+                'neshan.org', 'map.neshan.org', 'nshn.ir',
+                'maps.google.com', 'google.com', 'maps.app.goo.gl', 'goo.gl',
+                'balad.ir', 'map.ir',
+            ];
+            $hostAllowed = false;
+            foreach ($allowedHosts as $allowed) {
+                if ($host === $allowed || str_ends_with($host, '.' . $allowed)) {
+                    $hostAllowed = true;
+                    break;
+                }
+            }
+            $mapLinkValid = $hostAllowed;
+        }
+    }
+
+    if (!$mapLinkValid) {
+        setFlash('error', 'لینک نقشه نامعتبر است. فقط لینک اشتراک از نشان (Neshan)، گوگل مپ یا بلد پذیرفته می‌شود.');
+        redirect(url('admin/settings.php'));
+    }
+
     if ($workingHours !== '' && settingsStringLength($workingHours) > 100) {
         setFlash('error', 'ساعت کاری بسیار طولانی است.');
         redirect(url('admin/settings.php'));
@@ -349,6 +380,7 @@ if (isPostRequest()) {
         saveSetting($pdo, 'contact_phone', $contactPhone);
         saveSetting($pdo, 'contact_email', $contactEmail);
         saveSetting($pdo, 'site_address', $siteAddressVal);
+        saveSetting($pdo, 'map_link', $mapLink);
         saveSetting($pdo, 'working_hours', $workingHours);
         saveSetting($pdo, 'instagram', $instagram);
         saveSetting($pdo, 'telegram', $telegram);
@@ -438,10 +470,45 @@ require_once __DIR__ . '/header.php';
                 </div>
 
                 <div class="form-group">
-                    <label for="site_address" class="form-label">آدرس</label>
+                    <label for="site_address" class="form-label">آدرس مهد کودک (نشانی اصلی)</label>
                     <input type="text" id="site_address" name="site_address" class="form-control"
-                        maxlength="255" placeholder="تهران، خیابان ..."
+                        maxlength="255" placeholder="مثال: تهران، خیابان ...، پلاک ..."
                         value="<?= e($settings['site_address'] ?? '') ?>">
+                    <small style="color:var(--muted);font-size:0.85rem;">این نشانی در فوتر سایت، صفحه تماس و اطلاعات ساختارمند (SEO) نمایش داده می‌شود.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="map_link" class="form-label">لینک اشتراک موقعیت روی نقشه 🗺️</label>
+                    <input type="url" id="map_link" name="map_link" class="form-control"
+                        dir="ltr" maxlength="500"
+                        placeholder="https://maps.app.goo.gl/... یا https://neshan.org/maps/..."
+                        value="<?= e($settings['map_link'] ?? '') ?>">
+                    <small style="color:var(--muted);font-size:0.85rem;display:block;line-height:1.8;margin-top:4px;">
+                        نحوه دریافت لینک: در اپلیکیشن <strong>نشان</strong> یا <strong>گوگل مپ</strong>، محل دقیق مهد را پیدا کنید ←
+                        روی نام/نشانگر بزنید ← گزینه «اشتراک‌گذاری» ← کپی لینک ← همین‌جا جای‌گذاری کنید.
+                        نقشه صفحه تماس به‌صورت خودکار از این لینک ساخته می‌شود.
+                    </small>
+
+                    <?php $previewEmbed = function_exists('siteMapEmbedUrl') && ($settings['map_link'] ?? '') !== '' ? siteMapEmbedUrl() : null; ?>
+                    <?php if (($settings['map_link'] ?? '') !== ''): ?>
+                        <div style="margin-top:var(--space-sm);">
+                            <?php if ($previewEmbed !== null): ?>
+                                <div style="width:100%;height:180px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border);">
+                                    <iframe title="پیش‌نمایش نقشه" src="<?= e($previewEmbed) ?>"
+                                        width="100%" height="100%" style="border:0;"
+                                        loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                                </div>
+                            <?php else: ?>
+                                <div style="padding:10px 14px;background:rgba(232,168,56,0.12);border:1px solid rgba(232,168,56,0.35);border-radius:var(--radius-sm);font-size:0.8125rem;color:#A07018;">
+                                    لینک ثبت شده است، اما پیش‌نمایش داخلی برای این سرویس ممکن نیست (مثلاً بلد). لینک در صفحه تماس به‌صورت دکمه نمایش داده می‌شود.
+                                </div>
+                            <?php endif; ?>
+                            <a href="<?= e($settings['map_link']) ?>" target="_blank" rel="noopener noreferrer"
+                                style="font-size:0.8125rem;display:inline-flex;align-items:center;gap:4px;margin-top:6px;">
+                                بازکردن لینک فعلی ↗
+                            </a>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="form-group">
