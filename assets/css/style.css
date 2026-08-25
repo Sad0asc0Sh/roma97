@@ -208,7 +208,10 @@
     color: var(--white);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; direction: rtl; }
+html { scroll-behavior: smooth; direction: rtl; background: var(--bg-cream); }
+/* Opaque themed canvas on <html>: keeps the dark surface visible while
+   content fades out/in during navigation — kills the white flash. */
+html[data-theme="dark"] { background: #0B0F19; color-scheme: dark; }
 [dir="ltr"], [dir="ltr"] * { direction: ltr; }
 body { font-family: var(--font-base); font-size: var(--font-size-base); line-height: var(--line-height-base); color: var(--neutral-dark); background: var(--bg-cream); background-image: radial-gradient(circle at 20% 10%, rgba(61,139,99,0.04) 0%, transparent 30%), radial-gradient(circle at 80% 80%, rgba(196,114,74,0.04) 0%, transparent 35%), radial-gradient(circle at 50% 50%, rgba(232,168,56,0.03) 0%, transparent 50%); background-attachment: fixed; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
 img { max-width: 100%; height: auto; display: block; }
@@ -684,8 +687,10 @@ textarea.form-control { resize: vertical; min-height: 120px; }
     to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Exit fade — applied to the whole document right before navigating away */
-.js-enabled.page-leaving {
+/* Exit fade — applied to <body> right before navigating away. Fading the
+   body (not <html>) keeps the themed canvas opaque underneath, so dark
+   mode never flashes white mid-navigation. */
+.js-enabled.page-leaving body {
     opacity: 0;
     transform: translateY(-6px);
     transition: opacity 0.16s ease-in, transform 0.16s ease-in;

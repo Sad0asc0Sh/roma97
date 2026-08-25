@@ -31,7 +31,7 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script>(function(){var t=localStorage.getItem('roma_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
+    <script>(function(){var t=localStorage.getItem('roma_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');var d=document.documentElement;d.setAttribute('data-theme',t);d.style.backgroundColor=t==='dark'?'#0B0F19':'#F7F2E8';})();</script>
     <meta name="description" content="<?php echo $pageDescriptionValue; ?>">
     <?php
     // Canonical URL: derive the app-relative script path by stripping the base
