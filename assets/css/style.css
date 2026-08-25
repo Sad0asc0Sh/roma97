@@ -678,12 +678,12 @@ textarea.form-control { resize: vertical; min-height: 120px; }
     .js-enabled.page-entering .admin-content,
     .js-enabled.page-entering .parent-main,
     .js-enabled.page-entering .teacher-container {
-        animation: pageIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation: pageIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
 }
 
 @keyframes pageIn {
-    from { opacity: 0; transform: translateY(14px); }
+    from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -692,8 +692,7 @@ textarea.form-control { resize: vertical; min-height: 120px; }
    mode never flashes white mid-navigation. */
 .js-enabled.page-leaving body {
     opacity: 0;
-    transform: translateY(-6px);
-    transition: opacity 0.16s ease-in, transform 0.16s ease-in;
+    transition: opacity 0.06s linear;
 }
 
 /* Keyframes Library */

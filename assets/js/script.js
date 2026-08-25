@@ -63,7 +63,7 @@ document.documentElement.classList.add('js-enabled');
         document.documentElement.classList.add('page-entering');
         setTimeout(function() {
             document.documentElement.classList.remove('page-entering');
-        }, 600);
+        }, 350);
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', markEntering);
@@ -94,7 +94,7 @@ document.documentElement.classList.add('js-enabled');
             isLeaving = true;
             document.documentElement.classList.add('page-leaving');
             // Match the CSS exit duration before navigating.
-            setTimeout(function() { window.location.href = link.href; }, 160);
+            setTimeout(function() { window.location.href = link.href; }, 60);
         }
     }, true);
 
@@ -113,8 +113,72 @@ document.documentElement.classList.add('js-enabled');
         e.preventDefault();
         isLeaving = true;
         document.documentElement.classList.add('page-leaving');
-        setTimeout(function() { form.submit(); }, 160);
+        setTimeout(function() { form.submit(); }, 60);
     }, true);
+})();
+
+// ============================================
+// SPECULATIVE LINK PREFETCH
+// Warms the server connection with internal pages as they scroll near the
+// viewport, so clicking a nav link feels faster. Skipped entirely in
+// Chromium browsers, which get full prerendering via the Speculation
+// Rules <script> in header.php instead. Also skipped in admin/teacher/
+// parent shells and reduced-data contexts via Save-Data.
+// ============================================
+(function() {
+    var supportsPrerender = typeof HTMLScriptElement !== 'undefined' &&
+        HTMLScriptElement.supports && HTMLScriptElement.supports('speculationrules');
+    if (supportsPrerender) return;
+    if (document.body && document.body.classList.contains('admin-layout')) return;
+    if (document.querySelector('.parent-main, .teacher-container')) return;
+    var conn = navigator.connection || {};
+    if (conn.saveData) return;
+
+    var prefetched = new Set();
+
+    function prefetch(href) {
+        if (prefetched.has(href)) return;
+        prefetched.add(href);
+        var r = new Request(href, { mode: 'same-origin', credentials: 'same-origin', priority: 'low' });
+        fetch(r).catch(function() {});
+    }
+
+    function eligible(link) {
+        var href = link.getAttribute('href');
+        if (!href || href.charAt(0) === '#') return false;
+        if (link.target && link.target !== '_self') return false;
+        if (link.protocol !== window.location.protocol || link.host !== window.location.host) return false;
+        // Same page — browser already handles it.
+        if (link.href === window.location.href) return false;
+        return true;
+    }
+
+    function scan(root) {
+        root.querySelectorAll('a[href]').forEach(function(link) {
+            if (!eligible(link)) return;
+            prefetch(link.href);
+        });
+    }
+
+    if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    prefetch(entry.target.href);
+                    io.unobserve(entry.target);
+                }
+            });
+        }, { rootMargin: '200px' });
+
+        function observeAll() {
+            document.querySelectorAll('a[href]').forEach(function(link) {
+                if (eligible(link)) io.observe(link);
+            });
+        }
+        observeAll();
+    } else {
+        scan(document);
+    }
 })();
 
 // Mobile Menu Toggle (Public Site)

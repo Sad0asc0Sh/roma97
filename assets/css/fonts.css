@@ -4,6 +4,8 @@
  */
 
 /* ─── Vazirmatn (body font) ─────────────────────────────── */
+/* Weights above 900 map to ExtraBold (heaviest local file) so headings
+   declared at 900 render in Vazirmatn instead of falling back to Tahoma. */
 @font-face {
     font-family: 'Vazirmatn';
     font-style: normal;
@@ -35,7 +37,7 @@
 @font-face {
     font-family: 'Vazirmatn';
     font-style: normal;
-    font-weight: 800;
+    font-weight: 800 900;
     font-display: swap;
     src: url('../fonts/Vazirmatn-ExtraBold.woff2') format('woff2');
 }

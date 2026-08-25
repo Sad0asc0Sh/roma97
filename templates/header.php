@@ -48,7 +48,12 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
     <meta name="theme-color" content="#3D8B63" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#0B0F19" media="(prefers-color-scheme: dark)">
     <title><?php echo $pageTitleValue; ?></title>
-    <link rel="preload" href="<?php echo e(asset('assets/fonts/Vazirmatn-Regular.woff2')); ?>" as="font" type="font/woff2" crossorigin>
+    <?php // Font preloads use unversioned URLs to exactly match what fonts.css requests —
+          // a ?v= mismatch here makes the browser download each font twice.
+          // Long-term caching is handled by .htaccess (max-age=31536000, immutable). ?>
+    <link rel="preload" href="<?php echo e(url('assets/fonts/Vazirmatn-Regular.woff2')); ?>" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="<?php echo e(url('assets/fonts/Vazirmatn-Medium.woff2')); ?>" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="<?php echo e(url('assets/fonts/Vazirmatn-ExtraBold.woff2')); ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?php echo e(url('assets/css/fonts.css')); ?>">
     <link rel="icon" href="<?php echo e(asset('favicon.ico')); ?>" type="image/x-icon">
     <link rel="icon" href="<?php echo e(asset('assets/img/favicon.svg')); ?>" type="image/svg+xml">
@@ -56,6 +61,19 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
     <?php $cssHref = asset('assets/css/style.css'); ?>
     <link rel="stylesheet" href="<?php echo e($cssHref); ?>">
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/enhance.css')); ?>">
+    <?php // Speculation Rules: Chromium prerenders internal public pages on hover,
+          // making navigation instant. Conservative settings (no eagerness on
+          // login POST targets; same-origin only). Ignored by non-Chromium browsers. ?>
+    <script type="speculationrules">
+    {
+      "prerender": [
+        {
+          "where": { "href_matches": "/*" },
+          "eagerness": "moderate"
+        }
+      ]
+    }
+    </script>
     <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
 
     <!-- Open Graph Metadata -->
