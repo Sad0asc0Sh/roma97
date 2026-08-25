@@ -582,7 +582,7 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  background: var(--app-slate-25);
+  background: var(--app-bg);
 }
 
 /* ── CONFIRM DIALOG (.app-confirm) ────────────────────────── */
@@ -657,7 +657,7 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   display: inline-block;
 }
 [data-theme="dark"] .app-skeleton {
-  background: linear-gradient(90deg, #1E293B 25%, #334155 50%, #1E293B 75%);
+  background: linear-gradient(90deg, #212B24 25%, #2C3A31 50%, #212B24 75%);
   background-size: 200% 100%;
 }
 .app-skeleton-avatar { width: 44px; height: 44px; border-radius: 50%; }
@@ -883,9 +883,9 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
 }
 
 [data-theme="dark"] .shamsi-datepicker-container {
-  background: #1e293b;
-  border-color: #334155;
-  color: #f8fafc;
+  background: var(--app-surface, #182019);
+  border-color: var(--app-border-strong, #324038);
+  color: var(--app-text, #f0f4f2);
 }
 
 .sdp-header {
@@ -910,8 +910,8 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
 }
 
 [data-theme="dark"] .sdp-nav-btn {
-  background: #334155;
-  color: #f8fafc;
+  background: var(--app-slate-100, #212B24);
+  color: var(--app-text, #f0f4f2);
 }
 
 .sdp-nav-btn:hover {
@@ -955,7 +955,7 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
 }
 
 [data-theme="dark"] .sdp-day-btn {
-  color: #f8fafc;
+  color: var(--app-text, #f0f4f2);
 }
 
 .sdp-day-btn:hover {
@@ -963,7 +963,7 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
 }
 
 [data-theme="dark"] .sdp-day-btn:hover {
-  background: #334155;
+  background: var(--app-slate-100, #212B24);
 }
 
 .sdp-day-btn.selected {

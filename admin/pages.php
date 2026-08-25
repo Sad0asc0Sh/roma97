@@ -308,8 +308,6 @@ require_once __DIR__ . '/header.php';
     </template>
 
     <div class="admin-section">
-
-    <div class="admin-section">
         <div class="admin-section-header">
             <h2 class="admin-section-title">همه صفحات</h2>
         </div>

@@ -139,21 +139,21 @@ require_once __DIR__ . '/header.php';
 
     <!-- Summary KPI Cards -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 28px;">
-        <div class="card" style="padding: 20px; border-right: 5px solid #38a169;">
+        <div class="card" style="padding: 20px; border-inline-start: 5px solid var(--app-success, #2E7D5B);">
             <div style="font-size: 0.9rem; color: var(--adm-text-muted); font-weight: 600; margin-bottom: 8px;">مجموع شهریه دریافتی</div>
-            <div style="font-size: 1.6rem; font-weight: 800; color: #276749;"><?= e(persianNumber(number_format($totalTuition))) ?> <span style="font-size: 0.9rem; font-weight: normal;">تومان</span></div>
+            <div style="font-size: 1.6rem; font-weight: 800; color: var(--adm-success);"><?= e(persianNumber(number_format($totalTuition))) ?> <span style="font-size: 0.9rem; font-weight: normal;">تومان</span></div>
             <div style="font-size: 0.8rem; color: var(--adm-text-muted); margin-top: 6px;">ورودی مالی ماه <?= e(formatShamsiMonthYear($selectedMonthYear)) ?></div>
         </div>
 
-        <div class="card" style="padding: 20px; border-right: 5px solid #e53e3e;">
+        <div class="card" style="padding: 20px; border-inline-start: 5px solid var(--adm-danger);">
             <div style="font-size: 0.9rem; color: var(--adm-text-muted); font-weight: 600; margin-bottom: 8px;">مجموع هزینه‌ها</div>
-            <div style="font-size: 1.6rem; font-weight: 800; color: #9b2c2c;"><?= e(persianNumber(number_format($totalExpenses))) ?> <span style="font-size: 0.9rem; font-weight: normal;">تومان</span></div>
+            <div style="font-size: 1.6rem; font-weight: 800; color: var(--adm-danger);"><?= e(persianNumber(number_format($totalExpenses))) ?> <span style="font-size: 0.9rem; font-weight: normal;">تومان</span></div>
             <div style="font-size: 0.8rem; color: var(--adm-text-muted); margin-top: 6px;">حقوق معلمان (<?= e(persianNumber(number_format($totalSalaries))) ?>) + عمومی (<?= e(persianNumber(number_format($totalGeneralExpenses))) ?>)</div>
         </div>
 
-        <div class="card" style="padding: 20px; border-right: 5px solid <?= $netProfitLoss >= 0 ? '#319795' : '#dd6b20' ?>;">
+        <div class="card" style="padding: 20px; border-inline-start: 5px solid <?= $netProfitLoss >= 0 ? 'var(--app-success, #2E7D5B)' : 'var(--adm-warning, #B8791A)' ?>;">
             <div style="font-size: 0.9rem; color: var(--adm-text-muted); font-weight: 600; margin-bottom: 8px;">سود / زیان خالص</div>
-            <div style="font-size: 1.6rem; font-weight: 800; color: <?= $netProfitLoss >= 0 ? '#2c7a7b' : '#c05621' ?>;">
+            <div style="font-size: 1.6rem; font-weight: 800; color: <?= $netProfitLoss >= 0 ? 'var(--adm-success)' : 'var(--adm-warning)' ?>;">
                 <?= $netProfitLoss < 0 ? '-' : '' ?><?= e(persianNumber(number_format(abs($netProfitLoss)))) ?> <span style="font-size: 0.9rem; font-weight: normal;">تومان</span>
             </div>
             <div style="font-size: 0.8rem; color: var(--adm-text-muted); margin-top: 6px;"><?= $netProfitLoss >= 0 ? 'تراز مالی مثبت (سود)' : 'تراز مالی منفی (کسری/زیان)' ?></div>
@@ -194,7 +194,7 @@ require_once __DIR__ . '/header.php';
                                             <small class="muted"><a href="tel:<?= e($item['parent_phone']) ?>"><?= e($item['parent_phone']) ?></a></small>
                                         <?php endif; ?>
                                     </td>
-                                    <td style="color:#e53e3e; font-weight:700;"><?= e(persianNumber(number_format((float) $item['balance']))) ?> تومان</td>
+                                    <td style="color:var(--adm-danger); font-weight:700;"><?= e(persianNumber(number_format((float) $item['balance']))) ?> تومان</td>
                                     <td>
                                         <a href="<?= e(url('admin/tuition.php?child_id=' . $item['child_id'] . '#recordForm')) ?>" class="btn btn-sm btn-primary">ثبت پرداخت</a>
                                     </td>
@@ -237,7 +237,7 @@ require_once __DIR__ . '/header.php';
                                     <td>
                                         <div style="display:flex; align-items:center; gap:8px;">
                                             <div style="flex:1; background:var(--adm-bg, #edf2f7); height:8px; border-radius:4px; overflow:hidden;">
-                                                <div style="background:var(--adm-primary, #3182ce); height:100%; width:<?= $percentage ?>%;"></div>
+                                                <div style="background:var(--adm-primary, #3D8B63); height:100%; width:<?= $percentage ?>%;"></div>
                                             </div>
                                             <span style="font-size:0.8rem; font-weight:600; min-width:40px; text-align:left;"><?= e(persianNumber((string) $percentage)) ?>٪</span>
                                         </div>

@@ -75,8 +75,12 @@ function initSidebarToggle() {
     }
   }
 
-  const parentItems = document.querySelectorAll('.admin-nav-parent');
+  // Submenu parents without an inline onclick handler fall back to
+  // data-submenu driven toggling (avoids double-toggle with header.php's
+  // toggleAdminSubmenu which uses onclick).
+  const parentItems = document.querySelectorAll('.admin-nav-parent:not([onclick])');
   parentItems.forEach(item => {
+    if (!item.dataset.submenu) return;
     item.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();

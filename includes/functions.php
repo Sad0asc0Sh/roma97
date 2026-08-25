@@ -275,7 +275,7 @@ function sendSecurityHeaders(): void
            "img-src 'self' data:; " .
            "font-src 'self'; " .
            "connect-src 'self'; " .
-           "frame-src https://maps.google.com https://www.google.com; " .
+           "frame-src https://maps.google.com https://www.google.com https://neshan.org; " .
            "frame-ancestors 'none'; " .
            "base-uri 'self'; " .
            "form-action 'self';";

@@ -397,27 +397,27 @@ require_once __DIR__ . '/header.php';
                             $initial = strtoupper(substr((string) ($child['first_name'] ?? ''), 0, 1));
                             $notesVal = (string) ($child['attendance_notes'] ?? '');
                             ?>
-                            <article class="attendance-card" style="background:#fff;border:1px solid var(--adm-border);border-radius:12px;padding:16px;margin-bottom:12px;">
-                                <div class="attendance-card-top" style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                            <article class="attendance-card">
+                                <div class="attendance-card-top">
                                     <?php if (!empty($child['photo'])): ?>
-                                        <img class="child-photo-small" src="<?= e(url((string) $child['photo'])) ?>" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                                        <img class="child-photo-small" src="<?= e(url((string) $child['photo'])) ?>" alt="">
                                     <?php else: ?>
-                                        <span class="child-photo-small child-photo-small-placeholder" aria-hidden="true" style="width:40px;height:40px;border-radius:50%;background:var(--adm-primary-100);color:var(--adm-primary);display:inline-flex;align-items:center;justify-content:center;font-weight:700;"><?= e($initial ?: '?') ?></span>
+                                        <span class="child-photo-small-placeholder avatar-placeholder-circle" aria-hidden="true"><?= e($initial ?: '?') ?></span>
                                     <?php endif; ?>
                                     <div>
                                         <h2 class="attendance-card-name" style="font-size:1rem;font-weight:700;margin:0;"><?= e($fullName !== '' ? $fullName : 'کودک') ?></h2>
                                         <p class="attendance-card-meta" style="font-size:0.8rem;color:var(--adm-text-muted);margin:2px 0 0;"><?= e(attendanceAgeFromDob((string) ($child['date_of_birth'] ?? ''))) ?> · <?= e($parentName !== '' ? $parentName : '—') ?></p>
                                     </div>
                                 </div>
-                                <fieldset class="attendance-fieldset" disabled data-mobile-fieldset style="border:none;padding:0;margin:0 0 12px;">
+                                <fieldset class="attendance-fieldset" disabled data-mobile-fieldset>
                                     <legend class="sr-only">وضعیت برای <?= e($fullName) ?></legend>
-                                    <p class="attendance-field-label" style="font-weight:600;font-size:0.85rem;margin-bottom:6px;">وضعیت</p>
-                                    <div class="status-radio-group" style="display:flex;gap:6px;flex-wrap:wrap;">
+                                    <p class="attendance-field-label">وضعیت</p>
+                                    <div class="status-radio-group">
                                         <?php renderAttendanceRadios($child, $cid, 'mob'); ?>
                                     </div>
                                 </fieldset>
-                                <div class="time-inputs" style="display:flex;gap:12px;margin-bottom:12px;">
-                                    <label class="time-input-label" style="font-size:0.85rem;font-weight:600;flex:1;">
+                                <div class="time-inputs">
+                                    <label class="time-input-label">
                                         ورود
                                         <input
                                             class="form-control time-input"
@@ -425,10 +425,9 @@ require_once __DIR__ . '/header.php';
                                             name="attendance[<?= e((string) $cid) ?>][check_in]"
                                             value="<?= e(attendanceTimeForInput($child['check_in'] ?? null)) ?>"
                                             disabled
-                                            style="margin-top:4px;"
                                         >
                                     </label>
-                                    <label class="time-input-label" style="font-size:0.85rem;font-weight:600;flex:1;">
+                                    <label class="time-input-label">
                                         خروج
                                         <input
                                             class="form-control time-input"
@@ -436,11 +435,10 @@ require_once __DIR__ . '/header.php';
                                             name="attendance[<?= e((string) $cid) ?>][check_out]"
                                             value="<?= e(attendanceTimeForInput($child['check_out'] ?? null)) ?>"
                                             disabled
-                                            style="margin-top:4px;"
                                         >
                                     </label>
                                 </div>
-                                <label class="notes-field-label" style="font-size:0.85rem;font-weight:600;display:block;">
+                                <label class="notes-field-label">
                                     یادداشت
                                     <textarea
                                         class="form-control notes-field"
@@ -448,7 +446,6 @@ require_once __DIR__ . '/header.php';
                                         rows="2"
                                         maxlength="5000"
                                         disabled
-                                        style="margin-top:4px;"
                                     ><?= e($notesVal) ?></textarea>
                                 </label>
                             </article>

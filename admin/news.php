@@ -320,23 +320,23 @@ require_once __DIR__ . '/header.php';
             <?php endif; ?>
 
             <div class="form-group">
-                <label for="image" class="form-label" style="font-weight:700; font-size:0.95rem; color:#475569; margin-bottom:8px; display:block;">تصویر (اختیاری)</label>
-                <div onclick="document.getElementById('image').click()" style="border: 2px dashed #CBD5E1; border-radius: 16px; background: #F8FAFC; padding: 32px 20px; text-align: center; cursor: pointer; transition: all 0.2s ease;">
-                    <input type="file" id="image" name="image" style="display: none !important;"
+                <label for="image" class="form-label">تصویر (اختیاری)</label>
+                <div class="news-dropzone-box" onclick="document.getElementById('image').click()">
+                    <input type="file" id="image" name="image" class="news-dropzone-input"
                         accept=".jpg,.jpeg,.png,.gif,image/jpeg,image/png,image/gif"
                         onchange="document.getElementById('filename-text').textContent = this.files[0] ? this.files[0].name : 'No file chosen'">
 
-                    <div style="margin-bottom: 12px; display: flex; justify-content: center;">
-                        <svg width="60" height="45" viewBox="0 0 100 75" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M25 60 C12 60 5 49 10 37 C13 27 25 25 30 27 C34 15 50 11 62 19 C70 13 84 17 86 29 C94 31 98 43 90 55 C86 60 78 60 75 60 Z" fill="#EEF2FF"/>
-                            <rect x="36" y="28" width="28" height="20" rx="4" fill="#818CF8"/>
-                            <circle cx="62" cy="50" r="14" fill="#22C55E"/>
-                            <path d="M62 56 L62 44 M56 49 L62 44 L68 49" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <div class="news-dropzone-icon" style="display:flex;justify-content:center;">
+                        <svg width="60" height="45" viewBox="0 0 100 75" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:.75;">
+                            <path d="M25 60 C12 60 5 49 10 37 C13 27 25 25 30 27 C34 15 50 11 62 19 C70 13 84 17 86 29 C94 31 98 43 90 55 C86 60 78 60 75 60 Z" fill="currentColor" opacity="0.25"/>
+                            <path d="M62 56 L62 44 M56 49 L62 44 L68 49" stroke="var(--adm-primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            <circle cx="62" cy="42" r="6" fill="var(--adm-primary)"/>
+                            <rect x="30" y="30" width="26" height="18" rx="3" stroke="var(--adm-primary)" stroke-width="2.5" fill="none"/>
                         </svg>
                     </div>
 
-                    <div id="filename-text" style="font-size: 0.95rem; font-weight: 500; color: #475569; margin-bottom: 8px;">No file chosen</div>
-                    <div style="font-size: 0.82rem; color: #94A3B8;">فرمت‌های مجاز: <span style="color: #6366F1; font-weight: 600;">JPG, PNG, GIF</span>. حداکثر حجم: ۵۰۰ کیلوبایت.</div>
+                    <div id="filename-text" class="news-dropzone-filename">فایلی انتخاب نشده</div>
+                    <div class="news-dropzone-hint">فرمت‌های مجاز: <strong>JPG, PNG, GIF</strong> — حداکثر حجم: ۵۰۰ کیلوبایت.</div>
                 </div>
             </div>
 
