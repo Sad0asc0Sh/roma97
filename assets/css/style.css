@@ -219,7 +219,19 @@ a:hover { color: var(--primary-dark); }
 ::-webkit-scrollbar-track { background: var(--bg-soft); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius-sm); }
 ::-webkit-scrollbar-thumb:hover { background: var(--neutral-medium); }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } html { scroll-behavior: auto; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; } html { scroll-behavior: auto; } }
+/* Under reduced motion, entrance effects keep a gentle opacity fade but
+   never move the element (no translateY/scale) — vestibular-safe. */
+@media (prefers-reduced-motion: reduce) {
+    html.js-enabled .fade-in,
+    html.js-enabled .fade-up,
+    html.js-enabled .fade-scale,
+    html.js-enabled .slide-in-right,
+    html.js-enabled .slide-in-left {
+        transform: none;
+        transition: opacity 0.45s ease;
+    }
+}
 h1, h2, h3, h4, h5, h6 { font-weight: 800; line-height: 1.35; color: var(--neutral-dark); margin-bottom: var(--space-sm); letter-spacing: -0.02em; }
 h1 { font-size: clamp(1.875rem, 5vw, 2.75rem); font-weight: 900; }
 h2 { font-size: clamp(1.5rem, 4vw, 2.25rem); }
@@ -689,21 +701,22 @@ textarea.form-control { resize: vertical; min-height: 120px; }
 @keyframes pulse-gentle { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-/* Scroll Entrance Classes */
-.fade-in { opacity: 0; transform: translateY(20px); transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-.fade-in.visible { opacity: 1; transform: translateY(0); }
+/* Scroll Entrance Classes — hidden states only apply once script.js has
+   added .js-enabled, so content is never lost when JS fails to load. */
+html.js-enabled .fade-in { opacity: 0; transform: translateY(20px); transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+html.js-enabled .fade-in.visible { opacity: 1; transform: translateY(0); }
 
-.fade-up { opacity: 0; transform: translateY(28px); transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1), transform 0.55s cubic-bezier(0.4, 0, 0.2, 1); }
-.fade-up.visible { opacity: 1; transform: translateY(0); }
+html.js-enabled .fade-up { opacity: 0; transform: translateY(28px); transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1), transform 0.55s cubic-bezier(0.4, 0, 0.2, 1); }
+html.js-enabled .fade-up.visible { opacity: 1; transform: translateY(0); }
 
-.fade-scale { opacity: 0; transform: scale(0.92); transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-.fade-scale.visible { opacity: 1; transform: scale(1); }
+html.js-enabled .fade-scale { opacity: 0; transform: scale(0.92); transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+html.js-enabled .fade-scale.visible { opacity: 1; transform: scale(1); }
 
-.slide-in-right { opacity: 0; transform: translateX(28px); transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-.slide-in-right.visible { opacity: 1; transform: translateX(0); }
+html.js-enabled .slide-in-right { opacity: 0; transform: translateX(28px); transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+html.js-enabled .slide-in-right.visible { opacity: 1; transform: translateX(0); }
 
-.slide-in-left { opacity: 0; transform: translateX(-28px); transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-.slide-in-left.visible { opacity: 1; transform: translateX(0); }
+html.js-enabled .slide-in-left { opacity: 0; transform: translateX(-28px); transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+html.js-enabled .slide-in-left.visible { opacity: 1; transform: translateX(0); }
 
 /* Stagger Children Entrance */
 .stagger-children > *:nth-child(1) { transition-delay: 0.04s; }
@@ -3635,12 +3648,12 @@ input[type="file"].form-control {
     outline-offset: 2px;
 }
 
-/* Reduced Motion */
+/* Reduced Motion — kill looping/movement animations instantly, but keep
+   opacity transitions so entrance fades still feel smooth. */
 @media (prefers-reduced-motion: reduce) {
     *, ::before, ::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
     }
 }
@@ -5092,13 +5105,13 @@ tbody tr:hover {
 .mb-3 { margin-bottom: var(--space-md); }
 .mb-4 { margin-bottom: var(--space-lg); }
 
-.fade-in {
+html.js-enabled .fade-in {
     opacity: 0;
     transform: translateY(24px);
     transition: opacity 0.6s ease, transform 0.6s ease;
 }
 
-.fade-in.visible {
+html.js-enabled .fade-in.visible {
     opacity: 1;
     transform: translateY(0);
 }

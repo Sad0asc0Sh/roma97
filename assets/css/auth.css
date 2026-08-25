@@ -52,6 +52,26 @@ body.auth-standalone {
     min-height: 100dvh;
 }
 
+/* Soft page entrance — standalone auth pages don't load style.css/script.js,
+   so this CSS-only fade mirrors the public site's page transition.
+   Reduced motion gets an opacity-only fade; normal motion also slides up. */
+@media (prefers-reduced-motion: no-preference) {
+    .auth-wrapper {
+        animation: authPageIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .auth-wrapper {
+        animation: authFadeOnly 0.45s ease both;
+    }
+}
+
+@keyframes authPageIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
 /* === BRAND PANEL (Right-to-Left swap) === */
 .auth-brand {
     display: none;
@@ -738,12 +758,34 @@ body.auth-standalone {
 }
 
 /* === REDUCED MOTION === */
+/* Kill looping/movement animations instantly, but keep opacity fades so
+   entrance animations still feel smooth (mirrors style.css behavior). */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
     }
+
+    .auth-wrapper,
+    .auth-brand-anim,
+    .auth-anim-1, .auth-anim-2, .auth-anim-3,
+    .auth-anim-4, .auth-anim-5, .auth-anim-6,
+    .auth-anim-7, .auth-anim-8 {
+        animation-duration: 0.45s !important;
+        animation-name: authFadeOnly !important;
+    }
+
+    /* The spinner must keep spinning to signal loading */
+    .auth-submit.is-loading .btn-spinner {
+        animation-duration: 0.7s !important;
+        animation-name: authSpin !important;
+        animation-iteration-count: infinite !important;
+    }
+}
+
+@keyframes authFadeOnly {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 /* === LANDSCAPE MOBILE === */

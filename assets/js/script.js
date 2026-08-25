@@ -34,12 +34,14 @@ document.documentElement.classList.add('js-enabled');
     if (!headers.length || !('IntersectionObserver' in window)) return;
     var observer = new IntersectionObserver(function(entries) {
         entries.forEach(function(entry) {
-            if (entry.isIntersecting) {
+            // Also fire when the header has been scrolled past (fast jumps
+            // skip intersection entirely and would leave it un-animated).
+            if (entry.isIntersecting || entry.boundingClientRect.top < 0) {
                 entry.target.classList.add('in-view');
                 observer.unobserve(entry.target);
             }
         });
-    }, { threshold: 0.35 });
+    }, { threshold: 0.2 });
     headers.forEach(function(h) { observer.observe(h); });
 })();
 
@@ -55,14 +57,19 @@ document.documentElement.classList.add('js-enabled');
     var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reducedMotion) return;
 
-    // Entrance: mark the page on DOM-ready so the CSS animation runs.
-    document.addEventListener('DOMContentLoaded', function() {
+    // Entrance: mark the page so the CSS animation runs. The script loads
+    // with `defer`, so DOMContentLoaded may have already fired — check first.
+    function markEntering() {
         document.documentElement.classList.add('page-entering');
-        // Clean the class up after the animation so it never re-triggers.
         setTimeout(function() {
             document.documentElement.classList.remove('page-entering');
         }, 600);
-    });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', markEntering);
+    } else {
+        markEntering();
+    }
 
     // Exit: intercept internal link clicks and form submits.
     var isLeaving = false;
@@ -241,7 +248,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (motionElements.length > 0 && 'IntersectionObserver' in window) {
         var motionObserver = new IntersectionObserver(function(entries) {
             entries.forEach(function(entry) {
-                if (entry.isIntersecting) {
+                // Reveal when entering the viewport — or when already scrolled
+                // PAST it (fast jumps land elements above the fold without ever
+                // intersecting, which would otherwise leave them invisible).
+                if (entry.isIntersecting || entry.boundingClientRect.top < 0) {
                     entry.target.classList.add('visible');
                     motionObserver.unobserve(entry.target);
                 }
@@ -287,44 +297,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // ============================================
-    // ANIMATED COUNTERS
-    // ============================================
-    function animateCounter(el, target, duration) {
-        var start = 0;
-        var stepTime = Math.abs(Math.floor(duration / target));
-        var timer = setInterval(function() {
-            start += Math.ceil(target / 50);
-            if (start >= target) {
-                start = target;
-                clearInterval(timer);
-            }
-            var text = String(start).replace(/\d/g, function(d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; });
-            var suffix = el.getAttribute('data-suffix') || '';
-            el.textContent = text + suffix;
-        }, Math.max(stepTime, 20));
-    }
-
-    var statNumbers = document.querySelectorAll('.stat-number[data-count]');
-    if (statNumbers.length > 0 && 'IntersectionObserver' in window) {
-        var counterObserver = new IntersectionObserver(function(entries) {
-            entries.forEach(function(entry) {
-                if (entry.isIntersecting) {
-                    var el = entry.target;
-                    var target = parseInt(el.getAttribute('data-count'), 10);
-                    if (!isNaN(target)) {
-                        animateCounter(el, target, 1000);
-                    }
-                    counterObserver.unobserve(el);
-                }
-            });
-        }, { threshold: 0.5 });
-
-        statNumbers.forEach(function(el) {
-            counterObserver.observe(el);
-        });
-    }
-    
     // ============================================
     // ADMIN PANEL FUNCTIONALITY
     // ============================================
