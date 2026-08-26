@@ -236,7 +236,8 @@ require_once __DIR__ . '/templates/header.php';
                                 </h3>
                                 <p style="font-size: var(--text-sm); color: var(--neutral-medium); margin-bottom: var(--space-md); flex: 1; line-height: 1.7;"><?= e(publicNewsExcerpt($newsItem['content'])) ?></p>
                                 <a href="<?= e(url('news.php?id=' . $newsItem['id'])) ?>" class="news-read-more" style="font-size: var(--text-sm); font-weight: 700; color: var(--primary); text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                                    ادامه مطلب ←
+                                    ادامه مطلب
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
                                 </a>
                             </div>
                         </article>

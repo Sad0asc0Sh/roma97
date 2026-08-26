@@ -96,7 +96,7 @@
                         </div>
                         <div class="timeline-item">
                             <div class="timeline-time">۱۰:۳۰ - ۱۲:۰۰</div>
-                            <div class="timeline-title">میان‌العده میوه‌ای و قصه حسی</div>
+                            <div class="timeline-title">میان‌وعده میوه‌ای و قصه حسی</div>
                         </div>
                         <div class="timeline-item">
                             <div class="timeline-time">۱۲:۰۰ - ۱۳:۳۰</div>

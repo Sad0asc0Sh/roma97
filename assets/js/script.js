@@ -1,5 +1,8 @@
 document.documentElement.classList.add('js-enabled');
 
+// Shared reduced-motion preference — every JS-driven motion below defers to it.
+var prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 // ============================================
 // SCROLL PROGRESS RIBBON
 // Thin gradient bar pinned to the top edge that
@@ -73,6 +76,10 @@ document.documentElement.classList.add('js-enabled');
 
     // Exit: intercept internal link clicks and form submits.
     var isLeaving = false;
+    // Chromium prerenders internal pages via Speculation Rules — activation
+    // is instant, so the 60ms exit fade only delays those visitors.
+    var supportsPrerender = typeof HTMLScriptElement !== 'undefined' &&
+        HTMLScriptElement.supports && HTMLScriptElement.supports('speculationrules');
 
     function shouldIgnore(el) {
         if (!el || isLeaving) return true;
@@ -90,6 +97,7 @@ document.documentElement.classList.add('js-enabled');
     document.addEventListener('click', function(e) {
         var link = e.target.closest ? e.target.closest('a[href]') : null;
         if (!shouldIgnore(link)) {
+            if (supportsPrerender) return; // prerendered activation — navigate natively
             e.preventDefault();
             isLeaving = true;
             document.documentElement.classList.add('page-leaving');
@@ -220,6 +228,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 slides[currentSlide].classList.add('is-active');
                 if (dots[currentSlide]) dots[currentSlide].classList.add('is-active');
+
+                // Inactive slides keep opacity:0 for the crossfade but must not
+                // stay in the tab order — otherwise focus lands on invisible CTAs.
+                slides.forEach(function(slide, i) {
+                    slide.toggleAttribute('inert', i !== currentSlide);
+                    slide.setAttribute('aria-hidden', i === currentSlide ? 'false' : 'true');
+                });
             }
 
             function goNext() { goToSlide(currentSlide + 1); }
@@ -238,6 +253,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
             function handleManualNav() {
                 stopAutoPlay();
+                // Respect an explicit user pause — manual navigation must not
+                // silently resume the carousel they chose to stop.
+                if (slider.classList.contains('is-paused')) return;
                 if (resumeTimeout) clearTimeout(resumeTimeout);
                 resumeTimeout = setTimeout(function() {
                     if (!slider.matches(':hover')) startAutoPlay();
@@ -270,7 +288,8 @@ document.addEventListener('DOMContentLoaded', function() {
             slider.addEventListener('mouseenter', stopAutoPlay);
             slider.addEventListener('mouseleave', startAutoPlay);
 
-            // Touch gestures for mobile
+            // Touch gestures for mobile — RTL reading direction: swiping the
+            // finger toward the left (diffX < 0) reveals the NEXT slide.
             var touchStartX = 0;
             var touchStartY = 0;
             slider.addEventListener('touchstart', function(e) {
@@ -283,14 +302,45 @@ document.addEventListener('DOMContentLoaded', function() {
                 var diffY = touchStartY - e.changedTouches[0].screenY;
 
                 if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
-                    if (diffX > 0) goNext();
-                    else goPrev();
+                    if (diffX > 0) goPrev();
+                    else goNext();
                     handleManualNav();
                 }
             }, { passive: true });
 
-            // Start autoplay
-            startAutoPlay();
+            // Initialize inert/aria-hidden on non-active slides, then start
+            // autoplay unless the visitor prefers reduced motion.
+            goToSlide(currentSlide);
+            if (prefersReducedMotion) {
+                // No autoplay at all — reflect a paused state in the toggle.
+                isAutoPlaying = false;
+                var pauseBtnRM = slider.querySelector('[data-slider-toggle]');
+                if (pauseBtnRM) {
+                    pauseBtnRM.setAttribute('aria-pressed', 'false');
+                    pauseBtnRM.setAttribute('aria-label', 'پخش خودکار');
+                    slider.classList.add('is-paused');
+                }
+            } else {
+                startAutoPlay();
+            }
+
+            // Pause / play control — required for auto-advancing content
+            // (WCAG 2.2.2) and simply kind to anyone wanting to linger.
+            var autoplayToggle = slider.querySelector('[data-slider-toggle]');
+            if (autoplayToggle) {
+                autoplayToggle.addEventListener('click', function() {
+                    var paused = slider.classList.toggle('is-paused');
+                    if (paused) {
+                        stopAutoPlay();
+                        autoplayToggle.setAttribute('aria-pressed', 'false');
+                        autoplayToggle.setAttribute('aria-label', 'پخش خودکار');
+                    } else {
+                        startAutoPlay();
+                        autoplayToggle.setAttribute('aria-pressed', 'true');
+                        autoplayToggle.setAttribute('aria-label', 'توقف پخش خودکار');
+                    }
+                });
+            }
         }
     }
 
@@ -515,7 +565,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var target = document.querySelector(targetId);
             if (target) {
                 e.preventDefault();
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                target.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
             }
         });
     });
@@ -538,9 +588,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }, { passive: true });
     });
 
-    // Hide bottom nav on scroll down, show on scroll up (mobile only)
+    // Hide bottom nav on scroll down, show on scroll up (mobile only).
+    // Skipped for reduced-motion users — the sliding bar is pure motion.
     var bottomNav = document.querySelector('.mobile-bottom-nav');
-    if (bottomNav) {
+    if (bottomNav && !prefersReducedMotion) {
         var lastScrollY = 0;
         var navHideThreshold = 10;
         var ticking = false;
@@ -578,6 +629,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     var el = entry.target;
                     var target = parseInt(el.getAttribute('data-count'), 10);
                     var suffix = el.getAttribute('data-suffix') || '';
+                    // Reduced motion: show the final number immediately.
+                    if (prefersReducedMotion) {
+                        el.textContent = target.toLocaleString('fa-IR') + suffix;
+                        countObserver.unobserve(el);
+                        return;
+                    }
                     var duration = 1200;
                     var startTime = null;
                     var startVal = 0;
@@ -659,6 +716,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (btn) {
             btn.innerHTML = theme === 'dark' ? sunSvg : moonSvg;
             btn.setAttribute('aria-label', theme === 'dark' ? 'تغییر به حالت روشن' : 'تغییر به حالت تاریک');
+            if (!prefersReducedMotion) {
+                var icon = btn.querySelector('svg');
+                if (icon) icon.style.animation = 'themeIconSpin 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)';
+            }
         }
     }
 

@@ -40,7 +40,8 @@ function homeNewsExcerpt(string $content, int $limit = 150): string
     return strlen($plainText) > $limit ? substr($plainText, 0, $limit) . '...' : $plainText;
 }
 
-$pageTitle = siteName();
+$pageTitle = 'مهدکودک و پیش‌دبستانی ' . siteName() . ' | محیطی امن و شاد برای رشد کودک شما';
+$pageDescription = 'مهدکودک ' . siteName() . ' با مجوز رسمی بهزیستی، مربیان مجرب، گزارش روزانه والدین و محیطی امن و خلاق برای کودکان ۶ ماه تا ۶ سال. همین حالا برای بازدید حضوری هماهنگ کنید.';
 require_once __DIR__ . '/templates/header.php';
 ?>
 
@@ -75,10 +76,11 @@ require_once __DIR__ . '/templates/header.php';
         </div>
     <?php else: ?>
         <div class="slider" data-slider>
+            <h1 class="sr-only">به <?= e(siteName()) ?> خوش آمدید</h1>
             <div class="slides">
                 <?php foreach ($slides as $index => $slide): ?>
                     <div class="slide<?= $index === 0 ? ' is-active' : '' ?>" data-slide>
-                        <img src="<?= e(url($slide['image'])) ?>" alt="<?= e($slide['title']) ?>" loading="<?= $index === 0 ? 'eager' : 'lazy' ?>">
+                        <img src="<?= e(url($slide['image'])) ?>" alt="<?= e($slide['title']) ?>" loading="<?= $index === 0 ? 'eager' : 'lazy' ?>"<?php if ($index === 0): ?> fetchpriority="high" decoding="async"<?php endif; ?>>
                         <div class="slide-overlay">
                             <div class="slide-caption">
                                 <h2><?= e($slide['title']) ?></h2>
@@ -96,16 +98,20 @@ require_once __DIR__ . '/templates/header.php';
 
             <?php if (count($slides) > 1): ?>
                 <button class="slider-nav slider-prev" type="button" data-prev aria-label="تصویر قبلی">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
                 <button class="slider-nav slider-next" type="button" data-next aria-label="تصویر بعدی">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
                 </button>
                 <div class="slider-dots">
                     <?php foreach ($slides as $index => $slide): ?>
                         <button class="slider-dot<?= $index === 0 ? ' is-active' : '' ?>" type="button" data-dot="<?= e((string) $index ) ?>" aria-label="رفتن به تصویر <?= e(persianNumber((string) ($index + 1))) ?>"></button>
                     <?php endforeach; ?>
                 </div>
+                <button class="slider-autoplay-toggle" type="button" data-slider-toggle aria-label="توقف پخش خودکار" aria-pressed="true">
+                    <svg class="slider-toggle-pause" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                    <svg class="slider-toggle-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 5v14l11-7z"/></svg>
+                </button>
             <?php endif; ?>
         </div>
     <?php endif; ?>
@@ -116,22 +122,22 @@ require_once __DIR__ . '/templates/header.php';
     <div class="container">
         <div class="trust-strip-inner">
             <div class="trust-item">
-                <svg><use href="<?= asset('assets/img/icons.svg#icon-shield') ?>"/></svg>
+                <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-shield') ?>"/></svg>
                 <span>مجوز رسمی بهزیستی</span>
             </div>
             <div class="trust-divider"></div>
             <div class="trust-item">
-                <svg><use href="<?= asset('assets/img/icons.svg#icon-award') ?>"/></svg>
+                <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-award') ?>"/></svg>
                 <span>۱۰+ سال فعالیت تخصصی</span>
             </div>
             <div class="trust-divider"></div>
             <div class="trust-item">
-                <svg><use href="<?= asset('assets/img/icons.svg#icon-camera') ?>"/></svg>
+                <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-camera') ?>"/></svg>
                 <span>دوربین مداربسته تمام کلاس‌ها</span>
             </div>
             <div class="trust-divider"></div>
             <div class="trust-item">
-                <svg><use href="<?= asset('assets/img/icons.svg#icon-heart') ?>"/></svg>
+                <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-heart') ?>"/></svg>
                 <span>بیمه حوادث کامل کودکان</span>
             </div>
         </div>
@@ -300,12 +306,12 @@ require_once __DIR__ . '/templates/header.php';
         <div class="testimonials-slider">
             <div class="testimonial-card">
                 <div>
-                    <div class="testimonial-rating">
-                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                    <div class="testimonial-rating" role="img" aria-label="امتیاز ۵ از ۵">
+                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
                     </div>
                     <p class="testimonial-quote">
                         «چیزی که ما رو مطمئن کرد، این بود که هر روز عصر یه گزارش کوتاه از وضعیت غذا و خواب آیدا می‌گرفتیم، نه فقط یه پیام کلی که "روز خوبی داشت".»
@@ -314,7 +320,7 @@ require_once __DIR__ . '/templates/header.php';
                 <div class="testimonial-author">
                     <div class="testimonial-avatar">م‌آ</div>
                     <div class="testimonial-info">
-                        <h4>مادر آیدا</h4>
+                        <h3>مادر آیدا</h3>
                         <span>کلاس خردسال</span>
                     </div>
                 </div>
@@ -322,12 +328,12 @@ require_once __DIR__ . '/templates/header.php';
 
             <div class="testimonial-card">
                 <div>
-                    <div class="testimonial-rating">
-                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                    <div class="testimonial-rating" role="img" aria-label="امتیاز ۵ از ۵">
+                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
                     </div>
                     <p class="testimonial-quote">
                         «وقتی برای اولین بار اومدیم بازدید، پارسا از همون در ورودی نمی‌خواست بره. این برای ما از هر تبلیغی مهم‌تر بود.»
@@ -336,7 +342,7 @@ require_once __DIR__ . '/templates/header.php';
                 <div class="testimonial-author">
                     <div class="testimonial-avatar">پ‌پ</div>
                     <div class="testimonial-info">
-                        <h4>پدر پارسا</h4>
+                        <h3>پدر پارسا</h3>
                         <span>کلاس نوباوه</span>
                     </div>
                 </div>
@@ -344,12 +350,12 @@ require_once __DIR__ . '/templates/header.php';
 
             <div class="testimonial-card">
                 <div>
-                    <div class="testimonial-rating">
-                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                    <div class="testimonial-rating" role="img" aria-label="امتیاز ۵ از ۵">
+                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
+                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
                     </div>
                     <p class="testimonial-quote">
                         «پیش‌دبستانی روما مهارت‌های دست‌ورزی و اعتماد به‌نفس کیان رو عالی بالا برد. الان برای مدرسه کاملاً آماده و مشتاقه.»
@@ -358,7 +364,7 @@ require_once __DIR__ . '/templates/header.php';
                 <div class="testimonial-author">
                     <div class="testimonial-avatar">م‌ک</div>
                     <div class="testimonial-info">
-                        <h4>مادر کیان</h4>
+                        <h3>مادر کیان</h3>
                         <span>پیش‌دبستانی</span>
                     </div>
                 </div>
@@ -381,7 +387,7 @@ require_once __DIR__ . '/templates/header.php';
             <details class="faq-item">
                 <summary class="faq-summary">
                     <span>ساعات نگهداری و فعالیت مهدکودک روما چگونه است؟</span>
-                    <svg><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
+                    <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
                 </summary>
                 <div class="faq-content">
                     مهدکودک روما روزهای شنبه تا چهارشنبه از ساعت ۰۷:۰۰ الی ۱۶:۳۰ و پنج‌شنبه‌ها از ساعت ۰۷:۰۰ الی ۱۳:۰۰ فعال است.
@@ -391,7 +397,7 @@ require_once __DIR__ . '/templates/header.php';
             <details class="faq-item">
                 <summary class="faq-summary">
                     <span>آیا امکان ثبت‌نام نیم‌روزه وجود دارد؟</span>
-                    <svg><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
+                    <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
                 </summary>
                 <div class="faq-content">
                     بله، والدین عزیز می‌توانند با توجه به شرایط کاری خود، ثبت‌نام نیم‌روزه (۰۷:۰۰ الی ۱۲:۳۰) یا تمام‌روزه را انتخاب نمایند.
@@ -401,7 +407,7 @@ require_once __DIR__ . '/templates/header.php';
             <details class="faq-item">
                 <summary class="faq-summary">
                     <span>غذای کودکانی که آلرژی یا رژیم خاص دارند چطور مدیریت می‌شود؟</span>
-                    <svg><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
+                    <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
                 </summary>
                 <div class="faq-content">
                     در زمان ثبت‌نام، فرم حساسیت‌های غذایی دریافت می‌شود. آشپزخانه مهد منوی جداگانه و مشخصی طبق نظر مشاور تغذیه برای کودکان دارای آلرژی آماده می‌کند.
@@ -411,7 +417,7 @@ require_once __DIR__ . '/templates/header.php';
             <details class="faq-item">
                 <summary class="faq-summary">
                     <span>چگونه می‌توانم گزارش روزانه فرزندم را مشاهده کنم؟</span>
-                    <svg><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
+                    <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
                 </summary>
                 <div class="faq-content">
                     از طریق <a href="<?= url('login.php') ?>" style="color: var(--primary); font-weight: 700;">پنل والدین روما</a>، وضعیت تغذیه، ساعت خواب، فعالیت‌های کلاسی و گزارش مربی به‌صورت روزانه قابل مشاهده است.
@@ -421,7 +427,7 @@ require_once __DIR__ . '/templates/header.php';
             <details class="faq-item">
                 <summary class="faq-summary">
                     <span>مدارک لازم برای ثبت‌نام اولیه چیست؟</span>
-                    <svg><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
+                    <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
                 </summary>
                 <div class="faq-content">
                     کپی شناسنامه کودک و والدین، ۴ قطعه عکس ۳x۴، کارت واکسیناسیون کامل و فرم معاینه بهداشت اولیه‌الزامی است.
@@ -457,7 +463,7 @@ require_once __DIR__ . '/templates/header.php';
                         </h3>
                         <p><?= e(homeNewsExcerpt($newsItem['content'])) ?></p>
                         <a href="<?= e(url('news.php?id=' . $newsItem['id'])) ?>" class="news-read-more">ادامه مطلب
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
                         </a>
                     </div>
                 </article>
@@ -491,15 +497,15 @@ try {
 
         <!-- Gallery Filter Buttons -->
         <div class="gallery-filters" id="galleryFilters" style="display: flex; gap: var(--space-xs); justify-content: center; flex-wrap: wrap; margin-bottom: var(--space-xl);">
-            <button class="btn btn-primary btn-sm gallery-filter-btn is-active" data-filter="all">همه تصاویر</button>
-            <button class="btn btn-outline btn-sm gallery-filter-btn" data-filter="classes">کلاس‌ها</button>
-            <button class="btn btn-outline btn-sm gallery-filter-btn" data-filter="events">جشن‌ها و رویدادها</button>
-            <button class="btn btn-outline btn-sm gallery-filter-btn" data-filter="play">فضای بازی</button>
+            <button class="btn btn-primary btn-sm gallery-filter-btn is-active" data-filter="all" aria-pressed="true">همه تصاویر</button>
+            <button class="btn btn-outline btn-sm gallery-filter-btn" data-filter="classes" aria-pressed="false">کلاس‌ها</button>
+            <button class="btn btn-outline btn-sm gallery-filter-btn" data-filter="events" aria-pressed="false">جشن‌ها و رویدادها</button>
+            <button class="btn btn-outline btn-sm gallery-filter-btn" data-filter="play" aria-pressed="false">فضای بازی</button>
         </div>
 
         <div class="gallery-grid" style="columns: 3 260px; column-gap: var(--space-md);">
             <?php foreach ($galleryItems as $gi): ?>
-                <div class="gallery-item fade-in" data-gallery-item data-category="<?= e($gi['category'] ?? 'all') ?>" style="break-inside: avoid; margin-bottom: var(--space-md); position: relative; border-radius: var(--radius-lg); overflow: hidden; cursor: pointer;">
+                <div class="gallery-item fade-in" data-gallery-item data-category="<?= e($gi['category'] ?? 'all') ?>" tabindex="0" role="button" aria-label="<?= !empty($gi['title']) ? 'نمایش تصویر: ' . e($gi['title']) : 'نمایش تصویر' ?>" style="break-inside: avoid; margin-bottom: var(--space-md); position: relative; border-radius: var(--radius-lg); overflow: hidden; cursor: pointer;">
                     <img src="<?= e(url($gi['image'])) ?>" alt="<?= e($gi['title'] ?? '') ?>" loading="lazy" class="gallery-img" style="width: 100%; display: block; border-radius: var(--radius-lg);">
                     <div class="gallery-overlay">
                         <div class="gallery-overlay-content">
@@ -530,27 +536,30 @@ try {
     if(!lb||!items.length)return;
     var img=lb.querySelector(".gallery-lightbox-img"),ttl=lb.querySelector(".gallery-lightbox-title"),cap=lb.querySelector(".gallery-lightbox-caption");
     var close=lb.querySelector(".gallery-lightbox-close"),prev=lb.querySelector(".gallery-lightbox-prev"),next=lb.querySelector(".gallery-lightbox-next");
-    var idx=0;
+    var idx=0,lastFocus=null;
+    lb.setAttribute("aria-modal","true");
     // Only cycle through items currently visible under the active filter.
     function visibleItems(){return Array.prototype.filter.call(items,function(el){return el.style.display!=="none";});}
-    function show(i){var vis=visibleItems();if(!vis.length)return;if(i<0)i=0;if(i>=vis.length)i=vis.length-1;idx=i;var el=vis[i];img.src=el.querySelector("img").src;ttl.textContent=el.querySelector(".gallery-title")?el.querySelector(".gallery-title").textContent:"";cap.textContent=el.querySelector(".gallery-caption")?el.querySelector(".gallery-caption").textContent:"";lb.classList.add("active");document.body.style.overflow="hidden";}
+    function show(i){var vis=visibleItems();if(!vis.length)return;if(i<0)i=0;if(i>=vis.length)i=vis.length-1;idx=i;var el=vis[i];img.src=el.querySelector("img").src;ttl.textContent=el.querySelector(".gallery-title")?el.querySelector(".gallery-title").textContent:"";cap.textContent=el.querySelector(".gallery-caption")?el.querySelector(".gallery-caption").textContent:"";if(!lb.classList.contains("active")){lastFocus=document.activeElement;}lb.classList.add("active");document.body.style.overflow="hidden";close.focus();}
     function step(dir){var vis=visibleItems();if(!vis.length)return;var pos=vis.indexOf(items[idx]);show(((pos===-1?0:pos)+dir+vis.length)%vis.length);}
-    function hide(){lb.classList.remove("active");document.body.style.overflow="";}
-    items.forEach(function(el,i){el.addEventListener("click",function(){var vis=visibleItems();show(vis.indexOf(el));});});
+    function hide(){lb.classList.remove("active");document.body.style.overflow="";if(lastFocus&&lastFocus.focus){lastFocus.focus();lastFocus=null;}}
+    function openFrom(el){var vis=visibleItems();show(Math.max(vis.indexOf(el),0));}
+    items.forEach(function(el,i){el.addEventListener("click",function(){openFrom(el);});el.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openFrom(el);}});});
     close.addEventListener("click",hide);
     lb.addEventListener("click",function(e){if(e.target===lb)hide();});
     prev.addEventListener("click",function(e){e.stopPropagation();step(-1);});
     next.addEventListener("click",function(e){e.stopPropagation();step(1);});
-    document.addEventListener("keydown",function(e){if(!lb.classList.contains("active"))return;if(e.key==="Escape")hide();if(e.key==="ArrowLeft")step(1);if(e.key==="ArrowRight")step(-1);});
+    document.addEventListener("keydown",function(e){if(!lb.classList.contains("active"))return;if(e.key==="Escape"){hide();return;}if(e.key==="ArrowLeft")step(1);if(e.key==="ArrowRight")step(-1);if(e.key==="Tab"){var focusables=[close,prev,next];var fi=focusables.indexOf(document.activeElement);if(e.shiftKey&&(fi<=0)){e.preventDefault();focusables[focusables.length-1].focus();}else if(!e.shiftKey&&fi===focusables.length-1){e.preventDefault();focusables[0].focus();}}});
 
     // Gallery Filter Handler with Smooth Transition
     var filterBtns = document.querySelectorAll(".gallery-filter-btn");
     filterBtns.forEach(function(btn){
         btn.addEventListener("click", function(){
             var cat = btn.getAttribute("data-filter");
-            filterBtns.forEach(function(b){ b.classList.remove("btn-primary", "is-active"); b.classList.add("btn-outline"); });
+            filterBtns.forEach(function(b){ b.classList.remove("btn-primary", "is-active"); b.classList.add("btn-outline"); b.setAttribute("aria-pressed","false"); });
             btn.classList.remove("btn-outline");
             btn.classList.add("btn-primary", "is-active");
+            btn.setAttribute("aria-pressed","true");
 
             items.forEach(function(item){
                 var itemCat = item.getAttribute("data-category");
@@ -600,7 +609,8 @@ try {
                     </div>
                 </div>
                 <div class="about-image-wrap">
-                    <img src="<?= e(url('assets/uploads/gallery/about-story.jpg')) ?>?v=<?= filemtime(__DIR__ . '/assets/uploads/gallery/about-story.jpg') ?>" alt="داستان برند <?= e(siteName()) ?>" loading="lazy" decoding="async" width="800" height="533" onerror="this.onerror=null; this.src='<?= e(url('assets/img/about-story.jpg')) ?>?v=<?= filemtime(__DIR__ . '/assets/img/about-story.jpg') ?>';">
+                    <?php $aboutStoryImg = is_file(__DIR__ . '/assets/uploads/gallery/about-story.jpg') ? 'assets/uploads/gallery/about-story.jpg' : 'assets/img/about-story.jpg'; ?>
+                    <img src="<?= e(asset($aboutStoryImg)) ?>" alt="داستان برند <?= e(siteName()) ?>" loading="lazy" decoding="async" width="800" height="533">
                 </div>
             </div>
         </div>
@@ -622,7 +632,7 @@ try {
                     <input type="email" name="email" class="form-control" placeholder="آدرس ایمیل شما" required aria-label="آدرس ایمیل">
                     <button type="submit" class="btn btn-primary">عضویت در خبرنامه</button>
                 </form>
-                <div class="newsletter-toast" id="newsletterToast"></div>
+                <div class="newsletter-toast" id="newsletterToast" role="status" aria-live="polite"></div>
             </div>
         </div>
     </div>

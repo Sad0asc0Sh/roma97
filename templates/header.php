@@ -68,21 +68,36 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
     {
       "prerender": [
         {
-          "where": { "href_matches": "/*" },
+          "where": {
+            "and": [
+              { "href_matches": "/*" },
+              { "not": { "href_matches": "/*/admin/*" } },
+              { "not": { "href_matches": "/*/parent/*" } },
+              { "not": { "href_matches": "/*/teacher/*" } },
+              { "not": { "href_matches": "/*logout*" } }
+            ]
+          },
           "eagerness": "moderate"
         }
       ]
     }
     </script>
-    <div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
 
     <!-- Open Graph Metadata -->
     <meta property="og:title" content="<?php echo $pageTitleValue; ?>">
     <meta property="og:description" content="<?php echo $pageDescriptionValue; ?>">
     <meta property="og:type" content="website">
+    <meta property="og:url" content="<?php echo e($canonicalUrl); ?>">
     <meta property="og:locale" content="fa_IR">
     <meta property="og:site_name" content="<?php echo e($siteNameValue); ?>">
-    <meta property="og:image" content="<?php echo e(asset('assets/img/about-story.jpg')); ?>">
+    <?php // og:image must be protocol-absolute — relative URLs break WhatsApp/Telegram/Facebook crawlers. ?>
+    <meta property="og:image" content="<?php echo e(absoluteUrl('assets/img/about-story.jpg')); ?>">
+    <meta property="og:image:width" content="800">
+    <meta property="og:image:height" content="533">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<?php echo $pageTitleValue; ?>">
+    <meta name="twitter:description" content="<?php echo $pageDescriptionValue; ?>">
+    <meta name="twitter:image" content="<?php echo e(absoluteUrl('assets/img/about-story.jpg')); ?>">
 
     <!-- Schema.org Structured Data (ChildCare / LocalBusiness) -->
     <script type="application/ld+json">
@@ -91,6 +106,12 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
       "@type": "ChildCare",
       "name": "<?php echo e($siteNameValue); ?>",
       "description": "<?php echo $pageDescriptionValue; ?>",
+      "url": "<?php echo e($canonicalUrl); ?>",
+      "image": "<?php echo e(absoluteUrl('assets/img/about-story.jpg')); ?>",
+<?php $schemaSocial = array_values(array_filter([$instagramValue, $telegramValue, $whatsappValue], fn ($v) => $v !== '')); ?>
+<?php if ($schemaSocial !== []): ?>
+      "sameAs": <?php echo json_encode($schemaSocial, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>,
+<?php endif; ?>
       "address": {
         "@type": "PostalAddress",
         "streetAddress": "<?php echo e($siteAddressValue); ?>",
@@ -104,6 +125,8 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
     </script>
 </head>
 <body>
+<a class="skip-link" href="#main-content">پرش به محتوای اصلی</a>
+<div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
 <?php
 $topbarEnabled = siteTopbarEnabled();
 $topbarText = siteTopbarText();
@@ -185,23 +208,23 @@ $topbarText = siteTopbarText();
 
         <nav class="site-nav" aria-label="منوی اصلی">
             <a href="<?php echo e(url('index.php')); ?>" class="nav-link <?php echo $currentPage === 'index.php' ? 'active' : ''; ?>">
-                <svg class="nav-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <svg class="nav-icon-svg" aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 <span class="nav-label">خانه</span>
             </a>
             <a href="<?php echo e(url('page.php?slug=about')); ?>" class="nav-link <?php echo $currentPage === 'page.php' && $currentSlug === 'about' ? 'active' : ''; ?>">
-                <svg class="nav-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <svg class="nav-icon-svg" aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                 <span class="nav-label">درباره ما</span>
             </a>
             <a href="<?php echo e(url('news.php')); ?>" class="nav-link <?php echo $currentPage === 'news.php' ? 'active' : ''; ?>">
-                <svg class="nav-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+                <svg class="nav-icon-svg" aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
                 <span class="nav-label">اخبار</span>
             </a>
             <a href="<?php echo e(url('page.php?slug=classes')); ?>" class="nav-link <?php echo $currentPage === 'page.php' && $currentSlug === 'classes' ? 'active' : ''; ?>">
-                <svg class="nav-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/></svg>
+                <svg class="nav-icon-svg" aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/></svg>
                 <span class="nav-label">کلاسها</span>
             </a>
             <a href="<?php echo e(url('page.php?slug=contact')); ?>" class="nav-link <?php echo $currentPage === 'page.php' && $currentSlug === 'contact' ? 'active' : ''; ?>">
-                <svg class="nav-icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+                <svg class="nav-icon-svg" aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
                 <span class="nav-label">تماس با ما</span>
             </a>
 
@@ -234,4 +257,4 @@ $topbarText = siteTopbarText();
         </nav>
     </div>
 </header>
-<main class="site-main">
+<main class="site-main" id="main-content">
