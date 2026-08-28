@@ -9,6 +9,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
+require_once __DIR__ . '/../includes/sms.php';
 
 requireLogin();
 
@@ -34,6 +35,16 @@ function getSettings(PDO $pdo): array
         'topbar_enabled' => '1',
         'topbar_text' => '',
         'default_tuition_amount' => '0',
+        'sms_enabled' => '0',
+        'sms_api_key' => '',
+        'sms_subscription_monthly_fee' => '30000',
+        'sms_pattern_otp' => '',
+        'sms_pattern_welcome' => '',
+        'sms_pattern_daily_report_brief' => '',
+        'sms_pattern_daily_report' => '',
+        'sms_pattern_attendance' => '',
+        'sms_pattern_tuition_reminder' => '',
+        'sms_pattern_announcement' => '',
     ];
 
     $keys = array_keys($settings);
@@ -50,18 +61,6 @@ function getSettings(PDO $pdo): array
     }
 
     return $settings;
-}
-
-function saveSetting(PDO $pdo, string $key, string $value): void
-{
-    // Named placeholders cannot repeat when PDO::ATTR_EMULATE_PREPARES is
-    // false (native prepares), so positional ? markers are used instead.
-    $statement = $pdo->prepare(
-        "INSERT INTO settings (meta_key, meta_value) VALUES (?, ?)
-         ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)"
-    );
-
-    $statement->execute([$key, $value]);
 }
 
 function deleteLogoFile(string $relativePath): void
@@ -167,6 +166,20 @@ try {
         $adminStmt = $pdo->prepare('SELECT id, password FROM admins WHERE id = :id LIMIT 1');
         $adminStmt->execute([':id' => $adminId]);
         $admin = $adminStmt->fetch() ?: null;
+    }
+
+    $recentSmsLogs = [];
+    try {
+        $smsLogsStmt = $pdo->query("
+            SELECT sl.*, p.first_name AS p_first, p.last_name AS p_last
+            FROM sms_logs sl
+            LEFT JOIN parents p ON p.id = sl.parent_id
+            ORDER BY sl.id DESC
+            LIMIT 15
+        ");
+        $recentSmsLogs = $smsLogsStmt ? $smsLogsStmt->fetchAll() : [];
+    } catch (Throwable $e) {
+        $recentSmsLogs = [];
     }
 } catch (Throwable $exception) {
     error_log($exception->getMessage());
@@ -290,6 +303,61 @@ if (isPostRequest()) {
         recordAudit('auth.password_change', 'admin', (int) $admin['id']);
         setFlash('success', 'رمز عبور با موفقیت تغییر کرد.');
         redirect(url('admin/settings.php'));
+    }
+
+    if ($action === 'update_sms_settings') {
+        $smsEnabled = isset($_POST['sms_enabled']) ? '1' : '0';
+        $smsApiKey  = trim((string) ($_POST['sms_api_key'] ?? ''));
+        $smsVipFee  = trim((string) ($_POST['sms_subscription_monthly_fee'] ?? '30000'));
+        $bodyOtp    = trim((string) ($_POST['sms_pattern_otp'] ?? ''));
+        $bodyWel    = trim((string) ($_POST['sms_pattern_welcome'] ?? ''));
+        $bodyBrief  = trim((string) ($_POST['sms_pattern_daily_report_brief'] ?? ''));
+        $bodyRep    = trim((string) ($_POST['sms_pattern_daily_report'] ?? ''));
+        $bodyAtt    = trim((string) ($_POST['sms_pattern_attendance'] ?? ''));
+        $bodyTui    = trim((string) ($_POST['sms_pattern_tuition_reminder'] ?? ''));
+        $bodyAnn    = trim((string) ($_POST['sms_pattern_announcement'] ?? ''));
+
+        saveSetting($pdo, 'sms_enabled', $smsEnabled);
+        saveSetting($pdo, 'sms_api_key', $smsApiKey);
+        saveSetting($pdo, 'sms_subscription_monthly_fee', $smsVipFee);
+        saveSetting($pdo, 'sms_pattern_otp', $bodyOtp);
+        saveSetting($pdo, 'sms_pattern_welcome', $bodyWel);
+        saveSetting($pdo, 'sms_pattern_daily_report_brief', $bodyBrief);
+        saveSetting($pdo, 'sms_pattern_daily_report', $bodyRep);
+        saveSetting($pdo, 'sms_pattern_attendance', $bodyAtt);
+        saveSetting($pdo, 'sms_pattern_tuition_reminder', $bodyTui);
+        saveSetting($pdo, 'sms_pattern_announcement', $bodyAnn);
+
+        recordAudit('sms_settings.update', 'settings', null);
+        setFlash('success', 'تنظیمات پنل پیامک با موفقیت ذخیره شد.');
+        redirect(url('admin/settings.php#sms-section'));
+    }
+
+    if ($action === 'test_sms') {
+        $testPhone = trim((string) ($_POST['test_phone'] ?? ''));
+        $testBodyId = (int) ($_POST['test_body_id'] ?? 0);
+        $testArg1 = trim((string) ($_POST['test_arg1'] ?? 'تست'));
+        $testArg2 = trim((string) ($_POST['test_arg2'] ?? 'مهد کودک روما'));
+
+        if (!isValidIranianMobile($testPhone)) {
+            setFlash('error', 'شماره موبایل گیرنده تست نامعتبر است (مثال: 09123456789).');
+            redirect(url('admin/settings.php#sms-section'));
+        }
+
+        if ($testBodyId <= 0) {
+            setFlash('error', 'لطفاً شناسه الگوی معتبر (bodyId) برای تست وارد کنید.');
+            redirect(url('admin/settings.php#sms-section'));
+        }
+
+        $args = array_filter([$testArg1, $testArg2], fn($a) => $a !== '');
+        $res = sendMeliPayamakPattern($testPhone, $testBodyId, array_values($args), 'test');
+
+        if ($res['success']) {
+            setFlash('success', "پیامک تست با موفقیت ارسال شد. کد پیگیری: " . ($res['recId'] ?? '-'));
+        } else {
+            setFlash('error', "خطا در ارسال پیامک تست: " . $res['status']);
+        }
+        redirect(url('admin/settings.php#sms-section'));
     }
 
     $siteName = trim((string) ($_POST['site_name'] ?? ''));
@@ -657,6 +725,211 @@ require_once __DIR__ . '/header.php';
                 </form>
             </div>
         <?php endif; ?>
+
+        <!-- SMS Gateway Section -->
+        <div class="admin-section" id="sms-section" style="grid-column: 1 / -1;">
+            <div class="admin-section-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                <h2 class="admin-section-title">📱 تنظیمات پنل پیامک ملی‌پیامک (خط خدماتی اشتراکی / الگو)</h2>
+                <span class="badge <?= ($settings['sms_enabled'] ?? '0') === '1' ? 'badge-success' : 'badge-secondary' ?>" style="font-size:0.85rem;padding:4px 10px;border-radius:20px;">
+                    <?= ($settings['sms_enabled'] ?? '0') === '1' ? '✅ پیامک فعال است' : '⚪ پیامک غیرفعال است' ?>
+                </span>
+            </div>
+            <p style="color:var(--muted);margin-bottom:var(--space-md);font-size:0.9rem;line-height:1.8;">
+                با اتصال به وب‌سرویس ملی‌پیامک، کدهای ورود/ثبت‌نام (OTP) و اعلانات مهدکودک (گزارش روزانه کودک، حضور و غیاب، یادآوری بدهی شهریه و اطلاعیه‌ها) از طریق خط خدماتی اشتراکی حتی برای شماره‌های بلک‌لیست (تبلیغات مسدود) به صورت آنی ارسال می‌شوند.
+            </p>
+
+            <form method="post" action="<?= e(url('admin/settings.php#sms-section')) ?>" novalidate style="margin-bottom:var(--space-xl);">
+                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                <input type="hidden" name="action" value="update_sms_settings">
+
+                <div style="background:var(--surface-hover, rgba(0,0,0,0.02));padding:16px;border-radius:var(--radius-md);border:1px solid var(--border);margin-bottom:var(--space-lg);">
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:bold;">
+                            <input type="checkbox" name="sms_enabled" value="1" style="width:18px;height:18px;cursor:pointer;"
+                                <?= ($settings['sms_enabled'] ?? '0') === '1' ? 'checked' : '' ?>>
+                            فعال‌سازی ارسال پیامک‌های سیستمی
+                        </label>
+                        <small style="color:var(--muted);font-size:0.85rem;">در صورت غیرفعال بودن، پیام‌ها فقط به صورت نوتیفیکیشن درون پورتال ذخیره می‌شوند.</small>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label for="sms_api_key" class="form-label">کلید وب‌سرویس ملی‌پیامک (SMS API Key) <span class="req">*</span></label>
+                        <input type="text" id="sms_api_key" name="sms_api_key" class="form-control" dir="ltr"
+                            placeholder="مثال: f95527ef2fa7498dbad9a0d09f2bbad2"
+                            value="<?= e($settings['sms_api_key'] ?? '') ?>">
+                        <small style="color:var(--muted);font-size:0.85rem;">کلید وب‌سرویس اختصاصی کنسول ملی‌پیامک شما (از منوی وب‌سرویس در پنل ملی‌پیامک دریافت کنید).</small>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="sms_subscription_monthly_fee" class="form-label">مبلغ ماهانه اشتراک بسته پیامک تفصیلی (تومان)</label>
+                        <input type="number" id="sms_subscription_monthly_fee" name="sms_subscription_monthly_fee" class="form-control" dir="ltr"
+                            placeholder="۳۰۰۰۰"
+                            value="<?= e($settings['sms_subscription_monthly_fee'] ?? '30000') ?>">
+                        <small style="color:var(--muted);font-size:0.85rem;">این مبلغ به صورت خودکار به شهریه ماهانه والدینی که «بسته پیامک تفصیلی» را فعال کنند اضافه می‌شود تا هزینه پیامک‌ها جبران شود.</small>
+                    </div>
+                </div>
+
+                <h3 style="font-size:1.05rem;margin-bottom:var(--space-md);color:var(--text);border-bottom:1px dashed var(--border);padding-bottom:8px;">
+                    📋 شناسه‌های الگوهای متنی تایید شده در ملی‌پیامک (با لحن گرم و کودک‌محور)
+                </h3>
+
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:var(--space-md);margin-bottom:var(--space-lg);">
+                    <div class="form-group">
+                        <label for="sms_pattern_otp" class="form-label">
+                            ۱. کد تایید ورود و ثبت‌نام (OTP)
+                        </label>
+                        <input type="number" id="sms_pattern_otp" name="sms_pattern_otp" class="form-control" dir="ltr"
+                            placeholder="مثال: 524" value="<?= e($settings['sms_pattern_otp'] ?? '') ?>">
+                        <small style="color:var(--muted);font-size:0.8rem;">متغیر: <code>{0}=کد تایید ۵ رقمی</code><br>نمونه: کد ورود شما به خانه پرمهر مهدکودک روما: {0}</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sms_pattern_welcome" class="form-label">
+                            ۲. خوش‌آمدگویی و تایید حساب کاربری والد
+                        </label>
+                        <input type="number" id="sms_pattern_welcome" name="sms_pattern_welcome" class="form-control" dir="ltr"
+                            placeholder="مثال: 525" value="<?= e($settings['sms_pattern_welcome'] ?? '') ?>">
+                        <small style="color:var(--muted);font-size:0.8rem;">متغیر: <code>{0}=نام والد</code><br>نمونه: {0} عزیز، با عشق به جمع پرمهر مهدکودک روما خوش آمدید.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sms_pattern_daily_report_brief" class="form-label">
+                            ۳. گزارش روزانه خلاصه (رایگان / ارجاع به پنل) 💡
+                        </label>
+                        <input type="number" id="sms_pattern_daily_report_brief" name="sms_pattern_daily_report_brief" class="form-control" dir="ltr"
+                            placeholder="مثال: 530" value="<?= e($settings['sms_pattern_daily_report_brief'] ?? '') ?>">
+                        <small style="color:var(--muted);font-size:0.8rem;">متغیرها: <code>{0}=نام کودک</code>، <code>{1}=نام مهد</code><br>نمونه: مامان و بابای مهربون {0}، گزارش روز قشنگ دلبندتون در پنل {1} ثبت شد.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sms_pattern_daily_report" class="form-label">
+                            ۴. گزارش روزانه تفصیلی (اشتراک VIP) ⭐
+                        </label>
+                        <input type="number" id="sms_pattern_daily_report" name="sms_pattern_daily_report" class="form-control" dir="ltr"
+                            placeholder="مثال: 526" value="<?= e($settings['sms_pattern_daily_report'] ?? '') ?>">
+                        <small style="color:var(--muted);font-size:0.8rem;">متغیرها: <code>{0}=نام کودک</code>، <code>{1}=تاریخ</code>، <code>{2}=احوال/روحی</code><br>نمونه: گزارش روز {1} فرشته کوچولومون {0}: {2}. مهد روما</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sms_pattern_attendance" class="form-label">
+                            ۵. اعلام حضور / غیبت کودک در مهد
+                        </label>
+                        <input type="number" id="sms_pattern_attendance" name="sms_pattern_attendance" class="form-control" dir="ltr"
+                            placeholder="مثال: 527" value="<?= e($settings['sms_pattern_attendance'] ?? '') ?>">
+                        <small style="color:var(--muted);font-size:0.8rem;">متغیرها: <code>{0}=نام کودک</code>، <code>{1}=تاریخ</code>، <code>{2}=وضعیت</code><br>نمونه: دلبند قشنگمون {0} در تاریخ {1} {2}. مهد روما</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sms_pattern_tuition_reminder" class="form-label">
+                            ۶. یادآوری دوستانه شهریه
+                        </label>
+                        <input type="number" id="sms_pattern_tuition_reminder" name="sms_pattern_tuition_reminder" class="form-control" dir="ltr"
+                            placeholder="مثال: 528" value="<?= e($settings['sms_pattern_tuition_reminder'] ?? '') ?>">
+                        <small style="color:var(--muted);font-size:0.8rem;">متغیرها: <code>{0}=نام والد</code>، <code>{1}=نام کودک</code>، <code>{2}=ماه</code>، <code>{3}=مبلغ</code><br>نمونه: {0} مهربان، یادآوری دوستانه شهریه ماه {2} فرشته قشنگمون {1}: {3} تومان. مهد روما</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sms_pattern_announcement" class="form-label">
+                            ۷. اطلاعیه‌ها و رویدادهای مهدکودک
+                        </label>
+                        <input type="number" id="sms_pattern_announcement" name="sms_pattern_announcement" class="form-control" dir="ltr"
+                            placeholder="مثال: 529" value="<?= e($settings['sms_pattern_announcement'] ?? '') ?>">
+                        <small style="color:var(--muted);font-size:0.8rem;">متغیرها: <code>{0}=نام والد</code>، <code>{1}=عنوان پیام</code><br>نمونه: {0} مهربان، اطلاعیه جدید مهد با عنوان «{1}» در پنل شما قرار گرفت.</small>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">💾 ذخیره تنظیمات پیامک</button>
+                </div>
+            </form>
+
+            <!-- Test SMS Form -->
+            <div style="background:rgba(46,133,64,0.06);border:1px solid rgba(46,133,64,0.25);padding:18px;border-radius:var(--radius-md);margin-bottom:var(--space-xl);">
+                <h3 style="font-size:1rem;color:#1e632b;margin-bottom:8px;">🧪 تست زنده ارسال پیامک خدماتی با الگو</h3>
+                <p style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;">برای اطمینان از صحت کلید API و شناسه الگو، یک پیامک تستی به شماره دلخواه ارسال کنید.</p>
+                <form method="post" action="<?= e(url('admin/settings.php#sms-section')) ?>" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                    <input type="hidden" name="action" value="test_sms">
+
+                    <div style="flex:1;min-width:180px;">
+                        <label class="form-label" style="font-size:0.82rem;">شماره گیرنده تست</label>
+                        <input type="text" name="test_phone" class="form-control" dir="ltr" placeholder="09123456789" required>
+                    </div>
+
+                    <div style="width:120px;">
+                        <label class="form-label" style="font-size:0.82rem;">شناسه الگو (bodyId)</label>
+                        <input type="number" name="test_body_id" class="form-control" dir="ltr" placeholder="524" required>
+                    </div>
+
+                    <div style="flex:1;min-width:140px;">
+                        <label class="form-label" style="font-size:0.82rem;">متغیر اول ({0})</label>
+                        <input type="text" name="test_arg1" class="form-control" placeholder="12345">
+                    </div>
+
+                    <div style="flex:1;min-width:140px;">
+                        <label class="form-label" style="font-size:0.82rem;">متغیر دوم ({1})</label>
+                        <input type="text" name="test_arg2" class="form-control" placeholder="روما">
+                    </div>
+
+                    <button type="submit" class="btn" style="background:#2e8540;color:#fff;border:none;padding:10px 18px;font-size:0.88rem;cursor:pointer;border-radius:var(--radius-sm);">
+                        🚀 ارسال پیامک تست
+                    </button>
+                </form>
+            </div>
+
+            <!-- Recent SMS Logs Table -->
+            <h3 style="font-size:1.05rem;margin-bottom:var(--space-md);color:var(--text);">
+                📜 آخرین پیامک‌های ارسالی سیستم (لاگ وضعیت)
+            </h3>
+            <?php if (!empty($recentSmsLogs)): ?>
+                <div class="table-responsive" style="overflow-x:auto;">
+                    <table class="table" style="width:100%;font-size:0.85rem;">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>گیرنده</th>
+                                <th>والد</th>
+                                <th>نوع رویداد</th>
+                                <th>شناسه الگو</th>
+                                <th>شناسه پیگیری (recId)</th>
+                                <th>وضعیت ارسال</th>
+                                <th>زمان</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($recentSmsLogs as $log): ?>
+                                <tr>
+                                    <td><?= e($log['id']) ?></td>
+                                    <td dir="ltr" style="text-align:right;font-family:monospace;"><?= e($log['recipient_phone']) ?></td>
+                                    <td><?= !empty($log['p_first']) ? e($log['p_first'] . ' ' . $log['p_last']) : '<span style="color:var(--muted);">-</span>' ?></td>
+                                    <td>
+                                        <span class="badge badge-secondary" style="font-size:0.75rem;">
+                                            <?= e($log['message_type'] ?? 'pattern') ?>
+                                        </span>
+                                    </td>
+                                    <td dir="ltr" style="text-align:right;"><?= e($log['pattern_body_id'] ?? '-') ?></td>
+                                    <td dir="ltr" style="text-align:right;font-family:monospace;"><?= e($log['rec_id'] ?? '-') ?></td>
+                                    <td>
+                                        <?php if (($log['status'] ?? '') === 'sent'): ?>
+                                            <span style="color:#2e8540;font-weight:bold;">✅ موفق</span>
+                                        <?php else: ?>
+                                            <span style="color:#c62828;font-weight:bold;" title="<?= e($log['error_message'] ?? '') ?>">
+                                                ❌ <?= e($log['error_message'] ?: ($log['status'] ?? 'ناموفق')) ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="font-size:0.78rem;color:var(--muted);"><?= e(shamsiDate((string)$log['created_at'], 'with_time')) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php else: ?>
+                <p style="color:var(--muted);font-size:0.88rem;background:var(--surface-hover);padding:14px;border-radius:var(--radius-sm);text-align:center;">
+                    هنوز هیچ پیامکی از طریق سیستم ارسال نشده است.
+                </p>
+            <?php endif; ?>
+        </div>
     </div>
 </section>
 

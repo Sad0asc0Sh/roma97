@@ -19,6 +19,7 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/audit.php';
+require_once __DIR__ . '/../includes/sms.php';
 
 function cliLog(string $msg): void
 {
@@ -55,13 +56,18 @@ try {
 
     // 3. Find active children with overdue tuition (> 0)
     $childrenStmt = $pdo->query("
-        SELECT c.id, c.parent_id, c.first_name, c.last_name, p.first_name AS p_first, p.last_name AS p_last
+        SELECT c.id, c.parent_id, c.first_name, c.last_name,
+               p.first_name AS p_first, p.last_name AS p_last, p.phone, p.sms_pref_tuition
         FROM children c
         INNER JOIN parents p ON p.id = c.parent_id
         WHERE c.status = 'active'
         ORDER BY c.id
     ");
     $activeChildren = $childrenStmt ? $childrenStmt->fetchAll() : [];
+
+    $smsSettings = getSmsSettings($pdo);
+    $tuitionBodyId = (int) ($smsSettings['sms_pattern_tuition_reminder'] ?? 0);
+    $smsEnabled = ($smsSettings['sms_enabled'] ?? '0') === '1';
 
     $remindersSent = 0;
     $checkLogStmt = $pdo->prepare(
@@ -101,12 +107,13 @@ try {
         }
 
         $formattedBalance = persianNumber(number_format($balance));
-        $subject = "یادآوری پرداخت شهریه ماه {$monthLabel} - {$childName}";
-        $body = "ولایت‌محترم جناب آقای/سرکار خانم {$parentName}؛\n\n"
-            . "با سلام و احترام،\n"
-            . "به استحضار می‌رساند شهریه مربوط به فرزند عزیزتان «{$childName}» برای ماه {$monthLabel} به مبلغ {$formattedBalance} تومان هنوز تسویه نگردیده است.\n"
-            . "خواشمند است در اسرع وقت نسبت به تسویه یا ثبت پرداخت اقدام فرمایید.\n\n"
-            . "با تشکر،\nمدیریت مهدکودک " . siteName();
+        $subject = "یادآوری دوستانه شهریه ماه {$monthLabel} - فرشته قشنگمون {$childName} 🌸";
+        $body = "مامان و بابای مهربون «{$childName}» عزیز؛\n\n"
+            . "سلام و درود پر از عشق و انرژی! 🌟\n"
+            . "ممنونیم که کنار فرشته کوچولومون در مهدکودک " . siteName() . " هستید.\n"
+            . "یادآوری دوستانه: شهریه ماه {$monthLabel} دلبندتان به مبلغ {$formattedBalance} تومان هنوز در سیستم ثبت نشده است.\n"
+            . "خواهش می‌کنیم در زمان مناسب نسبت به ثبت پرداخت اقدام فرمایید.\n\n"
+            . "با آرزوی شادی و روزهای پرخنده،\nمدیریت و کادر مهدکودک " . siteName() . " 💖";
 
         $insMsgStmt->execute([
             ':sid' => $adminId,
@@ -120,6 +127,22 @@ try {
             ':pid' => $pid,
             ':myear' => $currentMonthYear,
         ]);
+
+        // Send SMS pattern reminder if parent enabled SMS and pattern is configured
+        if ($smsEnabled && $tuitionBodyId > 0 && (int)($child['sms_pref_tuition'] ?? 1) === 1 && !empty($child['phone'])) {
+            $smsRes = sendMeliPayamakPattern(
+                (string) $child['phone'],
+                $tuitionBodyId,
+                [$parentName, $childName, $monthLabel, (string) $formattedBalance],
+                'tuition_reminder',
+                $pid
+            );
+            if ($smsRes['success']) {
+                cliLog("SMS reminder sent to {$child['phone']} (recId: " . ($smsRes['recId'] ?? '-') . ").");
+            } else {
+                cliLog("SMS reminder failed for {$child['phone']}: " . $smsRes['status']);
+            }
+        }
 
         $remindersSent++;
         cliLog("Reminder sent to {$parentName} for {$childName} (Balance: {$formattedBalance} Toman).");

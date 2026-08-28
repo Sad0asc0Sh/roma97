@@ -64,9 +64,11 @@ var prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-redu
     // with `defer`, so DOMContentLoaded may have already fired — check first.
     function markEntering() {
         document.documentElement.classList.add('page-entering');
+        // Outlasts the longest entrance animation (headerDrop 0.55s) so it
+        // never gets cut mid-flight.
         setTimeout(function() {
             document.documentElement.classList.remove('page-entering');
-        }, 350);
+        }, 600);
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', markEntering);

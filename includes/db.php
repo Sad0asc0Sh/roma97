@@ -243,14 +243,10 @@ function initializeFinancialTables(): void
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
 
-        // Migrate indexes on existing tables idempotently if unique constraints still exist
-        $checkTuition = $pdo->query("
-            SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
-            WHERE table_schema = DATABASE() AND table_name = 'tuition_payments' AND constraint_name = 'unique_child_month'
-        ")->fetchColumn();
-        if ((int) $checkTuition > 0) {
-            $pdo->exec("ALTER TABLE tuition_payments DROP KEY unique_child_month");
-        }
+        // Migrate indexes on existing tables idempotently:
+        // Always add the replacement index BEFORE dropping the unique index,
+        // because InnoDB requires a supporting index for foreign key constraints
+        // (fk_tuition_child and fk_salary_teacher).
         $checkTuitionIdx = $pdo->query("
             SELECT COUNT(*) FROM information_schema.STATISTICS
             WHERE table_schema = DATABASE() AND table_name = 'tuition_payments' AND index_name = 'idx_tuition_child_month'
@@ -258,7 +254,21 @@ function initializeFinancialTables(): void
         if ((int) $checkTuitionIdx === 0) {
             $pdo->exec("ALTER TABLE tuition_payments ADD INDEX idx_tuition_child_month (child_id, month_year)");
         }
+        $checkTuition = $pdo->query("
+            SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+            WHERE table_schema = DATABASE() AND table_name = 'tuition_payments' AND constraint_name = 'unique_child_month'
+        ")->fetchColumn();
+        if ((int) $checkTuition > 0) {
+            $pdo->exec("ALTER TABLE tuition_payments DROP KEY unique_child_month");
+        }
 
+        $checkSalaryIdx = $pdo->query("
+            SELECT COUNT(*) FROM information_schema.STATISTICS
+            WHERE table_schema = DATABASE() AND table_name = 'salary_payments' AND index_name = 'idx_salary_teacher_month'
+        ")->fetchColumn();
+        if ((int) $checkSalaryIdx === 0) {
+            $pdo->exec("ALTER TABLE salary_payments ADD INDEX idx_salary_teacher_month (teacher_id, month_year)");
+        }
         $checkSalary = $pdo->query("
             SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
             WHERE table_schema = DATABASE() AND table_name = 'salary_payments' AND constraint_name = 'unique_teacher_month'
@@ -266,12 +276,83 @@ function initializeFinancialTables(): void
         if ((int) $checkSalary > 0) {
             $pdo->exec("ALTER TABLE salary_payments DROP KEY unique_teacher_month");
         }
-        $checkSalaryIdx = $pdo->query("
+
+        // Ensure SMS verification codes and logs tables exist
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS sms_verification_codes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                phone VARCHAR(15) NOT NULL,
+                code VARCHAR(10) NOT NULL,
+                action_type ENUM('register', 'login', 'reset_password') NOT NULL DEFAULT 'register',
+                payload_json TEXT NULL,
+                attempts INT DEFAULT 0,
+                expires_at DATETIME NOT NULL,
+                is_used TINYINT(1) DEFAULT 0,
+                ip_address VARCHAR(45) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_svc_phone_action (phone, action_type, is_used)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS sms_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                recipient_phone VARCHAR(20) NOT NULL,
+                pattern_body_id INT NULL,
+                args_json TEXT NULL,
+                rec_id VARCHAR(100) NULL,
+                status VARCHAR(50) NOT NULL DEFAULT 'sent',
+                message_type VARCHAR(50) NOT NULL DEFAULT 'pattern',
+                error_message TEXT NULL,
+                parent_id INT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_sms_phone (recipient_phone),
+                INDEX idx_sms_parent (parent_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+
+        $smsLogCols = $pdo->query("SHOW COLUMNS FROM sms_logs")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('parent_id', $smsLogCols, true)) {
+            $pdo->exec("ALTER TABLE sms_logs ADD COLUMN parent_id INT NULL AFTER error_message");
+        }
+        if (!in_array('pattern_body_id', $smsLogCols, true)) {
+            $pdo->exec("ALTER TABLE sms_logs ADD COLUMN pattern_body_id INT NULL AFTER recipient_phone");
+        }
+
+        // Idempotently make parents.email nullable and add unique index on parents.phone
+        try {
+            $pdo->exec("ALTER TABLE parents MODIFY COLUMN email VARCHAR(150) NULL DEFAULT NULL");
+        } catch (Throwable) {}
+
+        $checkPhoneIdx = $pdo->query("
             SELECT COUNT(*) FROM information_schema.STATISTICS
-            WHERE table_schema = DATABASE() AND table_name = 'salary_payments' AND index_name = 'idx_salary_teacher_month'
+            WHERE table_schema = DATABASE() AND table_name = 'parents' AND index_name = 'idx_parent_phone'
         ")->fetchColumn();
-        if ((int) $checkSalaryIdx === 0) {
-            $pdo->exec("ALTER TABLE salary_payments ADD INDEX idx_salary_teacher_month (teacher_id, month_year)");
+        if ((int) $checkPhoneIdx === 0) {
+            try {
+                $pdo->exec("ALTER TABLE parents ADD INDEX idx_parent_phone (phone)");
+            } catch (Throwable) {}
+        }
+
+        // Idempotently add SMS preferences to parents table if missing
+        $parentCols = $pdo->query("SHOW COLUMNS FROM parents")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('phone_verified', $parentCols, true)) {
+            $pdo->exec("ALTER TABLE parents ADD COLUMN phone_verified TINYINT(1) NOT NULL DEFAULT 0 AFTER phone");
+        }
+        if (!in_array('sms_pref_daily_report', $parentCols, true)) {
+            $pdo->exec("ALTER TABLE parents ADD COLUMN sms_pref_daily_report TINYINT(1) NOT NULL DEFAULT 1 AFTER phone_verified");
+        }
+        if (!in_array('sms_pref_attendance', $parentCols, true)) {
+            $pdo->exec("ALTER TABLE parents ADD COLUMN sms_pref_attendance TINYINT(1) NOT NULL DEFAULT 1 AFTER sms_pref_daily_report");
+        }
+        if (!in_array('sms_pref_tuition', $parentCols, true)) {
+            $pdo->exec("ALTER TABLE parents ADD COLUMN sms_pref_tuition TINYINT(1) NOT NULL DEFAULT 1 AFTER sms_pref_attendance");
+        }
+        if (!in_array('sms_pref_announcements', $parentCols, true)) {
+            $pdo->exec("ALTER TABLE parents ADD COLUMN sms_pref_announcements TINYINT(1) NOT NULL DEFAULT 1 AFTER sms_pref_tuition");
+        }
+        if (!in_array('sms_vip_subscription', $parentCols, true)) {
+            $pdo->exec("ALTER TABLE parents ADD COLUMN sms_vip_subscription TINYINT(1) NOT NULL DEFAULT 0 AFTER sms_pref_announcements");
         }
 
         // Idempotently modify children.status ENUM

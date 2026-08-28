@@ -9,6 +9,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
+require_once __DIR__ . '/../includes/sms.php';
 
 requireLogin();
 
@@ -222,6 +223,52 @@ SQL
                 ':check_out' => $checkOut,
                 ':notes' => $notes,
             ]);
+        }
+
+        // Send attendance pattern SMS to parents who opted in
+        $smsSettings = getSmsSettings($pdo);
+        $attBodyId = (int) ($smsSettings['sms_pattern_attendance'] ?? 0);
+
+        if ($attBodyId > 0 && ($smsSettings['sms_enabled'] ?? '0') === '1') {
+            $parentInfoStmt = $pdo->prepare("
+                SELECT c.id AS child_id, c.first_name AS c_first, c.last_name AS c_last,
+                       p.id AS parent_id, p.phone, p.sms_pref_attendance
+                FROM children c
+                INNER JOIN parents p ON p.id = c.parent_id
+                WHERE c.id = :cid LIMIT 1
+            ");
+
+            $statusFaLabels = [
+                'present' => 'با لبخند وارد مهد شد و در حال بازیه 🌈',
+                'absent'  => 'امروز جاش خیلی خالیه و دلتنگشیم 🎈',
+                'late'    => 'با کمی تاخیر اومد پیشمون و به جمع دوستانش پیوست ⏰',
+                'excused' => 'امروز در حال استراحت در کنار شماست 🏡',
+            ];
+
+            $dateFa = shamsiDate($parsedPostDate);
+
+            foreach ($attendanceData as $childKey => $fields) {
+                if (!is_array($fields)) continue;
+                $childId = (int) $childKey;
+                if (!isset($allowedIds[$childId])) continue;
+
+                $status = (string) ($fields['status'] ?? 'present');
+                $parentInfoStmt->execute([':cid' => $childId]);
+                $pRow = $parentInfoStmt->fetch();
+
+                if ($pRow && (int)($pRow['sms_pref_attendance'] ?? 1) === 1 && !empty($pRow['phone'])) {
+                    $cName = trim($pRow['c_first'] . ' ' . $pRow['c_last']);
+                    $stFa = $statusFaLabels[$status] ?? 'حاضر';
+
+                    sendMeliPayamakPattern(
+                        (string) $pRow['phone'],
+                        $attBodyId,
+                        [$cName, $dateFa, $stFa],
+                        'attendance',
+                        (int) $pRow['parent_id']
+                    );
+                }
+            }
         }
 
         $displayFlashDate = shamsiDate($parsedPostDate);

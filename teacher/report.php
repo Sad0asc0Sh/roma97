@@ -9,6 +9,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
+require_once __DIR__ . '/../includes/sms.php';
 
 requireTeacherLogin();
 
@@ -103,6 +104,62 @@ SQL;
                 }
 
                 $pdo->commit();
+
+                // Send SMS notifications to parents who opted in
+                $smsSettings = getSmsSettings($pdo);
+                $detailedBodyId = (int) ($smsSettings['sms_pattern_daily_report'] ?? 0);
+                $briefBodyId    = (int) ($smsSettings['sms_pattern_daily_report_brief'] ?? 0);
+
+                if (($smsSettings['sms_enabled'] ?? '0') === '1') {
+                    $parentInfoStmt = $pdo->prepare("
+                        SELECT c.id AS child_id, c.first_name AS c_first, c.last_name AS c_last,
+                               p.id AS parent_id, p.phone, p.sms_pref_daily_report, p.sms_vip_subscription
+                        FROM children c
+                        INNER JOIN parents p ON p.id = c.parent_id
+                        WHERE c.id = :cid LIMIT 1
+                    ");
+
+                    $moodLabels = [
+                        'happy'       => 'پر از خنده، شاد و عالی 🌟',
+                        'normal'      => 'آرام، خوش‌اخلاق و در حال بازی 🌸',
+                        'mixed'       => 'بازیگوش، پرحرف و کنجکاو 🎈',
+                        'challenging' => 'کمی دلتنگ و نیازمند آغوش پرمهر 💖',
+                    ];
+
+                    foreach ($allowedChildIds as $childId) {
+                        $parentInfoStmt->execute([':cid' => $childId]);
+                        $pRow = $parentInfoStmt->fetch();
+
+                        if ($pRow && (int)($pRow['sms_pref_daily_report'] ?? 1) === 1 && !empty($pRow['phone'])) {
+                            $cName = trim($pRow['c_first'] . ' ' . $pRow['c_last']);
+                            $isVip = ((int)($pRow['sms_vip_subscription'] ?? 0) === 1);
+
+                            if ($isVip && $detailedBodyId > 0) {
+                                // Detailed VIP SMS Pack
+                                $childMood = (string) ($moods[$childId] ?? 'normal');
+                                $moodFa = $moodLabels[$childMood] ?? 'خوب';
+                                $todayFa = jdate('Y/m/d');
+
+                                sendMeliPayamakPattern(
+                                    (string) $pRow['phone'],
+                                    $detailedBodyId,
+                                    [$cName, $todayFa, $moodFa],
+                                    'daily_report_vip',
+                                    (int) $pRow['parent_id']
+                                );
+                            } elseif ($briefBodyId > 0) {
+                                // Free / Brief SMS (Referral to Rooma Panel)
+                                sendMeliPayamakPattern(
+                                    (string) $pRow['phone'],
+                                    $briefBodyId,
+                                    [$cName, siteName()],
+                                    'daily_report_brief',
+                                    (int) $pRow['parent_id']
+                                );
+                            }
+                        }
+                    }
+                }
             } catch (Throwable $e) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();

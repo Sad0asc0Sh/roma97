@@ -291,7 +291,10 @@ function requireLogin(): void
         redirect(url('admin/login.php'));
     }
 
-    $currentPage = 'admin/' . basename($_SERVER['PHP_SELF'] ?? '');
+    // Use SCRIPT_NAME rather than PHP_SELF to prevent PATH_INFO permission bypasses
+    // (e.g. /admin/backup.php/index.php would have PHP_SELF basename of index.php).
+    $scriptName = (string) ($_SERVER['SCRIPT_NAME'] ?? '');
+    $currentPage = 'admin/' . basename($scriptName !== '' ? $scriptName : ($_SERVER['PHP_SELF'] ?? ''));
     if (!isPageAllowedForRole($currentPage, currentAdminRole())) {
         setFlash('error', 'شما دسترسی به این بخش را ندارید.');
         redirect(url('admin/index.php'));

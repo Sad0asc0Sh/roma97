@@ -120,6 +120,15 @@ function getSetting(string $key, string $default = ''): string
     return $settings[$key] ?? $default;
 }
 
+function saveSetting(PDO $pdo, string $key, string $value): void
+{
+    $statement = $pdo->prepare(
+        "INSERT INTO settings (meta_key, meta_value) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)"
+    );
+    $statement->execute([$key, $value]);
+}
+
 function siteName(): string
 {
     return getSetting('site_name', 'Rooma');
@@ -878,6 +887,25 @@ function childOutstandingBalance(PDO $pdo, int $childId, string $monthYear): flo
     } else {
         $expectedAmount = (float) getSetting('default_tuition_amount', '0');
     }
+
+    // Add optional detailed SMS subscription fee if parent opted into VIP SMS pack
+    try {
+        $pStmt = $pdo->prepare('
+            SELECT p.sms_vip_subscription
+            FROM children c
+            INNER JOIN parents p ON p.id = c.parent_id
+            WHERE c.id = :cid LIMIT 1
+        ');
+        $pStmt->execute([':cid' => $childId]);
+        $hasVipSms = (int) ($pStmt->fetchColumn() ?: 0);
+
+        if ($hasVipSms === 1) {
+            $smsFee = (float) getSetting('sms_subscription_monthly_fee', '30000');
+            if ($smsFee > 0) {
+                $expectedAmount += $smsFee;
+            }
+        }
+    } catch (Throwable) {}
 
     // 2. Get SUM of payments for this child and month_year
     $paidStmt = $pdo->prepare('SELECT SUM(amount) FROM tuition_payments WHERE child_id = :cid AND month_year = :myear');

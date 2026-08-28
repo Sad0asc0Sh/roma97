@@ -35,7 +35,7 @@ Options -Indexes
     </IfModule>
 </FilesMatch>
 
-# Protect log files
+# Protect log and text files (except robots.txt)
 <FilesMatch "\.(log|txt)$">
     <IfModule mod_authz_core.c>
         Require all denied
@@ -46,11 +46,21 @@ Options -Indexes
     </IfModule>
 </FilesMatch>
 
-# Block access to includes and templates directories, and to any .git
-# directory (defense-in-depth in case a repo is ever deployed in the web root)
+<Files "robots.txt">
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Allow from all
+    </IfModule>
+</Files>
+
+# Block access to includes, templates, dist, bin, docs and logs directories,
+# and to any .git directory (defense-in-depth)
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule ^(includes|templates)(/|$) - [F,L]
+    RewriteRule ^(includes|templates|dist|bin)(/|$) - [F,L]
     RewriteRule ^logs(/|$) - [F,L]
     RewriteRule ^docs(/|$) - [F,L]
     RewriteRule (^|/)\.git(/|$) - [F,L]
@@ -127,7 +137,7 @@ Options -Indexes
 FileETag None
 
 # Prevent access to backup, source, markdown and lock files
-<FilesMatch "(^#.*#|\.(bak|config|dist|fla|inc|ini|log|psd|sh|sql|sw[op]|md|lock)|~)$">
+<FilesMatch "(^#.*#|\.(bak|config|dist|fla|inc|ini|log|psd|sh|sql|sw[op]|md|lock|zip|tar|gz|rar)|~)$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>

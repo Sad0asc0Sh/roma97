@@ -4,7 +4,7 @@ declare(strict_types=1);
 /*
  * Build a clean production release zip for shared hosting deployment.
  *
- * Usage:  php bin\build-release.php
+ * Usage:  php bin/build-release.php
  * Output: dist/rooma-release.zip
  *
  * Excludes development artifacts (.git, .agents, docs, dev reports, logs
@@ -40,10 +40,6 @@ $excludedFiles = [
 // Keep these even inside otherwise-excluded patterns (upload dir guards).
 $keepNames = ['.htaccess', 'index.html'];
 
-if (!extension_loaded('zip')) {
-    exit("PHP zip extension is required (enable extension=zip in php.ini).\n");
-}
-
 if (is_file($zipPath)) {
     unlink($zipPath);
 }
@@ -51,17 +47,12 @@ if (!is_dir($distDir)) {
     mkdir($distDir, 0777, true);
 }
 
-$zip = new ZipArchive();
-if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-    exit("Cannot create {$zipPath}\n");
-}
-
 $rii = new RecursiveIteratorIterator(
     new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
     RecursiveIteratorIterator::LEAVES_ONLY
 );
 
-$fileCount = 0;
+$filesToZip = [];
 $totalBytes = 0;
 
 /** @var SplFileInfo $file */
@@ -99,16 +90,56 @@ foreach ($rii as $file) {
         continue;
     }
 
-    $zip->addFile($realPath, $relative);
-    $fileCount++;
+    $filesToZip[$relative] = $realPath;
     $totalBytes += filesize($realPath);
 }
 
-$zip->close();
+if (extension_loaded('zip')) {
+    $zip = new ZipArchive();
+    if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        exit("Cannot create {$zipPath}\n");
+    }
+
+    foreach ($filesToZip as $rel => $abs) {
+        $zip->addFile($abs, $rel);
+    }
+    $zip->close();
+} else {
+    // Fallback: Use PowerShell Compress-Archive or tar on Windows
+    $tempList = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'rooma_release_files_' . bin2hex(random_bytes(4));
+    @mkdir($tempList, 0777, true);
+
+    foreach ($filesToZip as $rel => $abs) {
+        $dest = $tempList . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
+        $destDir = dirname($dest);
+        if (!is_dir($destDir)) {
+            @mkdir($destDir, 0777, true);
+        }
+        copy($abs, $dest);
+    }
+
+    $psCmd = 'powershell.exe -NoProfile -Command "Compress-Archive -Path \'' . $tempList . '\*\' -DestinationPath \'' . $zipPath . '\' -Force"';
+    exec($psCmd, $out, $ret);
+
+    // Clean temp
+    $delRii = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($tempList, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::CHILD_FIRST
+    );
+    foreach ($delRii as $f) {
+        $f->isDir() ? @rmdir($f->getRealPath()) : @unlink($f->getRealPath());
+    }
+    @rmdir($tempList);
+
+    if ($ret !== 0 || !is_file($zipPath)) {
+        exit("Failed to create zip via PowerShell fallback.\n");
+    }
+}
 
 printf(
-    "Release built: %s\nFiles: %d (%.1f KB raw)\nUpload this zip into public_html and extract there.\n",
+    "Release built: %s\nFiles: %d (%.1f KB raw, %.1f KB zip)\nUpload this zip into public_html and extract there.\n",
     $zipPath,
-    $fileCount,
-    $totalBytes / 1024
+    count($filesToZip),
+    $totalBytes / 1024,
+    filesize($zipPath) / 1024
 );

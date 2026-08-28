@@ -10,9 +10,7 @@ focuses on production hardening, server configuration, backups, and updates.
 ## 1. Overview
 
 - **Stack:** PHP 8.1+ · MySQL 5.7+ / MariaDB 10.3+ · Apache (or Nginx + PHP-FPM)
-- **Schema:** Created and migrated **automatically** on first request
-  (idempotent `CREATE TABLE IF NOT EXISTS` + guarded `ALTER` statements). No
-  manual SQL import is required.
+- **Schema:** Created and initialized via `setup.php` on initial deployment. Additive migrations run automatically.
 - **Config:** Two-file pattern — committed `config.php` (safe defaults) +
   git-ignored `config.local.php` (environment credentials/overrides).
 
@@ -200,16 +198,14 @@ sudo chmod -R 775 /var/www/rooma/assets/uploads
 
 ## 8. First Run & Admin Bootstrap
 
-1. Visit `https://your-domain.com/` — tables initialize automatically.
-2. Go to `https://your-domain.com/admin/login.php`.
-3. Log in with the seeded credentials:
-   - **Username:** `admin`
-   - **Password:** `admin123`
-4. You are redirected to **Settings**, where a warning banner and a
-   "تغییر رمز عبور" (Change Password) form let you set a new password
-   immediately — do this before anything else.
-5. Set site name / logo / contact phone, then create classrooms, teachers,
-   and approve parents/children.
+1. Run the hardened web installer or CLI setup:
+   - **Web:** Visit `https://your-domain.com/setup.php`
+   - **CLI:** `php setup.php`
+2. Complete the setup form to initialize all tables and configure the primary Owner admin account.
+3. Upon completion, `setup.php` automatically writes `install.lock` and blocks any future execution.
+4. Log into the admin portal at `https://your-domain.com/admin/login.php`.
+5. Navigate to **تنظیمات (Settings) → پنل پیامک ملی‌پیامک** to enter your API key and pattern IDs (OTP, Daily Report, Attendance, Tuition Reminder, Announcements).
+6. Configure site name, logo, contact information, classrooms, and teachers.
 
 ---
 
@@ -217,28 +213,45 @@ sudo chmod -R 775 /var/www/rooma/assets/uploads
 
 - [ ] `DEVELOPMENT_MODE` is `false` in `config.local.php`.
 - [ ] `FORCE_HTTPS` is `true` and a valid SSL certificate is installed.
-- [ ] Default admin password (`admin123`) has been changed via **Settings →
-      تغییر رمز عبور**.
+- [ ] Primary admin password is strong and set during `setup.php` execution.
 - [ ] Database user uses a strong, unique password with least privilege.
 - [ ] `config.local.php` is present, git-ignored, and `chmod 640`.
 - [ ] Login is protected against brute force automatically (the
       `login_throttle` table tracks failed attempts per IP **and** per
       account/email — created on first use, no setup needed). Five failed
       attempts triggers a 15-minute lockout.
-- [ ] **Remove `preflight.php`** from the web root after verifying the
-      environment — it is a setup diagnostic and should not be public:
-      ```bash
-      rm /var/www/rooma/preflight.php
-      ```
-- [ ] Confirm `/includes/`, `/logs/`, and `config*.php` are not web-accessible
-      (try opening them in a browser — you should get 403/404).
-- [ ] Review the **Activity Log** (`admin/audit.php`) is recording events.
+- [ ] `install.lock` exists in the web root after installation.
+- [ ] Confirm `/includes/`, `/templates/`, `/dist/`, `/bin/`, `/logs/`, and `config*.php` are not web-accessible
+      (opening them in a browser returns 403 Forbidden).
+- [ ] Review the **Activity Log** (`admin/audit.php`) and **SMS Log** (`admin/settings.php#sms-section`) are recording events.
+
+---
+
+## 10. SMS Gateway & Automation Setup (MeliPayamak Shared Pattern)
+
+ROMA integrates with **MeliPayamak Shared Pattern Service** to deliver instant OTP verification codes and kindergarten notifications without SMS black-list blocking.
+
+### Pattern Variables Configuration (Child-Friendly & Sweet Tone):
+- **1. OTP Code (کد تایید ورود و ثبت‌نام):** 1 variable: `{0}=کد تایید ۵ رقمی`
+  - *نمونه متن:* `کد ورود شما به خانه پرمهر مهدکودک روما: {0} با آرزوی روزی شاد برای دلبندتان`
+- **2. Welcome (خوش‌آمدگویی و فعال‌سازی والد):** 1 variable: `{0}=نام والد`
+  - *نمونه متن:* `{0} عزیز، با عشق و افتخار به جمع پرمهر مهدکودک روما خوش آمدید.`
+- **3. Brief Daily Report (گزارش روزانه خلاصه / ارجاع به پنل - رایگان):** 2 variables: `{0}=نام کودک`, `{1}=نام مهدکودک`
+  - *نمونه متن:* `مامان و بابای مهربون {0}، گزارش روز پر از بازی دلبندتان در پنل {1} ثبت شد.`
+- **4. Detailed Daily Report (گزارش تفصیلی روزانه - بسته VIP):** 3 variables: `{0}=نام کودک`, `{1}=تاریخ`, `{2}=احوال/روحی`
+  - *نمونه متن:* `گزارش روز {1} فرشته کوچولومون {0}: {2}. مهدکودک روما`
+- **5. Attendance (اعلام حضور و غیاب):** 3 variables: `{0}=نام کودک`, `{1}=تاریخ`, `{2}=وضعیت حضور`
+  - *نمونه متن:* `دلبند قشنگمون {0} در تاریخ {1} {2}. مهدکودک روما`
+- **6. Tuition Reminder (یادآوری دوستانه و مهربانانه شهریه):** 4 variables: `{0}=نام والد`, `{1}=نام کودک`, `{2}=ماه`, `{3}=مبلغ بدهی`
+  - *نمونه متن:* `{0} مهربان، یادآوری دوستانه شهریه ماه {2} فرشته قشنگمون {1}: {3} تومان. مهد روما`
+- **7. Announcements (اطلاعیه‌ها و پیام‌های مهد):** 2 variables: `{0}=نام والد`, `{1}=عنوان پیام`
+  - *نمونه متن:* `{0} مهربان، اطلاعیه جدید مهد با عنوان «{1}» در پنل شما قرار گرفت.`
 
 ---
 
 ## 11. Automatic Overdue Tuition Reminders (Cron Job Setup)
 
-ROMA includes an automated background script to send polite in-app message reminders to parents who have overdue tuition for the current Shamsi month (with built-in anti-spam logic restricting reminders to once every 7 days).
+ROMA includes an automated background script to send polite in-app message reminders and SMS pattern alerts to parents who have overdue tuition for the current Shamsi month (with built-in anti-spam logic restricting reminders to once every 7 days).
 
 ### cPanel Cron Job Configuration:
 1. Log into your **cPanel** dashboard.

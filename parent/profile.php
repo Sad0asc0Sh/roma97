@@ -40,7 +40,9 @@ function isStrongProfilePassword(string $password): bool
 function getParentProfile(PDO $pdo, int $parentId): ?array
 {
     $statement = $pdo->prepare(
-        'SELECT id, first_name, last_name, email, phone, password, status, avatar FROM parents WHERE id = :id LIMIT 1'
+        'SELECT id, first_name, last_name, email, phone, phone_verified, password, status, avatar,
+                sms_pref_daily_report, sms_pref_attendance, sms_pref_tuition, sms_pref_announcements
+         FROM parents WHERE id = :id LIMIT 1'
     );
     $statement->execute([':id' => $parentId]);
     $parent = $statement->fetch();
@@ -206,17 +208,15 @@ if (isPostRequest()) {
             $errors[] = 'لطفاً نام خانوادگی معتبر وارد کنید.';
         }
 
-        if (
-            $infoOld['email'] === ''
-            || profileStringLength($infoOld['email']) > 150
-            || !filter_var($infoOld['email'], FILTER_VALIDATE_EMAIL)
-        ) {
-            $errors[] = 'لطفاً یک آدرس ایمیل معتبر وارد کنید.';
-        } elseif (profileEmailExists($pdo, $infoOld['email'], $parentId)) {
-            $errors[] = 'این آدرس ایمیل قبلاً استفاده شده است.';
+        if ($infoOld['email'] !== '') {
+            if (profileStringLength($infoOld['email']) > 150 || !filter_var($infoOld['email'], FILTER_VALIDATE_EMAIL)) {
+                $errors[] = 'لطفاً یک آدرس ایمیل معتبر وارد کنید یا فیلد ایمیل را خالی بگذارید.';
+            } elseif (profileEmailExists($pdo, $infoOld['email'], $parentId)) {
+                $errors[] = 'این آدرس ایمیل قبلاً توسط حساب دیگری استفاده شده است.';
+            }
         }
 
-        if (!isValidProfilePhone($infoOld['phone'])) {
+        if ($infoOld['phone'] === '' || !isValidProfilePhone($infoOld['phone'])) {
             $errors[] = 'لطفاً شماره تلفن معتبر وارد کنید.';
         }
 
@@ -226,10 +226,10 @@ if (isPostRequest()) {
             );
             $statement->execute([
                 ':first_name' => $infoOld['first_name'],
-                ':last_name' => $infoOld['last_name'],
-                ':email' => $infoOld['email'],
-                ':phone' => $infoOld['phone'] === '' ? null : $infoOld['phone'],
-                ':id' => $parentId,
+                ':last_name'  => $infoOld['last_name'],
+                ':email'      => $infoOld['email'] === '' ? null : $infoOld['email'],
+                ':phone'      => $infoOld['phone'],
+                ':id'         => $parentId,
             ]);
 
             $_SESSION['parent_name'] = trim($infoOld['first_name'] . ' ' . $infoOld['last_name']);
@@ -290,6 +290,34 @@ if (isPostRequest()) {
                 ? $exception->getMessage()
                 : 'تصویر پروفایل به‌روزرسانی نشد.';
         }
+    } elseif ($action === 'update_sms_preferences') {
+        $prefDaily = isset($_POST['sms_pref_daily_report']) ? 1 : 0;
+        $prefAtt   = isset($_POST['sms_pref_attendance']) ? 1 : 0;
+        $prefTui   = isset($_POST['sms_pref_tuition']) ? 1 : 0;
+        $prefAnn   = isset($_POST['sms_pref_announcements']) ? 1 : 0;
+        $prefVip   = isset($_POST['sms_vip_subscription']) ? 1 : 0;
+
+        $upStmt = $pdo->prepare('
+            UPDATE parents
+            SET sms_pref_daily_report = :daily,
+                sms_pref_attendance = :att,
+                sms_pref_tuition = :tui,
+                sms_pref_announcements = :ann,
+                sms_vip_subscription = :vip
+            WHERE id = :id
+        ');
+        $upStmt->execute([
+            ':daily' => $prefDaily,
+            ':att'   => $prefAtt,
+            ':tui'   => $prefTui,
+            ':ann'   => $prefAnn,
+            ':vip'   => $prefVip,
+            ':id'    => $parentId,
+        ]);
+
+        recordAudit('parent.update_sms_prefs', 'parent', $parentId, ['vip_pack' => $prefVip]);
+        setFlash('success', 'تنظیمات دریافت پیامک‌های شما با موفقیت ذخیره شد.');
+        redirect(url('parent/profile.php#sms-prefs'));
     } elseif ($action === 'remove_avatar') {
         $statement = $pdo->prepare('UPDATE parents SET avatar = NULL WHERE id = :id');
         $statement->execute([':id' => $parentId]);
@@ -342,7 +370,7 @@ require_once __DIR__ . '/header.php';
     </div>
     <div class="profile-info">
         <h1><?= e($displayName) ?></h1>
-        <p class="profile-email"><?= e($infoOld['email']) ?></p>
+        <p class="profile-email" dir="ltr" style="text-align:right;font-family:monospace;"><?= !empty($infoOld['phone']) ? e(persianNumber($infoOld['phone'])) : e($infoOld['email']) ?></p>
         <span class="status-badge status-badge-<?= e($status) ?>"><?= e($statusLabel) ?></span>
     </div>
 </div>
@@ -366,13 +394,13 @@ require_once __DIR__ . '/header.php';
             </div>
 
             <div class="form-group">
-                <label for="email">آدرس ایمیل</label>
-                <input type="email" id="email" name="email" value="<?= e($infoOld['email']) ?>" required>
+                <label for="phone">شماره تلفن همراه (شناسه اصلی ورود و پیامک) <span style="color:red">*</span></label>
+                <input type="tel" id="phone" name="phone" value="<?= e($infoOld['phone']) ?>" placeholder="09123456789" required dir="ltr">
             </div>
 
             <div class="form-group">
-                <label for="phone">شماره تلفن</label>
-                <input type="tel" id="phone" name="phone" value="<?= e($infoOld['phone']) ?>" placeholder="اختیاری">
+                <label for="email">آدرس ایمیل <small style="color:var(--muted);font-weight:normal;">(اختیاری)</small></label>
+                <input type="email" id="email" name="email" value="<?= e($infoOld['email']) ?>" placeholder="اختیاری" dir="ltr">
             </div>
 
             <button class="btn btn-primary" type="submit">به‌روزرسانی اطلاعات</button>
@@ -439,6 +467,86 @@ require_once __DIR__ . '/header.php';
                 <button class="btn btn-outline" type="submit">حذف تصویر</button>
             </form>
         <?php endif; ?>
+    </div>
+
+    <!-- SMS Notification Preferences Card -->
+    <div class="profile-card" id="sms-prefs" style="grid-column: 1 / -1;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+            <h2 style="margin:0;">📱 تنظیمات دریافت پیامک و اعلانات هوشمند</h2>
+            <span style="font-size:0.82rem;background:rgba(46,133,64,0.1);color:#1e632b;padding:4px 10px;border-radius:20px;font-weight:600;">
+                شماره پیامک: <?= !empty($parent['phone']) ? e(persianNumber($parent['phone'])) : 'ثبت نشده' ?>
+                <?= ((int)($parent['phone_verified'] ?? 0) === 1) ? ' (تایید شده ✅)' : '' ?>
+            </span>
+        </div>
+        <p style="color:var(--muted);font-size:0.88rem;margin-bottom:20px;line-height:1.8;">
+            شما می‌توانید انتخاب کنید که کدام رویدادها و گزارش‌های مهدکودک به صورت پیامک فوری برای شماره موبایل شما ارسال شوند:
+        </p>
+
+        <form method="post" action="<?= e(url('parent/profile.php#sms-prefs')) ?>" novalidate>
+            <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+            <input type="hidden" name="action" value="update_sms_preferences">
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;margin-bottom:20px;">
+                <label style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:var(--surface-hover,rgba(0,0,0,0.02));border:1px solid var(--border);border-radius:10px;cursor:pointer;">
+                    <input type="checkbox" name="sms_pref_daily_report" value="1" style="width:20px;height:20px;margin-top:2px;cursor:pointer;"
+                        <?= ((int)($parent['sms_pref_daily_report'] ?? 1) === 1) ? 'checked' : '' ?>>
+                    <div>
+                        <strong style="display:block;font-size:0.95rem;color:var(--text);margin-bottom:4px;">🍲 گزارش روزانه مهدکودک</strong>
+                        <span style="font-size:0.82rem;color:var(--muted);line-height:1.6;display:block;">ارسال پیامک ثبت گزارش روزانه (تغذیه، خواب، احوال) پس از ثبت توسط مربی</span>
+                    </div>
+                </label>
+
+                <label style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:var(--surface-hover,rgba(0,0,0,0.02));border:1px solid var(--border);border-radius:10px;cursor:pointer;">
+                    <input type="checkbox" name="sms_pref_attendance" value="1" style="width:20px;height:20px;margin-top:2px;cursor:pointer;"
+                        <?= ((int)($parent['sms_pref_attendance'] ?? 1) === 1) ? 'checked' : '' ?>>
+                    <div>
+                        <strong style="display:block;font-size:0.95rem;color:var(--text);margin-bottom:4px;">⏱️ حضور و غیاب</strong>
+                        <span style="font-size:0.82rem;color:var(--muted);line-height:1.6;display:block;">اطلاع‌رسانی پیامکی هنگام ورود کودک به مهد یا ثبت غیبت روزانه</span>
+                    </div>
+                </label>
+
+                <label style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:var(--surface-hover,rgba(0,0,0,0.02));border:1px solid var(--border);border-radius:10px;cursor:pointer;">
+                    <input type="checkbox" name="sms_pref_tuition" value="1" style="width:20px;height:20px;margin-top:2px;cursor:pointer;"
+                        <?= ((int)($parent['sms_pref_tuition'] ?? 1) === 1) ? 'checked' : '' ?>>
+                    <div>
+                        <strong style="display:block;font-size:0.95rem;color:var(--text);margin-bottom:4px;">💳 یادآوری و تسویه شهریه</strong>
+                        <span style="font-size:0.82rem;color:var(--muted);line-height:1.6;display:block;">ارسال پیامک خودکار یادآوری شهریه ماهانه و رسید ثبت پرداخت</span>
+                    </div>
+                </label>
+
+                <label style="display:flex;align-items:flex-start;gap:12px;padding:14px;background:var(--surface-hover,rgba(0,0,0,0.02));border:1px solid var(--border);border-radius:10px;cursor:pointer;">
+                    <input type="checkbox" name="sms_pref_announcements" value="1" style="width:20px;height:20px;margin-top:2px;cursor:pointer;"
+                        <?= ((int)($parent['sms_pref_announcements'] ?? 1) === 1) ? 'checked' : '' ?>>
+                    <div>
+                        <strong style="display:block;font-size:0.95rem;color:var(--text);margin-bottom:4px;">📢 اطلاعیه‌ها و رویدادهای مهد</strong>
+                        <span style="font-size:0.82rem;color:var(--muted);line-height:1.6;display:block;">اطلاع‌رسانی پیامکی جشن‌ها، اردوها، تعطیلات و پیام‌های مستقیم مدیریت مهد</span>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Detailed SMS Pack VIP Subscription Option -->
+            <?php $vipMonthlyFee = (float) getSetting('sms_subscription_monthly_fee', '30000'); ?>
+            <div style="background:rgba(232,168,56,0.1);border:1.5px solid rgba(232,168,56,0.4);border-radius:12px;padding:16px;margin-bottom:24px;">
+                <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;">
+                    <input type="checkbox" name="sms_vip_subscription" value="1" style="width:22px;height:22px;margin-top:2px;cursor:pointer;"
+                        <?= ((int)($parent['sms_vip_subscription'] ?? 0) === 1) ? 'checked' : '' ?>>
+                    <div>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <strong style="font-size:1rem;color:#966408;">⭐ فعال‌سازی بسته پیامک‌های تفصیلی و لحظه‌ای (اشتراک اختیاری)</strong>
+                            <span style="background:#e8a838;color:#fff;font-size:0.75rem;padding:2px 8px;border-radius:12px;font-weight:700;">
+                                +<?= e(persianNumber(number_format($vipMonthlyFee))) ?> تومان/ماه
+                            </span>
+                        </div>
+                        <p style="font-size:0.85rem;color:var(--text);margin:6px 0 0 0;line-height:1.7;">
+                            <strong>حالت رایگان (پیش‌فرض):</strong> یک پیامک خلاصه با متن «گزارش روزانه دلبندتان ثبت شد؛ جهت مشاهده جزئیات به پنل روما مراجعه کنید» دریافت می‌کنید.<br>
+                            <strong>در صورت فعال‌سازی این بسته:</strong> تمام جزئیات تغذیه، ساعت خواب، احوال کودک و ریز فعالیت‌ها به صورت مستقیم به پیامک شما ارسال می‌شود و هزینه آن ماهانه به شهریه افزوده می‌گردد.
+                        </p>
+                    </div>
+                </label>
+            </div>
+
+            <button class="btn btn-primary" type="submit">💾 ذخیره اولویت‌های پیامک</button>
+        </form>
     </div>
 </div>
 

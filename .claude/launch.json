@@ -4,8 +4,9 @@
         {
             "name": "roma97",
             "runtimeExecutable": "C:\\xampp\\php\\php.exe",
-            "runtimeArgs": ["-S", "127.0.0.1:8907", "-t", "C:\\xampp\\htdocs\\roma97"],
-            "port": 8907
+            "runtimeArgs": ["-S", "127.0.0.1:8915", "-t", "C:\\xampp\\htdocs\\roma97"],
+            "port": 8915,
+            "autoPort": true
         }
     ]
 }

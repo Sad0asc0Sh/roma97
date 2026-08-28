@@ -8,6 +8,7 @@ require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/csrf.php';
+require_once __DIR__ . '/../includes/sms.php';
 
 // Force database initialization for messaging table
 initializeMessagingTable();
@@ -93,6 +94,30 @@ if (isPostRequest() && isset($_POST['send_message'])) {
                 }
 
                 if ($error === '') {
+                    // Send SMS announcement pattern to active parents who opted in
+                    $smsSettings = getSmsSettings($pdo);
+                    $annBodyId = (int) ($smsSettings['sms_pattern_announcement'] ?? 0);
+
+                    if ($annBodyId > 0 && ($smsSettings['sms_enabled'] ?? '0') === '1') {
+                        if ($isBroadcast) {
+                            $targetParentsStmt = $pdo->query("SELECT id, first_name, last_name, phone, sms_pref_announcements FROM parents WHERE status = 'active'");
+                            while ($pRow = $targetParentsStmt->fetch()) {
+                                if ((int)($pRow['sms_pref_announcements'] ?? 1) === 1 && !empty($pRow['phone'])) {
+                                    $pName = trim($pRow['first_name'] . ' ' . $pRow['last_name']);
+                                    sendMeliPayamakPattern((string) $pRow['phone'], $annBodyId, [$pName, $subject], 'announcement', (int) $pRow['id']);
+                                }
+                            }
+                        } elseif ($recipientId !== null) {
+                            $targetStmt = $pdo->prepare("SELECT id, first_name, last_name, phone, sms_pref_announcements FROM parents WHERE id = :id LIMIT 1");
+                            $targetStmt->execute([':id' => $recipientId]);
+                            $pRow = $targetStmt->fetch();
+                            if ($pRow && (int)($pRow['sms_pref_announcements'] ?? 1) === 1 && !empty($pRow['phone'])) {
+                                $pName = trim($pRow['first_name'] . ' ' . $pRow['last_name']);
+                                sendMeliPayamakPattern((string) $pRow['phone'], $annBodyId, [$pName, $subject], 'announcement', (int) $pRow['id']);
+                            }
+                        }
+                    }
+
                     $success = $isBroadcast
                         ? 'پیام با موفقیت به ' . persianNumber((string) $sentCount) . ' والد ارسال شد.'
                         : 'پیام با موفقیت ارسال شد.';
