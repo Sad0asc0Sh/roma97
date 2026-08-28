@@ -549,15 +549,44 @@ p { margin-bottom: var(--space-sm); line-height: 1.8; }
 /* === ABOUT STORYTELLING SECTION === */
 .about-story-section { margin: var(--space-2xl) 0; }
 .about-story-card { background: var(--card-bg); border-radius: var(--radius-xl); padding: var(--space-2xl); border: 1px solid var(--border); box-shadow: var(--shadow-md); position: relative; overflow: hidden; }
-.about-story-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-xl); align-items: center; }
-@media (min-width: 992px) { .about-story-grid { grid-template-columns: 1.1fr 0.9fr; } }
-.about-story-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: var(--radius-full); background: var(--primary-faint); color: var(--primary-dark); font-size: 0.8125rem; font-weight: 700; margin-bottom: var(--space-md); }
-.about-story-content h2 { font-size: clamp(1.6rem, 3.5vw, 2.25rem); margin-bottom: var(--space-md); line-height: 1.35; color: var(--neutral-dark); }
-.about-story-content p { color: var(--neutral-medium); font-size: 1rem; line-height: 1.85; margin-bottom: var(--space-md); }
-.about-image-wrap { position: relative; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-md); width: 100%; aspect-ratio: 16 / 10; border: 1px solid rgba(0,0,0,0.06); background: var(--primary-faint); transition: box-shadow var(--transition-base), transform var(--transition-base); }
+.about-story-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-xl); align-items: center; justify-items: center; }
+@media (min-width: 992px) { .about-story-grid { grid-template-columns: 1.1fr 0.9fr; justify-items: stretch; } }
+.about-story-content { width: 100%; max-width: 100%; text-align: center; }
+.about-story-content > * { margin-inline: auto; }
+.about-story-content > div { width: 100%; }
+.about-story-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 50% / 50%; border-radius: var(--radius-full); background: var(--primary-faint); color: var(--primary-dark); font-size: 0.8125rem; font-weight: 700; margin-bottom: var(--space-md); justify-self: center; }
+.about-story-content h2 { font-size: clamp(1.6rem, 3.5vw, 2.25rem); margin-bottom: var(--space-md); line-height: 1.35; color: var(--neutral-dark); text-align: center; line-height: 1.5; }
+.about-story-content p { color: var(--neutral-medium); font-size: 1rem; line-height: 1.85; margin-bottom: var(--space-md); text-align: center; max-width: 56ch; margin-inline: auto; }
+.about-image-wrap { position: relative; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-md); width: 100%; max-width: 520px; aspect-ratio: 16 / 10; border: 1px solid rgba(0,0,0,0.06); background: var(--primary-faint); transition: box-shadow var(--transition-base), transform var(--transition-base); margin: 0 auto; justify-self: center; align-self: center; }
 .about-image-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; border-radius: var(--radius-xl); transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); backface-visibility: hidden; }
 .about-image-wrap:hover { box-shadow: var(--shadow-lg); }
 .about-image-wrap:hover img { transform: scale(1.04); }
+/* Mobile first — perfect centering on phones */
+@media (max-width: 991px) {
+    .about-story-section { margin: var(--space-xl) 0; }
+    .about-story-card { padding: var(--space-lg) var(--space-md); border-radius: var(--radius-lg); }
+    .about-story-grid { gap: var(--space-lg); }
+    .about-story-content { text-align: center; }
+    .about-story-content h2 { line-height: 1.55; }
+    .about-story-badge { margin-inline: auto; }
+    .about-image-wrap { max-width: 100%; margin: 0 auto; justify-self: center; align-self: center; }
+    .about-story-content .btn { margin-inline: auto; }
+}
+@media (max-width: 575px) {
+    .about-story-card { padding: var(--space-md) var(--space-sm); }
+    .about-story-content h2 { line-height: 1.65; }
+    .about-image-wrap { max-width: 100%; margin: 0 auto; }
+}
+/* Desktop override: restore side-by-side layout with proper alignment */
+@media (min-width: 992px) {
+    .about-story-grid { align-items: center; }
+    .about-story-content { text-align: start; }
+    .about-story-content > * { margin-inline: 0; }
+    .about-story-badge { justify-self: start; }
+    .about-story-content h2,
+    .about-story-content p { text-align: start; }
+    .about-image-wrap { max-width: none; }
+}
 .about-timeline { display: flex; flex-direction: column; gap: var(--space-md); margin-top: var(--space-lg); border-inline-start: 3px solid var(--primary-light); padding-inline-start: var(--space-md); }
 .about-timeline-item { position: relative; }
 .about-timeline-item::before { content: ''; position: absolute; inset-inline-start: calc(-1 * var(--space-md) - 7px); top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); border: 3px solid var(--card-bg); }
