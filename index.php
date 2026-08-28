@@ -596,7 +596,7 @@ try {
 <!-- About Us Teaser Section -->
 <section class="section about-story-section">
     <div class="container">
-        <div class="about-story-card fade-in" style="background: var(--white); border-radius: var(--radius-xl); padding: var(--space-xl); box-shadow: var(--shadow-md);">
+        <div class="about-story-card fade-in">
             <div class="about-story-grid">
                 <div class="about-story-content">
                     <span class="about-story-badge">درباره روما</span>
