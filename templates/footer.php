@@ -121,8 +121,6 @@ $footerNav   = roomaPublicNav($currentPage, $currentSlug);
     <?php echo icon('chevron-up', 20); ?>
 </button>
 
-<?php require_once __DIR__ . '/bottom-nav.php'; ?>
-
     <script src="<?php echo e(asset('assets/js/rooma.js')); ?>" defer></script>
 </body>
 </html>

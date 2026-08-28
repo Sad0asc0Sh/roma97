@@ -423,94 +423,6 @@ a.topbar__item:hover svg { opacity: 1; }
 .drawer__social:hover { background: var(--primary); border-color: var(--primary); color: #fff; transform: translateY(-2px); }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   5. BOTTOM NAV (mobile)
-   ══════════════════════════════════════════════════════════════════════════ */
-.bottom-nav {
-    position: fixed;
-    inset-inline: 0;
-    bottom: 0;
-    z-index: var(--z-header);
-    display: flex;
-    justify-content: space-around;
-    align-items: stretch;
-    gap: 2px;
-    padding: 0 .25rem env(safe-area-inset-bottom);
-    background: color-mix(in srgb, var(--surface) 90%, transparent);
-    -webkit-backdrop-filter: blur(18px) saturate(180%);
-    backdrop-filter: blur(18px) saturate(180%);
-    border-top: 1px solid var(--border);
-    box-shadow: 0 -4px 24px rgba(30,58,48,.08);
-    transition: transform .38s var(--ease-out-soft);
-}
-@supports not (background: color-mix(in srgb, red 50%, transparent)) {
-    .bottom-nav { background: rgba(255,255,255,.94); }
-    [data-theme="dark"] .bottom-nav { background: rgba(20,37,30,.95); }
-}
-@media (min-width: 992px) { .bottom-nav { display: none; } }
-
-/* Slides away while scrolling down to give the content full height */
-.bottom-nav.is-hidden { transform: translateY(105%); }
-
-.bottom-nav__item {
-    position: relative;
-    flex: 1 1 0;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    padding: .5rem .1rem .45rem;
-    color: var(--text-faint);
-    font-size: var(--text-2xs);
-    font-weight: 600;
-    -webkit-tap-highlight-color: transparent;
-    transition: color var(--t-fast);
-}
-.bottom-nav__item:active { transform: scale(.93); }
-.bottom-nav__icon-wrap {
-    display: grid;
-    place-items: center;
-    width: 34px; height: 26px;
-    border-radius: var(--radius-full);
-    transition: background var(--t-base), transform var(--t-base);
-}
-.bottom-nav__item svg {
-    width: 21px; height: 21px;
-    fill: none; stroke: currentColor; stroke-width: 2;
-    transition: transform var(--t-base);
-}
-.bottom-nav__label {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    line-height: 1.2;
-}
-.bottom-nav__item.is-active { color: var(--primary-dark); }
-.bottom-nav__item.is-active .bottom-nav__icon-wrap {
-    background: var(--primary-faint);
-    transform: translateY(-2px);
-}
-.bottom-nav__item.is-active svg { transform: scale(1.05); }
-/* Active top indicator */
-.bottom-nav__item.is-active::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    inset-inline-start: 50%;
-    transform: translateX(-50%);
-    width: 26px; height: 3px;
-    border-radius: 0 0 3px 3px;
-    background: var(--grad-primary);
-}
-
-/* Reserve space so the fixed bar never covers page content */
-@media (max-width: 991px) {
-    body { padding-bottom: calc(var(--bottomnav-h) + env(safe-area-inset-bottom)); }
-}
-
-/* ══════════════════════════════════════════════════════════════════════════
    6. BUTTONS
    ══════════════════════════════════════════════════════════════════════════ */
 .btn {
@@ -2414,7 +2326,7 @@ a.site-footer__contact:hover { color: #fff; }
     position: fixed;
     z-index: calc(var(--z-header) - 1);
     inset-inline-end: clamp(.75rem, 2vw, 1.5rem);
-    bottom: calc(var(--bottomnav-h) + env(safe-area-inset-bottom) + .75rem);
+    bottom: calc(.75rem + env(safe-area-inset-bottom));
     display: grid;
     place-items: center;
     width: 44px; height: 44px;
@@ -2483,7 +2395,7 @@ a.site-footer__contact:hover { color: #fff; }
    35. PRINT
    ══════════════════════════════════════════════════════════════════════════ */
 @media print {
-    .topbar, .site-header, .bottom-nav, .drawer, .drawer-overlay,
+    .topbar, .site-header, .drawer, .drawer-overlay,
     .to-top, .scroll-progress, .bg-canvas, .cta, .newsletter,
     .hero__nav, .hero__dots, .hero__playpause, .hero__cue { display: none !important; }
     body { background: #fff; color: #000; padding: 0; }

@@ -7,7 +7,7 @@
  *  01  utilities & shared state
  *  02  theme toggle
  *  03  scroll progress + back-to-top
- *  04  adaptive header (shrink / auto-hide) + bottom-nav autohide
+ *  04  adaptive header (shrink / auto-hide)
  *  05  desktop nav sliding pill
  *  06  mobile drawer (focus trap, ESC, swipe-to-close)
  *  07  scroll reveal (IntersectionObserver + stagger)
@@ -160,11 +160,10 @@
         }
     })();
 
-    /* ─── 04. Adaptive header + bottom nav autohide ────────────────────── */
+    /* ─── 04. Adaptive header autohide ─────────────────────────────────── */
     (function adaptiveHeader() {
         var header = $('[data-header]');
-        var bottomNav = $('[data-bottom-nav]');
-        if (!header && !bottomNav) return;
+        if (!header) return;
 
         var lastY = win.scrollY || 0;
         var accumulated = 0;
@@ -182,7 +181,6 @@
             if (y < 180) {
                 accumulated = 0;
                 if (header) header.classList.remove('is-hidden');
-                if (bottomNav) bottomNav.classList.remove('is-hidden');
                 return;
             }
 
@@ -195,11 +193,9 @@
 
             if (accumulated > HIDE_AFTER) {
                 if (header) header.classList.add('is-hidden');
-                if (bottomNav) bottomNav.classList.add('is-hidden');
                 accumulated = 0;
             } else if (accumulated < -SHOW_AFTER) {
                 if (header) header.classList.remove('is-hidden');
-                if (bottomNav) bottomNav.classList.remove('is-hidden');
                 accumulated = 0;
             }
         });
