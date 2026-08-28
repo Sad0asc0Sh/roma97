@@ -34,7 +34,7 @@ $unreadCountFa = persianNumber((string) $unreadCount);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script>(function(){var t=localStorage.getItem('roma_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');var d=document.documentElement;d.setAttribute('data-theme',t);d.style.backgroundColor=t==='dark'?'#0B0F19':'#F7F2E8';})();</script>
+    <script>(function(){var t=localStorage.getItem('roma_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
     <title><?php echo e($pageTitle); ?> | <?php echo e($siteNameValue); ?></title>
     <link rel="preload" href="<?php echo e(url('assets/fonts/Vazirmatn-Regular.woff2')); ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?php echo e(url('assets/css/fonts.css')); ?>">

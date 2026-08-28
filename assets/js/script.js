@@ -727,9 +727,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function setTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme);
-        // Keep the inline pre-CSS canvas color in sync so the flash-free
-        // background survives theme switches without a reload.
-        document.documentElement.style.backgroundColor = theme === 'dark' ? (document.body.classList.contains('admin-layout') ? '#101713' : '#0B0F19') : (document.body.classList.contains('admin-layout') ? '#FAFBFA' : '#F7F2E8');
         localStorage.setItem('roma_theme', theme);
         updateThemeIcon(theme);
     }

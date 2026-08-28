@@ -37,14 +37,11 @@
     to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Exit fade before navigating away — fades <body> so the themed <html>
-   canvas stays opaque (prevents white flash in dark mode) */
-.js-enabled.page-leaving body {
+/* Exit fade before navigating away */
+.js-enabled.page-leaving {
     opacity: 0;
     transition: opacity 0.16s ease-in;
 }
-html { background: var(--app-bg, #FAFBFA); }
-html[data-theme="dark"] { background: var(--app-bg, #101713); color-scheme: dark; }
 
 /* ── DESIGN TOKENS (Compatibility Layer - Mapped to Brand --app-*) ──── */
 :root {
