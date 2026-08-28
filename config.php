@@ -24,10 +24,29 @@ defined('APP_TIMEZONE') || define('APP_TIMEZONE', 'Asia/Tehran');
 date_default_timezone_set(APP_TIMEZONE);
 
 // ─── Database configuration ────────────────────────────────────────────────
-defined('DB_HOST') || define('DB_HOST', 'localhost');
-defined('DB_NAME') || define('DB_NAME', 'rooma_db');
-defined('DB_USER') || define('DB_USER', 'root');
-defined('DB_PASS') || define('DB_PASS', '');
+// Hosted environments, including Wasmer Edge, provide database credentials as
+// environment variables. A local config file still takes precedence over them.
+$dbHostFromEnv = getenv('DB_HOST');
+$dbPortFromEnv = getenv('DB_PORT');
+$dbNameFromEnv = getenv('DB_NAME');
+$dbUserFromEnv = getenv('DB_USER');
+$dbPassFromEnv = getenv('DB_PASSWORD');
+
+// Keep DB_USERNAME as a fallback for compatible hosting providers.
+if ($dbUserFromEnv === false || $dbUserFromEnv === '') {
+    $dbUserFromEnv = getenv('DB_USERNAME');
+}
+
+// Keep DB_PASS as a fallback for local or legacy environment configuration.
+if ($dbPassFromEnv === false || $dbPassFromEnv === '') {
+    $dbPassFromEnv = getenv('DB_PASS');
+}
+
+defined('DB_HOST') || define('DB_HOST', $dbHostFromEnv !== false && $dbHostFromEnv !== '' ? $dbHostFromEnv : 'localhost');
+defined('DB_PORT') || define('DB_PORT', $dbPortFromEnv !== false && $dbPortFromEnv !== '' ? $dbPortFromEnv : '3306');
+defined('DB_NAME') || define('DB_NAME', $dbNameFromEnv !== false && $dbNameFromEnv !== '' ? $dbNameFromEnv : 'rooma_db');
+defined('DB_USER') || define('DB_USER', $dbUserFromEnv !== false && $dbUserFromEnv !== '' ? $dbUserFromEnv : 'root');
+defined('DB_PASS') || define('DB_PASS', $dbPassFromEnv !== false ? $dbPassFromEnv : '');
 
 // Full base URL where this folder is served, without a trailing slash.
 //
