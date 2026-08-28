@@ -318,7 +318,10 @@
             doc.body.classList.remove('no-scroll');
             openBtns.forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
 
-            if (lastFocused && lastFocused.focus) lastFocused.focus();
+            // preventScroll: the burger lives inside the position:sticky header,
+            // and focusing it without this flag makes Chromium reveal-scroll the
+            // page upward every time the drawer closes.
+            if (lastFocused && lastFocused.focus) lastFocused.focus({ preventScroll: true });
         }
 
         openBtns.forEach(function (b) {
@@ -718,7 +721,7 @@
             box.setAttribute('aria-hidden', 'true');
             root.classList.remove('no-scroll');
             doc.body.classList.remove('no-scroll');
-            if (lastFocused && lastFocused.focus) lastFocused.focus();
+            if (lastFocused && lastFocused.focus) lastFocused.focus({ preventScroll: true });
         }
 
         function step(dir) {
