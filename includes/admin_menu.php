@@ -70,6 +70,14 @@ function renderAdminMenu(): void
             <a href="<?= e(url('admin/reports.php')) ?>">گزارش مالی</a>
             <span>|</span>
         <?php endif; ?>
+        <?php if (isPageAllowedForRole('admin/messages.php', $role)): ?>
+            <a href="<?= e(url('admin/messages.php')) ?>">پیام‌ها</a>
+            <span>|</span>
+        <?php endif; ?>
+        <?php if (isPageAllowedForRole('admin/sms-center.php', $role)): ?>
+            <a href="<?= e(url('admin/sms-center.php')) ?>">مرکز پیامک</a>
+            <span>|</span>
+        <?php endif; ?>
         <?php if (isPageAllowedForRole('admin/contact-messages.php', $role)): ?>
             <a href="<?= e(url('admin/contact-messages.php')) ?>">پیام‌های تماس</a>
             <span>|</span>

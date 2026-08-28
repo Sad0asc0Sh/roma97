@@ -8,6 +8,7 @@ require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/sms.php';
+require_once __DIR__ . '/../includes/notifications.php';
 
 requireLogin();
 $currentAdminId = (int) ($_SESSION['admin_id'] ?? 0);
@@ -49,17 +50,40 @@ if (isPostRequest()) {
             $msgs=['approve'=>'حساب والد تأیید و فعال شد.','reject'=>'حساب والد رد شد.','suspend'=>'حساب والد مسدود شد.','activate'=>'حساب والد فعال شد.'];
             recordAudit('parent.'.$action,'parent',$pid,['status'=>$ns]);
 
-            // If account is approved or activated, send welcome pattern SMS if configured
-            if (in_array($action, ['approve', 'activate'], true) && !empty($par['phone'])) {
-                $smsSettings = getSmsSettings($pdo);
-                $welBodyId = (int) ($smsSettings['sms_pattern_welcome'] ?? 0);
-                if ($welBodyId > 0 && ($smsSettings['sms_enabled'] ?? '0') === '1') {
-                    $fullName = trim($par['first_name'] . ' ' . $par['last_name']);
-                    sendMeliPayamakPattern((string) $par['phone'], $welBodyId, [$fullName], 'welcome', $pid);
+            $flashMessage = $msgs[$action];
+
+            // On approval/activation, welcome the family through the unified
+            // engine so they get BOTH a portal message (with what to do next)
+            // and the welcome SMS — previously only the SMS was attempted.
+            if (in_array($action, ['approve', 'activate'], true)) {
+                $fullName = trim((string) $par['first_name'] . ' ' . (string) $par['last_name']);
+                $portalBody = "{$fullName} عزیز؛\n\n"
+                    . 'به خانواده بزرگ مهدکودک ' . siteName() . " خوش آمدید! 🌷\n\n"
+                    . "حساب کاربری شما تأیید و فعال شد. از این پس می‌توانید:\n"
+                    . "• گزارش روزانه و حال‌وهوای فرزندتان را مشاهده کنید\n"
+                    . "• حضور و غیاب هفتگی را پیگیری کنید\n"
+                    . "• وضعیت و تاریخچه شهریه را ببینید\n"
+                    . "• تنظیمات دریافت پیامک‌ها را در پروفایل خود شخصی‌سازی کنید\n\n"
+                    . "با مهر،\nمدیریت مهدکودک " . siteName() . ' 💖';
+
+                $welcomeResult = notifyParent($pid, 'welcome', [
+                    'args'           => [$fullName],
+                    'portal_subject' => 'به ' . siteName() . ' خوش آمدید 🌷',
+                    'portal_body'    => $portalBody,
+                    'dedup_key'      => "welcome:{$pid}",
+                    'sender_id'      => $currentAdminId,
+                    'priority'       => 3,
+                ]);
+
+                smsQueueFlushInline($pdo);
+
+                $summary = summarizeNotificationResults([$welcomeResult]);
+                if ($summary !== '') {
+                    $flashMessage .= ' ' . $summary;
                 }
             }
 
-            setFlash('success',$msgs[$action]);
+            setFlash('success', $flashMessage);
         } else { setFlash('error','عملیات نامعتبر.'); }
         redirect(url('admin/parents.php'));
     } catch(Throwable $e){error_log($e->getMessage());setFlash('error','خطا.');redirect(url('admin/parents.php'));}

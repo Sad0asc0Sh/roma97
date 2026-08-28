@@ -55,13 +55,16 @@ function getSmsSettings(?PDO $pdo = null): array
         'sms_enabled'                     => '0',
         'sms_api_key'                     => '',
         'sms_subscription_monthly_fee'    => '30000', // Default 30,000 Toman for detailed SMS pack
+        'sms_inline_budget_seconds'       => '8',     // Max seconds a web request may spend flushing the queue
         'sms_pattern_otp'                 => '',
         'sms_pattern_welcome'             => '',
         'sms_pattern_daily_report_brief'  => '', // Short/Brief daily report pattern (free/portal referral)
         'sms_pattern_daily_report'        => '', // Detailed daily report pattern (VIP subscription)
         'sms_pattern_attendance'          => '',
         'sms_pattern_tuition_reminder'    => '',
+        'sms_pattern_payment_receipt'     => '', // Receipt sent when a tuition payment is recorded
         'sms_pattern_announcement'        => '',
+        'sms_pattern_child_status'        => '', // Enrolment status changes (approved / graduated / withdrawn)
     ];
 
     try {
@@ -262,22 +265,49 @@ function generateAndSendSmsOtp(
     // Fetch pattern ID for OTP
     $settings = getSmsSettings($pdo);
     $otpBodyId = (int) ($settings['sms_pattern_otp'] ?? 0);
+    $gatewayEnabled = ($settings['sms_enabled'] ?? '0') === '1';
+    $isDevMode = defined('DEVELOPMENT_MODE') && DEVELOPMENT_MODE;
 
-    if ($otpBodyId > 0 && ($settings['sms_enabled'] ?? '0') === '1') {
+    if ($otpBodyId > 0 && $gatewayEnabled) {
+        // OTP is time-critical: send it inline, never through the queue.
         $smsResult = sendMeliPayamakPattern($normalized, $otpBodyId, [$code], 'otp');
         if (!$smsResult['success']) {
             return [
                 'success' => false,
                 'message' => 'ارسال پیامک با مشکل مواجه شد: ' . $smsResult['status'],
-                'code_debug' => (defined('DEVELOPMENT_MODE') && DEVELOPMENT_MODE) ? $code : null,
+                'code_debug' => $isDevMode ? $code : null,
             ];
         }
+
+        return [
+            'success' => true,
+            'message' => 'کد تایید ۵ رقمی به شماره موبایل شما ارسال شد.',
+            'code_debug' => $isDevMode ? $code : null,
+        ];
     }
 
+    // The gateway is not usable for OTP. In development we surface the code so
+    // the flow stays testable, but in production we MUST fail loudly: silently
+    // reporting "code sent" when no SMS left the server locks every new parent
+    // out of registration and password recovery with no visible cause.
+    if ($isDevMode) {
+        return [
+            'success' => true,
+            'message' => 'حالت توسعه: پیامک ارسال نشد و کد تایید در ادامه نمایش داده می‌شود.',
+            'code_debug' => $code,
+        ];
+    }
+
+    $reason = !$gatewayEnabled
+        ? 'سامانه پیامک مهدکودک در حال حاضر غیرفعال است.'
+        : 'الگوی پیامک کد تایید هنوز تنظیم نشده است.';
+
+    error_log('generateAndSendSmsOtp blocked: ' . $reason);
+
     return [
-        'success' => true,
-        'message' => 'کد تایید ۵ رقمی به شماره موبایل شما ارسال شد.',
-        'code_debug' => (defined('DEVELOPMENT_MODE') && DEVELOPMENT_MODE) ? $code : null,
+        'success' => false,
+        'message' => $reason . ' لطفاً برای تکمیل ثبت‌نام با مدیریت مهدکودک تماس بگیرید.',
+        'code_debug' => null,
     ];
 }
 

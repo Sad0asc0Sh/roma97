@@ -324,6 +324,49 @@ CREATE TABLE IF NOT EXISTS messages (
     INDEX idx_messages_parent_read (parent_id, is_read)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ─── Notification Engine ───────────────────────────────────────────────────
+-- Outbound SMS delivery queue. Web requests enqueue and flush within a short
+-- time budget; bin/process-sms-queue.php drains the rest, so saving a large
+-- classroom never blocks the page on the SMS provider.
+
+CREATE TABLE IF NOT EXISTS sms_queue (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    recipient_phone VARCHAR(20) NOT NULL,
+    pattern_body_id INT NOT NULL,
+    args_json TEXT NULL,
+    event_type VARCHAR(50) NOT NULL DEFAULT 'general',
+    parent_id INT NULL,
+    dedup_key VARCHAR(191) NULL,
+    priority TINYINT NOT NULL DEFAULT 5,
+    status ENUM('pending','sending','sent','failed','cancelled') NOT NULL DEFAULT 'pending',
+    attempts TINYINT NOT NULL DEFAULT 0,
+    rec_id VARCHAR(100) NULL,
+    last_error VARCHAR(500) NULL,
+    sent_at DATETIME NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_sms_queue_dedup (dedup_key),
+    INDEX idx_sms_queue_status (status, priority, id),
+    INDEX idx_sms_queue_parent (parent_id),
+    INDEX idx_sms_queue_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Notification idempotency log. One row per (event, recipient, business key);
+-- the UNIQUE constraint turns a duplicate form submission into a no-op instead
+-- of a second charged SMS.
+
+CREATE TABLE IF NOT EXISTS notification_log (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    event_key VARCHAR(50) NOT NULL,
+    parent_id INT NULL,
+    dedup_key VARCHAR(191) NOT NULL,
+    channels VARCHAR(50) NOT NULL DEFAULT 'sms',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_notification_dedup (dedup_key),
+    INDEX idx_notification_event (event_key, created_at),
+    INDEX idx_notification_parent (parent_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ─── Audit / Operations ────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS audit_log (

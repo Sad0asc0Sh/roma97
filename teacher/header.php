@@ -49,6 +49,10 @@ $pageTitleValue = isset($pageTitle) ? e($pageTitle) : 'پنل معلم | ' . e($
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     <span class="nav-text">داشبورد</span>
                 </a>
+                <a href="<?php echo e(url('teacher/attendance.php')); ?>" class="teacher-nav-item <?php echo $currentPage === 'attendance.php' ? 'active' : ''; ?>">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                    <span class="nav-text">حضور و غیاب</span>
+                </a>
                 <a href="<?php echo e(url('teacher/report.php')); ?>" class="teacher-nav-item <?php echo $currentPage === 'report.php' ? 'active' : ''; ?>">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
                     <span class="nav-text">گزارش روزانه</span>

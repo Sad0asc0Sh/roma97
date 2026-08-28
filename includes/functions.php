@@ -871,46 +871,156 @@ function renderPagination(array $meta, string $baseUrl, array $query = [], strin
 }
 
 /**
+ * Full, itemised tuition position for one child in one Shamsi month.
+ *
+ * Returning the breakdown (rather than a bare number) is what lets every panel
+ * show the SAME figures and explain them. Previously the balance silently
+ * included the optional SMS-pack fee while the "expected amount" column showed
+ * only the base tuition, so a fully-paid child appeared to owe 30,000 Toman
+ * with no visible reason — the single most confusing thing in the finance UI.
+ *
+ * @return array{
+ *     base:float, sms_fee:float, expected:float, paid:float,
+ *     balance:float, has_plan:bool, is_vip:bool
+ * }
+ */
+function childTuitionBreakdown(PDO $pdo, int $childId, string $monthYear): array
+{
+    // One round-trip for the plan, the SMS-pack flag and the payments total.
+    $stmt = $pdo->prepare(
+        'SELECT
+            (SELECT tp.expected_amount FROM tuition_plans tp
+              WHERE tp.child_id = c.id AND tp.month_year = :myear LIMIT 1) AS expected_amount,
+            (SELECT COALESCE(SUM(pay.amount), 0) FROM tuition_payments pay
+              WHERE pay.child_id = c.id AND pay.month_year = :myear2) AS total_paid,
+            p.sms_vip_subscription
+         FROM children c
+         INNER JOIN parents p ON p.id = c.parent_id
+         WHERE c.id = :cid
+         LIMIT 1'
+    );
+    $stmt->execute([
+        ':myear'  => $monthYear,
+        ':myear2' => $monthYear,
+        ':cid'    => $childId,
+    ]);
+    $row = $stmt->fetch();
+
+    if (!$row) {
+        return [
+            'base' => 0.0, 'sms_fee' => 0.0, 'expected' => 0.0,
+            'paid' => 0.0, 'balance' => 0.0, 'has_plan' => false, 'is_vip' => false,
+        ];
+    }
+
+    $hasPlan = $row['expected_amount'] !== null;
+    $base = $hasPlan
+        ? (float) $row['expected_amount']
+        : (float) getSetting('default_tuition_amount', '0');
+
+    $isVip = ((int) ($row['sms_vip_subscription'] ?? 0) === 1);
+    $smsFee = 0.0;
+
+    if ($isVip) {
+        $configuredFee = (float) getSetting('sms_subscription_monthly_fee', '30000');
+        if ($configuredFee > 0) {
+            $smsFee = $configuredFee;
+        }
+    }
+
+    $expected  = $base + $smsFee;
+    $totalPaid = (float) ($row['total_paid'] ?? 0);
+
+    return [
+        'base'     => $base,
+        'sms_fee'  => $smsFee,
+        'expected' => $expected,
+        'paid'     => $totalPaid,
+        'balance'  => $expected - $totalPaid,
+        'has_plan' => $hasPlan,
+        'is_vip'   => $isVip,
+    ];
+}
+
+/**
  * Calculate the outstanding tuition balance for a child in a given month.
- * Returns expected_amount (from tuition_plans or default_tuition_amount setting) minus SUM(amount) paid.
- * A positive result means outstanding debt; zero means paid in full; negative means overpayment/credit.
+ * Positive = outstanding debt, zero = settled, negative = credit/overpayment.
+ *
+ * Thin wrapper over childTuitionBreakdown() kept for backward compatibility.
  */
 function childOutstandingBalance(PDO $pdo, int $childId, string $monthYear): float
 {
-    // 1. Get expected amount from tuition_plans for this child and month_year
-    $planStmt = $pdo->prepare('SELECT expected_amount FROM tuition_plans WHERE child_id = :cid AND month_year = :myear LIMIT 1');
-    $planStmt->execute([':cid' => $childId, ':myear' => $monthYear]);
-    $expectedRaw = $planStmt->fetchColumn();
+    return childTuitionBreakdown($pdo, $childId, $monthYear)['balance'];
+}
 
-    if ($expectedRaw !== false && $expectedRaw !== null) {
-        $expectedAmount = (float) $expectedRaw;
-    } else {
-        $expectedAmount = (float) getSetting('default_tuition_amount', '0');
+/**
+ * Bulk tuition breakdown for every ACTIVE child in one month, computed with a
+ * single query.
+ *
+ * The financial report and the tuition dashboard previously called
+ * childOutstandingBalance() inside a loop, issuing 3 queries per child — with
+ * 200 enrolled children that is 600 round-trips for one page view. This keeps
+ * those pages responsive as the daycare grows.
+ *
+ * @return array<int, array{
+ *     child_id:int, child_name:string, parent_id:int, parent_name:string,
+ *     parent_phone:string, base:float, sms_fee:float, expected:float,
+ *     paid:float, balance:float, has_plan:bool, is_vip:bool
+ * }>
+ */
+function activeChildrenTuitionBreakdown(PDO $pdo, string $monthYear): array
+{
+    $defaultTuition = (float) getSetting('default_tuition_amount', '0');
+    $configuredSmsFee = (float) getSetting('sms_subscription_monthly_fee', '30000');
+
+    $stmt = $pdo->prepare(
+        "SELECT
+            c.id AS child_id, c.first_name, c.last_name,
+            p.id AS parent_id, p.first_name AS p_first, p.last_name AS p_last,
+            p.phone AS p_phone, p.sms_vip_subscription,
+            tp.expected_amount,
+            COALESCE(paid.total_paid, 0) AS total_paid
+         FROM children c
+         INNER JOIN parents p ON p.id = c.parent_id
+         LEFT JOIN tuition_plans tp ON tp.child_id = c.id AND tp.month_year = :myear
+         LEFT JOIN (
+            SELECT child_id, SUM(amount) AS total_paid
+            FROM tuition_payments
+            WHERE month_year = :myear2
+            GROUP BY child_id
+         ) paid ON paid.child_id = c.id
+         WHERE c.status = 'active'
+         ORDER BY c.last_name ASC, c.first_name ASC"
+    );
+    $stmt->execute([':myear' => $monthYear, ':myear2' => $monthYear]);
+
+    $result = [];
+
+    foreach ($stmt->fetchAll() as $row) {
+        $hasPlan = $row['expected_amount'] !== null;
+        $base = $hasPlan ? (float) $row['expected_amount'] : $defaultTuition;
+
+        $isVip = ((int) ($row['sms_vip_subscription'] ?? 0) === 1);
+        $smsFee = ($isVip && $configuredSmsFee > 0) ? $configuredSmsFee : 0.0;
+
+        $expected = $base + $smsFee;
+        $paid = (float) $row['total_paid'];
+
+        $result[(int) $row['child_id']] = [
+            'child_id'     => (int) $row['child_id'],
+            'child_name'   => trim((string) $row['first_name'] . ' ' . (string) $row['last_name']),
+            'parent_id'    => (int) $row['parent_id'],
+            'parent_name'  => trim((string) $row['p_first'] . ' ' . (string) $row['p_last']),
+            'parent_phone' => (string) ($row['p_phone'] ?? ''),
+            'base'         => $base,
+            'sms_fee'      => $smsFee,
+            'expected'     => $expected,
+            'paid'         => $paid,
+            'balance'      => $expected - $paid,
+            'has_plan'     => $hasPlan,
+            'is_vip'       => $isVip,
+        ];
     }
 
-    // Add optional detailed SMS subscription fee if parent opted into VIP SMS pack
-    try {
-        $pStmt = $pdo->prepare('
-            SELECT p.sms_vip_subscription
-            FROM children c
-            INNER JOIN parents p ON p.id = c.parent_id
-            WHERE c.id = :cid LIMIT 1
-        ');
-        $pStmt->execute([':cid' => $childId]);
-        $hasVipSms = (int) ($pStmt->fetchColumn() ?: 0);
-
-        if ($hasVipSms === 1) {
-            $smsFee = (float) getSetting('sms_subscription_monthly_fee', '30000');
-            if ($smsFee > 0) {
-                $expectedAmount += $smsFee;
-            }
-        }
-    } catch (Throwable) {}
-
-    // 2. Get SUM of payments for this child and month_year
-    $paidStmt = $pdo->prepare('SELECT SUM(amount) FROM tuition_payments WHERE child_id = :cid AND month_year = :myear');
-    $paidStmt->execute([':cid' => $childId, ':myear' => $monthYear]);
-    $totalPaid = (float) ($paidStmt->fetchColumn() ?: 0);
-
-    return $expectedAmount - $totalPaid;
+    return $result;
 }

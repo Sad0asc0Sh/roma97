@@ -20,6 +20,11 @@ $children   = [];
 $report     = null;
 $error      = null;
 
+// Today's task-board counters (see "Today's task board" below).
+$attendanceCounts  = ['present' => 0, 'late' => 0, 'excused' => 0, 'absent' => 0];
+$attendanceMissing = 0;
+$reportedChildren  = 0;
+
 try {
     $pdo = getDb();
 
@@ -67,6 +72,28 @@ SQL
         );
         $rStmt->execute([':cid' => $classroomId, ':today' => $today]);
         $report = $rStmt->fetch() ?: null;
+
+        // ── Today's task board ──────────────────────────────────────────────
+        // A teacher's two daily duties are the attendance register and the
+        // daily report. Surfacing their completion state here (instead of
+        // making the teacher open both pages to find out) is what turns the
+        // dashboard from a decoration into an actual work list.
+        foreach ($children as $childRow) {
+            $status = (string) ($childRow['attendance_status'] ?? '');
+            if ($status === '') {
+                $attendanceMissing++;
+            } elseif (isset($attendanceCounts[$status])) {
+                $attendanceCounts[$status]++;
+            }
+        }
+
+        // How many of today's children already have an individual daily report.
+        $reportedStmt = $pdo->prepare(
+            'SELECT COUNT(DISTINCT child_id) FROM daily_reports
+             WHERE classroom_id = :cid AND report_date = :today'
+        );
+        $reportedStmt->execute([':cid' => $classroomId, ':today' => $today]);
+        $reportedChildren = (int) $reportedStmt->fetchColumn();
     }
 } catch (Throwable $e) {
     error_log($e->getMessage());
@@ -151,6 +178,66 @@ function attendanceBadge(?string $status): string
                     <?php endif; ?>
                 </div>
             </div>
+        </div>
+
+        <!-- Today's task board: what still needs doing, at a glance -->
+        <?php
+        $childCount = count($children);
+        $attendanceDone = $childCount > 0 && $attendanceMissing === 0;
+        $reportsDone = $childCount > 0 && $reportedChildren >= $childCount;
+        ?>
+        <div class="teacher-section">
+            <h2 class="teacher-section-title">✅ کارهای امروز</h2>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;">
+                <div class="card" style="padding:16px;border-inline-start:4px solid <?= $attendanceDone ? '#2e8540' : '#c8860d' ?>;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
+                        <strong style="font-size:0.95rem;">حضور و غیاب</strong>
+                        <span style="font-size:0.8rem;font-weight:700;color:<?= $attendanceDone ? '#1e632b' : '#7a5205' ?>;">
+                            <?= $attendanceDone ? 'کامل شد' : 'در انتظار تکمیل' ?>
+                        </span>
+                    </div>
+                    <p class="text-muted" style="font-size:0.83rem;margin:0 0 10px;line-height:1.8;">
+                        <?php if ($childCount === 0): ?>
+                            هنوز کودکی در کلاس شما ثبت نشده است.
+                        <?php elseif ($attendanceDone): ?>
+                            حاضر: <?= e(persianNumber((string) $attendanceCounts['present'])) ?> ·
+                            تأخیر: <?= e(persianNumber((string) $attendanceCounts['late'])) ?> ·
+                            غایب: <?= e(persianNumber((string) ($attendanceCounts['absent'] + $attendanceCounts['excused']))) ?>
+                        <?php else: ?>
+                            وضعیت <?= e(persianNumber((string) $attendanceMissing)) ?> کودک از
+                            <?= e(persianNumber((string) $childCount)) ?> کودک هنوز ثبت نشده است.
+                        <?php endif; ?>
+                    </p>
+                    <a href="<?= e(url('teacher/attendance.php')) ?>" class="btn <?= $attendanceDone ? 'btn-secondary' : 'btn-primary' ?> btn-sm">
+                        <?= $attendanceDone ? 'مشاهده / ویرایش' : 'ثبت حضور و غیاب' ?>
+                    </a>
+                </div>
+
+                <div class="card" style="padding:16px;border-inline-start:4px solid <?= $reportsDone ? '#2e8540' : '#c8860d' ?>;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;">
+                        <strong style="font-size:0.95rem;">گزارش روزانه کودکان</strong>
+                        <span style="font-size:0.8rem;font-weight:700;color:<?= $reportsDone ? '#1e632b' : '#7a5205' ?>;">
+                            <?= $reportsDone ? 'کامل شد' : 'در انتظار تکمیل' ?>
+                        </span>
+                    </div>
+                    <p class="text-muted" style="font-size:0.83rem;margin:0 0 10px;line-height:1.8;">
+                        <?php if ($childCount === 0): ?>
+                            هنوز کودکی در کلاس شما ثبت نشده است.
+                        <?php else: ?>
+                            گزارش <?= e(persianNumber((string) $reportedChildren)) ?> کودک از
+                            <?= e(persianNumber((string) $childCount)) ?> کودک ثبت شده است.
+                        <?php endif; ?>
+                    </p>
+                    <a href="<?= e(url('teacher/report.php')) ?>" class="btn <?= $reportsDone ? 'btn-secondary' : 'btn-primary' ?> btn-sm">
+                        <?= $reportsDone ? 'مشاهده / ویرایش' : 'ثبت گزارش روزانه' ?>
+                    </a>
+                </div>
+            </div>
+
+            <p class="text-muted" style="font-size:0.8rem;margin:12px 0 0;line-height:1.8;">
+                💡 والدین به‌طور خودکار از تغییرات حضور و غیاب و ثبت گزارش روزانه باخبر می‌شوند؛ نیازی به اطلاع‌رسانی دستی نیست.
+            </p>
         </div>
 
         <!-- Daily Report Widget -->

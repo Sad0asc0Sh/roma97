@@ -9,6 +9,10 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
+require_once __DIR__ . '/../includes/sms.php';
+require_once __DIR__ . '/../includes/notifications.php';
+// parentChildEnrollmentLabel() is used to name the new status in notifications.
+require_once __DIR__ . '/../includes/parent_children_helpers.php';
 
 requireLogin();
 
@@ -204,13 +208,25 @@ $newStatus = $statusUpdates[$action];
 try {
     initializeParentTables();
     $pdo = getDb();
-    $exists = $pdo->prepare('SELECT id FROM children WHERE id = :id LIMIT 1');
-    $exists->execute([':id' => $childId]);
 
-    if ($exists->fetchColumn() === false) {
+    // Load the child together with the previous status and the parent, so we can
+    // both skip no-op updates and personalise the notification.
+    $exists = $pdo->prepare(
+        'SELECT c.id, c.status, c.first_name, c.last_name, c.parent_id,
+                p.first_name AS p_first, p.last_name AS p_last
+         FROM children c
+         INNER JOIN parents p ON p.id = c.parent_id
+         WHERE c.id = :id LIMIT 1'
+    );
+    $exists->execute([':id' => $childId]);
+    $childRow = $exists->fetch();
+
+    if (!$childRow) {
         setFlash('error', 'سابقه این کودک پیدا نشد.');
         redirect($destination);
     }
+
+    $previousStatus = (string) $childRow['status'];
 
     $statement = $pdo->prepare(
         'UPDATE children SET status = :status WHERE id = :id'
@@ -228,8 +244,50 @@ try {
         'graduate'  => 'وضعیت کودک به فارغ‌التحصیل تغییر یافت.',
         'withdraw'  => 'وضعیت کودک به انصراف‌داده تغییر یافت.',
     ];
-    recordAudit('child.' . $action, 'child', (int) $childId, ['status' => $newStatus]);
-    setFlash('success', $messages[$action]);
+    recordAudit('child.' . $action, 'child', (int) $childId, [
+        'status'          => $newStatus,
+        'previous_status' => $previousStatus,
+    ]);
+
+    $flashMessage = $messages[$action];
+
+    // Tell the family their child's enrolment status changed. Previously this
+    // happened entirely silently — parents had to log in and notice by chance.
+    if ($previousStatus !== $newStatus) {
+        $childName  = trim((string) $childRow['first_name'] . ' ' . (string) $childRow['last_name']);
+        $parentName = trim((string) $childRow['p_first'] . ' ' . (string) $childRow['p_last']);
+        $statusLabel = parentChildEnrollmentLabel($newStatus);
+
+        $portalBody = "{$parentName} عزیز؛\n\n"
+            . "وضعیت ثبت‌نام «{$childName}» در مهدکودک " . siteName() . " به‌روزرسانی شد.\n\n"
+            . "• وضعیت جدید: {$statusLabel}\n\n"
+            . match ($newStatus) {
+                'active'    => "از این پس گزارش روزانه، حضور و غیاب و وضعیت شهریه فرزندتان در پنل شما در دسترس است. 🌟\n",
+                'graduated' => "از اینکه این مسیر قشنگ را با ما طی کردید سپاسگزاریم؛ برای دلبندتان آرزوی موفقیت داریم. 🎓\n",
+                'withdrawn' => "امیدواریم به‌زودی دوباره در کنار شما باشیم. برای هرگونه هماهنگی با مدیریت در تماس باشید. 🌸\n",
+                default     => "برای اطلاعات بیشتر لطفاً با مدیریت مهدکودک در تماس باشید.\n",
+            }
+            . "\nبا مهر،\nمدیریت مهدکودک " . siteName() . ' 💖';
+
+        $statusResult = notifyParent((int) $childRow['parent_id'], 'child_status', [
+            'args'           => [$parentName, $childName, $statusLabel],
+            'portal_subject' => "به‌روزرسانی وضعیت ثبت‌نام {$childName}",
+            'portal_body'    => $portalBody,
+            'dedup_key'      => "child_status:{$childId}:{$newStatus}:" . date('Y-m-d'),
+            'sender_id'      => (int) ($_SESSION['admin_id'] ?? 0),
+            // Suspended/pending parents still deserve to hear about their child.
+            'allow_inactive' => true,
+        ]);
+
+        smsQueueFlushInline($pdo);
+
+        $summary = summarizeNotificationResults([$statusResult]);
+        if ($summary !== '') {
+            $flashMessage .= ' ' . $summary;
+        }
+    }
+
+    setFlash('success', $flashMessage);
 } catch (Throwable $exception) {
     error_log($exception->getMessage());
     setFlash('error', 'به‌روزرسانی ثبت‌نام امکان‌پذیر نیست. لطفاً دوباره تلاش کنید.');

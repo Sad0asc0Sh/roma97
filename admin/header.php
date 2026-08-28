@@ -14,6 +14,28 @@ requireLogin();
 
 $logo = siteLogo();
 $currentPage = basename($_SERVER['PHP_SELF']);
+
+/**
+ * Whether the signed-in admin may actually open a page.
+ *
+ * The sidebar used to render every link for every role, so an accountant or
+ * receptionist saw items that immediately bounced them back to the dashboard
+ * with "شما دسترسی به این بخش را ندارید". Gating the nav with the same matrix
+ * that enforces access removes those dead ends entirely.
+ */
+$adminRole = currentAdminRole();
+$navCan = static fn(string $pagePath): bool => isPageAllowedForRole($pagePath, $adminRole);
+
+/** True when at least one page of a submenu group is reachable. */
+$navCanAny = static function (array $pagePaths) use ($navCan): bool {
+    foreach ($pagePaths as $path) {
+        if ($navCan($path)) {
+            return true;
+        }
+    }
+
+    return false;
+};
 $adminUsername = $_SESSION['admin_username'] ?? 'مدیر';
 $siteNameValue = siteName();
 $pageTitleValue = isset($pageTitle) ? e($pageTitle) : 'پنل مدیریت | ' . e($siteNameValue);
@@ -89,7 +111,7 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
 
 <?php
 $isContentActive = in_array($currentPage, ['slides.php', 'gallery.php', 'news.php', 'pages.php'], true);
-$isChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php', 'attendance.php', 'classrooms.php', 'parents.php'], true);
+$isChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php', 'edit-child.php', 'attendance.php', 'classrooms.php', 'parents.php'], true);
 $isFinanceActive = in_array($currentPage, ['tuition.php', 'salary.php', 'expenses.php', 'reports.php'], true);
 ?>
 <script>
@@ -110,6 +132,7 @@ function toggleAdminSubmenu(btn, id) {
     }
 }
 </script>
+            <?php if ($navCanAny(['admin/slides.php', 'admin/gallery.php', 'admin/news.php', 'admin/pages.php'])): ?>
             <div class="admin-nav-group">
                 <button type="button" class="admin-nav-item admin-nav-parent <?php echo $isContentActive ? 'active' : ''; ?>" onclick="toggleAdminSubmenu(this, 'content')" aria-expanded="<?php echo $isContentActive ? 'true' : 'false'; ?>">
                     <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
@@ -131,12 +154,16 @@ function toggleAdminSubmenu(btn, id) {
                     </a>
                 </div>
             </div>
+            <?php endif; ?>
 
+            <?php if ($navCan('admin/teachers.php')): ?>
             <a href="<?php echo e(url('admin/teachers.php')); ?>" class="admin-nav-item <?php echo $currentPage === 'teachers.php' ? 'active' : ''; ?>">
                 <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></span>
                 <span class="nav-text">معلمان</span>
             </a>
+            <?php endif; ?>
 
+            <?php if ($navCanAny(['admin/children.php', 'admin/attendance.php', 'admin/classrooms.php', 'admin/parents.php'])): ?>
             <div class="admin-nav-group">
                 <button type="button" class="admin-nav-item admin-nav-parent <?php echo $isChildrenActive ? 'active' : ''; ?>" onclick="toggleAdminSubmenu(this, 'children')" aria-expanded="<?php echo $isChildrenActive ? 'true' : 'false'; ?>">
                     <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg></span>
@@ -158,7 +185,9 @@ function toggleAdminSubmenu(btn, id) {
                         <span class="nav-text">مدیریت والدین</span>
                     </a>                </div>
             </div>
+            <?php endif; ?>
 
+            <?php if ($navCanAny(['admin/tuition.php', 'admin/salary.php', 'admin/expenses.php', 'admin/reports.php'])): ?>
             <div class="admin-nav-group">
                 <button type="button" class="admin-nav-item admin-nav-parent <?php echo $isFinanceActive ? 'active' : ''; ?>" onclick="toggleAdminSubmenu(this, 'finance')" aria-expanded="<?php echo $isFinanceActive ? 'true' : 'false'; ?>">
                     <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>
@@ -181,41 +210,62 @@ function toggleAdminSubmenu(btn, id) {
                     </a>
                 </div>
             </div>
+            <?php endif; ?>
 
+            <?php if ($navCanAny(['admin/events.php', 'admin/messages.php', 'admin/sms-center.php', 'admin/contact-messages.php', 'admin/audit.php', 'admin/backup.php'])): ?>
             <div class="admin-nav-section">ارتباطات</div>
+            <?php endif; ?>
 
+            <?php if ($navCan('admin/events.php')): ?>
             <a href="<?php echo e(url('admin/events.php')); ?>" class="admin-nav-item <?php echo $currentPage === 'events.php' ? 'active' : ''; ?>">
                 <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
                 <span class="nav-text">رویدادها</span>
             </a>
+            <?php endif; ?>
 
-
+            <?php if ($navCan('admin/messages.php')): ?>
             <a href="<?php echo e(url('admin/messages.php')); ?>" class="admin-nav-item <?php echo $currentPage === 'messages.php' ? 'active' : ''; ?>">
                 <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>
                 <span class="nav-text">پیام‌ها</span>
             </a>
+            <?php endif; ?>
 
+            <?php if ($navCan('admin/sms-center.php')): ?>
+            <a href="<?php echo e(url('admin/sms-center.php')); ?>" class="admin-nav-item <?php echo $currentPage === 'sms-center.php' ? 'active' : ''; ?>">
+                <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/></svg></span>
+                <span class="nav-text">مرکز پیامک</span>
+            </a>
+            <?php endif; ?>
+
+            <?php if ($navCan('admin/contact-messages.php')): ?>
             <a href="<?php echo e(url('admin/contact-messages.php')); ?>" class="admin-nav-item <?php echo $currentPage === 'contact-messages.php' ? 'active' : ''; ?>">
                 <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg></span>
                 <span class="nav-text">پیام‌های تماس</span>
             </a>
+            <?php endif; ?>
 
+            <?php if ($navCan('admin/audit.php')): ?>
             <a href="<?php echo e(url('admin/audit.php')); ?>" class="admin-nav-item <?php echo $currentPage === 'audit.php' ? 'active' : ''; ?>">
                 <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
                 <span class="nav-text">گزارش فعالیت‌ها</span>
             </a>
+            <?php endif; ?>
 
+            <?php if ($navCan('admin/backup.php')): ?>
             <a href="<?php echo e(url('admin/backup.php')); ?>" class="admin-nav-item <?php echo $currentPage === 'backup.php' ? 'active' : ''; ?>">
                 <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span>
                 <span class="nav-text">پشتیبان‌گیری</span>
             </a>
+            <?php endif; ?>
 
             <div class="admin-nav-divider"></div>
 
+            <?php if ($navCan('admin/settings.php')): ?>
             <a href="<?php echo e(url('admin/settings.php')); ?>" class="admin-nav-item <?php echo $currentPage === 'settings.php' ? 'active' : ''; ?>">
                 <span class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>
                 <span class="nav-text">تنظیمات</span>
             </a>
+            <?php endif; ?>
 
             <form method="post" action="<?php echo e(url('admin/logout.php')); ?>" class="admin-nav-logout-form">
                 <input type="hidden" name="csrf_token" value="<?php echo e(generateCsrfToken()); ?>">
