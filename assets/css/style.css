@@ -547,8 +547,12 @@ p { margin-bottom: var(--space-sm); line-height: 1.8; }
 /* Mobile-first: every child is centered via flex (works for block, inline-flex, image regardless of RTL quirks) */
 .about-story-section { margin: var(--space-2xl) 0; }
 .about-story-card { background: var(--card-bg); border-radius: var(--radius-xl); padding: var(--space-2xl); border: 1px solid var(--border); box-shadow: var(--shadow-md); position: relative; overflow: hidden; }
-.about-story-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-xl); align-items: center; justify-items: center; }
-@media (min-width: 992px) { .about-story-grid { grid-template-columns: 1.1fr 0.9fr; justify-items: stretch; } }
+.about-story-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-xl); align-items: center; justify-items: center; }
+@media (min-width: 992px) { .about-story-grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); justify-items: stretch; } }
+/* Grid items must be allowed to shrink below their min-content width, otherwise a
+   nowrap child (the CTA button) inflates the item past its track and — in RTL —
+   the overflow spills leftwards, dragging the whole block off-centre. */
+.about-story-grid > * { min-width: 0; }
 /* Flex column guarantees every direct child is centered horizontally — no reliance on text-align for inline-flex btn. */
 .about-story-content {
     display: flex;
@@ -557,14 +561,17 @@ p { margin-bottom: var(--space-sm); line-height: 1.8; }
     text-align: center;
     width: 100%;
     max-width: 100%;
+    min-width: 0;
 }
-.about-story-content > * { max-width: 100%; }
+.about-story-content > * { max-width: 100%; min-width: 0; }
 .about-story-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: var(--radius-full); background: var(--primary-faint); color: var(--primary-dark); font-size: 0.8125rem; font-weight: 700; margin-bottom: var(--space-md); align-self: center; }
 .about-story-content h2 { font-size: clamp(1.6rem, 3.5vw, 2.25rem); margin-bottom: var(--space-md); line-height: 1.5; color: var(--neutral-dark); text-align: center; max-width: 28ch; align-self: center; }
 .about-story-content p { color: var(--neutral-medium); font-size: 1rem; line-height: 1.85; margin-bottom: var(--space-md); text-align: center; max-width: 56ch; align-self: center; }
 /* The CTA wrapper must itself be a flex container so the inline-flex .btn gets centered too. */
-.about-story-content > div { width: 100%; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; }
-.about-story-content > div .btn { align-self: center; }
+.about-story-content > div { width: 100%; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; min-width: 0; }
+/* Global .btn is `white-space: nowrap`; here the long Persian label would exceed the
+   card width and break centring. Let it wrap and clamp it to the available width. */
+.about-story-content > div .btn { align-self: center; max-width: 100%; white-space: normal; text-align: center; text-wrap: balance; }
 /* Image wrap is a grid sibling — use align-self on grid track to center the box. */
 .about-image-wrap { position: relative; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-md); width: 100%; max-width: 520px; aspect-ratio: 16 / 10; border: 1px solid rgba(0,0,0,0.06); background: var(--primary-faint); transition: box-shadow var(--transition-base), transform var(--transition-base); justify-self: center; align-self: center; }
 .about-image-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; border-radius: var(--radius-xl); transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); backface-visibility: hidden; }
@@ -576,6 +583,7 @@ p { margin-bottom: var(--space-sm); line-height: 1.8; }
     .about-story-card { padding: var(--space-lg) var(--space-md); border-radius: var(--radius-lg); }
     .about-story-grid { gap: var(--space-lg); }
     .about-story-content h2 { line-height: 1.55; max-width: 24ch; }
+    .about-story-content > div .btn { width: 100%; padding-inline: var(--space-md); }
     .about-image-wrap { max-width: 100%; }
 }
 @media (max-width: 575px) {
