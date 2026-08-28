@@ -266,6 +266,11 @@ html {
        the scrollable overflow area. `hidden` is kept as a fallback. */
     overflow-x: hidden;
     overflow-x: clip;
+    /* Reserve the scrollbar's space even while the page is not scrolled.
+       Without this, the scroll-lock used by the mobile drawer / lightbox
+       (`overflow: hidden` on <html>) makes the scrollbar vanish, widens the
+       layout, reflows the text and visibly jumps the page upward. */
+    scrollbar-gutter: stable;
 }
 
 body {

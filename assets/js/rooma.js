@@ -301,8 +301,10 @@
             openBtns.forEach(function (b) { b.setAttribute('aria-expanded', 'true'); });
 
             // Move focus into the panel
+            // preventScroll: focus must never nudge any scroll container
+            // (the page can otherwise creep upward while the drawer slides in)
             var first = panel.querySelector(FOCUSABLE);
-            if (first) setTimeout(function () { first.focus(); }, 120);
+            if (first) setTimeout(function () { first.focus({ preventScroll: true }); }, 120);
         }
 
         function close() {
