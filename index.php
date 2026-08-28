@@ -3,673 +3,938 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/error_handler.php';
-
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';
 
-try {
-    initializeCmsTables();
-    $pdo = getDb();
-    $statement = $pdo->prepare(
-        'SELECT id, title, subtitle, image FROM slides ORDER BY sort_order ASC, created_at DESC'
-    );
-    $statement->execute();
-    $slides = $statement->fetchAll();
+$slides       = [];
+$latestNews   = [];
+$galleryItems = [];
 
-    $newsStatement = $pdo->prepare(
-        'SELECT id, title, content, image, created_at FROM news ORDER BY created_at DESC LIMIT 3'
-    );
-    $newsStatement->execute();
-    $latestNews = $newsStatement->fetchAll();
+try {
+    $pdo = getDb();
+
+    $stmt = $pdo->query('SELECT id, title, subtitle, image FROM slides ORDER BY sort_order ASC, created_at DESC');
+    $slides = $stmt->fetchAll();
+
+    $stmt = $pdo->query('SELECT id, title, content, image, category, created_at FROM news ORDER BY created_at DESC LIMIT 3');
+    $latestNews = $stmt->fetchAll();
+
+    $stmt = $pdo->query('SELECT id, title, caption, image, category FROM gallery_images WHERE is_active = 1 ORDER BY sort_order ASC, created_at DESC LIMIT 12');
+    $galleryItems = $stmt->fetchAll();
 } catch (Throwable $exception) {
     error_log($exception->getMessage());
-    $slides = [];
-    $latestNews = [];
 }
 
-function homeNewsExcerpt(string $content, int $limit = 150): string
+/**
+ * Plain-text excerpt for the news teasers.
+ */
+function homeExcerpt(string $content, int $limit = 145): string
 {
-    $plainText = trim(strip_tags($content));
+    $plain = trim(preg_replace('/\s+/u', ' ', strip_tags($content)) ?? '');
 
-    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
-        return mb_strlen($plainText, 'UTF-8') > $limit
-            ? mb_substr($plainText, 0, $limit, 'UTF-8') . '...'
-            : $plainText;
+    if (function_exists('mb_strlen')) {
+        return mb_strlen($plain, 'UTF-8') > $limit
+            ? rtrim(mb_substr($plain, 0, $limit, 'UTF-8')) . '…'
+            : $plain;
     }
 
-    return strlen($plainText) > $limit ? substr($plainText, 0, $limit) . '...' : $plainText;
+    return strlen($plain) > $limit ? rtrim(substr($plain, 0, $limit)) . '…' : $plain;
 }
 
-$pageTitle = 'مهدکودک و پیش‌دبستانی ' . siteName() . ' | محیطی امن و شاد برای رشد کودک شما';
-$pageDescription = 'مهدکودک ' . siteName() . ' با مجوز رسمی بهزیستی، مربیان مجرب، گزارش روزانه والدین و محیطی امن و خلاق برای کودکان ۶ ماه تا ۶ سال. همین حالا برای بازدید حضوری هماهنگ کنید.';
+$siteNameV = siteName();
+
+$pageTitle = 'مهدکودک و پیش‌دبستانی ' . $siteNameV . ' | محیطی امن و شاد برای رشد کودک شما';
+$pageDescription = 'مهدکودک ' . $siteNameV . ' با مجوز رسمی بهزیستی، مربیان مجرب، گزارش روزانه والدین و محیطی امن و خلاق'
+    . ' برای کودکان ۶ ماه تا ۶ سال. همین حالا برای بازدید حضوری هماهنگ کنید.';
+
 require_once __DIR__ . '/templates/header.php';
+
+// The gallery filter set is derived from what actually exists in the DB.
+$galleryCategories = [
+    'activities' => 'فعالیت‌ها و کارگاه‌ها',
+    'space'      => 'فضا و کلاس‌ها',
+    'events'     => 'جشن‌ها و رویدادها',
+];
+$presentCategories = [];
+foreach ($galleryItems as $g) {
+    $cat = (string) ($g['category'] ?? '');
+    if ($cat !== '' && isset($galleryCategories[$cat])) {
+        $presentCategories[$cat] = $galleryCategories[$cat];
+    }
+}
 ?>
 
-<!-- Hero Slider -->
-<section class="hero-slider-wrapper" aria-label="تصاویر برگزیده مهد کودک <?= e(siteName()) ?>">
+<?php /* ═══════════════ HERO ═══════════════ */ ?>
+<section class="hero" aria-label="معرفی <?php echo e($siteNameV); ?>">
     <?php if ($slides === []): ?>
-        <div class="hero-fallback">
-            <div class="container">
-                <div class="hero-fallback-content fade-in">
-                    <svg class="hero-fallback-icon-svg" width="72" height="72" viewBox="0 0 72 72" fill="none">
-                        <circle cx="36" cy="36" r="34" stroke="url(#heroGrad)" stroke-width="3"/>
-                        <path d="M36 20c-5 0-9 2.4-9 7 0 3 1.6 5 4 6.4-1 .6-2.4 2-3 3.6-.6 1.6-.4 3 .6 4 1 1 2.4 1 3.6.6 1.2-.4 2-1.6 2.4-2.4h1.4c.4.8 1.2 2 2.4 2.4 1.2.4 2.6.4 3.6-.6 1-1 1.2-2.4.6-4-.6-1.6-2-3-3-3.6 2.4-1.4 4-3.4 4-6.4 0-4.6-4-7-9-7z" fill="url(#heroGrad)"/>
-                        <circle cx="31" cy="28" r="2" fill="white"/>
-                        <circle cx="41" cy="28" r="2" fill="white"/>
-                        <path d="M31 35c0 0 2 3 5 3s5-3 5-3" stroke="white" stroke-width="1.6" stroke-linecap="round" fill="none"/>
-                        <defs>
-                            <linearGradient id="heroGrad" x1="0" y1="0" x2="72" y2="72">
-                                <stop stop-color="#3D8B63"/>
-                                <stop offset="1" stop-color="#C4724A"/>
-                            </linearGradient>
-                        </defs>
-                    </svg>
-                    <h1>به <?= e(siteName()) ?> خوش آمدید</h1>
-                    <p>جایی که کوچولوهای شما با عشق و مهربانی بزرگ میشوند</p>
-                    <p class="hero-fallback-sub">محیطی امن، شاد و پر از یادگیری برای فرزندان دلبندتان</p>
-                    <div class="hero-fallback-actions">
-                        <a href="<?= e(url('page.php?slug=about')) ?>" class="btn btn-primary btn-lg">آشنایی با ما</a>
-                        <a href="<?= e(url('login.php')) ?>" class="btn btn-outline btn-lg">ثبت نام والدین</a>
+        <div class="hero hero--fallback">
+            <div class="container hero__inner">
+                <div class="hero__content">
+                    <span class="eyebrow eyebrow-light hero__anim">
+                        <?php echo icon('shield', 14); ?>
+                        دارای مجوز رسمی بهزیستی
+                    </span>
+                    <h1 class="hero__title hero__anim">
+                        به <?php echo e($siteNameV); ?> خوش آمدید
+                    </h1>
+                    <p class="hero__sub hero__anim">
+                        جایی که کوچولوهای شما با عشق، امنیت و بازی بزرگ می‌شوند —
+                        محیطی شاد و پر از یادگیری برای کودکان ۶ ماه تا ۶ سال.
+                    </p>
+                    <div class="hero__actions hero__anim">
+                        <a class="btn btn-secondary btn-lg" href="<?php echo e(url('page.php?slug=contact')); ?>">
+                            <?php echo icon('calendar', 19); ?>
+                            رزرو بازدید حضوری
+                        </a>
+                        <a class="btn btn-light btn-lg" href="<?php echo e(url('page.php?slug=about')); ?>">
+                            آشنایی با روما
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     <?php else: ?>
-        <div class="slider" data-slider>
-            <h1 class="sr-only">به <?= e(siteName()) ?> خوش آمدید</h1>
-            <div class="slides">
-                <?php foreach ($slides as $index => $slide): ?>
-                    <div class="slide<?= $index === 0 ? ' is-active' : '' ?>" data-slide>
-                        <img src="<?= e(url($slide['image'])) ?>" alt="<?= e($slide['title']) ?>" loading="<?= $index === 0 ? 'eager' : 'lazy' ?>"<?php if ($index === 0): ?> fetchpriority="high" decoding="async"<?php endif; ?>>
-                        <div class="slide-overlay">
-                            <div class="slide-caption">
-                                <h2><?= e($slide['title']) ?></h2>
-                                <?php if (!empty($slide['subtitle'])): ?><span class="slide-subtitle"><?= e($slide['subtitle']) ?></span><?php endif; ?>
-                                <div style="margin-top: var(--space-md);">
-                                    <a href="<?= e(url('page.php?slug=contact')) ?>" class="btn btn-secondary btn-sm" style="padding: 10px 20px;">
-                                        ثبت‌نام و بازدید حضوری ←
-                                    </a>
-                                </div>
+        <div class="hero__viewport" data-slider data-slider-interval="7000">
+            <h1 class="sr-only">مهدکودک و پیش‌دبستانی <?php echo e($siteNameV); ?></h1>
+            <span class="sr-only" role="status" aria-live="polite" data-slider-live></span>
+
+            <?php foreach ($slides as $index => $slide): ?>
+                <?php
+                $isFirst = $index === 0;
+                $title    = (string) $slide['title'];
+                $subtitle = (string) ($slide['subtitle'] ?? '');
+                ?>
+                <div class="hero__slide<?php echo $isFirst ? ' is-active' : ''; ?>"
+                     data-slide
+                     aria-hidden="<?php echo $isFirst ? 'false' : 'true'; ?>"
+                     aria-roledescription="اسلاید"
+                     aria-label="<?php echo e(persianNumber((string) ($index + 1))) . ' از ' . e(persianNumber((string) count($slides))); ?>">
+                    <div class="hero__media">
+                        <img class="hero__img"
+                             src="<?php echo e(url((string) $slide['image'])); ?>"
+                             alt="<?php echo e($title); ?>"
+                             width="1920" height="1072"
+                             loading="<?php echo $isFirst ? 'eager' : 'lazy'; ?>"
+                             decoding="<?php echo $isFirst ? 'sync' : 'async'; ?>"
+                             <?php echo $isFirst ? 'fetchpriority="high"' : ''; ?>>
+                        <div class="hero__scrim"></div>
+                    </div>
+
+                    <div class="container hero__inner">
+                        <div class="hero__content">
+                            <span class="eyebrow eyebrow-light hero__anim">
+                                <?php echo icon('shield', 14); ?>
+                                مجوز رسمی بهزیستی · ۱۰ سال تجربه
+                            </span>
+                            <p class="hero__title hero__anim"><?php echo e($title); ?></p>
+                            <?php if ($subtitle !== ''): ?>
+                                <p class="hero__sub hero__anim"><?php echo e($subtitle); ?></p>
+                            <?php endif; ?>
+                            <div class="hero__actions hero__anim">
+                                <a class="btn btn-secondary btn-lg" href="<?php echo e(url('page.php?slug=contact')); ?>">
+                                    <?php echo icon('calendar', 19); ?>
+                                    رزرو بازدید حضوری
+                                </a>
+                                <a class="btn btn-light btn-lg" href="<?php echo e(url('page.php?slug=classes')); ?>">
+                                    مشاهده کلاس‌ها
+                                </a>
                             </div>
                         </div>
                     </div>
-                <?php endforeach; ?>
-            </div>
+                </div>
+            <?php endforeach; ?>
 
             <?php if (count($slides) > 1): ?>
-                <button class="slider-nav slider-prev" type="button" data-prev aria-label="تصویر قبلی">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                <button type="button" class="hero__nav hero__nav--prev" data-slide-prev aria-label="تصویر قبلی">
+                    <?php echo icon('chevron-right', 20); ?>
                 </button>
-                <button class="slider-nav slider-next" type="button" data-next aria-label="تصویر بعدی">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                <button type="button" class="hero__nav hero__nav--next" data-slide-next aria-label="تصویر بعدی">
+                    <?php echo icon('chevron-left', 20); ?>
                 </button>
-                <div class="slider-dots">
+
+                <div class="hero__dots" data-slider-dots role="tablist" aria-label="انتخاب تصویر">
                     <?php foreach ($slides as $index => $slide): ?>
-                        <button class="slider-dot<?= $index === 0 ? ' is-active' : '' ?>" type="button" data-dot="<?= e((string) $index ) ?>" aria-label="رفتن به تصویر <?= e(persianNumber((string) ($index + 1))) ?>"></button>
+                        <button type="button"
+                                class="hero__dot<?php echo $index === 0 ? ' is-active' : ''; ?>"
+                                data-slide-dot
+                                role="tab"
+                                aria-selected="<?php echo $index === 0 ? 'true' : 'false'; ?>"
+                                tabindex="<?php echo $index === 0 ? '0' : '-1'; ?>"
+                                aria-label="رفتن به تصویر <?php echo e(persianNumber((string) ($index + 1))); ?>"></button>
                     <?php endforeach; ?>
                 </div>
-                <button class="slider-autoplay-toggle" type="button" data-slider-toggle aria-label="توقف پخش خودکار" aria-pressed="true">
-                    <svg class="slider-toggle-pause" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
-                    <svg class="slider-toggle-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 5v14l11-7z"/></svg>
+
+                <button type="button" class="hero__playpause" data-slide-toggle aria-pressed="true" aria-label="توقف پخش خودکار">
+                    <span class="i-pause"><?php echo brandIcon('pause', 14); ?></span>
+                    <span class="i-play"><?php echo brandIcon('play', 14); ?></span>
                 </button>
             <?php endif; ?>
+
+            <div class="hero__cue" aria-hidden="true">
+                <span class="hero__cue-track"></span>
+                <span>برای دیدن بیشتر اسکرول کنید</span>
+            </div>
         </div>
     <?php endif; ?>
 </section>
 
-<!-- Trust Strip (4 Quick Trust Markers) -->
-<div class="trust-strip">
+<?php /* ═══════════════ TRUST STRIP ═══════════════ */ ?>
+<div class="trust">
     <div class="container">
-        <div class="trust-strip-inner">
-            <div class="trust-item">
-                <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-shield') ?>"/></svg>
+        <div class="trust__grid">
+            <div class="trust__item">
+                <span class="trust__icon"><?php echo icon('shield', 17); ?></span>
                 <span>مجوز رسمی بهزیستی</span>
             </div>
-            <div class="trust-divider"></div>
-            <div class="trust-item">
-                <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-award') ?>"/></svg>
-                <span>۱۰+ سال فعالیت تخصصی</span>
+            <div class="trust__item">
+                <span class="trust__icon"><?php echo icon('award', 17); ?></span>
+                <span>۱۰ سال فعالیت تخصصی</span>
             </div>
-            <div class="trust-divider"></div>
-            <div class="trust-item">
-                <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-camera') ?>"/></svg>
-                <span>دوربین مداربسته تمام کلاس‌ها</span>
+            <div class="trust__item">
+                <span class="trust__icon"><?php echo icon('camera', 17); ?></span>
+                <span>دوربین مداربسته کلاس‌ها</span>
             </div>
-            <div class="trust-divider"></div>
-            <div class="trust-item">
-                <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-heart') ?>"/></svg>
+            <div class="trust__item">
+                <span class="trust__icon"><?php echo icon('heart', 17); ?></span>
                 <span>بیمه حوادث کامل کودکان</span>
             </div>
         </div>
     </div>
 </div>
-<section class="section services-section">
-    <div class="container">
-        <div class="section-header">
-            <svg class="section-icon-svg" width="40" height="40" viewBox="0 0 40 40" fill="none">
-                <circle cx="20" cy="20" r="19" stroke="url(#svcGrad)" stroke-width="2"/>
-                <path d="M14 20l2 2 6-6" stroke="url(#svcGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M20 8c-1.5 0-2.7.7-2.7 2.1 0 .9.5 1.5 1.2 1.9-.3.2-.7.6-.9 1.1-.2.5-.1.9.2 1.2.3.3.7.3 1.1.2.4-.1.6-.5.7-.7h.4c.1.2.4.6.7.7.4.1.8.1 1.1-.2.3-.3.4-.7.2-1.2-.2-.5-.6-.9-.9-1.1.7-.4 1.2-1 1.2-1.9 0-1.4-1.2-2.1-2.7-2.1z" fill="url(#svcGrad)" transform="translate(0,6) scale(1.3)"/>
-                <defs>
-                    <linearGradient id="svcGrad" x1="0" y1="0" x2="40" y2="40">
-                        <stop stop-color="#3D8B63"/>
-                        <stop offset="1" stop-color="#C4724A"/>
-                    </linearGradient>
-                </defs>
-            </svg>
-            <h2>خدمات ما در <?= e(siteName()) ?></h2>
-            <p class="section-subtitle">ما با عشق و دانش، بهترین خدمات را برای رشد و شکوفایی فرزندان شما فراهم میکنیم</p>
-        </div>
-        <div class="services-grid">
-            <div class="service-card fade-in">
-                <div class="service-icon-wrap">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10" stroke="url(#svc1)" stroke-width="2"/><defs><linearGradient id="svc1" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
-                </div>
-                <h3>محیط امن و مطمئن</h3>
-                <p>امنیت فرزند شما اولویت اول ماست. مهد کودک ما به سیستمهای امنیتی مدرن و کارکنان آموزشدیده مجهز است</p>
-            </div>
-            <div class="service-card fade-in">
-                <div class="service-icon-wrap">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="0.5" fill="url(#svc2)"/><circle cx="17.5" cy="10.5" r="0.5" fill="url(#svc2)"/><circle cx="8.5" cy="7.5" r="0.5" fill="url(#svc2)"/><circle cx="6.5" cy="12.5" r="0.5" fill="url(#svc2)"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/><defs><linearGradient id="svc2" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
-                </div>
-                <h3>یادگیری خلاقانه</h3>
-                <p>خلاقیت کودکان را از طریق هنر، موسیقی و فعالیتهای آموزشی مبتنی بر بازی پرورش میدهیم</p>
-            </div>
-            <div class="service-card fade-in">
-                <div class="service-icon-wrap">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/><defs><linearGradient id="svc3" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
-                </div>
-                <h3>وعدههای غذایی سالم</h3>
-                <p>غذاهای مقوی و خوشمزه به صورت روزانه و تازه تهیه میشود تا رشد و سلامت کودک شما را تضمین کند</p>
-            </div>
-            <div class="service-card fade-in">
-                <div class="service-icon-wrap">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/><defs><linearGradient id="svc4" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
-                </div>
-                <h3>برنامه آموزشی استاندارد</h3>
-                <p>برنامههای آموزشی ما مطابق با استانداردهای روز دنیا و متناسب با سن کودکان طراحی شده است</p>
-            </div>
-            <div class="service-card fade-in">
-                <div class="service-icon-wrap">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/><defs><linearGradient id="svc5" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
-                </div>
-                <h3>مربیان مجرب و دلسوز</h3>
-                <p>تیم مربیان ما با تحصیلات مرتبط و تجربه کافی، با عشق و مهربانی از کودکان مراقبت میکنند</p>
-            </div>
-            <div class="service-card fade-in">
-                <div class="service-icon-wrap">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="url(#svc6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/><defs><linearGradient id="svc6" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
-                </div>
-                <h3>فعالیتهای هنری و موسیقی</h3>
-                <p>کلاسهای موسیقی، نقاشی، نمایش خلاق و ورزشهای مناسب برای رشد همهجانبه کودکان برگزار میشود</p>
-            </div>
-        </div>
-    </div>
-</section>
 
-<!-- Stats Section -->
-<section class="section stats-section">
+<?php /* ═══════════════ SERVICES ═══════════════ */ ?>
+<section class="section" id="services">
     <div class="container">
-        <div class="stats-grid">
-            <div class="stat-card fade-in">
-                <svg class="stat-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#statGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/><defs><linearGradient id="statGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
-                <div class="stat-number" data-count="10" data-suffix="+">۱۰+</div>
-                <div class="stat-label">سال تجربه</div>
-            </div>
-            <div class="stat-card fade-in">
-                <svg class="stat-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#statGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/></svg>
-                <div class="stat-number" data-count="500" data-suffix="+">۵۰۰+</div>
-                <div class="stat-label">کودک فارغ‌التحصیل</div>
-            </div>
-            <div class="stat-card fade-in">
-                <svg class="stat-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#statGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-                <div class="stat-number" data-count="20" data-suffix="+">۲۰+</div>
-                <div class="stat-label">مربی متخصص</div>
-            </div>
-            <div class="stat-card fade-in">
-                <svg class="stat-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#statGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                <div class="stat-number" data-count="98" data-suffix="٪">۹۸٪</div>
-                <div class="stat-label">رضایت والدین</div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Classes Section -->
-<section class="section classes-section">
-    <div class="container">
-        <div class="section-header">
-            <svg class="section-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#clsGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/><defs><linearGradient id="clsGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
-            <h2>کلاسهای ما</h2>
-            <p class="section-subtitle">هر کلاس متناسب با سن و نیازهای رشدی کودکان طراحی شده است</p>
-        </div>
-        <div class="classes-grid">
-            <div class="class-card fade-in">
-                <div class="class-card-header class-gradient-pink">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#C4724A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                </div>
-                <div class="class-card-body">
-                    <h3>کلاس نوباوه</h3>
-                    <p class="class-age">۰ تا ۲ سال</p>
-                    <p>مراقبت ویژه و آموزشهای حسی برای نوزادان و نوپایان دلبند شما</p>
-                    <ul class="class-features">
-                        <li>مراقبت فردی</li>
-                        <li>تغذیه مناسب سن</li>
-                        <li>برنامه خواب منظم</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="class-card fade-in">
-                <div class="class-card-header class-gradient-lavender">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#E8A838" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                </div>
-                <div class="class-card-body">
-                    <h3>کلاس خردسال</h3>
-                    <p class="class-age">۲ تا ۴ سال</p>
-                    <p>یادگیری مهارتهای اجتماعی و زبانی در محیطی شاد و پویا</p>
-                    <ul class="class-features">
-                        <li>آموزش زبان فارسی</li>
-                        <li>بازیهای گروهی</li>
-                        <li>فعالیتهای هنری</li>
-                    </ul>
-                </div>
-            </div>
-            <div class="class-card fade-in">
-                <div class="class-card-header class-gradient-sky">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#5B8DB8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/></svg>
-                </div>
-                <div class="class-card-body">
-                    <h3>کلاس پیشدبستانی</h3>
-                    <p class="class-age">۴ تا ۶ سال</p>
-                    <p>آمادگی کامل برای ورود به مدرسه با برنامههای درسی و مهارتی</p>
-                    <ul class="class-features">
-                        <li>خواندن و نوشتن مقدماتی</li>
-                        <li>ریاضیات پایه</li>
-                        <li>مهارتهای زندگی</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Parent Testimonials Section -->
-<section class="section testimonials-section" style="background: var(--paper); padding: var(--space-2xl) 0; border-top: 1px solid var(--paper-line); border-bottom: 1px solid var(--paper-line);">
-    <div class="container">
-        <div class="section-header text-center" style="margin-bottom: var(--space-xl);">
-            <h2 style="font-family: var(--font-display); font-size: var(--text-3xl); color: var(--neutral-dark);">
-                تجربه واقعی والدین روما
+        <div class="section-head" data-reveal="up">
+            <span class="eyebrow">
+                <?php echo icon('sparkles', 14); ?>
+                خدمات روما
+            </span>
+            <h2 class="section-head__title">
+                هر آنچه یک کودک برای <span class="u-mark">رشد کامل</span> نیاز دارد
             </h2>
-            <p style="color: var(--muted); font-size: var(--text-base);">نظرات خانواده‌هایی که به ما اعتماد کردند</p>
+            <p class="section-head__sub">
+                از تغذیه و خواب تا خلاقیت و مهارت‌های اجتماعی — برنامه روما بر پایه علم رشد کودک
+                و با نگاه به آرامش خیال شما طراحی شده است.
+            </p>
         </div>
 
-        <div class="testimonials-slider">
-            <div class="testimonial-card">
-                <div>
-                    <div class="testimonial-rating" role="img" aria-label="امتیاز ۵ از ۵">
-                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                    </div>
-                    <p class="testimonial-quote">
-                        «چیزی که ما رو مطمئن کرد، این بود که هر روز عصر یه گزارش کوتاه از وضعیت غذا و خواب آیدا می‌گرفتیم، نه فقط یه پیام کلی که "روز خوبی داشت".»
-                    </p>
-                </div>
-                <div class="testimonial-author">
-                    <div class="testimonial-avatar">م‌آ</div>
-                    <div class="testimonial-info">
-                        <h3>مادر آیدا</h3>
-                        <span>کلاس خردسال</span>
-                    </div>
-                </div>
-            </div>
+        <div class="feature-grid" data-reveal-group data-reveal-step="80">
+            <article class="card card-hover card-glow feature" data-reveal="up">
+                <span class="feature__icon"><?php echo icon('shield', 27); ?></span>
+                <h3 class="feature__title">محیط امن و مطمئن</h3>
+                <p class="feature__text">
+                    ورود و خروج با کد اختصاصی، دوربین مداربسته در تمام کلاس‌ها، کف‌پوش ضربه‌گیر
+                    و مهار تمام کمدها به دیوار. ایمنی فرزند شما اتفاقی نیست — طراحی‌شده است.
+                </p>
+            </article>
 
-            <div class="testimonial-card">
-                <div>
-                    <div class="testimonial-rating" role="img" aria-label="امتیاز ۵ از ۵">
-                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                    </div>
-                    <p class="testimonial-quote">
-                        «وقتی برای اولین بار اومدیم بازدید، پارسا از همون در ورودی نمی‌خواست بره. این برای ما از هر تبلیغی مهم‌تر بود.»
-                    </p>
-                </div>
-                <div class="testimonial-author">
-                    <div class="testimonial-avatar">پ‌پ</div>
-                    <div class="testimonial-info">
-                        <h3>پدر پارسا</h3>
-                        <span>کلاس نوباوه</span>
-                    </div>
-                </div>
-            </div>
+            <article class="card card-hover card-glow feature" data-reveal="up">
+                <span class="feature__icon"><?php echo icon('brain', 27); ?></span>
+                <h3 class="feature__title">یادگیری از دل بازی</h3>
+                <p class="feature__text">
+                    کودکان با حفظ‌کردن رشد نمی‌کنند. در روما مفاهیم ریاضی، زبان و علوم از طریق
+                    بازی هدفمند، کارگاه هنر و آزمایش‌های ساده تجربه می‌شوند.
+                </p>
+            </article>
 
-            <div class="testimonial-card">
-                <div>
-                    <div class="testimonial-rating" role="img" aria-label="امتیاز ۵ از ۵">
-                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                        <svg aria-hidden="true" focusable="false" style="width:16px; height:16px;"><use href="<?= asset('assets/img/icons.svg#icon-star') ?>"/></svg>
-                    </div>
-                    <p class="testimonial-quote">
-                        «پیش‌دبستانی روما مهارت‌های دست‌ورزی و اعتماد به‌نفس کیان رو عالی بالا برد. الان برای مدرسه کاملاً آماده و مشتاقه.»
-                    </p>
-                </div>
-                <div class="testimonial-author">
-                    <div class="testimonial-avatar">م‌ک</div>
-                    <div class="testimonial-info">
-                        <h3>مادر کیان</h3>
-                        <span>پیش‌دبستانی</span>
-                    </div>
-                </div>
-            </div>
+            <article class="card card-hover card-glow feature" data-reveal="up">
+                <span class="feature__icon"><?php echo icon('utensils', 27); ?></span>
+                <h3 class="feature__title">تغذیه تازه و فصلی</h3>
+                <p class="feature__text">
+                    منوی هفتگی زیر نظر کارشناس تغذیه، پخت روزانه در آشپزخانه مجموعه و منوی
+                    جداگانه برای کودکان دارای آلرژی یا رژیم خاص.
+                </p>
+            </article>
+
+            <article class="card card-hover card-glow feature" data-reveal="up">
+                <span class="feature__icon"><?php echo icon('message', 27); ?></span>
+                <h3 class="feature__title">شفافیت کامل با والدین</h3>
+                <p class="feature__text">
+                    هر روز عصر گزارش دقیق تغذیه، ساعت خواب، حال‌وهوا و فعالیت‌های فرزندتان را
+                    در پنل اختصاصی والدین می‌بینید — نه یک پیام کلی.
+                </p>
+            </article>
+
+            <article class="card card-hover card-glow feature" data-reveal="up">
+                <span class="feature__icon"><?php echo icon('users', 27); ?></span>
+                <h3 class="feature__title">مربیان مجرب و دلسوز</h3>
+                <p class="feature__text">
+                    تمام مربیان دارای مدرک مرتبط، گواهی مربی‌گری بهزیستی و کارت بهداشت‌اند و
+                    سالانه در کارگاه‌های روانشناسی کودک شرکت می‌کنند.
+                </p>
+            </article>
+
+            <article class="card card-hover card-glow feature" data-reveal="up">
+                <span class="feature__icon"><?php echo icon('palette', 27); ?></span>
+                <h3 class="feature__title">هنر، موسیقی و حرکت</h3>
+                <p class="feature__text">
+                    کارگاه سفالگری، نقاشی، موسیقی کودک، نمایش خلاق و بازی‌های حرکتی — برای
+                    پرورش اعتماد به‌نفس و مهارت دست‌ورزی.
+                </p>
+            </article>
         </div>
     </div>
 </section>
 
-<!-- FAQ Accordion Section -->
-<section class="section faq-section" style="padding: var(--space-2xl) 0;">
-    <div class="container" style="max-width: 800px;">
-        <div class="section-header text-center" style="margin-bottom: var(--space-xl);">
-            <h2 style="font-family: var(--font-display); font-size: var(--text-3xl); color: var(--neutral-dark);">
-                پرسش‌های متداول والدین
-            </h2>
-            <p style="color: var(--muted); font-size: var(--text-base);">پاسخ به سوالاتی که اکثر والدین قبل از ثبت‌نام می‌پرسند</p>
-        </div>
-
-        <div class="faq-accordion">
-            <details class="faq-item">
-                <summary class="faq-summary">
-                    <span>ساعات نگهداری و فعالیت مهدکودک روما چگونه است؟</span>
-                    <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
-                </summary>
-                <div class="faq-content">
-                    مهدکودک روما روزهای شنبه تا چهارشنبه از ساعت ۰۷:۰۰ الی ۱۶:۳۰ و پنج‌شنبه‌ها از ساعت ۰۷:۰۰ الی ۱۳:۰۰ فعال است.
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-summary">
-                    <span>آیا امکان ثبت‌نام نیم‌روزه وجود دارد؟</span>
-                    <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
-                </summary>
-                <div class="faq-content">
-                    بله، والدین عزیز می‌توانند با توجه به شرایط کاری خود، ثبت‌نام نیم‌روزه (۰۷:۰۰ الی ۱۲:۳۰) یا تمام‌روزه را انتخاب نمایند.
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-summary">
-                    <span>غذای کودکانی که آلرژی یا رژیم خاص دارند چطور مدیریت می‌شود؟</span>
-                    <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
-                </summary>
-                <div class="faq-content">
-                    در زمان ثبت‌نام، فرم حساسیت‌های غذایی دریافت می‌شود. آشپزخانه مهد منوی جداگانه و مشخصی طبق نظر مشاور تغذیه برای کودکان دارای آلرژی آماده می‌کند.
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-summary">
-                    <span>چگونه می‌توانم گزارش روزانه فرزندم را مشاهده کنم؟</span>
-                    <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
-                </summary>
-                <div class="faq-content">
-                    از طریق <a href="<?= url('login.php') ?>" style="color: var(--primary); font-weight: 700;">پنل والدین روما</a>، وضعیت تغذیه، ساعت خواب، فعالیت‌های کلاسی و گزارش مربی به‌صورت روزانه قابل مشاهده است.
-                </div>
-            </details>
-
-            <details class="faq-item">
-                <summary class="faq-summary">
-                    <span>مدارک لازم برای ثبت‌نام اولیه چیست؟</span>
-                    <svg aria-hidden="true" focusable="false"><use href="<?= asset('assets/img/icons.svg#icon-chevron-down') ?>"/></svg>
-                </summary>
-                <div class="faq-content">
-                    کپی شناسنامه کودک و والدین، ۴ قطعه عکس ۳x۴، کارت واکسیناسیون کامل و فرم معاینه بهداشت اولیه‌الزامی است.
-                </div>
-            </details>
-        </div>
-    </div>
-</section>
-
-<!-- News Section -->
-<?php if ($latestNews !== []): ?>
-<section class="section news-section">
+<?php /* ═══════════════ STATS ═══════════════ */ ?>
+<section class="section stats">
     <div class="container">
-        <div class="section-header">
-            <svg class="section-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#newsGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/><defs><linearGradient id="newsGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
-            <h2>آخرین اخبار و رویدادها</h2>
+        <div class="stats__grid" data-reveal-group data-reveal-step="90">
+            <div class="stat" data-reveal="zoom">
+                <span class="stat__icon"><?php echo icon('award', 23); ?></span>
+                <span class="stat__num" data-count="10" data-suffix="+">۱۰+</span>
+                <span class="stat__label">سال تجربه تخصصی</span>
+            </div>
+            <div class="stat" data-reveal="zoom">
+                <span class="stat__icon"><?php echo icon('cap', 23); ?></span>
+                <span class="stat__num" data-count="500" data-suffix="+">۵۰۰+</span>
+                <span class="stat__label">کودک فارغ‌التحصیل</span>
+            </div>
+            <div class="stat" data-reveal="zoom">
+                <span class="stat__icon"><?php echo icon('users', 23); ?></span>
+                <span class="stat__num" data-count="20" data-suffix="+">۲۰+</span>
+                <span class="stat__label">مربی و کارشناس</span>
+            </div>
+            <div class="stat" data-reveal="zoom">
+                <span class="stat__icon"><?php echo icon('heart', 23); ?></span>
+                <span class="stat__num" data-count="98" data-suffix="٪">۹۸٪</span>
+                <span class="stat__label">رضایت والدین</span>
+            </div>
         </div>
-        <div class="news-grid">
-            <?php foreach ($latestNews as $newsItem): ?>
-                <article class="news-card fade-in">
-                    <?php if (!empty($newsItem['image'])): ?>
-                        <div class="news-card-image">
-                            <img src="<?= e(url($newsItem['image'])) ?>" alt="<?= e($newsItem['title']) ?>" loading="lazy">
+    </div>
+</section>
+
+<?php /* ═══════════════ CLASSES ═══════════════ */ ?>
+<section class="section section-paper" id="classes">
+    <div class="container">
+        <div class="section-head" data-reveal="up">
+            <span class="eyebrow eyebrow-clay">
+                <?php echo icon('cap', 14); ?>
+                گروه‌های سنی
+            </span>
+            <h2 class="section-head__title">
+                برای هر سن، یک <span class="u-mark">برنامه متفاوت</span>
+            </h2>
+            <p class="section-head__sub">
+                نیاز یک نوپای یک‌ساله با کودک پنج‌ساله زمین تا آسمان تفاوت دارد. سه کلاس روما
+                با نسبت مربی، فضا و برنامه روزانه مستقل طراحی شده‌اند.
+            </p>
+        </div>
+
+        <div class="class-grid" data-reveal-group data-reveal-step="110">
+            <article class="card card-hover class-card" data-reveal="rise">
+                <div class="class-card__head class-card__head--green">
+                    <span class="class-card__icon"><?php echo icon('baby', 46); ?></span>
+                </div>
+                <div class="class-card__body">
+                    <h3 class="class-card__title">کلاس نوباوه</h3>
+                    <span class="badge badge-primary">۶ ماه تا ۲ سال · نسبت مربی ۱ به ۴</span>
+                    <p class="class-card__text">
+                        تمرکز بر حس امنیت، دلبستگی ایمن و رشد حرکتی. برنامه خواب و تغذیه هر کودک
+                        جداگانه و مطابق عادت خانه تنظیم می‌شود.
+                    </p>
+                    <ul class="class-card__list">
+                        <li><?php echo icon('check', 17); ?><span>مراقبت فردی و ماساژ کودک</span></li>
+                        <li><?php echo icon('check', 17); ?><span>تحریک حسی با اسباب‌بازی ایمن</span></li>
+                        <li><?php echo icon('check', 17); ?><span>گزارش ساعتی خواب و تغذیه</span></li>
+                    </ul>
+                    <div class="meter">
+                        <div class="meter__head">
+                            <span>ظرفیت تکمیل‌شده</span>
+                            <span class="text-secondary">۲ جای خالی از ۱۰</span>
                         </div>
-                    <?php endif; ?>
-                    <div class="news-card-body">
-                        <time class="news-date" datetime="<?= e($newsItem['created_at']) ?>">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                            <?= e(shamsiDate($newsItem['created_at'])) ?>
-                        </time>
-                        <h3>
-                            <a href="<?= e(url('news.php?id=' . $newsItem['id'])) ?>"><?= e($newsItem['title']) ?></a>
-                        </h3>
-                        <p><?= e(homeNewsExcerpt($newsItem['content'])) ?></p>
-                        <a href="<?= e(url('news.php?id=' . $newsItem['id'])) ?>" class="news-read-more">ادامه مطلب
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
+                        <div class="meter__track">
+                            <div class="meter__fill" data-meter="80%" style="--w:80%"></div>
+                        </div>
+                    </div>
+                    <div class="class-card__foot">
+                        <a class="btn btn-outline btn-sm btn-block" href="<?php echo e(url('page.php?slug=classes')); ?>">
+                            جزئیات و برنامه روزانه
                         </a>
+                    </div>
+                </div>
+            </article>
+
+            <article class="card card-hover class-card" data-reveal="rise">
+                <div class="class-card__head class-card__head--clay">
+                    <span class="class-card__icon"><?php echo icon('puzzle', 46); ?></span>
+                </div>
+                <div class="class-card__body">
+                    <h3 class="class-card__title">کلاس خردسال</h3>
+                    <span class="badge badge-secondary">۲ تا ۴ سال · نسبت مربی ۱ به ۶</span>
+                    <p class="class-card__text">
+                        سن طلایی زبان و مهارت اجتماعی. کودکان یاد می‌گیرند نوبت بگیرند، احساسشان
+                        را با کلمه بگویند و در گروه بازی کنند.
+                    </p>
+                    <ul class="class-card__list">
+                        <li><?php echo icon('check', 17); ?><span>غنی‌سازی واژگان و قصه‌گویی</span></li>
+                        <li><?php echo icon('check', 17); ?><span>بازی‌های گروهی و نوبت‌گیری</span></li>
+                        <li><?php echo icon('check', 17); ?><span>کارگاه هنر، سفال و موسیقی</span></li>
+                    </ul>
+                    <div class="meter">
+                        <div class="meter__head">
+                            <span>ظرفیت تکمیل‌شده</span>
+                            <span class="text-secondary">۴ جای خالی از ۱۴</span>
+                        </div>
+                        <div class="meter__track">
+                            <div class="meter__fill" data-meter="71%" style="--w:71%"></div>
+                        </div>
+                    </div>
+                    <div class="class-card__foot">
+                        <a class="btn btn-outline btn-sm btn-block" href="<?php echo e(url('page.php?slug=classes')); ?>">
+                            جزئیات و برنامه روزانه
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <article class="card card-hover class-card" data-reveal="rise">
+                <div class="class-card__head class-card__head--sky">
+                    <span class="class-card__icon"><?php echo icon('cap', 46); ?></span>
+                </div>
+                <div class="class-card__body">
+                    <h3 class="class-card__title">پیش‌دبستانی</h3>
+                    <span class="badge badge-info">۴ تا ۶ سال · نسبت مربی ۱ به ۷</span>
+                    <p class="class-card__text">
+                        آماده‌سازی واقعی برای مدرسه: تمرکز، دست‌ورزی، سوادآموزی اولیه و
+                        اعتماد به‌نفس — بدون فشار و مشق شب.
+                    </p>
+                    <ul class="class-card__list">
+                        <li><?php echo icon('check', 17); ?><span>خواندن و نوشتن مقدماتی</span></li>
+                        <li><?php echo icon('check', 17); ?><span>مفاهیم ریاضی و حل مسئله</span></li>
+                        <li><?php echo icon('check', 17); ?><span>مهارت‌های زندگی و استقلال</span></li>
+                    </ul>
+                    <div class="meter">
+                        <div class="meter__head">
+                            <span>ظرفیت تکمیل‌شده</span>
+                            <span class="text-secondary">۳ جای خالی از ۱۵</span>
+                        </div>
+                        <div class="meter__track">
+                            <div class="meter__fill" data-meter="80%" style="--w:80%"></div>
+                        </div>
+                    </div>
+                    <div class="class-card__foot">
+                        <a class="btn btn-outline btn-sm btn-block" href="<?php echo e(url('page.php?slug=classes')); ?>">
+                            جزئیات و برنامه روزانه
+                        </a>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<?php /* ═══════════════ A DAY AT ROOMA ═══════════════ */ ?>
+<section class="section">
+    <div class="container">
+        <div class="split split--wide-start">
+            <div class="split__content" data-reveal="start">
+                <span class="eyebrow">
+                    <?php echo icon('clock', 14); ?>
+                    یک روز در روما
+                </span>
+                <h2 class="split__title">از لحظه خداحافظی تا آغوش دوباره شما</h2>
+                <p class="split__text">
+                    روز کودک شما در روما ساختار دارد، اما خشک نیست. ریتم ثابتِ صبحانه، بازی،
+                    یادگیری و استراحت به کودک حس امنیت می‌دهد و دقیقاً همین ریتم است که
+                    شب‌ها خواب راحت‌تری برای شما می‌سازد.
+                </p>
+
+                <div class="timeline mt-md w-full">
+                    <div class="timeline__item">
+                        <span class="timeline__time">۰۷:۰۰ – ۰۸:۳۰</span>
+                        <p class="timeline__title">پذیرش گرم و صبحانه</p>
+                        <p class="timeline__desc">استقبال فردی مربی، معاینه سلامت روزانه و صبحانه گروهی.</p>
+                    </div>
+                    <div class="timeline__item">
+                        <span class="timeline__time">۰۸:۳۰ – ۱۰:۳۰</span>
+                        <p class="timeline__title">حلقه صبحگاهی و کارگاه یادگیری</p>
+                        <p class="timeline__desc">قصه، گفت‌وگو و فعالیت هدفمند متناسب با گروه سنی.</p>
+                    </div>
+                    <div class="timeline__item">
+                        <span class="timeline__time">۱۰:۳۰ – ۱۲:۰۰</span>
+                        <p class="timeline__title">میان‌وعده و بازی آزاد در حیاط</p>
+                        <p class="timeline__desc">میوه تازه و بازی حرکتی در فضای باز و امن.</p>
+                    </div>
+                    <div class="timeline__item">
+                        <span class="timeline__time">۱۲:۰۰ – ۱۳:۳۰</span>
+                        <p class="timeline__title">ناهار و آماده‌سازی استراحت</p>
+                        <p class="timeline__desc">غذای تازه پخته‌شده و آموزش خودیاری در غذاخوردن.</p>
+                    </div>
+                    <div class="timeline__item">
+                        <span class="timeline__time">۱۳:۳۰ – ۱۵:۰۰</span>
+                        <p class="timeline__title">خواب و آرام‌سازی</p>
+                        <p class="timeline__desc">فضای تاریک و ساکت با موسیقی ملایم و پایش مربی.</p>
+                    </div>
+                    <div class="timeline__item">
+                        <span class="timeline__time">۱۵:۰۰ – ۱۶:۳۰</span>
+                        <p class="timeline__title">هنر، موسیقی و تحویل به والدین</p>
+                        <p class="timeline__desc">کارگاه خلاق و ارائه گزارش روزانه هنگام تحویل.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="split__media" data-reveal="end">
+                <?php
+                $dayImg = is_file(__DIR__ . '/assets/img/hero-classroom.jpg')
+                    ? 'assets/img/hero-classroom.jpg'
+                    : 'assets/img/about-story.jpg';
+                ?>
+                <figure class="frame">
+                    <img src="<?php echo e(asset($dayImg)); ?>"
+                         alt="فضای کلاس مهدکودک <?php echo e($siteNameV); ?>"
+                         width="1920" height="1072" loading="lazy" decoding="async">
+                    <figcaption class="frame__chip">
+                        <span class="frame__chip-icon"><?php echo icon('sun-cloud', 18); ?></span>
+                        <span>
+                            <span class="frame__chip-num">۲ ساعت</span>
+                            <span class="frame__chip-label">بازی روزانه در فضای باز</span>
+                        </span>
+                    </figcaption>
+                </figure>
+            </div>
+        </div>
+    </div>
+</section>
+
+<?php /* ═══════════════ PARENT PORTAL ═══════════════ */ ?>
+<section class="section section-sunken">
+    <div class="container">
+        <div class="split split--wide-end">
+            <div class="split__media hide-mobile" data-reveal="start">
+                <figure class="frame">
+                    <?php
+                    $portalImg = is_file(__DIR__ . '/assets/uploads/gallery/about-story.jpg')
+                        ? 'assets/uploads/gallery/about-story.jpg'
+                        : 'assets/img/about-story.jpg';
+                    ?>
+                    <img src="<?php echo e(asset($portalImg)); ?>"
+                         alt="گزارش روزانه والدین در پنل <?php echo e($siteNameV); ?>"
+                         width="800" height="533" loading="lazy" decoding="async">
+                    <figcaption class="frame__chip">
+                        <span class="frame__chip-icon"><?php echo icon('message', 18); ?></span>
+                        <span>
+                            <span class="frame__chip-num">هر روز</span>
+                            <span class="frame__chip-label">گزارش دقیق فرزند شما</span>
+                        </span>
+                    </figcaption>
+                </figure>
+            </div>
+
+            <div class="split__content" data-reveal="end">
+                <span class="eyebrow eyebrow-clay">
+                    <?php echo icon('message', 14); ?>
+                    پنل اختصاصی والدین
+                </span>
+                <h2 class="split__title">نگرانی «الان حالش چطوره؟» را کنار بگذارید</h2>
+                <p class="split__text">
+                    مهم‌ترین چیزی که والدین از ما می‌خواهند، خبر است. پنل روما دسترسی شما را
+                    به جزئیات روز فرزندتان باز می‌کند — هر زمان، از گوشی خودتان.
+                </p>
+
+                <ul class="check-list mt-md">
+                    <li><?php echo icon('check-circle', 19); ?><span><strong>گزارش روزانه:</strong> چه خورد، چقدر خوابید، حال‌وهوایش چطور بود.</span></li>
+                    <li><?php echo icon('check-circle', 19); ?><span><strong>حضور و غیاب:</strong> ساعت دقیق ورود و خروج با تأیید مربی.</span></li>
+                    <li><?php echo icon('check-circle', 19); ?><span><strong>پیام مستقیم مربی:</strong> پرسش‌های روزمره را همان‌جا بپرسید.</span></li>
+                    <li><?php echo icon('check-circle', 19); ?><span><strong>شهریه و پرداخت‌ها:</strong> صورت‌حساب شفاف و سابقه پرداخت.</span></li>
+                    <li><?php echo icon('check-circle', 19); ?><span><strong>منوی هفتگی غذا:</strong> از قبل بدانید فردا چه می‌خورد.</span></li>
+                </ul>
+
+                <div class="row mt-md">
+                    <?php if (isParentLoggedIn()): ?>
+                        <a class="btn btn-primary" href="<?php echo e(url('parent/index.php')); ?>">
+                            <?php echo icon('user', 17); ?>
+                            ورود به پنل والدین
+                        </a>
+                    <?php else: ?>
+                        <a class="btn btn-primary" href="<?php echo e(url('login.php')); ?>">
+                            <?php echo icon('login', 17); ?>
+                            ورود به پنل والدین
+                        </a>
+                        <a class="btn btn-ghost" href="<?php echo e(url('register.php')); ?>">ثبت‌نام</a>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<?php /* ═══════════════ TESTIMONIALS ═══════════════ */ ?>
+<section class="section">
+    <div class="container">
+        <div class="section-head" data-reveal="up">
+            <span class="eyebrow">
+                <?php echo icon('star', 14); ?>
+                تجربه خانواده‌ها
+            </span>
+            <h2 class="section-head__title">
+                والدین روما چه <span class="u-mark">می‌گویند</span>
+            </h2>
+            <p class="section-head__sub">
+                بهترین معرفی ما، حرف خانواده‌هایی است که هر روز فرزندشان را به ما می‌سپارند.
+            </p>
+        </div>
+
+        <div class="testimonials" data-reveal-group data-reveal-step="100">
+            <article class="card quote" data-reveal="up">
+                <div class="quote__stars" role="img" aria-label="امتیاز ۵ از ۵">
+                    <?php for ($i = 0; $i < 5; $i++) { echo brandIcon('star', 16); } ?>
+                </div>
+                <p class="quote__text">
+                    «چیزی که ما را مطمئن کرد، این بود که هر روز عصر یک گزارش واقعی از وضعیت غذا
+                    و خواب آیدا می‌گرفتیم — نه یک پیام کلی که ”روز خوبی داشت“.»
+                </p>
+                <div class="quote__author">
+                    <span class="quote__avatar">م‌آ</span>
+                    <span>
+                        <span class="quote__name">مادر آیدا</span><br>
+                        <span class="quote__role">کلاس خردسال</span>
+                    </span>
+                </div>
+            </article>
+
+            <article class="card quote" data-reveal="up">
+                <div class="quote__stars" role="img" aria-label="امتیاز ۵ از ۵">
+                    <?php for ($i = 0; $i < 5; $i++) { echo brandIcon('star', 16); } ?>
+                </div>
+                <p class="quote__text">
+                    «بار اول که برای بازدید آمدیم، پارسا از همان در ورودی نمی‌خواست برگردد.
+                    این برای ما از هر تبلیغی مهم‌تر بود.»
+                </p>
+                <div class="quote__author">
+                    <span class="quote__avatar">پ‌پ</span>
+                    <span>
+                        <span class="quote__name">پدر پارسا</span><br>
+                        <span class="quote__role">کلاس نوباوه</span>
+                    </span>
+                </div>
+            </article>
+
+            <article class="card quote" data-reveal="up">
+                <div class="quote__stars" role="img" aria-label="امتیاز ۵ از ۵">
+                    <?php for ($i = 0; $i < 5; $i++) { echo brandIcon('star', 16); } ?>
+                </div>
+                <p class="quote__text">
+                    «پیش‌دبستانی روما مهارت دست‌ورزی و اعتماد به‌نفس کیان را عالی بالا برد.
+                    الان برای مدرسه کاملاً آماده و مشتاق است.»
+                </p>
+                <div class="quote__author">
+                    <span class="quote__avatar">م‌ک</span>
+                    <span>
+                        <span class="quote__name">مادر کیان</span><br>
+                        <span class="quote__role">پیش‌دبستانی</span>
+                    </span>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<?php /* ═══════════════ GALLERY ═══════════════ */ ?>
+<?php if ($galleryItems !== []): ?>
+<section class="section section-paper" id="gallery">
+    <div class="container">
+        <div class="section-head" data-reveal="up">
+            <span class="eyebrow eyebrow-clay">
+                <?php echo icon('camera', 14); ?>
+                گالری تصاویر
+            </span>
+            <h2 class="section-head__title">
+                نگاهی به <span class="u-mark">روزهای روما</span>
+            </h2>
+            <p class="section-head__sub">
+                فضای کلاس‌ها، کارگاه‌ها و لحظه‌های شادی که هر روز اینجا ساخته می‌شود.
+            </p>
+        </div>
+
+        <?php if ($presentCategories !== []): ?>
+        <div class="gallery-filters" role="group" aria-label="فیلتر گالری" data-reveal="up">
+            <button type="button" class="chip is-active" data-gallery-filter="all" aria-pressed="true">همه تصاویر</button>
+            <?php foreach ($presentCategories as $slug => $label): ?>
+                <button type="button" class="chip" data-gallery-filter="<?php echo e($slug); ?>" aria-pressed="false"><?php echo e($label); ?></button>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+        <div class="gallery" data-gallery data-reveal="up">
+            <?php foreach ($galleryItems as $item): ?>
+                <?php
+                $gTitle   = (string) ($item['title'] ?? '');
+                $gCaption = (string) ($item['caption'] ?? '');
+                $gSrc     = url((string) $item['image']);
+                $alt      = $gTitle !== '' ? $gTitle : 'تصویری از مهدکودک ' . $siteNameV;
+                ?>
+                <button type="button"
+                        class="gallery__item"
+                        data-gallery-item
+                        data-category="<?php echo e((string) ($item['category'] ?? '')); ?>"
+                        data-lightbox-src="<?php echo e($gSrc); ?>"
+                        data-lightbox-alt="<?php echo e($alt); ?>"
+                        data-lightbox-cap="<?php echo e($gCaption !== '' ? $gCaption : $gTitle); ?>"
+                        aria-label="بزرگ‌نمایی تصویر: <?php echo e($alt); ?>">
+                    <img src="<?php echo e($gSrc); ?>" alt="<?php echo e($alt); ?>" loading="lazy" decoding="async">
+                    <?php if ($gTitle !== '' || $gCaption !== ''): ?>
+                        <span class="gallery__cap"><?php echo e($gCaption !== '' ? $gCaption : $gTitle); ?></span>
+                    <?php endif; ?>
+                </button>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+
+<?php /* Lightbox */ ?>
+<div class="lightbox" data-lightbox aria-hidden="true" role="dialog" aria-modal="true" aria-label="نمایش تصویر">
+    <button type="button" class="lightbox__btn lightbox__close" data-lightbox-close aria-label="بستن">
+        <?php echo icon('close', 22); ?>
+    </button>
+    <button type="button" class="lightbox__btn lightbox__prev" data-lightbox-prev aria-label="تصویر قبلی">
+        <?php echo icon('chevron-right', 22); ?>
+    </button>
+    <button type="button" class="lightbox__btn lightbox__next" data-lightbox-next aria-label="تصویر بعدی">
+        <?php echo icon('chevron-left', 22); ?>
+    </button>
+    <figure class="lightbox__figure">
+        <img class="lightbox__img" data-lightbox-img src="" alt="">
+        <figcaption class="lightbox__cap" data-lightbox-cap></figcaption>
+    </figure>
+</div>
+<?php endif; ?>
+
+<?php /* ═══════════════ NEWS ═══════════════ */ ?>
+<?php if ($latestNews !== []): ?>
+<section class="section" id="news">
+    <div class="container">
+        <div class="section-head" data-reveal="up">
+            <span class="eyebrow">
+                <?php echo icon('news', 14); ?>
+                تازه‌های روما
+            </span>
+            <h2 class="section-head__title">
+                آخرین <span class="u-mark">اخبار و اطلاعیه‌ها</span>
+            </h2>
+            <p class="section-head__sub">
+                از جشن‌ها و اردوها تا کارگاه‌های تربیتی والدین و تغییرات منوی غذایی.
+            </p>
+        </div>
+
+        <div class="news-grid" data-reveal-group data-reveal-step="100">
+            <?php foreach ($latestNews as $news): ?>
+                <?php
+                $newsUrl = url('news.php?id=' . (int) $news['id']);
+                $cat     = (string) ($news['category'] ?? '');
+                ?>
+                <article class="card card-hover news-card" data-reveal="up">
+                    <a class="news-card__media" href="<?php echo e($newsUrl); ?>" aria-hidden="true" tabindex="-1">
+                        <?php if (!empty($news['image'])): ?>
+                            <img src="<?php echo e(url((string) $news['image'])); ?>"
+                                 alt="<?php echo e((string) $news['title']); ?>"
+                                 loading="lazy" decoding="async">
+                        <?php else: ?>
+                            <img src="<?php echo e(asset('assets/img/about-story.jpg')); ?>"
+                                 alt="<?php echo e((string) $news['title']); ?>"
+                                 loading="lazy" decoding="async">
+                        <?php endif; ?>
+                        <span class="news-card__cat">
+                            <span class="badge <?php echo e(newsCategoryBadge($cat)); ?>"><?php echo e(newsCategoryLabel($cat)); ?></span>
+                        </span>
+                    </a>
+                    <div class="news-card__body">
+                        <span class="news-card__date">
+                            <?php echo icon('calendar', 14); ?>
+                            <?php echo e(shamsiDate((string) $news['created_at'])); ?>
+                        </span>
+                        <h3 class="news-card__title">
+                            <a href="<?php echo e($newsUrl); ?>"><?php echo e((string) $news['title']); ?></a>
+                        </h3>
+                        <p class="news-card__excerpt"><?php echo e(homeExcerpt((string) $news['content'])); ?></p>
+                        <span class="news-card__more">
+                            ادامه مطلب
+                            <?php echo icon('arrow-left', 16); ?>
+                        </span>
                     </div>
                 </article>
             <?php endforeach; ?>
         </div>
+
+        <div class="text-center mt-xl" data-reveal="up">
+            <a class="btn btn-ghost btn-lg" href="<?php echo e(url('news.php')); ?>">
+                مشاهده همه اخبار
+                <?php echo icon('arrow-left', 19); ?>
+            </a>
+        </div>
     </div>
 </section>
 <?php endif; ?>
 
-
-<?php
-// Roma Gallery
-try {
-    if (empty($pdo)) {
-        $pdo = getDb();
-    }
-    $gStmt = $pdo->prepare('SELECT id, title, caption, image FROM gallery_images WHERE is_active = 1 ORDER BY sort_order ASC, created_at DESC LIMIT 12');
-    $gStmt->execute();
-    $galleryItems = $gStmt->fetchAll();
-} catch (Throwable $exception) { $galleryItems = []; }
-?>
-<?php if (!empty($galleryItems)): ?>
-<!-- Gallery Section -->
-<section class="section gallery-section">
-    <div class="container">
-        <div class="section-header text-center">
-            <svg class="section-icon-svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="url(#galGrad)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/><defs><linearGradient id="galGrad" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#3D8B63"/><stop offset="1" stop-color="#C4724A"/></linearGradient></defs></svg>
-            <h2>گالری تصاویر <?= e(siteName()) ?></h2>
-            <p class="section-subtitle">لحظات شاد و به‌یادماندنی کودکان ما در فعالیت‌های روزانه</p>
+<?php /* ═══════════════ FAQ ═══════════════ */ ?>
+<section class="section section-sunken" id="faq">
+    <div class="container container-narrow">
+        <div class="section-head" data-reveal="up">
+            <span class="eyebrow">
+                <?php echo icon('info', 14); ?>
+                پرسش‌های متداول
+            </span>
+            <h2 class="section-head__title">
+                هر چه پیش از ثبت‌نام <span class="u-mark">باید بدانید</span>
+            </h2>
+            <p class="section-head__sub">
+                پاسخ صریح به سوال‌هایی که بیشتر والدین در اولین تماس می‌پرسند.
+            </p>
         </div>
 
-        <!-- Gallery Filter Buttons -->
-        <div class="gallery-filters" id="galleryFilters" style="display: flex; gap: var(--space-xs); justify-content: center; flex-wrap: wrap; margin-bottom: var(--space-xl);">
-            <button class="btn btn-primary btn-sm gallery-filter-btn is-active" data-filter="all" aria-pressed="true">همه تصاویر</button>
-            <button class="btn btn-outline btn-sm gallery-filter-btn" data-filter="classes" aria-pressed="false">کلاس‌ها</button>
-            <button class="btn btn-outline btn-sm gallery-filter-btn" data-filter="events" aria-pressed="false">جشن‌ها و رویدادها</button>
-            <button class="btn btn-outline btn-sm gallery-filter-btn" data-filter="play" aria-pressed="false">فضای بازی</button>
-        </div>
-
-        <div class="gallery-grid" style="columns: 3 260px; column-gap: var(--space-md);">
-            <?php foreach ($galleryItems as $gi): ?>
-                <div class="gallery-item fade-in" data-gallery-item data-category="<?= e($gi['category'] ?? 'all') ?>" tabindex="0" role="button" aria-label="<?= !empty($gi['title']) ? 'نمایش تصویر: ' . e($gi['title']) : 'نمایش تصویر' ?>" style="break-inside: avoid; margin-bottom: var(--space-md); position: relative; border-radius: var(--radius-lg); overflow: hidden; cursor: pointer;">
-                    <img src="<?= e(url($gi['image'])) ?>" alt="<?= e($gi['title'] ?? '') ?>" loading="lazy" class="gallery-img" style="width: 100%; display: block; border-radius: var(--radius-lg);">
-                    <div class="gallery-overlay">
-                        <div class="gallery-overlay-content">
-                            <svg class="gallery-zoom-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-                            <?php if (!empty($gi['title'])): ?><span class="gallery-title"><?= e($gi['title']) ?></span><?php endif; ?>
-                            <?php if (!empty($gi['caption'])): ?><span class="gallery-caption"><?= e($gi['caption']) ?></span><?php endif; ?>
-                        </div>
-                    </div>
+        <div class="faq" data-reveal-group data-reveal-step="60">
+            <details class="faq__item" data-reveal="up">
+                <summary class="faq__q">
+                    <span>ساعات کاری مهدکودک روما چگونه است؟</span>
+                    <?php echo icon('chevron-down', 20); ?>
+                </summary>
+                <div class="faq__a">
+                    شنبه تا چهارشنبه از ۰۷:۰۰ تا ۱۶:۳۰ و پنج‌شنبه‌ها از ۰۷:۰۰ تا ۱۳:۰۰.
+                    جمعه‌ها و تعطیلات رسمی مجموعه تعطیل است. امکان تحویل زودتر یا دیرتر
+                    (تا ۱۷:۰۰) با هماهنگی قبلی وجود دارد.
                 </div>
-            <?php endforeach; ?>
+            </details>
+
+            <details class="faq__item" data-reveal="up">
+                <summary class="faq__q">
+                    <span>آیا امکان ثبت‌نام نیم‌روزه وجود دارد؟</span>
+                    <?php echo icon('chevron-down', 20); ?>
+                </summary>
+                <div class="faq__a">
+                    بله. دو گزینه وجود دارد: نیم‌روزه (۰۷:۰۰ تا ۱۲:۳۰، شامل صبحانه و
+                    میان‌وعده) و تمام‌روزه (۰۷:۰۰ تا ۱۶:۳۰، شامل ناهار و خواب).
+                    انتخاب حالت در طول سال قابل تغییر است.
+                </div>
+            </details>
+
+            <details class="faq__item" data-reveal="up">
+                <summary class="faq__q">
+                    <span>کودک من آلرژی غذایی دارد؛ چطور مدیریت می‌شود؟</span>
+                    <?php echo icon('chevron-down', 20); ?>
+                </summary>
+                <div class="faq__a">
+                    در زمان ثبت‌نام فرم حساسیت‌های غذایی و دارویی تکمیل می‌شود. آشپزخانه
+                    مجموعه برای هر کودک دارای آلرژی، منوی جداگانه و ظرف مخصوص علامت‌گذاری‌شده
+                    تهیه می‌کند و این اطلاعات روی کارت کلاس مربی نیز درج می‌شود.
+                </div>
+            </details>
+
+            <details class="faq__item" data-reveal="up">
+                <summary class="faq__q">
+                    <span>دوره سازگاری کودک تازه‌وارد چگونه است؟</span>
+                    <?php echo icon('chevron-down', 20); ?>
+                </summary>
+                <div class="faq__a">
+                    یک هفته اول به‌صورت پله‌ای پیش می‌رود: روز اول یک ساعت همراه والد،
+                    و به‌تدریج تا یک روز کامل. هدف این است که جدایی برای کودک تجربه‌ای
+                    ایمن باشد، نه شوک. مربی هر روز بازخورد سازگاری را با شما مرور می‌کند.
+                </div>
+            </details>
+
+            <details class="faq__item" data-reveal="up">
+                <summary class="faq__q">
+                    <span>چگونه گزارش روزانه فرزندم را می‌بینم؟</span>
+                    <?php echo icon('chevron-down', 20); ?>
+                </summary>
+                <div class="faq__a">
+                    از طریق
+                    <a href="<?php echo e(url('login.php')); ?>">پنل اختصاصی والدین روما</a>.
+                    وضعیت تغذیه، ساعت خواب، حال‌وهوا، فعالیت‌های کلاسی و یادداشت مربی
+                    هر روز ثبت می‌شود و از گوشی خودتان قابل مشاهده است.
+                </div>
+            </details>
+
+            <details class="faq__item" data-reveal="up">
+                <summary class="faq__q">
+                    <span>برای بازدید حضوری باید چه کار کنم؟</span>
+                    <?php echo icon('chevron-down', 20); ?>
+                </summary>
+                <div class="faq__a">
+                    فقط
+                    <a href="<?php echo e(url('page.php?slug=contact')); ?>">فرم تماس</a>
+                    را پر کنید یا تلفنی هماهنگ کنید. بازدیدها در ساعات فعالیت مهد انجام
+                    می‌شود تا فضا را در حال زندگی واقعی ببینید — نه یک ساختمان خالی.
+                </div>
+            </details>
         </div>
     </div>
 </section>
 
-<!-- Gallery Lightbox -->
-<div class="gallery-lightbox" id="galleryLightbox" role="dialog" aria-label="گالری تصاویر">
-    <button class="gallery-lightbox-close" aria-label="بستن">&times;</button>
-    <button class="gallery-lightbox-prev" aria-label="قبلی">&#8249;</button>
-    <button class="gallery-lightbox-next" aria-label="بعدی">&#8250;</button>
-    <div class="gallery-lightbox-content">
-        <img alt="" class="gallery-lightbox-img">
-        <div class="gallery-lightbox-info"><h3 class="gallery-lightbox-title"></h3><p class="gallery-lightbox-caption"></p></div>
-    </div>
-</div>
-<script>
-(function(){
-    var items=document.querySelectorAll("[data-gallery-item]"),lb=document.getElementById("galleryLightbox");
-    if(!lb||!items.length)return;
-    var img=lb.querySelector(".gallery-lightbox-img"),ttl=lb.querySelector(".gallery-lightbox-title"),cap=lb.querySelector(".gallery-lightbox-caption");
-    var close=lb.querySelector(".gallery-lightbox-close"),prev=lb.querySelector(".gallery-lightbox-prev"),next=lb.querySelector(".gallery-lightbox-next");
-    var idx=0,lastFocus=null;
-    lb.setAttribute("aria-modal","true");
-    // Only cycle through items currently visible under the active filter.
-    function visibleItems(){return Array.prototype.filter.call(items,function(el){return el.style.display!=="none";});}
-    function show(i){var vis=visibleItems();if(!vis.length)return;if(i<0)i=0;if(i>=vis.length)i=vis.length-1;idx=i;var el=vis[i];img.src=el.querySelector("img").src;ttl.textContent=el.querySelector(".gallery-title")?el.querySelector(".gallery-title").textContent:"";cap.textContent=el.querySelector(".gallery-caption")?el.querySelector(".gallery-caption").textContent:"";if(!lb.classList.contains("active")){lastFocus=document.activeElement;}lb.classList.add("active");document.body.style.overflow="hidden";close.focus();}
-    function step(dir){var vis=visibleItems();if(!vis.length)return;var pos=vis.indexOf(items[idx]);show(((pos===-1?0:pos)+dir+vis.length)%vis.length);}
-    function hide(){lb.classList.remove("active");document.body.style.overflow="";if(lastFocus&&lastFocus.focus){lastFocus.focus();lastFocus=null;}}
-    function openFrom(el){var vis=visibleItems();show(Math.max(vis.indexOf(el),0));}
-    items.forEach(function(el,i){el.addEventListener("click",function(){openFrom(el);});el.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openFrom(el);}});});
-    close.addEventListener("click",hide);
-    lb.addEventListener("click",function(e){if(e.target===lb)hide();});
-    prev.addEventListener("click",function(e){e.stopPropagation();step(-1);});
-    next.addEventListener("click",function(e){e.stopPropagation();step(1);});
-    document.addEventListener("keydown",function(e){if(!lb.classList.contains("active"))return;if(e.key==="Escape"){hide();return;}if(e.key==="ArrowLeft")step(1);if(e.key==="ArrowRight")step(-1);if(e.key==="Tab"){var focusables=[close,prev,next];var fi=focusables.indexOf(document.activeElement);if(e.shiftKey&&(fi<=0)){e.preventDefault();focusables[focusables.length-1].focus();}else if(!e.shiftKey&&fi===focusables.length-1){e.preventDefault();focusables[0].focus();}}});
-
-    // Gallery Filter Handler with Smooth Transition
-    var filterBtns = document.querySelectorAll(".gallery-filter-btn");
-    filterBtns.forEach(function(btn){
-        btn.addEventListener("click", function(){
-            var cat = btn.getAttribute("data-filter");
-            filterBtns.forEach(function(b){ b.classList.remove("btn-primary", "is-active"); b.classList.add("btn-outline"); b.setAttribute("aria-pressed","false"); });
-            btn.classList.remove("btn-outline");
-            btn.classList.add("btn-primary", "is-active");
-            btn.setAttribute("aria-pressed","true");
-
-            items.forEach(function(item){
-                var itemCat = item.getAttribute("data-category");
-                var shouldShow = (cat === "all" || itemCat === cat || !itemCat);
-
-                if (shouldShow) {
-                    if (item.style.display === "none") {
-                        item.style.display = "block";
-                        item.style.opacity = "0";
-                        item.style.transform = "scale(0.95)";
-                        item.style.transition = "opacity 0.3s ease, transform 0.3s ease";
-                        requestAnimationFrame(function() {
-                            item.style.opacity = "1";
-                            item.style.transform = "scale(1)";
-                        });
-                    }
-                } else {
-                    item.style.opacity = "0";
-                    item.style.transform = "scale(0.95)";
-                    item.style.transition = "opacity 0.25s ease, transform 0.25s ease";
-                    setTimeout(function() {
-                        if (item.style.opacity === "0") {
-                            item.style.display = "none";
-                        }
-                    }, 250);
-                }
-            });
-        });
-    });
-})();
-</script>
-<?php endif; ?>
-
-<!-- About Us Teaser Section -->
-<section class="section about-story-section">
+<?php /* ═══════════════ ABOUT TEASER ═══════════════ */ ?>
+<section class="section">
     <div class="container">
-        <div class="about-story-card fade-in">
-            <div class="about-story-grid">
-                <div class="about-story-content">
-                    <span class="about-story-badge">درباره روما</span>
-                    <h2>روایتی از عشق، امنیت و رشد شکوفه‌های فردا</h2>
-                    <p>مهد کودک <?= e(siteName()) ?> از سال ۱۳۹۵ با هدف ایجاد فضایی گرم، شاداب و امن برای پرورش استعدادها و توانمندی‌های کودکان شروع به کار کرد. ما باور داریم که سال‌های ابتدایی زندگی، شالوده‌ساز اصلی شخصیت و آینده فرزندان شماست.</p>
-                    <div style="margin-top: var(--space-lg);">
-                        <a href="<?= e(url('page.php?slug=about')) ?>" class="btn btn-primary btn-lg">
-                            داستان کامل ما و آشنایی با روما ←
-                        </a>
-                    </div>
-                </div>
-                <div class="about-image-wrap">
-                    <?php $aboutStoryImg = is_file(__DIR__ . '/assets/uploads/gallery/about-story.jpg') ? 'assets/uploads/gallery/about-story.jpg' : 'assets/img/about-story.jpg'; ?>
-                    <img src="<?= e(asset($aboutStoryImg)) ?>" alt="داستان برند <?= e(siteName()) ?>" loading="lazy" decoding="async" width="800" height="533">
-                </div>
+        <div class="split split--wide-start">
+            <div class="split__content" data-reveal="start">
+                <span class="eyebrow">
+                    <?php echo icon('leaf', 14); ?>
+                    درباره روما
+                </span>
+                <h2 class="split__title">روایتی از عشق، امنیت و رشد شکوفه‌های فردا</h2>
+                <p class="split__text">
+                    مهدکودک <?php echo e($siteNameV); ?> از سال ۱۳۹۵ با دو کلاس کوچک و یک باور
+                    ساده شروع کرد: سال‌های نخست زندگی، شالودهٔ شخصیت و آیندهٔ یک انسان را
+                    می‌سازد. امروز پس از ده سال، همان باور با تجربه، آموزش تخصصی مربیان و
+                    اعتماد بیش از ۵۰۰ خانواده پشتیبانی می‌شود.
+                </p>
+                <p class="split__text">
+                    ما مهد را «جایی برای نگهداری» نمی‌دانیم؛ آن را نخستین جامعهٔ کودک
+                    می‌دانیم — جایی که یاد می‌گیرد دوست بشود، اشتباه کند، دوباره تلاش کند
+                    و به خودش اعتماد داشته باشد.
+                </p>
+                <a class="btn btn-primary btn-lg mt-md" href="<?php echo e(url('page.php?slug=about')); ?>">
+                    داستان کامل روما
+                    <?php echo icon('arrow-left', 19); ?>
+                </a>
+            </div>
+
+            <div class="split__media" data-reveal="end">
+                <?php
+                $aboutImg = is_file(__DIR__ . '/assets/uploads/gallery/about-story.jpg')
+                    ? 'assets/uploads/gallery/about-story.jpg'
+                    : 'assets/img/about-story.jpg';
+                ?>
+                <figure class="frame">
+                    <img src="<?php echo e(asset($aboutImg)); ?>"
+                         alt="داستان مهدکودک <?php echo e($siteNameV); ?>"
+                         width="800" height="533" loading="lazy" decoding="async">
+                    <figcaption class="frame__chip">
+                        <span class="frame__chip-icon"><?php echo icon('award', 18); ?></span>
+                        <span>
+                            <span class="frame__chip-num">از ۱۳۹۵</span>
+                            <span class="frame__chip-label">همراه خانواده‌های ایرانی</span>
+                        </span>
+                    </figcaption>
+                </figure>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Newsletter Section -->
-<section class="section newsletter-section">
+<?php /* ═══════════════ NEWSLETTER ═══════════════ */ ?>
+<section class="section section-tight">
     <div class="container">
-        <div class="newsletter-card fade-in">
-            <div class="newsletter-content">
-                <div class="newsletter-icon">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                </div>
-                <h2>عضویت در خبرنامه <?= e(siteName()) ?></h2>
-                <p>از آخرین اطلاعیه‌ها، برنامه‌های آموزشی، مقالات تربیتی و رویدادهای مهد باخبر شوید.</p>
-                <form class="newsletter-form" id="newsletterForm" onsubmit="handleNewsletterSubmit(event)">
-                    <input type="text" name="name" class="form-control" placeholder="نام و نام خانوادگی" required aria-label="نام و نام خانوادگی">
-                    <input type="email" name="email" class="form-control" placeholder="آدرس ایمیل شما" required aria-label="آدرس ایمیل">
-                    <button type="submit" class="btn btn-primary">عضویت در خبرنامه</button>
-                </form>
-                <div class="newsletter-toast" id="newsletterToast" role="status" aria-live="polite"></div>
-            </div>
+        <div class="newsletter" data-reveal="zoom">
+            <span class="newsletter__icon"><?php echo icon('mail', 27); ?></span>
+            <h2 class="newsletter__title">خبرنامه تربیتی روما</h2>
+            <p class="newsletter__text">
+                ماهی یک ایمیل کوتاه: نکته‌های کاربردی تربیت کودک از روانشناس مجموعه،
+                برنامه کارگاه‌های والدین و اطلاعیه‌های مهم. بدون تبلیغات.
+            </p>
+
+            <form class="newsletter__form" data-newsletter novalidate>
+                <input type="text" name="name" class="form-control" placeholder="نام و نام خانوادگی" aria-label="نام و نام خانوادگی" autocomplete="name" required>
+                <input type="email" name="email" class="form-control" placeholder="آدرس ایمیل" aria-label="آدرس ایمیل" autocomplete="email" required>
+                <button type="submit" class="btn btn-primary">
+                    <?php echo icon('send', 17); ?>
+                    عضویت
+                </button>
+            </form>
+            <div class="newsletter__toast" data-newsletter-toast role="status" aria-live="polite"></div>
         </div>
     </div>
 </section>
-<script>
-function handleNewsletterSubmit(e) {
-    e.preventDefault();
-    var form = e.target;
-    var name = form.name.value.trim();
-    var email = form.email.value.trim();
-    var toast = document.getElementById('newsletterToast');
 
-    if (!name || !email) {
-        toast.className = 'newsletter-toast error';
-        toast.textContent = 'لطفاً تمامی فیلدها را وارد کنید.';
-        return;
-    }
-
-    var btn = form.querySelector('button[type="submit"]');
-    btn.disabled = true;
-    btn.textContent = 'در حال ثبت...';
-
-    setTimeout(function() {
-        toast.style.display = '';
-        toast.className = 'newsletter-toast success';
-        toast.textContent = 'با تشکر از شما ' + name + ' عزیز! ثبت‌نام شما در خبرنامه با موفقیت انجام شد.';
-        form.reset();
-        btn.disabled = false;
-        btn.textContent = 'عضویت در خبرنامه';
-        clearTimeout(toast.__hideTimer);
-        toast.__hideTimer = setTimeout(function() { toast.style.display = 'none'; }, 6000);
-    }, 800);
-}
-</script>
-
-<!-- Shared Footer CTA -->
 <?php require __DIR__ . '/templates/cta-section.php'; ?>
-
 
 <?php require_once __DIR__ . '/templates/footer.php'; ?>

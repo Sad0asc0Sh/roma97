@@ -1,208 +1,354 @@
 <?php
+declare(strict_types=1);
+
 /**
- * Dedicated About Us Template
- * Roma Kindergarten
+ * Rooma — About page template (page.php?slug=about)
  */
-?>
-<!-- Inner Hero Banner -->
-<section class="inner-hero" style="position: relative; background: var(--gradient-hero), url('<?php echo asset('assets/uploads/slide-hero-legacy.jpg'); ?>') center/cover no-repeat; padding: var(--space-2xl) 0 var(--space-xl) 0; color: var(--white); text-align: center;">
-    <div class="container">
-        <div class="breadcrumb" style="display: flex; justify-content: center; gap: 8px; font-size: var(--text-sm); margin-bottom: var(--space-sm); opacity: 0.9;">
-            <a href="<?php echo e(url('index.php')); ?>" style="color: var(--white); text-decoration: none;">خانه</a>
-            <span>‹</span>
-            <span style="color: var(--accent);">درباره روما</span>
-        </div>
-        <h1 style="font-family: var(--font-display); font-size: var(--text-4xl); margin-bottom: var(--space-xs);">داستان و فلسفه مهدکودک روما</h1>
-        <p style="font-size: var(--text-lg); max-width: 640px; margin: 0 auto; opacity: 0.95;">
-            محیطی امن، گرم و خلاق برای رشد همه‌جانبه، شادابی و کشف استعدادهای فرزند شما
-        </p>
-    </div>
-</section>
 
-<!-- Why Roma Section (Ink Night Signature Dark Card Container) -->
-<section class="section why-roma-section" style="padding: var(--space-2xl) 0; background: var(--bg-cream);">
-    <div class="container">
-        <div style="background: var(--ink-night); color: var(--white); border-radius: var(--radius-xl); padding: var(--space-2xl) var(--space-xl); box-shadow: var(--shadow-xl);">
-            <div class="section-header text-center" style="margin-bottom: var(--space-xl);">
-                <h2 style="font-family: var(--font-display); font-size: var(--text-3xl); color: var(--white); margin-bottom: var(--space-xs);">
-                    اصول سه‌گانه روما
-                </h2>
-                <p style="color: rgba(255,255,255,0.8); font-size: var(--text-base);">ارزش‌هایی که هر روز در روما زندگی می‌کنیم</p>
-            </div>
+if (!defined('ROOMA_APP')) {
+    die('Access denied.');
+}
 
-            <div class="why-roma-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-xl);">
-                <div class="why-card" style="background: var(--ink-night-soft); padding: var(--space-lg); border-radius: var(--radius-lg); border: 1px solid rgba(255,255,255,0.1);">
-                    <div style="font-family: var(--font-display); font-size: var(--text-5xl); font-weight: 800; color: var(--accent); margin-bottom: var(--space-xs); line-height: 1;">۰۱</div>
-                    <h3 style="font-size: var(--text-xl); color: var(--white); margin-bottom: var(--space-sm);">۱. یادگیری از دل بازی</h3>
-                    <p style="color: rgba(255,255,255,0.85); font-size: var(--text-base); line-height: 1.8;">
-                        کودکان با حفظ‌کردن رشد نمی‌کنند؛ آن‌ها با لمس‌کردن، ساختن و تجربه مستقیم، مفاهیم ریاضی، زبان و مهارت‌های اجتماعی را فرا می‌گیرند.
-                    </p>
-                </div>
+require_once __DIR__ . '/../../includes/ui.php';
 
-                <div class="why-card" style="background: var(--ink-night-soft); padding: var(--space-lg); border-radius: var(--radius-lg); border: 1px solid rgba(255,255,255,0.1);">
-                    <div style="font-family: var(--font-display); font-size: var(--text-5xl); font-weight: 800; color: var(--accent); margin-bottom: var(--space-xs); line-height: 1;">۰۲</div>
-                    <h3 style="font-size: var(--text-xl); color: var(--white); margin-bottom: var(--space-sm);">۲. شفافیت کامل با والدین</h3>
-                    <p style="color: rgba(255,255,255,0.85); font-size: var(--text-base); line-height: 1.8;">
-                        شما در تمام لحظات کنار ما هستید. از پنل اختصاصی والدین با گزارش روزانه تغذیه، خواب و فعالیت‌ها تا امکان ارتباط مستقیم با مربی.
-                    </p>
-                </div>
+$siteNameV = siteName();
 
-                <div class="why-card" style="background: var(--ink-night-soft); padding: var(--space-lg); border-radius: var(--radius-lg); border: 1px solid rgba(255,255,255,0.1);">
-                    <div style="font-family: var(--font-display); font-size: var(--text-5xl); font-weight: 800; color: var(--accent); margin-bottom: var(--space-xs); line-height: 1;">۰۳</div>
-                    <h3 style="font-size: var(--text-xl); color: var(--white); margin-bottom: var(--space-sm);">۳. رشد فردی، نه یکسان‌سازی</h3>
-                    <p style="color: rgba(255,255,255,0.85); font-size: var(--text-base); line-height: 1.8;">
-                        هر کودک یک الگوی رشد بی‌نظیر دارد. مربیان ما برنامه‌های آموزشی را با ریتم و استعداد ویژه هر فرزند تنظیم می‌کنند.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Timeline Section -->
-<section class="section timeline-section" style="padding: var(--space-2xl) 0;">
-    <div class="container">
-        <div class="section-header text-center" style="margin-bottom: var(--space-xl);">
-            <h2 class="title-underline" style="font-family: var(--font-display); font-size: var(--text-3xl); color: var(--neutral-dark);">
-                مسیر رشد روما در یک نگاه
-            </h2>
-            <p style="color: var(--muted); font-size: var(--text-base); margin-top: var(--space-xs);">از تاسیس تا امروز همراه با خانواده‌ها</p>
-        </div>
-
-        <div class="timeline-vertical" style="max-width: 680px; margin: 0 auto;">
-            <div class="timeline-item">
-                <div class="timeline-time">۱۳۹۵</div>
-                <div class="timeline-title">تاسیس مهدکودک روما با ۲ کلاس نوباوه</div>
-                <div class="timeline-desc">شروع فعالیت با مجوز رسمی بهزیستی و ظرفیت پذیرش ۲۰ کودک در فضایی صمیمی.</div>
-            </div>
-
-            <div class="timeline-item">
-                <div class="timeline-time">۱۳۹۹</div>
-                <div class="timeline-title">توسعه فضای بازی سرپوشیده و کارگاه‌های تخصصی</div>
-                <div class="timeline-desc">افزایش بخش پیش‌دبستانی، راه‌اندازی کارگاه سفالگری و اتاق بازی‌های تعاملی.</div>
-            </div>
-
-            <div class="timeline-item">
-                <div class="timeline-time">۱۴۰۳</div>
-                <div class="timeline-title">ارتقای سیستم هوشمند والدین و پایش رشد</div>
-                <div class="timeline-desc">استقرار پنل دیجیتال شفافیت والدین، پایش تغذیه ارگانیک و دوربین‌های مداربسته پیشرفته.</div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Teachers Team Section -->
-<?php
+/* Team members come from the teachers table when available. */
 $teamTeachers = [];
 try {
-    initializeTeachersTables();
-    $pdo = getDb();
-    $teamStmt = $pdo->prepare(
+    if (function_exists('initializeTeachersTables')) {
+        initializeTeachersTables();
+    }
+    $pdoTeam = getDb();
+    $teamStmt = $pdoTeam->query(
         "SELECT first_name, last_name, avatar, role_title, bio, education_level, major
          FROM teachers
          WHERE status = 'active' AND (show_in_team = 1 OR show_in_team IS NULL)
          ORDER BY sort_order ASC, id ASC"
     );
-    $teamStmt->execute();
     $teamTeachers = $teamStmt->fetchAll();
-} catch (Throwable $e) {
-    error_log($e->getMessage());
+} catch (Throwable $exception) {
+    error_log($exception->getMessage());
 }
 
-if (!function_exists('getTeacherInitials')) {
-    function getTeacherInitials(string $fn, string $ln): string {
-        $f = mb_substr(trim($fn), 0, 1, 'UTF-8');
-        $l = mb_substr(trim($ln), 0, 1, 'UTF-8');
-        return ($f && $l) ? $f . '‌' . $l : ($f ?: ($l ?: '?'));
+if (!function_exists('roomaTeacherInitials')) {
+    /**
+     * Two-letter Persian monogram for a teacher without a photo.
+     */
+    function roomaTeacherInitials(string $first, string $last): string
+    {
+        $f = mb_substr(trim($first), 0, 1, 'UTF-8');
+        $l = mb_substr(trim($last), 0, 1, 'UTF-8');
+
+        if ($f !== '' && $l !== '') {
+            return $f . '‌' . $l;
+        }
+
+        return $f !== '' ? $f : ($l !== '' ? $l : '؟');
     }
 }
+
+$heroImg = is_file(__DIR__ . '/../../assets/img/hero-classroom.jpg')
+    ? 'assets/img/hero-classroom.jpg'
+    : 'assets/img/about-story.jpg';
 ?>
-<section class="section team-section" style="padding: var(--space-2xl) 0; background: var(--paper);">
+
+<?php /* ═══════════════ PAGE HERO ═══════════════ */ ?>
+<section class="page-hero">
+    <div class="page-hero__media">
+        <img src="<?php echo e(asset($heroImg)); ?>" alt="" width="1920" height="1072" loading="eager" fetchpriority="high">
+    </div>
+    <div class="page-hero__scrim"></div>
+
+    <div class="container page-hero__inner">
+        <nav class="crumbs" aria-label="مسیر صفحه">
+            <a href="<?php echo e(url('index.php')); ?>">خانه</a>
+            <span class="crumbs__sep" aria-hidden="true">‹</span>
+            <span class="crumbs__current" aria-current="page">درباره روما</span>
+        </nav>
+        <h1 class="page-hero__title">داستان و فلسفه مهدکودک <?php echo e($siteNameV); ?></h1>
+        <p class="page-hero__sub">
+            ده سال تلاش برای ساختن جایی که کودک با خیال راحت بزرگ شود و والدین با آرامش
+            سر کار بروند.
+        </p>
+    </div>
+</section>
+
+<?php /* ═══════════════ STORY ═══════════════ */ ?>
+<section class="section">
     <div class="container">
-        <div class="section-header text-center" style="margin-bottom: var(--space-xl);">
-            <h2 style="font-family: var(--font-display); font-size: var(--text-3xl); color: var(--neutral-dark);">
-                تیم مربیان تخصصی روما
+        <div class="split split--wide-start">
+            <div class="split__content" data-reveal="start">
+                <span class="eyebrow">
+                    <?php echo icon('leaf', 14); ?>
+                    از کجا شروع شد
+                </span>
+                <h2 class="split__title">از دو کلاس کوچک تا خانه دوم ۵۰۰ کودک</h2>
+                <p class="split__text">
+                    سال ۱۳۹۵ روما با دو کلاس، پنج مربی و ظرفیت بیست کودک کار خود را آغاز کرد.
+                    ایده اولیه ساده بود: مادرانی که مجبور بودند بین شغل و آرامش خیالشان یکی را
+                    انتخاب کنند، باید گزینه سومی داشته باشند — مهدی که بتوانند به آن اعتماد کنند.
+                </p>
+                <p class="split__text">
+                    امروز پس از ده سال، بیش از ۵۰۰ کودک از روما فارغ‌التحصیل شده‌اند. آنچه تغییر
+                    نکرده، همان اصل نخست است: هر کودک یک نفر است، نه یک شماره در لیست حضور.
+                    برنامه ما با ریتم او هماهنگ می‌شود، نه برعکس.
+                </p>
+
+                <ul class="check-list mt-md">
+                    <li><?php echo icon('check-circle', 19); ?><span>مجوز رسمی و فعال سازمان بهزیستی</span></li>
+                    <li><?php echo icon('check-circle', 19); ?><span>فضای مستقل و ایمن‌سازی‌شده برای هر گروه سنی</span></li>
+                    <li><?php echo icon('check-circle', 19); ?><span>آشپزخانه اختصاصی با پخت روزانه</span></li>
+                    <li><?php echo icon('check-circle', 19); ?><span>بیمه حوادث کامل برای همه کودکان</span></li>
+                </ul>
+            </div>
+
+            <div class="split__media" data-reveal="end">
+                <?php
+                $storyImg = is_file(__DIR__ . '/../../assets/uploads/gallery/about-story.jpg')
+                    ? 'assets/uploads/gallery/about-story.jpg'
+                    : 'assets/img/about-story.jpg';
+                ?>
+                <figure class="frame">
+                    <img src="<?php echo e(asset($storyImg)); ?>"
+                         alt="داستان مهدکودک <?php echo e($siteNameV); ?>"
+                         width="800" height="533" loading="lazy" decoding="async">
+                    <figcaption class="frame__chip">
+                        <span class="frame__chip-icon"><?php echo icon('users', 18); ?></span>
+                        <span>
+                            <span class="frame__chip-num">۵۰۰+</span>
+                            <span class="frame__chip-label">کودک فارغ‌التحصیل</span>
+                        </span>
+                    </figcaption>
+                </figure>
+            </div>
+        </div>
+    </div>
+</section>
+
+<?php /* ═══════════════ PILLARS ═══════════════ */ ?>
+<section class="section section-paper">
+    <div class="container">
+        <div class="pillars" data-reveal-group data-reveal-step="110">
+            <div class="pillars__head" data-reveal="up">
+                <span class="eyebrow eyebrow-light">
+                    <?php echo icon('target', 14); ?>
+                    اصول ما
+                </span>
+                <h2 class="pillars__title">سه اصلی که هر روز در روما زندگی می‌کنیم</h2>
+                <p class="pillars__sub">اینها شعار روی دیوار نیستند؛ معیار تصمیم‌گیری روزانه ما هستند.</p>
+            </div>
+
+            <div class="pillars__grid">
+                <article class="pillar" data-reveal="up">
+                    <div class="pillar__num">۰۱</div>
+                    <h3 class="pillar__title">یادگیری از دل بازی</h3>
+                    <p class="pillar__text">
+                        کودکان با حفظ‌کردن رشد نمی‌کنند؛ با لمس‌کردن، ساختن و تجربه مستقیم،
+                        مفاهیم ریاضی، زبان و مهارت‌های اجتماعی را درونی می‌کنند. در روما
+                        هیچ کودکی پشت میز نمی‌نشیند تا «درس بدهد».
+                    </p>
+                </article>
+
+                <article class="pillar" data-reveal="up">
+                    <div class="pillar__num">۰۲</div>
+                    <h3 class="pillar__title">شفافیت کامل با والدین</h3>
+                    <p class="pillar__text">
+                        شما حق دارید بدانید فرزندتان چه خورد، چقدر خوابید و امروز چه حالی داشت.
+                        پنل والدین، گزارش روزانه و ارتباط مستقیم با مربی، حدس‌زدن را از
+                        رابطه ما حذف می‌کند.
+                    </p>
+                </article>
+
+                <article class="pillar" data-reveal="up">
+                    <div class="pillar__num">۰۳</div>
+                    <h3 class="pillar__title">رشد فردی، نه یکسان‌سازی</h3>
+                    <p class="pillar__text">
+                        هر کودک الگوی رشد بی‌نظیر خودش را دارد. یکی زودتر حرف می‌زند، دیگری
+                        زودتر راه می‌افتد. مربیان ما برنامه را با ریتم و استعداد هر کودک
+                        تنظیم می‌کنند — و هیچ‌وقت او را مقایسه نمی‌کنند.
+                    </p>
+                </article>
+            </div>
+        </div>
+    </div>
+</section>
+
+<?php /* ═══════════════ TIMELINE ═══════════════ */ ?>
+<section class="section">
+    <div class="container container-narrow">
+        <div class="section-head" data-reveal="up">
+            <span class="eyebrow">
+                <?php echo icon('trending', 14); ?>
+                مسیر رشد
+            </span>
+            <h2 class="section-head__title">
+                روما در یک <span class="u-mark">نگاه</span>
             </h2>
-            <p style="color: var(--muted); font-size: var(--text-base);">دارای گواهی‌نامه‌های رسمی مربی‌گری و روانشناسی کودک</p>
+            <p class="section-head__sub">از تأسیس تا امروز، همراه با خانواده‌ها.</p>
         </div>
 
-        <div class="team-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-lg);">
-            <?php if (!empty($teamTeachers)): ?>
+        <div class="timeline" data-reveal-group data-reveal-step="90">
+            <div class="timeline__item" data-reveal="start">
+                <span class="timeline__time">۱۳۹۵</span>
+                <p class="timeline__title">تأسیس روما با دو کلاس نوباوه</p>
+                <p class="timeline__desc">
+                    آغاز فعالیت با مجوز رسمی بهزیستی، پنج مربی و ظرفیت پذیرش بیست کودک
+                    در فضایی کوچک و صمیمی.
+                </p>
+            </div>
+            <div class="timeline__item" data-reveal="start">
+                <span class="timeline__time">۱۳۹۷</span>
+                <p class="timeline__title">افزودن بخش پیش‌دبستانی</p>
+                <p class="timeline__desc">
+                    راه‌اندازی دوره آمادگی مدرسه با تمرکز بر دست‌ورزی، تمرکز و سوادآموزی اولیه.
+                </p>
+            </div>
+            <div class="timeline__item" data-reveal="start">
+                <span class="timeline__time">۱۳۹۹</span>
+                <p class="timeline__title">توسعه فضای بازی سرپوشیده و کارگاه‌ها</p>
+                <p class="timeline__desc">
+                    ساخت اتاق بازی‌های تعاملی، کارگاه سفالگری و نوسازی کامل حیاط با
+                    کف‌پوش ضربه‌گیر استاندارد.
+                </p>
+            </div>
+            <div class="timeline__item" data-reveal="start">
+                <span class="timeline__time">۱۴۰۱</span>
+                <p class="timeline__title">آشپزخانه اختصاصی و مشاور تغذیه</p>
+                <p class="timeline__desc">
+                    پایان قرارداد با پیمانکار غذا و آغاز پخت روزانه در محل، زیر نظر
+                    کارشناس تغذیه کودک.
+                </p>
+            </div>
+            <div class="timeline__item" data-reveal="start">
+                <span class="timeline__time">۱۴۰۳</span>
+                <p class="timeline__title">راه‌اندازی پنل هوشمند والدین</p>
+                <p class="timeline__desc">
+                    استقرار سامانه دیجیتال گزارش روزانه، حضور و غیاب، پیام مربی و
+                    مدیریت شهریه به‌صورت کاملاً شفاف.
+                </p>
+            </div>
+            <div class="timeline__item" data-reveal="start">
+                <span class="timeline__time">امروز</span>
+                <p class="timeline__title">بیش از ۵۰۰ خانواده، یک هدف ثابت</p>
+                <p class="timeline__desc">
+                    ادامه همان مسیر با بیست مربی و کارشناس، و همان اصل نخست:
+                    هر کودک یک نفر است.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<?php /* ═══════════════ TEAM ═══════════════ */ ?>
+<?php if ($teamTeachers !== []): ?>
+<section class="section section-sunken">
+    <div class="container">
+        <div class="section-head" data-reveal="up">
+            <span class="eyebrow eyebrow-clay">
+                <?php echo icon('users', 14); ?>
+                تیم روما
+            </span>
+            <h2 class="section-head__title">
+                کسانی که هر روز <span class="u-mark">کنار فرزند شما</span> هستند
+            </h2>
+            <p class="section-head__sub">
+                همه مربیان ما دارای مدرک مرتبط، گواهی مربی‌گری بهزیستی و کارت بهداشت معتبرند.
+            </p>
+        </div>
+
+        <div class="team-grid" data-reveal-group data-reveal-step="80">
+            <?php foreach ($teamTeachers as $teacher): ?>
                 <?php
-                $badgeColors = ['badge-success', 'badge-warning', 'badge-info', 'badge-primary'];
-                $themeStyles = [
-                    ['bg' => 'var(--primary-faint)', 'color' => 'var(--primary-dark)', 'border' => 'var(--primary-light)'],
-                    ['bg' => 'var(--secondary-faint)', 'color' => 'var(--secondary-dark)', 'border' => 'var(--secondary-light)'],
-                ];
+                $fullName = trim((string) $teacher['first_name'] . ' ' . (string) $teacher['last_name']);
+                $initials = roomaTeacherInitials((string) $teacher['first_name'], (string) $teacher['last_name']);
+                $roleTitle = (string) ($teacher['role_title'] ?? '');
+                if ($roleTitle === '') {
+                    $roleTitle = (string) ($teacher['education_level'] ?? '') !== ''
+                        ? (string) $teacher['education_level']
+                        : 'مربی روما';
+                }
+                $bioText = (string) ($teacher['bio'] ?? '');
+                if ($bioText === '' && (string) ($teacher['major'] ?? '') !== '') {
+                    $bioText = 'تخصص: ' . (string) $teacher['major'];
+                }
+                $avatar = (string) ($teacher['avatar'] ?? '');
                 ?>
-                <?php foreach ($teamTeachers as $idx => $t): ?>
-                    <?php
-                    $fullName = trim($t['first_name'] . ' ' . $t['last_name']);
-                    $initials = getTeacherInitials((string) $t['first_name'], (string) $t['last_name']);
-                    $roleTitle = !empty($t['role_title']) ? $t['role_title'] : (!empty($t['education_level']) ? $t['education_level'] : 'مربی روما');
-                    $bioText   = !empty($t['bio']) ? $t['bio'] : (!empty($t['major']) ? 'تخصص: ' . $t['major'] : '');
-                    $theme = $themeStyles[$idx % count($themeStyles)];
-                    $badgeClass = $badgeColors[$idx % count($badgeColors)];
-                    ?>
-                    <div class="team-card" style="background: var(--white); border-radius: var(--radius-lg); padding: var(--space-lg); text-align: center; box-shadow: var(--shadow-sm); border: 1px solid var(--border);">
-                        <?php if (!empty($t['avatar'])): ?>
-                            <div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; margin: 0 auto var(--space-md) auto; border: 3px solid <?= $theme['border'] ?>;">
-                                <img src="<?= e(url((string) $t['avatar'])) ?>" alt="<?= e($fullName) ?>" style="width: 100%; height: 100%; object-fit: cover;">
-                            </div>
+                <article class="card card-hover person" data-reveal="up">
+                    <div class="person__photo">
+                        <?php if ($avatar !== ''): ?>
+                            <img src="<?php echo e(url($avatar)); ?>" alt="<?php echo e($fullName); ?>" loading="lazy" decoding="async">
                         <?php else: ?>
-                            <div style="width: 100px; height: 100px; border-radius: 50%; background: <?= $theme['bg'] ?>; color: <?= $theme['color'] ?>; display: flex; align-items: center; justify-content: center; font-size: var(--text-2xl); font-weight: 700; margin: 0 auto var(--space-md) auto; border: 3px solid <?= $theme['border'] ?>;">
-                                <?= e($initials) ?>
-                            </div>
-                        <?php endif; ?>
-                        <h3 style="font-size: var(--text-lg); margin-bottom: 4px;"><?= e($fullName) ?></h3>
-                        <span class="badge <?= e($badgeClass) ?>" style="margin-bottom: var(--space-xs); display: inline-block;"><?= e($roleTitle) ?></span>
-                        <?php if ($bioText !== ''): ?>
-                            <p style="font-size: var(--text-sm); color: var(--muted); margin: 0;"><?= e($bioText) ?></p>
+                            <span class="person__initials"><?php echo e($initials); ?></span>
                         <?php endif; ?>
                     </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
+                    <h3 class="person__name"><?php echo e($fullName); ?></h3>
+                    <div class="person__role">
+                        <span class="badge badge-primary"><?php echo e($roleTitle); ?></span>
+                    </div>
+                    <?php if ($bioText !== ''): ?>
+                        <p class="person__bio"><?php echo e($bioText); ?></p>
+                    <?php endif; ?>
+                </article>
+            <?php endforeach; ?>
         </div>
     </div>
 </section>
+<?php endif; ?>
 
-<!-- Certificates Section -->
-<section class="section certificates-section" style="padding: var(--space-2xl) 0;">
+<?php /* ═══════════════ CERTIFICATES ═══════════════ */ ?>
+<section class="section">
     <div class="container">
-        <div class="section-header text-center" style="margin-bottom: var(--space-xl);">
-            <h2 style="font-family: var(--font-display); font-size: var(--text-3xl); color: var(--neutral-dark);">
-                مجوزها و تاییدیه‌های رسمی
+        <div class="section-head" data-reveal="up">
+            <span class="eyebrow">
+                <?php echo icon('shield', 14); ?>
+                مجوزها و استانداردها
+            </span>
+            <h2 class="section-head__title">
+                اعتماد شما با <span class="u-mark">سند</span> پشتیبانی می‌شود
             </h2>
-            <p style="color: var(--muted); font-size: var(--text-base);">تضمین استانداردهای بهداشتی، آموزشی و ایمنی</p>
+            <p class="section-head__sub">
+                همه مجوزها در محل مجموعه قابل رؤیت و استعلام است.
+            </p>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); text-align: center;">
-            <div style="background: var(--white); padding: var(--space-md); border-radius: var(--radius-md); border: 1px solid var(--border);">
-                <div style="color: var(--primary); margin-bottom: var(--space-xs);">
-                    <svg style="width: 40px; height: 40px;"><use href="<?php echo asset('assets/img/icons.svg#icon-shield'); ?>"/></svg>
-                </div>
-                <h4 style="font-size: var(--text-base); margin-bottom: 4px;">پروانه رسمی بهزیستی</h4>
-                <p style="font-size: var(--text-xs); color: var(--muted); margin: 0;">شماره ثبت و استعلام معتبر سازمان</p>
-            </div>
+        <div class="feature-grid" data-reveal-group data-reveal-step="80">
+            <article class="card card-hover feature text-center" data-reveal="up">
+                <span class="feature__icon mx-auto"><?php echo icon('shield', 27); ?></span>
+                <h3 class="feature__title">پروانه رسمی بهزیستی</h3>
+                <p class="feature__text">
+                    فعالیت روما تحت پروانه معتبر سازمان بهزیستی است و شماره ثبت آن
+                    قابل استعلام می‌باشد.
+                </p>
+            </article>
 
-            <div style="background: var(--white); padding: var(--space-md); border-radius: var(--radius-md); border: 1px solid var(--border);">
-                <div style="color: var(--secondary); margin-bottom: var(--space-xs);">
-                    <svg style="width: 40px; height: 40px;"><use href="<?php echo asset('assets/img/icons.svg#icon-award'); ?>"/></svg>
-                </div>
-                <h4 style="font-size: var(--text-base); margin-bottom: 4px;">تاییدیه بهداشت و تغذیه</h4>
-                <p style="font-size: var(--text-xs); color: var(--muted); margin: 0;">کارت بهداشت مربیان و نظارت دوره‌ای</p>
-            </div>
+            <article class="card card-hover feature text-center" data-reveal="up">
+                <span class="feature__icon mx-auto"><?php echo icon('utensils', 27); ?></span>
+                <h3 class="feature__title">تأییدیه بهداشت و تغذیه</h3>
+                <p class="feature__text">
+                    کارت بهداشت همه کارکنان به‌روز است و آشپزخانه به‌صورت دوره‌ای
+                    بازرسی می‌شود.
+                </p>
+            </article>
 
-            <div style="background: var(--white); padding: var(--space-md); border-radius: var(--radius-md); border: 1px solid var(--border);">
-                <div style="color: var(--accent); margin-bottom: var(--space-xs);">
-                    <svg style="width: 40px; height: 40px;"><use href="<?php echo asset('assets/img/icons.svg#icon-camera'); ?>"/></svg>
-                </div>
-                <h4 style="font-size: var(--text-base); margin-bottom: 4px;">ایمنی و پایش دوربین</h4>
-                <p style="font-size: var(--text-xs); color: var(--muted); margin: 0;">استاندارد ایمنی فیزیکی کلاس‌ها و حیاط</p>
-            </div>
+            <article class="card card-hover feature text-center" data-reveal="up">
+                <span class="feature__icon mx-auto"><?php echo icon('camera', 27); ?></span>
+                <h3 class="feature__title">ایمنی فیزیکی و پایش</h3>
+                <p class="feature__text">
+                    دوربین مداربسته کلاس‌ها و حیاط، کف‌پوش ضربه‌گیر و مهار تجهیزات
+                    مطابق استاندارد ایمنی کودک.
+                </p>
+            </article>
+
+            <article class="card card-hover feature text-center" data-reveal="up">
+                <span class="feature__icon mx-auto"><?php echo icon('heart', 27); ?></span>
+                <h3 class="feature__title">بیمه حوادث کودکان</h3>
+                <p class="feature__text">
+                    همه کودکان از روز نخست ثبت‌نام تحت پوشش بیمه حوادث قرار می‌گیرند.
+                </p>
+            </article>
         </div>
     </div>
 </section>
 
-<!-- Shared Footer CTA -->
 <?php require __DIR__ . '/../cta-section.php'; ?>

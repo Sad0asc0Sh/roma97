@@ -3,103 +3,132 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/includes/error_handler.php';
-
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/db.php';
 
+/**
+ * Validate an incoming news id.
+ */
 function parsePublicNewsId(mixed $value): int
 {
-    $id = filter_var($value, FILTER_VALIDATE_INT, [
-        'options' => ['min_range' => 1],
-    ]);
+    $id = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 
     return is_int($id) ? $id : 0;
 }
 
-function formatPublicNewsDate(string $date): string
+/**
+ * Plain-text excerpt for a news teaser.
+ */
+function publicNewsExcerpt(string $content, int $limit = 165): string
 {
-    return shamsiDate($date);
-}
+    $plain = trim(preg_replace('/\s+/u', ' ', strip_tags($content)) ?? '');
 
-function publicNewsExcerpt(string $content, int $limit = 180): string
-{
-    $plainText = trim(strip_tags($content));
-
-    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
-        return mb_strlen($plainText, 'UTF-8') > $limit
-            ? mb_substr($plainText, 0, $limit, 'UTF-8') . '...'
-            : $plainText;
+    if (function_exists('mb_strlen')) {
+        return mb_strlen($plain, 'UTF-8') > $limit
+            ? rtrim(mb_substr($plain, 0, $limit, 'UTF-8')) . '…'
+            : $plain;
     }
 
-    return strlen($plainText) > $limit ? substr($plainText, 0, $limit) . '...' : $plainText;
+    return strlen($plain) > $limit ? rtrim(substr($plain, 0, $limit)) . '…' : $plain;
+}
+
+/**
+ * Estimated reading time in Persian, based on ~200 words per minute.
+ */
+function publicNewsReadingTime(string $content): string
+{
+    $plain = trim(strip_tags($content));
+    $words = preg_split('/\s+/u', $plain, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $minutes = max(1, (int) ceil(count($words) / 200));
+
+    return persianNumber((string) $minutes) . ' دقیقه مطالعه';
 }
 
 $singleNewsItem = null;
-$relatedNews = [];
-$newsItems = [];
-$notFound = false;
-$hasId = array_key_exists('id', $_GET);
-$newsId = $hasId ? parsePublicNewsId($_GET['id']) : 0;
+$relatedNews    = [];
+$newsItems      = [];
+$newsPagination = [];
+$availableCats  = [];
+$notFound       = false;
+
+$hasId     = array_key_exists('id', $_GET);
+$newsId    = $hasId ? parsePublicNewsId($_GET['id']) : 0;
 $catFilter = trim((string) ($_GET['cat'] ?? ''));
 
 try {
-    initializeCmsTables();
     $pdo = getDb();
+
+    // Which categories actually exist? Drives the filter chips, so a chip can
+    // never point at an empty result set.
+    $catStmt = $pdo->query(
+        "SELECT category, COUNT(*) AS total
+         FROM news
+         WHERE category IS NOT NULL AND category <> ''
+         GROUP BY category
+         ORDER BY total DESC"
+    );
+    $availableCats = $catStmt->fetchAll();
+
+    $knownCats = array_column($availableCats, 'category');
+    if ($catFilter !== '' && !in_array($catFilter, $knownCats, true)) {
+        $catFilter = '';
+    }
 
     if ($hasId) {
         if ($newsId === 0) {
             $notFound = true;
         } else {
-            $statement = $pdo->prepare(
+            $stmt = $pdo->prepare(
                 'SELECT id, title, content, image, category, created_at FROM news WHERE id = :id LIMIT 1'
             );
-            $statement->execute([':id' => $newsId]);
-            $singleNewsItem = $statement->fetch() ?: null;
+            $stmt->execute([':id' => $newsId]);
+            $singleNewsItem = $stmt->fetch() ?: null;
             $notFound = $singleNewsItem === null;
 
-            if ($singleNewsItem) {
+            if ($singleNewsItem !== null) {
+                // Prefer same-category articles, then fall back to recency.
                 $relStmt = $pdo->prepare(
-                    'SELECT id, title, content, image, created_at FROM news WHERE id != :id ORDER BY created_at DESC LIMIT 3'
+                    'SELECT id, title, image, category, created_at
+                     FROM news
+                     WHERE id <> :id
+                     ORDER BY (category = :cat) DESC, created_at DESC
+                     LIMIT 3'
                 );
-                $relStmt->execute([':id' => $newsId]);
+                $relStmt->execute([
+                    ':id'  => $newsId,
+                    ':cat' => (string) ($singleNewsItem['category'] ?? ''),
+                ]);
                 $relatedNews = $relStmt->fetchAll();
             }
         }
     } else {
-        // Paginated list — the news table grows over time; never select all rows.
         $newsPage = max(1, (int) ($_GET['p'] ?? 1));
-        $perPage = 9;
+        $perPage  = 9;
 
-        $countStmt = $catFilter !== ''
-            ? $pdo->prepare('SELECT COUNT(*) FROM news WHERE category = :cat')
-            : $pdo->query('SELECT COUNT(*) FROM news');
         if ($catFilter !== '') {
+            $countStmt = $pdo->prepare('SELECT COUNT(*) FROM news WHERE category = :cat');
             $countStmt->execute([':cat' => $catFilter]);
+        } else {
+            $countStmt = $pdo->query('SELECT COUNT(*) FROM news');
         }
-        $totalNews = (int) $countStmt->fetchColumn();
+        $totalNews      = (int) $countStmt->fetchColumn();
         $newsPagination = paginate($totalNews, $newsPage, $perPage);
 
+        $sql = 'SELECT id, title, content, image, category, created_at FROM news'
+            . ($catFilter !== '' ? ' WHERE category = :cat' : '')
+            . ' ORDER BY created_at DESC LIMIT :lim OFFSET :off';
+        $stmt = $pdo->prepare($sql);
         if ($catFilter !== '') {
-            $statement = $pdo->prepare(
-                'SELECT id, title, content, image, category, created_at FROM news WHERE category = :cat ORDER BY created_at DESC LIMIT :lim OFFSET :off'
-            );
-            $statement->bindValue(':cat', $catFilter, PDO::PARAM_STR);
-            $statement->bindValue(':lim', $perPage, PDO::PARAM_INT);
-            $statement->bindValue(':off', $newsPagination['offset'], PDO::PARAM_INT);
-            $statement->execute();
-        } else {
-            $statement = $pdo->prepare(
-                'SELECT id, title, content, image, category, created_at FROM news ORDER BY created_at DESC LIMIT :lim OFFSET :off'
-            );
-            $statement->bindValue(':lim', $perPage, PDO::PARAM_INT);
-            $statement->bindValue(':off', $newsPagination['offset'], PDO::PARAM_INT);
-            $statement->execute();
+            $stmt->bindValue(':cat', $catFilter, PDO::PARAM_STR);
         }
-        $newsItems = $statement->fetchAll();
+        $stmt->bindValue(':lim', $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':off', $newsPagination['offset'], PDO::PARAM_INT);
+        $stmt->execute();
+        $newsItems = $stmt->fetchAll();
     }
 } catch (Throwable $exception) {
     error_log($exception->getMessage());
-    $notFound = $hasId;
+    $notFound  = $hasId;
     $newsItems = [];
 }
 
@@ -107,151 +136,267 @@ if ($notFound) {
     http_response_code(404);
 }
 
-$pageTitle = $singleNewsItem ? $singleNewsItem['title'] . ' | ' . siteName() : 'اخبار | ' . siteName();
+$siteNameV = siteName();
+
+if ($singleNewsItem !== null) {
+    $pageTitle = (string) $singleNewsItem['title'] . ' | ' . $siteNameV;
+    $pageDescription = publicNewsExcerpt((string) $singleNewsItem['content'], 155);
+} elseif ($notFound) {
+    $pageTitle = 'خبر یافت نشد | ' . $siteNameV;
+} else {
+    $pageTitle = 'اخبار و رویدادها | ' . $siteNameV;
+    $pageDescription = 'آخرین اخبار، اطلاعیه‌ها، جشن‌ها و مقالات تربیتی مهدکودک ' . $siteNameV . '.';
+}
+
 require_once __DIR__ . '/templates/header.php';
 ?>
 
 <?php if ($notFound): ?>
-    <section class="section page-404">
-        <div class="container" style="text-align: center; padding: var(--space-2xl) 0;">
-            <div class="empty-state">
-                <div class="empty-state-icon" style="width: 100px; height: 100px; margin: 0 auto var(--space-md) auto;">
-                    <svg viewBox="0 0 100 100" style="width:100%; height:100%;"><use href="<?= asset('assets/img/bargoo.svg#bargoo-surprised') ?>"/></svg>
-                </div>
-                <h1 style="font-family: var(--font-display); font-size: var(--text-3xl); margin-bottom: var(--space-xs);">خبری یافت نشد</h1>
-                <p style="color: var(--muted); margin-bottom: var(--space-lg);">خبری که به دنبال آن بودید یافت نشد یا حذف شده است.</p>
-                <a href="<?= e(url('news.php')) ?>" class="btn btn-primary">بازگشت به لیست اخبار</a>
+
+    <section class="section">
+        <div class="container">
+            <div class="empty">
+                <svg class="empty__art" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+                    <use href="<?php echo e(asset('assets/img/bargoo.svg#bargoo-surprised')); ?>"/>
+                </svg>
+                <h1 class="empty__title">این خبر پیدا نشد</h1>
+                <p class="empty__text">
+                    خبری که به دنبالش بودید یافت نشد یا حذف شده است.
+                </p>
+                <a class="btn btn-primary" href="<?php echo e(url('news.php')); ?>">
+                    <?php echo icon('arrow-left', 17); ?>
+                    بازگشت به همه اخبار
+                </a>
             </div>
         </div>
     </section>
-<?php elseif ($singleNewsItem): ?>
-    <section class="section news-detail" style="padding: var(--space-2xl) 0;">
-        <div class="container" style="max-width: 860px;">
-            <div class="breadcrumb" style="margin-bottom: var(--space-lg);">
-                <a href="<?= e(url('index.php')) ?>">خانه</a>
-                <span class="breadcrumb-sep">‹</span>
-                <a href="<?= e(url('news.php')) ?>">اخبار</a>
-                <span class="breadcrumb-sep">‹</span>
-                <span class="breadcrumb-current"><?= e($singleNewsItem['title']) ?></span>
-            </div>
 
-            <article class="news-article" style="background: var(--white); padding: var(--space-2xl); border-radius: var(--radius-xl); border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: var(--space-2xl);">
-                <header class="news-article-header" style="margin-bottom: var(--space-lg); border-bottom: 1px solid var(--border); padding-bottom: var(--space-md);">
-                    <h1 style="font-family: var(--font-display); font-size: var(--text-3xl); color: var(--neutral-dark); margin-bottom: var(--space-sm);"><?= e($singleNewsItem['title']) ?></h1>
+<?php elseif ($singleNewsItem !== null): ?>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-sm);">
-                        <time class="news-article-date" datetime="<?= e($singleNewsItem['created_at']) ?>" style="color: var(--muted); font-size: var(--text-sm);">
-                            <svg width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-inline-end:4px;"><use href="<?= e(asset('assets/img/icons.svg#icon-calendar')) ?>"/></svg> <?= e(formatPublicNewsDate($singleNewsItem['created_at'])) ?>
+    <?php
+    $articleUrl   = absoluteUrl('news.php?id=' . (int) $singleNewsItem['id']);
+    $articleTitle = (string) $singleNewsItem['title'];
+    $articleCat   = (string) ($singleNewsItem['category'] ?? '');
+    ?>
+    <section class="section">
+        <div class="container">
+            <article class="article">
+
+                <nav class="crumbs crumbs--page" aria-label="مسیر صفحه">
+                    <a href="<?php echo e(url('index.php')); ?>">خانه</a>
+                    <span class="crumbs__sep" aria-hidden="true">‹</span>
+                    <a href="<?php echo e(url('news.php')); ?>">اخبار</a>
+                    <span class="crumbs__sep" aria-hidden="true">‹</span>
+                    <span class="crumbs__current" aria-current="page"><?php echo e($articleTitle); ?></span>
+                </nav>
+
+                <header class="article__head">
+                    <span class="badge <?php echo e(newsCategoryBadge($articleCat)); ?>">
+                        <?php echo e(newsCategoryLabel($articleCat)); ?>
+                    </span>
+                    <h1 class="article__title"><?php echo e($articleTitle); ?></h1>
+                    <div class="article__meta">
+                        <time class="article__meta-item" datetime="<?php echo e((string) $singleNewsItem['created_at']); ?>">
+                            <?php echo icon('calendar', 14); ?>
+                            <?php echo e(shamsiDate((string) $singleNewsItem['created_at'])); ?>
                         </time>
-
-                        <!-- Share Buttons -->
-                        <div class="news-share-buttons" style="display: flex; gap: 8px; align-items: center;">
-                            <span style="font-size: var(--text-xs); color: var(--muted); font-weight: 600;">اشتراک‌گذاری:</span>
-                            <a href="https://t.me/share/url?url=<?= urlencode(url('news.php?id=' . $singleNewsItem['id'])) ?>&text=<?= urlencode($singleNewsItem['title']) ?>" target="_blank" rel="noopener" class="btn btn-outline" style="padding: 4px 10px; font-size: var(--text-xs);" title="تلگرام">
-                                تلگرام
-                            </a>
-                            <a href="https://api.whatsapp.com/send?text=<?= urlencode($singleNewsItem['title'] . ' ' . url('news.php?id=' . $singleNewsItem['id'])) ?>" target="_blank" rel="noopener" class="btn btn-outline" style="padding: 4px 10px; font-size: var(--text-xs); color: #25D366; border-color: #25D366;" title="واتس‌اپ">
-                                واتس‌اپ
-                            </a>
-                        </div>
+                        <span class="article__meta-item">
+                            <?php echo icon('clock', 14); ?>
+                            <?php echo e(publicNewsReadingTime((string) $singleNewsItem['content'])); ?>
+                        </span>
                     </div>
                 </header>
 
                 <?php if (!empty($singleNewsItem['image'])): ?>
-                    <div class="news-article-image" style="margin-bottom: var(--space-lg); border-radius: var(--radius-lg); overflow: hidden;">
-                        <img src="<?= e(url($singleNewsItem['image'])) ?>" alt="<?= e($singleNewsItem['title']) ?>" style="width: 100%; max-height: 480px; object-fit: cover;">
-                    </div>
+                    <figure class="article__media">
+                        <img src="<?php echo e(url((string) $singleNewsItem['image'])); ?>"
+                             alt="<?php echo e($articleTitle); ?>"
+                             loading="eager" fetchpriority="high" decoding="async">
+                    </figure>
                 <?php endif; ?>
 
-                <div class="news-article-body" style="font-size: var(--text-base); line-height: 1.9; color: var(--neutral-dark);">
-                    <?= nl2br(e($singleNewsItem['content'])) ?>
+                <div class="article__body">
+                    <?php echo nl2br(e((string) $singleNewsItem['content'])); ?>
+                </div>
+
+                <div class="share">
+                    <span class="share__label">اشتراک‌گذاری:</span>
+                    <a class="share__btn"
+                       href="https://t.me/share/url?url=<?php echo urlencode($articleUrl); ?>&amp;text=<?php echo urlencode($articleTitle); ?>"
+                       target="_blank" rel="noopener noreferrer" aria-label="اشتراک در تلگرام">
+                        <?php echo brandIcon('telegram', 17); ?>
+                    </a>
+                    <a class="share__btn"
+                       href="https://api.whatsapp.com/send?text=<?php echo urlencode($articleTitle . ' ' . $articleUrl); ?>"
+                       target="_blank" rel="noopener noreferrer" aria-label="اشتراک در واتس‌اپ">
+                        <?php echo brandIcon('whatsapp', 17); ?>
+                    </a>
+                    <button type="button" class="share__btn"
+                            data-share="native"
+                            data-share-url="<?php echo e($articleUrl); ?>"
+                            data-share-title="<?php echo e($articleTitle); ?>"
+                            aria-label="کپی لینک / اشتراک‌گذاری">
+                        <?php echo icon('share', 17); ?>
+                    </button>
                 </div>
             </article>
+        </div>
+    </section>
 
-            <!-- Related News Section -->
-            <?php if (!empty($relatedNews)): ?>
-                <div class="related-news-section" style="margin-bottom: var(--space-2xl);">
-                    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--neutral-dark); margin-bottom: var(--space-md);">
-                        اخبار و اطلاعیه‌های مرتبط
-                    </h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-md);">
-                        <?php foreach ($relatedNews as $rel): ?>
-                            <div style="background: var(--white); border-radius: var(--radius-md); padding: var(--space-md); border: 1px solid var(--border);">
-                                <h4 style="font-size: var(--text-base); margin-bottom: 6px;">
-                                    <a href="<?= e(url('news.php?id=' . $rel['id'])) ?>" style="color: var(--neutral-dark); text-decoration: none;"><?= e($rel['title']) ?></a>
-                                </h4>
-                                <span style="font-size: var(--text-xs); color: var(--muted);"><?= e(formatPublicNewsDate($rel['created_at'])) ?></span>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            <?php endif; ?>
+    <?php if ($relatedNews !== []): ?>
+    <section class="section section-paper">
+        <div class="container">
+            <div class="section-head" data-reveal="up">
+                <span class="eyebrow">
+                    <?php echo icon('news', 14); ?>
+                    ادامه بخوانید
+                </span>
+                <h2 class="section-head__title">
+                    مطالب <span class="u-mark">مرتبط</span>
+                </h2>
+            </div>
 
-            <div class="news-detail-back" style="text-align: center;">
-                <a href="<?= e(url('news.php')) ?>" class="btn btn-outline">← بازگشت به لیست اخبار</a>
+            <div class="news-grid" data-reveal-group data-reveal-step="90">
+                <?php foreach ($relatedNews as $rel): ?>
+                    <?php $relUrl = url('news.php?id=' . (int) $rel['id']); ?>
+                    <article class="card card-hover news-card" data-reveal="up">
+                        <a class="news-card__media" href="<?php echo e($relUrl); ?>" aria-hidden="true" tabindex="-1">
+                            <img src="<?php echo e(url((string) ($rel['image'] ?: 'assets/img/about-story.jpg'))); ?>"
+                                 alt="<?php echo e((string) $rel['title']); ?>"
+                                 loading="lazy" decoding="async">
+                            <span class="news-card__cat">
+                                <span class="badge <?php echo e(newsCategoryBadge((string) ($rel['category'] ?? ''))); ?>">
+                                    <?php echo e(newsCategoryLabel((string) ($rel['category'] ?? ''))); ?>
+                                </span>
+                            </span>
+                        </a>
+                        <div class="news-card__body">
+                            <span class="news-card__date">
+                                <?php echo icon('calendar', 14); ?>
+                                <?php echo e(shamsiDate((string) $rel['created_at'])); ?>
+                            </span>
+                            <h3 class="news-card__title">
+                                <a href="<?php echo e($relUrl); ?>"><?php echo e((string) $rel['title']); ?></a>
+                            </h3>
+                            <span class="news-card__more">
+                                ادامه مطلب
+                                <?php echo icon('arrow-left', 16); ?>
+                            </span>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+
+            <div class="text-center mt-xl">
+                <a class="btn btn-ghost btn-lg" href="<?php echo e(url('news.php')); ?>">
+                    مشاهده همه اخبار
+                    <?php echo icon('arrow-left', 19); ?>
+                </a>
             </div>
         </div>
     </section>
-<?php else: ?>
-    <section class="section news-list-section" style="padding: var(--space-2xl) 0;">
-        <div class="container">
-            <div class="section-header text-center" style="margin-bottom: var(--space-lg);">
-                <h1 style="font-family: var(--font-display); font-size: var(--text-3xl); color: var(--neutral-dark); margin-bottom: var(--space-xs);">
-                    اخبار و رویدادهای <?= e(siteName()) ?>
-                </h1>
-                <p class="section-subtitle" style="color: var(--muted);">آخرین خبرها، اطلاعیه‌ها و مقالات آموزشی مهدکودک</p>
-            </div>
+    <?php endif; ?>
 
-            <!-- Category Filter Pills -->
-            <div class="category-filters" style="display: flex; gap: var(--space-xs); justify-content: center; flex-wrap: wrap; margin-bottom: var(--space-xl);">
-                <a href="<?= e(url('news.php')) ?>" class="btn <?= $catFilter === '' ? 'btn-primary' : 'btn-outline' ?> btn-sm">همه اخبار</a>
-                <a href="<?= e(url('news.php?cat=announcement')) ?>" class="btn <?= $catFilter === 'announcement' ? 'btn-primary' : 'btn-outline' ?> btn-sm">اطلاعیه‌ها</a>
-                <a href="<?= e(url('news.php?cat=event')) ?>" class="btn <?= $catFilter === 'event' ? 'btn-primary' : 'btn-outline' ?> btn-sm">رویدادها</a>
-                <a href="<?= e(url('news.php?cat=educational')) ?>" class="btn <?= $catFilter === 'educational' ? 'btn-primary' : 'btn-outline' ?> btn-sm">مقالات آموزشی</a>
+<?php else: ?>
+
+    <?php /* ── Listing ── */ ?>
+    <section class="page-hero">
+        <div class="page-hero__scrim"></div>
+        <div class="container page-hero__inner">
+            <nav class="crumbs" aria-label="مسیر صفحه">
+                <a href="<?php echo e(url('index.php')); ?>">خانه</a>
+                <span class="crumbs__sep" aria-hidden="true">‹</span>
+                <span class="crumbs__current" aria-current="page">اخبار</span>
+            </nav>
+            <h1 class="page-hero__title">اخبار و رویدادهای <?php echo e($siteNameV); ?></h1>
+            <p class="page-hero__sub">
+                جشن‌ها، اردوها، کارگاه‌های والدین و اطلاعیه‌های مهم مجموعه.
+            </p>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+
+            <?php if ($availableCats !== []): ?>
+            <div class="gallery-filters" role="group" aria-label="فیلتر دسته‌بندی اخبار">
+                <a class="chip <?php echo $catFilter === '' ? 'is-active' : ''; ?>"
+                   href="<?php echo e(url('news.php')); ?>">همه اخبار</a>
+                <?php foreach ($availableCats as $cat): ?>
+                    <?php $slug = (string) $cat['category']; ?>
+                    <a class="chip <?php echo $catFilter === $slug ? 'is-active' : ''; ?>"
+                       href="<?php echo e(url('news.php?cat=' . urlencode($slug))); ?>">
+                        <?php echo e(newsCategoryLabel($slug)); ?>
+                        <?php echo e('(' . persianNumber((string) $cat['total']) . ')'); ?>
+                    </a>
+                <?php endforeach; ?>
             </div>
+            <?php endif; ?>
 
             <?php if ($newsItems === []): ?>
-                <div class="empty-state" style="text-align: center; padding: var(--space-2xl) 0;">
-                    <div class="empty-state-icon" style="width: 90px; height: 90px; margin: 0 auto var(--space-md) auto;">
-                        <svg viewBox="0 0 100 100" style="width:100%; height:100%;"><use href="<?= asset('assets/img/bargoo.svg#bargoo-sleeping') ?>"/></svg>
-                    </div>
-                    <h3 style="font-family: var(--font-display); font-size: var(--text-2xl); color: var(--neutral-dark);">هنوز خبری منتشر نشده است</h3>
-                    <p style="color: var(--muted);">به زودی اخبار جدید روما در این بخش منتشر خواهد شد.</p>
+                <div class="empty">
+                    <svg class="empty__art" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+                        <use href="<?php echo e(asset('assets/img/bargoo.svg#bargoo-sleeping')); ?>"/>
+                    </svg>
+                    <h2 class="empty__title">هنوز خبری در این بخش نیست</h2>
+                    <p class="empty__text">
+                        به‌زودی تازه‌های روما را همین‌جا منتشر می‌کنیم.
+                    </p>
+                    <?php if ($catFilter !== ''): ?>
+                        <a class="btn btn-primary" href="<?php echo e(url('news.php')); ?>">مشاهده همه اخبار</a>
+                    <?php endif; ?>
                 </div>
             <?php else: ?>
-                <div class="news-list-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-lg);">
+                <div class="news-grid" data-reveal-group data-reveal-step="80">
                     <?php foreach ($newsItems as $newsItem): ?>
-                        <article class="news-list-card fade-in" style="background: var(--white); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm); display: flex; flex-direction: column;">
-                            <?php if (!empty($newsItem['image'])): ?>
-                                <a href="<?= e(url('news.php?id=' . $newsItem['id'])) ?>" class="news-list-image" style="display: block; height: 200px; overflow: hidden;">
-                                    <img src="<?= e(url($newsItem['image'])) ?>" alt="<?= e($newsItem['title']) ?>" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; transition: transform var(--transition-base);">
-                                </a>
-                            <?php endif; ?>
-                            <div class="news-list-content" style="padding: var(--space-md); flex: 1; display: flex; flex-direction: column;">
-                                <time class="news-list-date" datetime="<?= e($newsItem['created_at']) ?>" style="font-size: var(--text-xs); color: var(--muted); margin-bottom: 6px;">
-                                    <svg width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-inline-end:4px;"><use href="<?= e(asset('assets/img/icons.svg#icon-calendar')) ?>"/></svg> <?= e(formatPublicNewsDate($newsItem['created_at'])) ?>
-                                </time>
-                                <h3 style="font-size: var(--text-lg); margin-bottom: var(--space-xs); line-height: 1.5;">
-                                    <a href="<?= e(url('news.php?id=' . $newsItem['id'])) ?>" style="color: var(--neutral-dark); text-decoration: none;"><?= e($newsItem['title']) ?></a>
-                                </h3>
-                                <p style="font-size: var(--text-sm); color: var(--neutral-medium); margin-bottom: var(--space-md); flex: 1; line-height: 1.7;"><?= e(publicNewsExcerpt($newsItem['content'])) ?></p>
-                                <a href="<?= e(url('news.php?id=' . $newsItem['id'])) ?>" class="news-read-more" style="font-size: var(--text-sm); font-weight: 700; color: var(--primary); text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                        <?php
+                        $itemUrl = url('news.php?id=' . (int) $newsItem['id']);
+                        $itemCat = (string) ($newsItem['category'] ?? '');
+                        ?>
+                        <article class="card card-hover news-card" data-reveal="up">
+                            <a class="news-card__media" href="<?php echo e($itemUrl); ?>" aria-hidden="true" tabindex="-1">
+                                <img src="<?php echo e(url((string) ($newsItem['image'] ?: 'assets/img/about-story.jpg'))); ?>"
+                                     alt="<?php echo e((string) $newsItem['title']); ?>"
+                                     loading="lazy" decoding="async">
+                                <span class="news-card__cat">
+                                    <span class="badge <?php echo e(newsCategoryBadge($itemCat)); ?>">
+                                        <?php echo e(newsCategoryLabel($itemCat)); ?>
+                                    </span>
+                                </span>
+                            </a>
+                            <div class="news-card__body">
+                                <span class="news-card__date">
+                                    <?php echo icon('calendar', 14); ?>
+                                    <?php echo e(shamsiDate((string) $newsItem['created_at'])); ?>
+                                </span>
+                                <h2 class="news-card__title">
+                                    <a href="<?php echo e($itemUrl); ?>"><?php echo e((string) $newsItem['title']); ?></a>
+                                </h2>
+                                <p class="news-card__excerpt">
+                                    <?php echo e(publicNewsExcerpt((string) $newsItem['content'])); ?>
+                                </p>
+                                <span class="news-card__more">
                                     ادامه مطلب
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
-                                </a>
+                                    <?php echo icon('arrow-left', 16); ?>
+                                </span>
                             </div>
                         </article>
                     <?php endforeach; ?>
                 </div>
 
-                <?php if (!empty($newsPagination) && $newsPagination['totalPages'] > 1): ?>
-                    <nav class="news-pagination" style="margin-top: var(--space-xl); display:flex; justify-content:center;" aria-label="صفحه‌بندی اخبار">
-                        <?= renderPagination($newsPagination, url('news.php'), $catFilter !== '' ? ['cat' => $catFilter] : []) ?>
-                    </nav>
+                <?php if (!empty($newsPagination) && (int) $newsPagination['totalPages'] > 1): ?>
+                    <?php echo renderPagination(
+                        $newsPagination,
+                        url('news.php'),
+                        $catFilter !== '' ? ['cat' => $catFilter] : []
+                    ); ?>
                 <?php endif; ?>
             <?php endif; ?>
         </div>
     </section>
+
 <?php endif; ?>
+
+<?php require __DIR__ . '/templates/cta-section.php'; ?>
 
 <?php require_once __DIR__ . '/templates/footer.php'; ?>

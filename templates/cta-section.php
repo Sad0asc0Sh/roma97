@@ -1,31 +1,45 @@
 <?php
-/**
- * Shared CTA Section Partial
- * Roma Kindergarten
- */
-?>
-<section class="cta-section cta-banner">
-    <div class="container">
-        <div class="cta-content cta-banner-content">
-            <h2 class="cta-banner-title">
-                همین امروز برای آینده کودکتان اقدام کنید
-            </h2>
-            <p class="cta-banner-text">
-                برای رزرو وقت بازدید حضوری و صحبت با مشاوره ثبت‌نام، با ما در ارتباط باشید یا فرم زیر را تکمیل کنید.
-            </p>
-            <div class="cta-buttons">
-                <a href="<?php echo url('page.php?slug=contact'); ?>" class="btn btn-secondary btn-lg">
-                    ثبت‌نام و بازدید حضوری
-                </a>
-                <a href="tel:<?php echo e(siteContactPhone()); ?>" class="btn btn-outline btn-lg cta-btn-phone">
-                    تماس تلفنی: <?php echo e(persianNumber(siteContactPhone())); ?>
+declare(strict_types=1);
 
+if (!defined('ROOMA_APP')) {
+    die('Access denied.');
+}
+
+require_once __DIR__ . '/../includes/ui.php';
+
+$ctaPhone = siteContactPhone();
+?>
+<section class="cta" data-reveal-group>
+    <div class="container cta__inner">
+        <span class="eyebrow eyebrow-light" data-reveal="up">
+            <?php echo icon('calendar', 14); ?>
+            ظرفیت دوره جدید محدود است
+        </span>
+
+        <h2 class="cta__title" data-reveal="up">
+            بهترین راه شناختن روما، دیدن آن از نزدیک است
+        </h2>
+
+        <p class="cta__text" data-reveal="up">
+            یک بازدید حضوری نیم‌ساعته رزرو کنید: کلاس‌ها، حیاط بازی و آشپزخانه را ببینید،
+            با مربی فرزندتان صحبت کنید و پاسخ همه سوال‌هایتان را بگیرید — بدون هیچ تعهدی.
+        </p>
+
+        <div class="cta__actions" data-reveal="up">
+            <a class="btn btn-secondary btn-lg" href="<?php echo e(url('page.php?slug=contact')); ?>">
+                <?php echo icon('send', 19); ?>
+                رزرو بازدید حضوری
+            </a>
+            <?php if ($ctaPhone !== ''): ?>
+                <a class="btn btn-light btn-lg" href="tel:<?php echo e(telHref($ctaPhone)); ?>">
+                    <?php echo icon('phone', 19); ?>
+                    <?php echo e(persianNumber($ctaPhone)); ?>
                 </a>
-            </div>
+            <?php endif; ?>
         </div>
     </div>
-    <!-- Decorative Bargoo Waving in bottom corner -->
-    <div class="cta-mascot-corner">
-        <svg viewBox="0 0 100 100" class="cta-mascot-svg"><use href="<?php echo asset('assets/img/bargoo.svg#bargoo-waving'); ?>"/></svg>
-    </div>
+
+    <svg class="cta__mascot" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+        <use href="<?php echo e(asset('assets/img/bargoo.svg#bargoo-waving')); ?>"/>
+    </svg>
 </section>
