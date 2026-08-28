@@ -21,8 +21,10 @@ $viewMessage = null;
 if (isset($_GET['view'])) {
     $viewId = (int) $_GET['view'];
 
-    // Mark as read first
-    $markReadStmt = $pdo->prepare('UPDATE messages SET is_read = 1 WHERE id = ? AND (parent_id IS NULL OR parent_id = ?)');
+    // Only ever flip the read flag on a row that belongs to THIS parent.
+    // Legacy broadcast rows (parent_id IS NULL) are shared by every family, so
+    // marking those read would wipe the "unread" badge for all of them at once.
+    $markReadStmt = $pdo->prepare('UPDATE messages SET is_read = 1 WHERE id = ? AND parent_id = ?');
     $markReadStmt->execute([$viewId, $parentId]);
 
     // Fetch message details

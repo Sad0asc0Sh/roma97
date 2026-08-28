@@ -44,6 +44,17 @@ $netProfitLoss = 0.0;
 $overdueChildren = [];
 $expensesByCategory = [];
 
+// Receivables position for the selected month. Reported alongside cash-in so an
+// owner can tell the difference between "we earned less" and "we simply have not
+// collected yet" — two very different problems that the old report conflated.
+$expectedTuition = 0.0;
+$collectedTuition = 0.0;
+$outstandingTuition = 0.0;
+$collectionRate = 0.0;
+$activeChildCount = 0;
+$settledCount = 0;
+$vipSmsRevenue = 0.0;
+
 try {
     initializeFinancialTables();
     $pdo = getDb();
@@ -78,33 +89,45 @@ try {
     $totalExpenses = $totalSalaries + $totalGeneralExpenses;
     $netProfitLoss = $totalTuition - $totalExpenses;
 
-    // 4. Overdue Children in selected month_year
-    // Query active children
-    $childrenStmt = $pdo->query("
-        SELECT c.id, c.first_name, c.last_name, p.first_name AS p_first, p.last_name AS p_last, p.phone AS p_phone
-        FROM children c
-        INNER JOIN parents p ON p.id = c.parent_id
-        WHERE c.status = 'active'
-        ORDER BY c.last_name, c.first_name
-    ");
-    $activeChildren = $childrenStmt ? $childrenStmt->fetchAll() : [];
+    // 4. Receivables + overdue children for the selected month.
+    //
+    // Performance: this used to run three queries per active child (default
+    // tuition, plan, payments) inside a loop — ~900 round-trips for a 300-child
+    // daycare, which made the page unusable at scale. `activeChildrenTuitionBreakdown()`
+    // answers the same question with a single JOINed query.
+    $breakdowns = activeChildrenTuitionBreakdown($pdo, $selectedMonthYear);
+    $activeChildCount = count($breakdowns);
 
-    foreach ($activeChildren as $child) {
-        $cid = (int) $child['id'];
-        $balance = childOutstandingBalance($pdo, $cid, $selectedMonthYear);
+    foreach ($breakdowns as $childId => $row) {
+        $expectedTuition  += (float) $row['expected'];
+        $collectedTuition += (float) $row['paid'];
+        $vipSmsRevenue    += (float) $row['sms_fee'];
 
-        if ($balance > 0) {
+        $balance = (float) $row['balance'];
+
+        // Anything under 1000 Toman is rounding dust, not a debt worth chasing.
+        if ($balance >= 1000) {
+            $outstandingTuition += $balance;
             $overdueChildren[] = [
-                'child_id'   => $cid,
-                'child_name' => trim($child['first_name'] . ' ' . $child['last_name']),
-                'parent_name'=> trim($child['p_first'] . ' ' . $child['p_last']),
-                'parent_phone'=> (string) ($child['p_phone'] ?? ''),
-                'balance'    => $balance,
+                'child_id'     => $childId,
+                'child_name'   => (string) $row['child_name'],
+                'parent_name'  => (string) $row['parent_name'],
+                'parent_phone' => (string) $row['parent_phone'],
+                'balance'      => $balance,
+                'expected'     => (float) $row['expected'],
+                'paid'         => (float) $row['paid'],
+                'has_plan'     => (bool) $row['has_plan'],
             ];
+        } else {
+            $settledCount++;
         }
     }
 
-    // Sort overdue children by balance descending
+    $collectionRate = $expectedTuition > 0
+        ? round(($collectedTuition / $expectedTuition) * 100, 1)
+        : 0.0;
+
+    // Biggest debts first — that is the order an owner wants to make calls in.
     usort($overdueChildren, static fn($a, $b) => $b['balance'] <=> $a['balance']);
 
 } catch (Throwable $e) {
@@ -160,6 +183,66 @@ require_once __DIR__ . '/header.php';
         </div>
     </div>
 
+    <!-- Receivables: separates "earned less" from "not collected yet" -->
+    <div class="admin-section" style="margin-bottom:28px;">
+        <div class="admin-section-header">
+            <h2 class="admin-section-title" style="margin:0;">وضعیت وصول شهریه ماه <?= e(formatShamsiMonthYear($selectedMonthYear)) ?></h2>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:16px;">
+            <div class="card" style="padding:14px 16px;">
+                <div style="font-size:0.8rem;color:var(--adm-text-muted);font-weight:600;">شهریه قابل وصول</div>
+                <div style="font-size:1.15rem;font-weight:800;"><?= e(persianNumber(number_format($expectedTuition))) ?> <span style="font-size:0.75rem;font-weight:normal;">تومان</span></div>
+                <div style="font-size:0.75rem;color:var(--adm-text-muted);margin-top:4px;">
+                    برای <?= e(persianNumber((string) $activeChildCount)) ?> کودک فعال
+                </div>
+            </div>
+
+            <div class="card" style="padding:14px 16px;border-inline-start:4px solid var(--app-success, #2E7D5B);">
+                <div style="font-size:0.8rem;color:var(--adm-text-muted);font-weight:600;">وصول‌شده</div>
+                <div style="font-size:1.15rem;font-weight:800;color:var(--adm-success);"><?= e(persianNumber(number_format($collectedTuition))) ?> <span style="font-size:0.75rem;font-weight:normal;">تومان</span></div>
+                <div style="font-size:0.75rem;color:var(--adm-text-muted);margin-top:4px;">
+                    <?= e(persianNumber((string) $settledCount)) ?> کودک تسویه‌شده
+                </div>
+            </div>
+
+            <div class="card" style="padding:14px 16px;border-inline-start:4px solid var(--adm-danger);">
+                <div style="font-size:0.8rem;color:var(--adm-text-muted);font-weight:600;">مانده وصول‌نشده</div>
+                <div style="font-size:1.15rem;font-weight:800;color:var(--adm-danger);"><?= e(persianNumber(number_format($outstandingTuition))) ?> <span style="font-size:0.75rem;font-weight:normal;">تومان</span></div>
+                <div style="font-size:0.75rem;color:var(--adm-text-muted);margin-top:4px;">
+                    <?= e(persianNumber((string) count($overdueChildren))) ?> خانواده بدهکار
+                </div>
+            </div>
+
+            <div class="card" style="padding:14px 16px;">
+                <div style="font-size:0.8rem;color:var(--adm-text-muted);font-weight:600;">نرخ وصول</div>
+                <div style="font-size:1.15rem;font-weight:800;color:<?= $collectionRate >= 85 ? 'var(--adm-success)' : ($collectionRate >= 60 ? 'var(--adm-warning, #B8791A)' : 'var(--adm-danger)') ?>;">
+                    <?= e(persianNumber((string) $collectionRate)) ?>٪
+                </div>
+                <div style="margin-top:8px;background:var(--adm-bg, #edf2f7);height:7px;border-radius:4px;overflow:hidden;">
+                    <div style="height:100%;width:<?= max(0, min(100, (float) $collectionRate)) ?>%;background:<?= $collectionRate >= 85 ? 'var(--adm-primary, #3D8B63)' : ($collectionRate >= 60 ? '#B8791A' : '#c62828') ?>;"></div>
+                </div>
+            </div>
+
+            <?php if ($vipSmsRevenue > 0): ?>
+                <div class="card" style="padding:14px 16px;">
+                    <div style="font-size:0.8rem;color:var(--adm-text-muted);font-weight:600;">درآمد بسته پیامک تفصیلی</div>
+                    <div style="font-size:1.15rem;font-weight:800;"><?= e(persianNumber(number_format($vipSmsRevenue))) ?> <span style="font-size:0.75rem;font-weight:normal;">تومان</span></div>
+                    <div style="font-size:0.75rem;color:var(--adm-text-muted);margin-top:4px;">بخشی از شهریه قابل وصول بالا</div>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <p style="font-size:0.82rem;color:var(--adm-text-muted);margin:0;line-height:1.8;">
+            💡 «شهریه دریافتی» در کارت‌های بالا مبلغی است که واقعاً به حساب رسیده؛ «مانده وصول‌نشده» درآمدی است که هنوز وصول نشده و در سود/زیان لحاظ نشده است.
+            <?php if ($outstandingTuition > 0): ?>
+                برای ارسال یادآوری گروهی می‌توانید از
+                <a href="<?= e(url('admin/sms-center.php')) ?>">مرکز پیامک</a>
+                وضعیت اعلان‌ها را بررسی کنید.
+            <?php endif; ?>
+        </p>
+    </div>
+
     <div class="admin-two-column">
         <!-- Overdue Children Table -->
         <div class="admin-section">
@@ -180,23 +263,44 @@ require_once __DIR__ . '/header.php';
                             <tr>
                                 <th>نام کودک</th>
                                 <th>والد / تماس</th>
+                                <th>وضعیت پرداخت</th>
                                 <th>مبلغ بدهی معوق</th>
                                 <th>عملیات</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($overdueChildren as $item): ?>
+                                <?php
+                                $itemExpected = (float) ($item['expected'] ?? 0);
+                                $itemPaid = (float) ($item['paid'] ?? 0);
+                                $itemProgress = $itemExpected > 0 ? min(100, ($itemPaid / $itemExpected) * 100) : 0;
+                                ?>
                                 <tr>
-                                    <td style="font-weight:600;"><?= e($item['child_name']) ?></td>
+                                    <td style="font-weight:600;">
+                                        <?= e($item['child_name']) ?>
+                                        <?php if (empty($item['has_plan'])): ?>
+                                            <div style="font-size:0.7rem;color:var(--adm-warning, #B8791A);font-weight:600;margin-top:2px;">
+                                                ⚠️ مبلغ اختصاصی ثبت نشده (شهریه پیش‌فرض)
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
                                     <td>
                                         <div><?= e($item['parent_name']) ?></div>
                                         <?php if (!empty($item['parent_phone'])): ?>
                                             <small class="muted"><a href="tel:<?= e($item['parent_phone']) ?>"><?= e($item['parent_phone']) ?></a></small>
                                         <?php endif; ?>
                                     </td>
+                                    <td style="min-width:130px;">
+                                        <div style="font-size:0.78rem;color:var(--adm-text-muted);margin-bottom:4px;">
+                                            <?= e(persianNumber(number_format($itemPaid))) ?> از <?= e(persianNumber(number_format($itemExpected))) ?>
+                                        </div>
+                                        <div style="background:var(--adm-bg, #edf2f7);height:6px;border-radius:3px;overflow:hidden;">
+                                            <div style="height:100%;width:<?= (float) $itemProgress ?>%;background:var(--adm-primary, #3D8B63);"></div>
+                                        </div>
+                                    </td>
                                     <td style="color:var(--adm-danger); font-weight:700;"><?= e(persianNumber(number_format((float) $item['balance']))) ?> تومان</td>
                                     <td>
-                                        <a href="<?= e(url('admin/tuition.php?child_id=' . $item['child_id'] . '#recordForm')) ?>" class="btn btn-sm btn-primary">ثبت پرداخت</a>
+                                        <a href="<?= e(url('admin/tuition.php?child_id=' . $item['child_id'] . '&month_year=' . urlencode($selectedMonthYear) . '#recordForm')) ?>" class="btn btn-sm btn-primary">ثبت پرداخت</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

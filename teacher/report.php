@@ -10,6 +10,7 @@ require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/sms.php';
+require_once __DIR__ . '/../includes/notifications.php';
 
 requireTeacherLogin();
 
@@ -77,10 +78,31 @@ ON DUPLICATE KEY UPDATE
 SQL;
 
             try {
+                // Snapshot what is already stored for today so we only notify
+                // parents whose report actually changed. Without this, pressing
+                // "save" twice sent (and charged for) a second SMS to every parent.
+                $existingStmt = $pdo->prepare(
+                    'SELECT child_id, mood, activities, notes FROM daily_reports
+                     WHERE classroom_id = :cid AND report_date = :rdate'
+                );
+                $existingStmt->execute([':cid' => $classroomId, ':rdate' => $today]);
+
+                $previousReports = [];
+                foreach ($existingStmt->fetchAll() as $prev) {
+                    $previousReports[(int) $prev['child_id']] = [
+                        'mood'       => (string) ($prev['mood'] ?? ''),
+                        'activities' => trim((string) ($prev['activities'] ?? '')),
+                        'notes'      => trim((string) ($prev['notes'] ?? '')),
+                    ];
+                }
+
                 $pdo->beginTransaction();
                 $uStmt = $pdo->prepare($upsertSql);
 
                 $saved = 0;
+                /** @var array<int, array{mood:string}> $changedChildren */
+                $changedChildren = [];
+
                 foreach ($allowedChildIds as $childId) {
                     // Only persist children that belong to this teacher's classroom.
                     $mood = (string) ($moods[$childId] ?? 'normal');
@@ -101,65 +123,20 @@ SQL;
                         ':notes'      => $childNotes === '' ? null : $childNotes,
                     ]);
                     $saved++;
+
+                    $before = $previousReports[$childId] ?? null;
+                    $isNew = $before === null;
+                    $hasChanged = $isNew
+                        || $before['mood'] !== $mood
+                        || $before['activities'] !== $childActivities
+                        || $before['notes'] !== $childNotes;
+
+                    if ($hasChanged) {
+                        $changedChildren[$childId] = ['mood' => $mood];
+                    }
                 }
 
                 $pdo->commit();
-
-                // Send SMS notifications to parents who opted in
-                $smsSettings = getSmsSettings($pdo);
-                $detailedBodyId = (int) ($smsSettings['sms_pattern_daily_report'] ?? 0);
-                $briefBodyId    = (int) ($smsSettings['sms_pattern_daily_report_brief'] ?? 0);
-
-                if (($smsSettings['sms_enabled'] ?? '0') === '1') {
-                    $parentInfoStmt = $pdo->prepare("
-                        SELECT c.id AS child_id, c.first_name AS c_first, c.last_name AS c_last,
-                               p.id AS parent_id, p.phone, p.sms_pref_daily_report, p.sms_vip_subscription
-                        FROM children c
-                        INNER JOIN parents p ON p.id = c.parent_id
-                        WHERE c.id = :cid LIMIT 1
-                    ");
-
-                    $moodLabels = [
-                        'happy'       => 'پر از خنده، شاد و عالی 🌟',
-                        'normal'      => 'آرام، خوش‌اخلاق و در حال بازی 🌸',
-                        'mixed'       => 'بازیگوش، پرحرف و کنجکاو 🎈',
-                        'challenging' => 'کمی دلتنگ و نیازمند آغوش پرمهر 💖',
-                    ];
-
-                    foreach ($allowedChildIds as $childId) {
-                        $parentInfoStmt->execute([':cid' => $childId]);
-                        $pRow = $parentInfoStmt->fetch();
-
-                        if ($pRow && (int)($pRow['sms_pref_daily_report'] ?? 1) === 1 && !empty($pRow['phone'])) {
-                            $cName = trim($pRow['c_first'] . ' ' . $pRow['c_last']);
-                            $isVip = ((int)($pRow['sms_vip_subscription'] ?? 0) === 1);
-
-                            if ($isVip && $detailedBodyId > 0) {
-                                // Detailed VIP SMS Pack
-                                $childMood = (string) ($moods[$childId] ?? 'normal');
-                                $moodFa = $moodLabels[$childMood] ?? 'خوب';
-                                $todayFa = jdate('Y/m/d');
-
-                                sendMeliPayamakPattern(
-                                    (string) $pRow['phone'],
-                                    $detailedBodyId,
-                                    [$cName, $todayFa, $moodFa],
-                                    'daily_report_vip',
-                                    (int) $pRow['parent_id']
-                                );
-                            } elseif ($briefBodyId > 0) {
-                                // Free / Brief SMS (Referral to Rooma Panel)
-                                sendMeliPayamakPattern(
-                                    (string) $pRow['phone'],
-                                    $briefBodyId,
-                                    [$cName, siteName()],
-                                    'daily_report_brief',
-                                    (int) $pRow['parent_id']
-                                );
-                            }
-                        }
-                    }
-                }
             } catch (Throwable $e) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
@@ -167,8 +144,76 @@ SQL;
                 throw $e;
             }
 
-            recordAudit('daily_report.save', 'classroom', $classroomId, ['children' => $saved]);
-            setFlash('success', 'گزارش روزانه برای ' . persianNumber((string) $saved) . ' کودک با موفقیت ذخیره شد!');
+            // ── Notify parents (portal + SMS) through the unified engine ──────
+            // Runs after the transaction commits so a slow SMS provider can
+            // never hold a database lock open.
+            $moodLabels = [
+                'happy'       => 'پر از خنده، شاد و عالی 🌟',
+                'normal'      => 'آرام، خوش‌اخلاق و در حال بازی 🌸',
+                'mixed'       => 'بازیگوش، پرحرف و کنجکاو 🎈',
+                'challenging' => 'کمی دلتنگ و نیازمند آغوش پرمهر 💖',
+            ];
+
+            $notifyResults = [];
+
+            if ($changedChildren !== []) {
+                $childIdList = implode(',', array_map('intval', array_keys($changedChildren)));
+                $recipientStmt = $pdo->query("
+                    SELECT c.id AS child_id, c.first_name AS c_first, c.last_name AS c_last,
+                           p.id AS parent_id, p.sms_vip_subscription
+                    FROM children c
+                    INNER JOIN parents p ON p.id = c.parent_id
+                    WHERE c.id IN ({$childIdList})
+                ");
+                $recipients = $recipientStmt ? $recipientStmt->fetchAll() : [];
+
+                $todayFa = shamsiDate($today);
+
+                foreach ($recipients as $row) {
+                    $childId  = (int) $row['child_id'];
+                    $parentId = (int) $row['parent_id'];
+                    $childName = trim((string) $row['c_first'] . ' ' . (string) $row['c_last']);
+                    $isVip = ((int) ($row['sms_vip_subscription'] ?? 0) === 1);
+                    $mood = (string) ($changedChildren[$childId]['mood'] ?? 'normal');
+                    $moodFa = $moodLabels[$mood] ?? 'خوب';
+
+                    // Parents on the detailed pack get the full report by SMS;
+                    // everyone else gets the short "check the portal" message.
+                    $eventKey = $isVip ? 'daily_report_vip' : 'daily_report_brief';
+                    $args = $isVip
+                        ? [$childName, $todayFa, $moodFa]
+                        : [$childName, siteName()];
+
+                    $notifyResults[] = notifyParent($parentId, $eventKey, [
+                        'args' => $args,
+                        // One notification per child per day, regardless of how
+                        // many times the teacher saves the form.
+                        'dedup_key'   => "daily_report:{$childId}:{$today}",
+                        'sender_type' => 'teacher',
+                        'sender_id'   => $teacherId,
+                    ]);
+                }
+
+                smsQueueFlushInline($pdo);
+            }
+
+            recordAudit('daily_report.save', 'classroom', $classroomId, [
+                'children' => $saved,
+                'notified' => count($notifyResults),
+            ]);
+
+            $flash = 'گزارش روزانه برای ' . persianNumber((string) $saved) . ' کودک با موفقیت ذخیره شد!';
+
+            if ($changedChildren === []) {
+                $flash .= ' (تغییری نسبت به گزارش قبلی نبود، پیامک تکراری ارسال نشد.)';
+            } else {
+                $summary = summarizeNotificationResults($notifyResults);
+                if ($summary !== '') {
+                    $flash .= ' ' . $summary;
+                }
+            }
+
+            setFlash('success', $flash);
             redirect(url('teacher/report.php'));
         }
 

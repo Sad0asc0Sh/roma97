@@ -8,9 +8,12 @@ require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/csrf.php';
+require_once __DIR__ . '/../includes/sms.php';
+require_once __DIR__ . '/../includes/notifications.php';
 
 // Force database initialization for messaging table
 initializeMessagingTable();
+initializeNotificationTables();
 
 requireTeacherLogin();
 
@@ -34,14 +37,12 @@ if (isPostRequest() && isset($_POST['send_message'])) {
             $error = 'موضوع و متن پیام الزامی است.';
         } else {
             try {
-                $insertStmt = $pdo->prepare(
-                    'INSERT INTO messages (sender_type, sender_id, parent_id, subject, body) VALUES (?, ?, ?, ?, ?)'
-                );
-
-                $sentCount = 0;
+                // Build the recipient list, restricted to parents of children in
+                // THIS teacher's classroom, then hand delivery to the shared
+                // notification engine (portal message + queued announcement SMS).
+                $recipientIds = [];
 
                 if ($isBroadcast) {
-                    // Fan-out: insert one row per parent in this teacher's classroom
                     $classParentsStmt = $pdo->prepare('
                         SELECT DISTINCT p.id
                         FROM parents p
@@ -54,17 +55,12 @@ if (isPostRequest() && isset($_POST['send_message'])) {
                     $classParentsStmt->execute([$teacherId]);
 
                     while (($pid = $classParentsStmt->fetchColumn()) !== false) {
-                        $insertStmt->execute(['teacher', $teacherId, (int) $pid, $subject, $body]);
-                        $sentCount++;
+                        $recipientIds[] = (int) $pid;
                     }
 
-                    if ($sentCount === 0) {
-                        // No parents in classroom — insert a single NULL row so teacher still sees it in sent list
-                        $insertStmt->execute(['teacher', $teacherId, null, $subject, $body]);
-                        $sentCount = 1;
+                    if ($recipientIds === []) {
+                        throw new RuntimeException('هنوز والدی در کلاس شما ثبت‌نام نکرده است.');
                     }
-
-                    recordAudit('message.send', 'message', null, ['broadcast' => true, 'recipients' => $sentCount]);
                 } else {
                     // Verify the specific parent belongs to this teacher's classroom
                     $verifyStmt = $pdo->prepare('
@@ -76,20 +72,49 @@ if (isPostRequest() && isset($_POST['send_message'])) {
                     ');
                     $verifyStmt->execute([$teacherId, $recipientId]);
                     if ((int) $verifyStmt->fetchColumn() === 0) {
-                        throw new Exception('دریافت‌کننده نامعتبر است.');
+                        throw new RuntimeException('دریافت‌کننده نامعتبر است.');
                     }
 
-                    $insertStmt->execute(['teacher', $teacherId, $recipientId, $subject, $body]);
-                    $sentCount = 1;
-                    recordAudit('message.send', 'message', (int) $pdo->lastInsertId(), ['recipient_id' => $recipientId]);
+                    $recipientIds[] = (int) $recipientId;
                 }
+
+                $batchToken = bin2hex(random_bytes(8));
+                $notifyResults = [];
+
+                foreach ($recipientIds as $targetParentId) {
+                    $notifyResults[] = notifyParent($targetParentId, 'announcement', [
+                        'args'           => [parentDisplayNameForMessage($pdo, $targetParentId), $subject],
+                        'portal_subject' => $subject,
+                        'portal_body'    => $body,
+                        'dedup_key'      => "announcement:{$batchToken}:{$targetParentId}",
+                        'sender_type'    => 'teacher',
+                        'sender_id'      => $teacherId,
+                    ]);
+                }
+
+                $sentCount = count($recipientIds);
+
+                recordAudit('message.send', 'message', null, [
+                    'broadcast'  => $isBroadcast,
+                    'recipients' => $sentCount,
+                ]);
+
+                smsQueueFlushInline($pdo);
 
                 $success = $isBroadcast
                     ? 'پیام با موفقیت به ' . persianNumber((string) $sentCount) . ' والد ارسال شد.'
                     : 'پیام با موفقیت ارسال شد.';
+
+                $summary = summarizeNotificationResults($notifyResults);
+                if ($summary !== '') {
+                    $success .= ' ' . $summary;
+                }
+            } catch (RuntimeException $e) {
+                $error = $e->getMessage();
             } catch (Throwable $e) {
                 error_log($e->getMessage());
-                $error = 'ارسال پیام ناموفق بود: ' . $e->getMessage();
+                // Never leak internal exception text to the UI.
+                $error = 'ارسال پیام ناموفق بود. لطفاً دوباره تلاش کنید.';
             }
         }
     }

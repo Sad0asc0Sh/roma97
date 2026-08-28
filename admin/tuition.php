@@ -9,6 +9,8 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
+require_once __DIR__ . '/../includes/sms.php';
+require_once __DIR__ . '/../includes/notifications.php';
 
 requireLogin();
 
@@ -16,6 +18,13 @@ $successMessage = getFlash('success');
 $errorMessage = getFlash('error');
 
 $selectedChildId = max(0, (int) ($_GET['child_id'] ?? 0));
+
+// Month shown in the status table (defaults to the current Shamsi month).
+$viewMonthYear = (string) ($_GET['month_year'] ?? '');
+if (!preg_match('/^\d{4}-\d{2}$/', $viewMonthYear)) {
+    [$vJy, $vJm] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
+    $viewMonthYear = sprintf('%04d-%02d', $vJy, $vJm);
+}
 
 try {
     initializeFinancialTables();
@@ -77,10 +86,17 @@ try {
             redirect(url('admin/tuition.php'));
         }
 
-        // Get parent ID from child
-        $pStmt = $pdo->prepare('SELECT parent_id FROM children WHERE id = :cid LIMIT 1');
+        // Resolve the owning parent and the names used in the receipt.
+        $pStmt = $pdo->prepare(
+            'SELECT c.parent_id, c.first_name AS c_first, c.last_name AS c_last,
+                    p.first_name AS p_first, p.last_name AS p_last
+             FROM children c
+             INNER JOIN parents p ON p.id = c.parent_id
+             WHERE c.id = :cid LIMIT 1'
+        );
         $pStmt->execute([':cid' => $childId]);
-        $parentId = (int) $pStmt->fetchColumn();
+        $childRow = $pStmt->fetch();
+        $parentId = (int) ($childRow['parent_id'] ?? 0);
 
         if ($parentId === 0) {
             setFlash('error', 'کودک انتخاب‌شده نامعتبر است.');
@@ -108,8 +124,60 @@ try {
             'amount' => $amount,
             'month' => $monthYear,
         ]);
-        setFlash('success', 'پرداخت شهریه با موفقیت ثبت شد.');
-        redirect(url('admin/tuition.php'));
+
+        // ── Send the parent a receipt (portal + SMS) ─────────────────────────
+        // Closes the biggest trust gap in the finance flow: money was recorded
+        // in the office and the family was never told.
+        $childName  = trim((string) ($childRow['c_first'] ?? '') . ' ' . (string) ($childRow['c_last'] ?? ''));
+        $parentName = trim((string) ($childRow['p_first'] ?? '') . ' ' . (string) ($childRow['p_last'] ?? ''));
+        $monthLabel = formatShamsiMonthYear($monthYear);
+        $amountFa   = persianNumber(number_format($amount));
+
+        $breakdown = childTuitionBreakdown($pdo, $childId, $monthYear);
+        $remaining = $breakdown['balance'];
+
+        $receiptBody = "{$parentName} عزیز؛\n\n"
+            . "پرداخت شهریه «{$childName}» با موفقیت در سیستم ثبت شد. 🌸\n\n"
+            . "• مبلغ ثبت‌شده: {$amountFa} تومان\n"
+            . "• ماه شهریه: {$monthLabel}\n"
+            . '• تاریخ پرداخت: ' . shamsiDate($paymentDate) . "\n"
+            . '• روش پرداخت: ' . match ($paymentMethod) {
+                'cash' => 'نقدی',
+                'bank_transfer' => 'انتقال بانکی',
+                'check' => 'چک',
+                default => $paymentMethod,
+            } . "\n";
+
+        if ($remaining > 0) {
+            $receiptBody .= '• مانده بدهی این ماه: ' . persianNumber(number_format($remaining)) . " تومان\n";
+        } elseif ($remaining < 0) {
+            $receiptBody .= '• اعتبار باقی‌مانده شما: ' . persianNumber(number_format(abs($remaining))) . " تومان\n";
+        } else {
+            $receiptBody .= "• وضعیت: شهریه این ماه به‌طور کامل تسویه شد ✅\n";
+        }
+
+        $receiptBody .= "\nاز همکاری و اعتماد شما سپاسگزاریم.\nمدیریت مهدکودک " . siteName() . ' 💖';
+
+        $notifyResult = notifyParent($parentId, 'payment_receipt', [
+            'args' => [$parentName, $childName, $amountFa, $monthLabel],
+            'portal_subject' => "رسید پرداخت شهریه {$monthLabel} — {$childName}",
+            'portal_body'    => $receiptBody,
+            // Unique per payment row: recording two real payments sends two receipts.
+            'dedup_key' => "payment_receipt:{$tuitionId}",
+            'sender_id' => (int) ($_SESSION['admin_id'] ?? 0),
+            'priority'  => 3,
+        ]);
+
+        smsQueueFlushInline($pdo);
+
+        $flash = 'پرداخت شهریه با موفقیت ثبت شد و رسید برای والد ارسال گردید.';
+        $summary = summarizeNotificationResults([$notifyResult]);
+        if ($summary !== '') {
+            $flash .= ' ' . $summary;
+        }
+
+        setFlash('success', $flash);
+        redirect(url('admin/tuition.php?month_year=' . rawurlencode($monthYear)));
     }
 
     // Fetch children for dropdown
@@ -122,26 +190,37 @@ try {
     ");
     $children = $childrenStmt->fetchAll();
 
-    // Fetch all active children with their latest payment
-    $pagination = paginate(
-        (int) $pdo->query("SELECT COUNT(*) FROM children WHERE status = 'active'")->fetchColumn(),
-        currentPageNumber(),
-        20
+    // Whole-month position for every active child, computed in ONE query
+    // (previously 3 queries per child inside a render loop).
+    $breakdowns = activeChildrenTuitionBreakdown($pdo, $viewMonthYear);
+
+    // Last payment date per child for the selected month, fetched in bulk.
+    $lastPayments = [];
+    $lastPayStmt = $pdo->prepare(
+        'SELECT child_id, MAX(payment_date) AS latest_date
+         FROM tuition_payments WHERE month_year = :myear GROUP BY child_id'
     );
-    $statusStmt = $pdo->query("
-        SELECT
-            c.id, c.first_name, c.last_name,
-            p.first_name AS p_first, p.last_name AS p_last,
-            (SELECT month_year FROM tuition_payments WHERE child_id = c.id ORDER BY month_year DESC, payment_date DESC, id DESC LIMIT 1) AS latest_month,
-            (SELECT payment_date FROM tuition_payments WHERE child_id = c.id ORDER BY month_year DESC, payment_date DESC, id DESC LIMIT 1) AS latest_date,
-            (SELECT SUM(amount) FROM tuition_payments WHERE child_id = c.id AND month_year = (SELECT month_year FROM tuition_payments WHERE child_id = c.id ORDER BY month_year DESC, payment_date DESC, id DESC LIMIT 1)) AS latest_month_total
-        FROM children c
-        INNER JOIN parents p ON p.id = c.parent_id
-        WHERE c.status = 'active'
-        ORDER BY c.last_name, c.first_name
-        LIMIT {$pagination['perPage']} OFFSET {$pagination['offset']}
-    ");
-    $dashboardStatus = $statusStmt->fetchAll();
+    $lastPayStmt->execute([':myear' => $viewMonthYear]);
+    foreach ($lastPayStmt->fetchAll() as $lp) {
+        $lastPayments[(int) $lp['child_id']] = (string) $lp['latest_date'];
+    }
+
+    // Month-level KPIs so the admin sees the collection position at a glance.
+    $monthTotals = ['expected' => 0.0, 'paid' => 0.0, 'outstanding' => 0.0, 'settled' => 0, 'debtors' => 0];
+    foreach ($breakdowns as $b) {
+        $monthTotals['expected'] += $b['expected'];
+        $monthTotals['paid']     += $b['paid'];
+
+        if ($b['balance'] > 0) {
+            $monthTotals['outstanding'] += $b['balance'];
+            $monthTotals['debtors']++;
+        } else {
+            $monthTotals['settled']++;
+        }
+    }
+
+    $pagination = paginate(count($breakdowns), currentPageNumber(), 20);
+    $dashboardStatus = array_slice(array_values($breakdowns), $pagination['offset'], $pagination['perPage']);
 
 } catch (Throwable $e) {
     error_log($e->getMessage());
@@ -150,6 +229,8 @@ try {
     }
     $children = [];
     $dashboardStatus = [];
+    $lastPayments = [];
+    $monthTotals = ['expected' => 0.0, 'paid' => 0.0, 'outstanding' => 0.0, 'settled' => 0, 'debtors' => 0];
     $pagination = paginate(0, 1, 20);
 }
 
@@ -278,9 +359,44 @@ require_once __DIR__ . '/header.php';
         </div>
 
         <div class="admin-section">
-            <div class="admin-section-header">
-                <h2 class="admin-section-title">وضعیت پرداخت کودکان فعال</h2>
+            <div class="admin-section-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                <h2 class="admin-section-title" style="margin:0;">وضعیت شهریه کودکان فعال</h2>
+                <form method="get" action="<?= e(url('admin/tuition.php')) ?>" style="display:flex;gap:8px;align-items:center;">
+                    <label for="view_month_year" style="font-size:0.85rem;font-weight:600;">ماه:</label>
+                    <select name="month_year" id="view_month_year" class="form-control" onchange="this.form.submit()" style="min-width:150px;">
+                        <?php foreach (getShamsiMonthYearChoices(24, 12) as $choice): ?>
+                            <option value="<?= e($choice['value']) ?>" <?= $choice['value'] === $viewMonthYear ? 'selected' : '' ?>>
+                                <?= e($choice['label']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </form>
             </div>
+
+            <!-- Month collection KPIs -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;">
+                <div class="card" style="padding:12px 14px;">
+                    <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">مبلغ مورد انتظار ماه</div>
+                    <div style="font-size:1.1rem;font-weight:800;"><?= e(persianNumber(number_format($monthTotals['expected']))) ?> <span style="font-size:0.75rem;font-weight:normal;">تومان</span></div>
+                </div>
+                <div class="card" style="padding:12px 14px;border-inline-start:4px solid var(--app-success, #2E7D5B);">
+                    <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">دریافت‌شده</div>
+                    <div style="font-size:1.1rem;font-weight:800;color:var(--adm-success);"><?= e(persianNumber(number_format($monthTotals['paid']))) ?> <span style="font-size:0.75rem;font-weight:normal;">تومان</span></div>
+                </div>
+                <div class="card" style="padding:12px 14px;border-inline-start:4px solid var(--adm-danger);">
+                    <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">مانده معوق</div>
+                    <div style="font-size:1.1rem;font-weight:800;color:var(--adm-danger);"><?= e(persianNumber(number_format($monthTotals['outstanding']))) ?> <span style="font-size:0.75rem;font-weight:normal;">تومان</span></div>
+                </div>
+                <div class="card" style="padding:12px 14px;">
+                    <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">تسویه‌شده / بدهکار</div>
+                    <div style="font-size:1.1rem;font-weight:800;">
+                        <span style="color:var(--adm-success);"><?= e(persianNumber((string) $monthTotals['settled'])) ?></span>
+                        <span style="color:var(--adm-text-muted);font-weight:normal;">/</span>
+                        <span style="color:var(--adm-danger);"><?= e(persianNumber((string) $monthTotals['debtors'])) ?></span>
+                    </div>
+                </div>
+            </div>
+
             <?php if (empty($dashboardStatus)): ?>
                 <div class="empty-state empty-state-sm">
                     <div class="empty-state-icon">
@@ -295,49 +411,42 @@ require_once __DIR__ . '/header.php';
                             <tr>
                                 <th>نام کودک</th>
                                 <th>والدین</th>
-                                <th>آخرین ماه پرداخت</th>
-                                <th>مجموع پرداختی ماه</th>
                                 <th>مبلغ مورد انتظار</th>
+                                <th>پرداخت‌شده</th>
                                 <th>مانده بدهی / تسویه</th>
-                                <th>تاریخ آخرین پرداخت</th>
+                                <th>آخرین پرداخت</th>
                                 <th>عملیات</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php
-                            [$curJy, $curJm] = gregorianToJalali((int)date('Y'), (int)date('n'), (int)date('j'));
-                            $currentMonthYearStr = sprintf('%04d-%02d', $curJy, $curJm);
-                            ?>
                             <?php foreach ($dashboardStatus as $s): ?>
                                 <?php
-                                $sCid = (int) $s['id'];
-                                $sMonth = $currentMonthYearStr;
-                                $balance = childOutstandingBalance($pdo, $sCid, $sMonth);
-
-                                // Expected amount for this child & current month
-                                $planStmt = $pdo->prepare('SELECT expected_amount FROM tuition_plans WHERE child_id = :cid AND month_year = :myear LIMIT 1');
-                                $planStmt->execute([':cid' => $sCid, ':myear' => $sMonth]);
-                                $expVal = $planStmt->fetchColumn();
-                                $expectedAmount = ($expVal !== false && $expVal !== null) ? (float)$expVal : (float)getSetting('default_tuition_amount', '0');
+                                $sCid = (int) $s['child_id'];
+                                $balance = (float) $s['balance'];
+                                $latestDate = $lastPayments[$sCid] ?? null;
                                 ?>
                                 <tr>
-                                    <td style="font-weight:600;"><?= e(trim($s['first_name'] . ' ' . $s['last_name'])) ?></td>
-                                    <td><?= e(trim($s['p_first'] . ' ' . $s['p_last'])) ?></td>
+                                    <td style="font-weight:600;"><?= e($s['child_name']) ?></td>
+                                    <td><?= e($s['parent_name']) ?></td>
                                     <td>
-                                        <?php if ($s['latest_month']): ?>
-                                            <span class="badge badge-success"><?= e(formatShamsiMonthYear($s['latest_month'])) ?></span>
-                                        <?php else: ?>
-                                            <span class="badge badge-danger">ندارد</span>
+                                        <strong><?= e(persianNumber(number_format((float) $s['expected']))) ?></strong> تومان
+                                        <?php if ((float) $s['sms_fee'] > 0): ?>
+                                            <br>
+                                            <small class="muted" style="font-size:0.75rem;">
+                                                شهریه <?= e(persianNumber(number_format((float) $s['base']))) ?>
+                                                + بسته پیامک <?= e(persianNumber(number_format((float) $s['sms_fee']))) ?>
+                                            </small>
+                                        <?php elseif (!$s['has_plan']): ?>
+                                            <br><small class="muted" style="font-size:0.75rem;">بر پایه شهریه پیش‌فرض</small>
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <?php if ($s['latest_month_total'] !== null): ?>
-                                            <strong><?= e(persianNumber(number_format((float) $s['latest_month_total']))) ?> تومان</strong>
+                                        <?php if ((float) $s['paid'] > 0): ?>
+                                            <strong><?= e(persianNumber(number_format((float) $s['paid']))) ?></strong> تومان
                                         <?php else: ?>
                                             <span class="muted">—</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td><?= e(persianNumber(number_format($expectedAmount))) ?> تومان</td>
                                     <td>
                                         <?php if ($balance > 0): ?>
                                             <span class="badge badge-danger" style="font-weight:700;">بدهکار: <?= e(persianNumber(number_format($balance))) ?> تومان</span>
@@ -347,9 +456,9 @@ require_once __DIR__ . '/header.php';
                                             <span class="badge badge-success" style="font-weight:700;">تسویه کامل</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td><?= $s['latest_date'] ? e(shamsiDate($s['latest_date'])) : '—' ?></td>
+                                    <td><?= $latestDate !== null ? e(shamsiDate($latestDate)) : '<span class="muted">—</span>' ?></td>
                                     <td>
-                                        <a href="<?= e(url('admin/tuition.php?child_id=' . $s['id'] . '#recordForm')) ?>" class="btn btn-sm btn-secondary">پرداخت</a>
+                                        <a href="<?= e(url('admin/tuition.php?child_id=' . $sCid . '&month_year=' . rawurlencode($viewMonthYear) . '#recordForm')) ?>" class="btn btn-sm btn-secondary">پرداخت</a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -360,7 +469,7 @@ require_once __DIR__ . '/header.php';
                     <p class="pagination-summary">
                         نمایش <?= e(persianNumber($pagination['from'])) ?> تا <?= e(persianNumber($pagination['to'])) ?> از <?= e(persianNumber($pagination['total'])) ?> کودک
                     </p>
-                    <?= renderPagination($pagination, url('admin/tuition.php')) ?>
+                    <?= renderPagination($pagination, url('admin/tuition.php'), ['month_year' => $viewMonthYear]) ?>
                 <?php endif; ?>
             <?php endif; ?>
         </div>

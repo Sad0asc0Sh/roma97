@@ -22,6 +22,13 @@ $todayAttendanceByChild = [];
 /** @var array<int, string> */
 $classroomByChild = [];
 
+// Current-month tuition position across all active children (see below).
+$currentMonthYear = '';
+$tuitionExpected = 0.0;
+$tuitionPaid = 0.0;
+$tuitionBalance = 0.0;
+$hasActiveChild = false;
+
 $successMessage = getFlash('success');
 $errorMessage = getFlash('error');
 
@@ -74,6 +81,25 @@ SQL
 
         while ($ar = $todayStmt->fetch()) {
             $todayAttendanceByChild[(int) $ar['child_id']] = (string) $ar['status'];
+        }
+
+        // ── Current-month tuition position ──────────────────────────────────
+        // Financial transparency on the dashboard, not buried one click away:
+        // a parent should never have to phone the office to learn whether this
+        // month is settled.
+        [$jy, $jm] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
+        $currentMonthYear = sprintf('%04d-%02d', $jy, $jm);
+
+        foreach ($children as $childRow) {
+            if ((string) ($childRow['status'] ?? '') !== 'active') {
+                continue;
+            }
+
+            $breakdown = childTuitionBreakdown($pdo, (int) $childRow['id'], $currentMonthYear);
+            $tuitionExpected += (float) $breakdown['expected'];
+            $tuitionPaid     += (float) $breakdown['paid'];
+            $tuitionBalance  += (float) $breakdown['balance'];
+            $hasActiveChild = true;
         }
     }
 } catch (Throwable $exception) {
@@ -171,6 +197,38 @@ require_once __DIR__ . '/header.php';
         <?php endforeach; ?>
     </div>
 </section>
+<?php endif; ?>
+
+<!-- Current-month tuition status: answers "do I owe anything?" without a phone call -->
+<?php if ($hasActiveChild): ?>
+    <?php
+    // Tolerance so rounding dust never shows a settled family as a debtor.
+    $tuitionSettled = $tuitionBalance < 1000;
+    $tuitionCredit  = $tuitionBalance < -1000;
+    ?>
+    <section class="parent-section">
+        <div class="card" style="padding:16px 18px;border-inline-start:5px solid <?= $tuitionSettled ? '#2e8540' : '#c8860d' ?>;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                <div>
+                    <h3 style="margin:0 0 4px;font-size:1rem;">شهریه ماه <?= e(formatShamsiMonthYear($currentMonthYear)) ?></h3>
+                    <p style="margin:0;font-size:0.85rem;color:var(--muted);line-height:1.8;">
+                        <?php if ($tuitionCredit): ?>
+                            این ماه تسویه شده و <?= e(persianNumber(number_format(abs($tuitionBalance)))) ?> تومان اعتبار دارید. سپاس از شما! 💚
+                        <?php elseif ($tuitionSettled): ?>
+                            این ماه به‌طور کامل تسویه شده است. سپاس از همراهی شما! 💚
+                        <?php else: ?>
+                            مانده قابل پرداخت:
+                            <strong style="color:#c62828;"><?= e(persianNumber(number_format($tuitionBalance))) ?> تومان</strong>
+                            از مجموع <?= e(persianNumber(number_format($tuitionExpected))) ?> تومان
+                        <?php endif; ?>
+                    </p>
+                </div>
+                <a href="<?= e(url('parent/payments.php')) ?>" class="btn <?= $tuitionSettled ? 'btn-secondary' : 'btn-primary' ?> btn-sm">
+                    مشاهده جزئیات
+                </a>
+            </div>
+        </div>
+    </section>
 <?php endif; ?>
 
 <!-- Your Children Section -->

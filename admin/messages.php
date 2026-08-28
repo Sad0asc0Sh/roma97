@@ -9,9 +9,11 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/sms.php';
+require_once __DIR__ . '/../includes/notifications.php';
 
 // Force database initialization for messaging table
 initializeMessagingTable();
+initializeNotificationTables();
 
 requireLogin();
 
@@ -38,47 +40,24 @@ if (isPostRequest() && isset($_POST['send_message'])) {
             $error = 'موضوع و متن پیام الزامی است.';
         } else {
             try {
-                $insertStmt = $pdo->prepare(
-                    'INSERT INTO messages (sender_type, sender_id, parent_id, subject, body) VALUES (?, ?, ?, ?, ?)'
-                );
-
-                $sentCount = 0;
+                // Resolve the recipient list up-front, then let the notification
+                // engine write the portal message AND queue the SMS for each one.
+                // Doing both in a single place is what keeps the parent inbox and
+                // the SMS log consistent with each other.
+                $recipientIds = [];
 
                 if ($isBroadcast) {
-                    // Fan-out: insert one row per ACTIVE parent so each has independent
-                    // read state. Suspended/pending parents should not receive broadcasts.
-                    // Wrapped in a transaction so the fan-out is all-or-nothing.
-                    $pdo->beginTransaction();
-                    try {
-                        $parentsListStmt = $pdo->prepare(
-                            "SELECT id FROM parents WHERE status = 'active' ORDER BY id"
-                        );
-                        $parentsListStmt->execute();
-
-                        while (($pid = $parentsListStmt->fetchColumn()) !== false) {
-                            $insertStmt->execute(['admin', $adminId, (int) $pid, $subject, $body]);
-                            $sentCount++;
-                        }
-
-                        if ($sentCount === 0) {
-                            // No active parents — insert a single NULL row so the admin
-                            // still sees it in sent list (and the broadcast is recorded).
-                            $insertStmt->execute(['admin', $adminId, null, $subject, $body]);
-                            $sentCount = 1;
-                        }
-
-                        $pdo->commit();
-                    } catch (Throwable $inner) {
-                        if ($pdo->inTransaction()) {
-                            $pdo->rollBack();
-                        }
-                        throw $inner;
+                    $parentsListStmt = $pdo->query("SELECT id FROM parents WHERE status = 'active' ORDER BY id");
+                    while (($pid = $parentsListStmt->fetchColumn()) !== false) {
+                        $recipientIds[] = (int) $pid;
                     }
 
-                    recordAudit('message.send', 'message', null, ['broadcast' => true, 'recipients' => $sentCount]);
+                    if ($recipientIds === []) {
+                        $error = 'هیچ والد فعالی برای دریافت این پیام وجود ندارد.';
+                    }
                 } else {
-                    // Validate that the chosen recipient is a real active parent before
-                    // sending, so an admin can't address a suspended/deleted account.
+                    // Validate that the chosen recipient is a real active parent so an
+                    // admin can't address a suspended/deleted account.
                     $verifyStmt = $pdo->prepare(
                         'SELECT id FROM parents WHERE id = :id AND status = :active LIMIT 1'
                     );
@@ -87,40 +66,44 @@ if (isPostRequest() && isset($_POST['send_message'])) {
                     if ($verifyStmt->fetchColumn() === false) {
                         $error = 'گیرنده انتخاب‌شده معتبر یا فعال نیست.';
                     } else {
-                        $insertStmt->execute(['admin', $adminId, $recipientId, $subject, $body]);
-                        $sentCount = 1;
-                        recordAudit('message.send', 'message', (int) $pdo->lastInsertId(), ['recipient_id' => $recipientId]);
+                        $recipientIds[] = (int) $recipientId;
                     }
                 }
 
                 if ($error === '') {
-                    // Send SMS announcement pattern to active parents who opted in
-                    $smsSettings = getSmsSettings($pdo);
-                    $annBodyId = (int) ($smsSettings['sms_pattern_announcement'] ?? 0);
+                    // Shared token so all rows of one broadcast are traceable
+                    // together while each recipient still de-duplicates independently.
+                    $batchToken = bin2hex(random_bytes(8));
+                    $notifyResults = [];
 
-                    if ($annBodyId > 0 && ($smsSettings['sms_enabled'] ?? '0') === '1') {
-                        if ($isBroadcast) {
-                            $targetParentsStmt = $pdo->query("SELECT id, first_name, last_name, phone, sms_pref_announcements FROM parents WHERE status = 'active'");
-                            while ($pRow = $targetParentsStmt->fetch()) {
-                                if ((int)($pRow['sms_pref_announcements'] ?? 1) === 1 && !empty($pRow['phone'])) {
-                                    $pName = trim($pRow['first_name'] . ' ' . $pRow['last_name']);
-                                    sendMeliPayamakPattern((string) $pRow['phone'], $annBodyId, [$pName, $subject], 'announcement', (int) $pRow['id']);
-                                }
-                            }
-                        } elseif ($recipientId !== null) {
-                            $targetStmt = $pdo->prepare("SELECT id, first_name, last_name, phone, sms_pref_announcements FROM parents WHERE id = :id LIMIT 1");
-                            $targetStmt->execute([':id' => $recipientId]);
-                            $pRow = $targetStmt->fetch();
-                            if ($pRow && (int)($pRow['sms_pref_announcements'] ?? 1) === 1 && !empty($pRow['phone'])) {
-                                $pName = trim($pRow['first_name'] . ' ' . $pRow['last_name']);
-                                sendMeliPayamakPattern((string) $pRow['phone'], $annBodyId, [$pName, $subject], 'announcement', (int) $pRow['id']);
-                            }
-                        }
+                    foreach ($recipientIds as $targetParentId) {
+                        $notifyResults[] = notifyParent($targetParentId, 'announcement', [
+                            'args'           => [parentDisplayNameForMessage($pdo, $targetParentId), $subject],
+                            'portal_subject' => $subject,
+                            'portal_body'    => $body,
+                            'dedup_key'      => "announcement:{$batchToken}:{$targetParentId}",
+                            'sender_type'    => 'admin',
+                            'sender_id'      => $adminId,
+                        ]);
                     }
+
+                    $sentCount = count($recipientIds);
+
+                    recordAudit('message.send', 'message', null, [
+                        'broadcast'  => $isBroadcast,
+                        'recipients' => $sentCount,
+                    ]);
+
+                    smsQueueFlushInline($pdo);
 
                     $success = $isBroadcast
                         ? 'پیام با موفقیت به ' . persianNumber((string) $sentCount) . ' والد ارسال شد.'
                         : 'پیام با موفقیت ارسال شد.';
+
+                    $summary = summarizeNotificationResults($notifyResults);
+                    if ($summary !== '') {
+                        $success .= ' ' . $summary;
+                    }
                 }
             } catch (Throwable $e) {
                 error_log($e->getMessage());
@@ -134,18 +117,54 @@ if (isPostRequest() && isset($_POST['send_message'])) {
 $parentsStmt = $pdo->query("SELECT id, first_name, last_name, email FROM parents WHERE status = 'active' ORDER BY last_name, first_name");
 $parents = $parentsStmt->fetchAll();
 
-// Fetch Sent Messages (paginated)
-$countStmt = $pdo->prepare("SELECT COUNT(*) FROM messages WHERE sender_type = 'admin' AND sender_id = ?");
+// Fetch sent messages, grouped so one broadcast appears as ONE row with a
+// recipient count and a read-progress figure — instead of N identical rows,
+// which made the outbox unusable after a few announcements.
+$countStmt = $pdo->prepare(
+    "SELECT COUNT(*) FROM (
+        SELECT 1 FROM messages
+        WHERE sender_type = 'admin' AND sender_id = ?
+        GROUP BY subject, body, created_at
+     ) grouped"
+);
 $countStmt->execute([$adminId]);
 $pagination = paginate((int) $countStmt->fetchColumn(), currentPageNumber(), 20);
 
 $messagesStmt = $pdo->prepare(
-    'SELECT m.*, p.first_name, p.last_name FROM messages m LEFT JOIN parents p ON m.parent_id = p.id'
-    . " WHERE m.sender_type = 'admin' AND m.sender_id = ? ORDER BY m.created_at DESC"
-    . ' LIMIT ' . $pagination['perPage'] . ' OFFSET ' . $pagination['offset']
+    "SELECT
+        MIN(m.id) AS id,
+        m.subject,
+        m.body,
+        m.created_at,
+        COUNT(*) AS recipient_count,
+        SUM(m.is_read) AS read_count,
+        MIN(m.parent_id) AS sample_parent_id,
+        MAX(CASE WHEN m.parent_id IS NULL THEN 1 ELSE 0 END) AS has_null_recipient
+     FROM messages m
+     WHERE m.sender_type = 'admin' AND m.sender_id = ?
+     GROUP BY m.subject, m.body, m.created_at
+     ORDER BY m.created_at DESC
+     LIMIT " . $pagination['perPage'] . ' OFFSET ' . $pagination['offset']
 );
 $messagesStmt->execute([$adminId]);
 $sentMessages = $messagesStmt->fetchAll();
+
+// Resolve the display name for single-recipient rows in one extra query.
+$singleParentIds = [];
+foreach ($sentMessages as $row) {
+    if ((int) $row['recipient_count'] === 1 && $row['sample_parent_id'] !== null) {
+        $singleParentIds[(int) $row['sample_parent_id']] = true;
+    }
+}
+
+$parentNamesById = [];
+if ($singleParentIds !== []) {
+    $idList = implode(',', array_map('intval', array_keys($singleParentIds)));
+    $nameStmt = $pdo->query("SELECT id, first_name, last_name FROM parents WHERE id IN ({$idList})");
+    foreach (($nameStmt ? $nameStmt->fetchAll() : []) as $pRow) {
+        $parentNamesById[(int) $pRow['id']] = trim((string) $pRow['first_name'] . ' ' . (string) $pRow['last_name']);
+    }
+}
 
 // View Message Details — looked up directly (not from the paginated list above)
 // so the link still works regardless of which page it was sent from.
@@ -221,15 +240,42 @@ require_once __DIR__ . '/header.php';
                             <th>تاریخ</th>
                             <th>گیرنده</th>
                             <th>موضوع</th>
+                            <th>وضعیت مطالعه</th>
                             <th>عملیات</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($sentMessages as $msg): ?>
+                            <?php
+                            $recipientCount = (int) $msg['recipient_count'];
+                            $readCount = (int) $msg['read_count'];
+                            $isGroup = $recipientCount > 1;
+                            $sampleParentId = $msg['sample_parent_id'] !== null ? (int) $msg['sample_parent_id'] : 0;
+                            ?>
                             <tr>
                                 <td><?= e(formatPersianDate($msg['created_at'])) ?></td>
-                                <td><?= $msg['parent_id'] ? e($msg['first_name'] . ' ' . $msg['last_name']) : '<strong>همه والدین</strong>' ?></td>
+                                <td>
+                                    <?php if ($isGroup): ?>
+                                        <strong>ارسال گروهی</strong>
+                                        <br><small class="muted"><?= e(persianNumber((string) $recipientCount)) ?> والد</small>
+                                    <?php elseif ((int) $msg['has_null_recipient'] === 1): ?>
+                                        <strong>همه والدین</strong>
+                                    <?php else: ?>
+                                        <?= e($parentNamesById[$sampleParentId] ?? 'والد') ?>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?= e($msg['subject']) ?></td>
+                                <td>
+                                    <?php if ($readCount >= $recipientCount): ?>
+                                        <span class="badge badge-success">خوانده شد<?= $isGroup ? ' (همه)' : '' ?></span>
+                                    <?php elseif ($readCount > 0): ?>
+                                        <span class="badge badge-warning">
+                                            <?= e(persianNumber((string) $readCount)) ?> از <?= e(persianNumber((string) $recipientCount)) ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge badge-info">خوانده نشده</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <a href="?view=<?= e((string) $msg['id']) ?>" class="btn btn-sm btn-outline">مشاهده</a>
                                 </td>

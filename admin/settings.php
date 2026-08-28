@@ -45,6 +45,9 @@ function getSettings(PDO $pdo): array
         'sms_pattern_attendance' => '',
         'sms_pattern_tuition_reminder' => '',
         'sms_pattern_announcement' => '',
+        'sms_pattern_payment_receipt' => '',
+        'sms_pattern_child_status' => '',
+        'sms_inline_budget_seconds' => '8',
     ];
 
     $keys = array_keys($settings);
@@ -316,6 +319,19 @@ if (isPostRequest()) {
         $bodyAtt    = trim((string) ($_POST['sms_pattern_attendance'] ?? ''));
         $bodyTui    = trim((string) ($_POST['sms_pattern_tuition_reminder'] ?? ''));
         $bodyAnn    = trim((string) ($_POST['sms_pattern_announcement'] ?? ''));
+        $bodyPay    = trim((string) ($_POST['sms_pattern_payment_receipt'] ?? ''));
+        $bodyStat   = trim((string) ($_POST['sms_pattern_child_status'] ?? ''));
+
+        // Inline send budget: how long a web request may spend flushing the SMS
+        // queue before handing the rest over to the cron worker. Clamped so a
+        // typo can never hang the panel for minutes.
+        $inlineBudget = (int) ($_POST['sms_inline_budget_seconds'] ?? 8);
+        if ($inlineBudget < 0) {
+            $inlineBudget = 0;
+        }
+        if ($inlineBudget > 25) {
+            $inlineBudget = 25;
+        }
 
         saveSetting($pdo, 'sms_enabled', $smsEnabled);
         saveSetting($pdo, 'sms_api_key', $smsApiKey);
@@ -327,6 +343,9 @@ if (isPostRequest()) {
         saveSetting($pdo, 'sms_pattern_attendance', $bodyAtt);
         saveSetting($pdo, 'sms_pattern_tuition_reminder', $bodyTui);
         saveSetting($pdo, 'sms_pattern_announcement', $bodyAnn);
+        saveSetting($pdo, 'sms_pattern_payment_receipt', $bodyPay);
+        saveSetting($pdo, 'sms_pattern_child_status', $bodyStat);
+        saveSetting($pdo, 'sms_inline_budget_seconds', (string) $inlineBudget);
 
         recordAudit('sms_settings.update', 'settings', null);
         setFlash('success', 'تنظیمات پنل پیامک با موفقیت ذخیره شد.');
@@ -835,6 +854,35 @@ require_once __DIR__ . '/header.php';
                         <input type="number" id="sms_pattern_announcement" name="sms_pattern_announcement" class="form-control" dir="ltr"
                             placeholder="مثال: 529" value="<?= e($settings['sms_pattern_announcement'] ?? '') ?>">
                         <small style="color:var(--muted);font-size:0.8rem;">متغیرها: <code>{0}=نام والد</code>، <code>{1}=عنوان پیام</code><br>نمونه: {0} مهربان، اطلاعیه جدید مهد با عنوان «{1}» در پنل شما قرار گرفت.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sms_pattern_payment_receipt" class="form-label">
+                            ۸. رسید پرداخت شهریه (اعتمادساز مالی) 🧾
+                        </label>
+                        <input type="number" id="sms_pattern_payment_receipt" name="sms_pattern_payment_receipt" class="form-control" dir="ltr"
+                            placeholder="مثال: 531" value="<?= e($settings['sms_pattern_payment_receipt'] ?? '') ?>">
+                        <small style="color:var(--muted);font-size:0.8rem;">متغیرها: <code>{0}=نام والد</code>، <code>{1}=نام کودک</code>، <code>{2}=مبلغ</code>، <code>{3}=ماه</code><br>نمونه: {0} مهربان، پرداخت {2} تومان شهریه ماه {3} برای {1} با سپاس ثبت شد. مهد روما</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sms_pattern_child_status" class="form-label">
+                            ۹. تغییر وضعیت ثبت‌نام کودک 🔄
+                        </label>
+                        <input type="number" id="sms_pattern_child_status" name="sms_pattern_child_status" class="form-control" dir="ltr"
+                            placeholder="مثال: 532" value="<?= e($settings['sms_pattern_child_status'] ?? '') ?>">
+                        <small style="color:var(--muted);font-size:0.8rem;">متغیرها: <code>{0}=نام والد</code>، <code>{1}=نام کودک</code>، <code>{2}=وضعیت جدید</code><br>نمونه: {0} مهربان، وضعیت ثبت‌نام {1} به «{2}» تغییر یافت. مهد روما</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sms_inline_budget_seconds" class="form-label">
+                            ⏱️ حداکثر زمان ارسال درون‌خطی (ثانیه)
+                        </label>
+                        <input type="number" id="sms_inline_budget_seconds" name="sms_inline_budget_seconds" class="form-control" dir="ltr"
+                            min="0" max="25" placeholder="8" value="<?= e($settings['sms_inline_budget_seconds'] ?? '8') ?>">
+                        <small style="color:var(--muted);font-size:0.8rem;">
+                            هنگام ثبت گزارش یا حضور و غیاب، سیستم حداکثر این مدت را صرف ارسال آنی پیامک‌ها می‌کند و باقی صف را به کرون می‌سپارد تا صفحه هرگز کند نشود. مقدار پیشنهادی: ۸ ثانیه.
+                        </small>
                     </div>
                 </div>
 

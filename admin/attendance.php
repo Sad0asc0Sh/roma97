@@ -10,6 +10,7 @@ require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/sms.php';
+require_once __DIR__ . '/../includes/notifications.php';
 
 requireLogin();
 
@@ -168,6 +169,18 @@ try {
             $attendanceData = [];
         }
 
+        // Snapshot the stored statuses for this date so notifications only go
+        // out for children whose status actually changed. Re-saving the sheet
+        // (a very common action while children arrive) must not re-send SMS.
+        $previousStatuses = [];
+        $prevStmt = $pdo->prepare(
+            'SELECT child_id, status FROM attendance WHERE attendance_date = :adate'
+        );
+        $prevStmt->execute([':adate' => $parsedPostDate]);
+        foreach ($prevStmt->fetchAll() as $prevRow) {
+            $previousStatuses[(int) $prevRow['child_id']] = (string) $prevRow['status'];
+        }
+
         // VALUES() syntax: the row-alias form ("AS new") is MySQL 8+ only and
         // fails on MariaDB (the typical shared-hosting database).
         $upsert = $pdo->prepare(
@@ -225,55 +238,87 @@ SQL
             ]);
         }
 
-        // Send attendance pattern SMS to parents who opted in
-        $smsSettings = getSmsSettings($pdo);
-        $attBodyId = (int) ($smsSettings['sms_pattern_attendance'] ?? 0);
+        // ── Notify parents of attendance changes only ────────────────────────
+        // Determine which children's status genuinely changed in this submit.
+        $statusFaLabels = [
+            'present' => 'با لبخند وارد مهد شد و در حال بازیه 🌈',
+            'absent'  => 'امروز جاش خیلی خالیه و دلتنگشیم 🎈',
+            'late'    => 'با کمی تاخیر اومد پیشمون و به جمع دوستانش پیوست ⏰',
+            'excused' => 'امروز در حال استراحت در کنار شماست 🏡',
+        ];
 
-        if ($attBodyId > 0 && ($smsSettings['sms_enabled'] ?? '0') === '1') {
-            $parentInfoStmt = $pdo->prepare("
-                SELECT c.id AS child_id, c.first_name AS c_first, c.last_name AS c_last,
-                       p.id AS parent_id, p.phone, p.sms_pref_attendance
-                FROM children c
-                INNER JOIN parents p ON p.id = c.parent_id
-                WHERE c.id = :cid LIMIT 1
-            ");
+        $changedAttendance = [];
 
-            $statusFaLabels = [
-                'present' => 'با لبخند وارد مهد شد و در حال بازیه 🌈',
-                'absent'  => 'امروز جاش خیلی خالیه و دلتنگشیم 🎈',
-                'late'    => 'با کمی تاخیر اومد پیشمون و به جمع دوستانش پیوست ⏰',
-                'excused' => 'امروز در حال استراحت در کنار شماست 🏡',
-            ];
+        foreach ($attendanceData as $childKey => $fields) {
+            if (!is_array($fields)) {
+                continue;
+            }
 
-            $dateFa = shamsiDate($parsedPostDate);
+            $childId = filter_var($childKey, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if (!is_int($childId) || !isset($allowedIds[$childId])) {
+                continue;
+            }
 
-            foreach ($attendanceData as $childKey => $fields) {
-                if (!is_array($fields)) continue;
-                $childId = (int) $childKey;
-                if (!isset($allowedIds[$childId])) continue;
+            $status = (string) ($fields['status'] ?? 'present');
+            if (!in_array($status, $allowedStatuses, true)) {
+                $status = 'present';
+            }
 
-                $status = (string) ($fields['status'] ?? 'present');
-                $parentInfoStmt->execute([':cid' => $childId]);
-                $pRow = $parentInfoStmt->fetch();
-
-                if ($pRow && (int)($pRow['sms_pref_attendance'] ?? 1) === 1 && !empty($pRow['phone'])) {
-                    $cName = trim($pRow['c_first'] . ' ' . $pRow['c_last']);
-                    $stFa = $statusFaLabels[$status] ?? 'حاضر';
-
-                    sendMeliPayamakPattern(
-                        (string) $pRow['phone'],
-                        $attBodyId,
-                        [$cName, $dateFa, $stFa],
-                        'attendance',
-                        (int) $pRow['parent_id']
-                    );
-                }
+            if (($previousStatuses[$childId] ?? null) !== $status) {
+                $changedAttendance[$childId] = $status;
             }
         }
 
+        $notifyResults = [];
+
+        if ($changedAttendance !== []) {
+            $childIdList = implode(',', array_map('intval', array_keys($changedAttendance)));
+            $recipientStmt = $pdo->query("
+                SELECT c.id AS child_id, c.first_name AS c_first, c.last_name AS c_last, p.id AS parent_id
+                FROM children c
+                INNER JOIN parents p ON p.id = c.parent_id
+                WHERE c.id IN ({$childIdList})
+            ");
+            $recipients = $recipientStmt ? $recipientStmt->fetchAll() : [];
+
+            $dateFa = shamsiDate($parsedPostDate);
+
+            foreach ($recipients as $row) {
+                $childId = (int) $row['child_id'];
+                $status  = (string) ($changedAttendance[$childId] ?? 'present');
+                $childName = trim((string) $row['c_first'] . ' ' . (string) $row['c_last']);
+
+                $notifyResults[] = notifyParent((int) $row['parent_id'], 'attendance', [
+                    'args' => [$childName, $dateFa, $statusFaLabels[$status] ?? 'حاضر'],
+                    // Keyed by the resulting status: a correction (present → absent)
+                    // legitimately notifies again, a plain re-save does not.
+                    'dedup_key' => "attendance:{$childId}:{$parsedPostDate}:{$status}",
+                ]);
+            }
+
+            smsQueueFlushInline($pdo);
+        }
+
         $displayFlashDate = shamsiDate($parsedPostDate);
-        recordAudit('attendance.save', 'attendance', null, ['date' => $parsedPostDate]);
-        setFlash('success', 'حضور و غیاب برای تاریخ ' . $displayFlashDate . ' ذخیره شد.');
+        recordAudit('attendance.save', 'attendance', null, [
+            'date'     => $parsedPostDate,
+            'changed'  => count($changedAttendance),
+            'notified' => count($notifyResults),
+        ]);
+
+        $flashMessage = 'حضور و غیاب برای تاریخ ' . $displayFlashDate . ' ذخیره شد.';
+
+        if ($changedAttendance === []) {
+            $flashMessage .= ' هیچ تغییری در وضعیت کودکان نبود، بنابراین پیامک تکراری ارسال نشد.';
+        } else {
+            $flashMessage .= ' ' . persianNumber((string) count($changedAttendance)) . ' تغییر وضعیت ثبت شد.';
+            $summary = summarizeNotificationResults($notifyResults);
+            if ($summary !== '') {
+                $flashMessage .= ' ' . $summary;
+            }
+        }
+
+        setFlash('success', $flashMessage);
         redirect(url('admin/attendance.php?date=' . rawurlencode($parsedPostDate)));
     }
 

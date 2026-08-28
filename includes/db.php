@@ -403,8 +403,87 @@ function initializeFinancialTables(): void
                 CONSTRAINT fk_cw_classroom FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
+
+        initializeNotificationTables($pdo);
     } catch (Throwable $e) {
         error_log($e->getMessage());
+    }
+}
+
+/**
+ * Notification engine storage (migration 009).
+ *
+ * Kept idempotent and callable on its own so installs that upgrade without
+ * running the .sql migrations still gain the SMS queue and the de-duplication
+ * log — without them, saving a form twice would charge for two SMS.
+ */
+function initializeNotificationTables(?PDO $pdo = null): void
+{
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+    $initialized = true;
+
+    try {
+        $pdo = $pdo ?? getDb();
+
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS sms_queue (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                recipient_phone VARCHAR(20) NOT NULL,
+                pattern_body_id INT NOT NULL,
+                args_json TEXT NULL,
+                event_type VARCHAR(50) NOT NULL DEFAULT 'general',
+                parent_id INT NULL,
+                dedup_key VARCHAR(191) NULL,
+                priority TINYINT NOT NULL DEFAULT 5,
+                status ENUM('pending','sending','sent','failed','cancelled') NOT NULL DEFAULT 'pending',
+                attempts TINYINT NOT NULL DEFAULT 0,
+                rec_id VARCHAR(100) NULL,
+                last_error VARCHAR(500) NULL,
+                sent_at DATETIME NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_sms_queue_dedup (dedup_key),
+                INDEX idx_sms_queue_status (status, priority, id),
+                INDEX idx_sms_queue_parent (parent_id),
+                INDEX idx_sms_queue_created (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS notification_log (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                event_key VARCHAR(50) NOT NULL,
+                parent_id INT NULL,
+                dedup_key VARCHAR(191) NOT NULL,
+                channels VARCHAR(50) NOT NULL DEFAULT 'sms',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_notification_dedup (dedup_key),
+                INDEX idx_notification_event (event_key, created_at),
+                INDEX idx_notification_parent (parent_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+
+        // Reporting indexes for the SMS Center KPIs.
+        foreach ([
+            'idx_sms_logs_status_created' => '(status, created_at)',
+            'idx_sms_logs_type'           => '(message_type)',
+        ] as $indexName => $definition) {
+            $exists = $pdo->query("
+                SELECT COUNT(*) FROM information_schema.STATISTICS
+                WHERE table_schema = DATABASE() AND table_name = 'sms_logs' AND index_name = '{$indexName}'
+            ")->fetchColumn();
+
+            if ((int) $exists === 0) {
+                try {
+                    $pdo->exec("ALTER TABLE sms_logs ADD INDEX {$indexName} {$definition}");
+                } catch (Throwable) {}
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('initializeNotificationTables failed: ' . $e->getMessage());
     }
 }
 
