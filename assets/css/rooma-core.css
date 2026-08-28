@@ -1,0 +1,636 @@
+@charset "UTF-8";
+/* ============================================================================
+   ROOMA — CORE DESIGN SYSTEM  (public site only)
+   ----------------------------------------------------------------------------
+   Layer 1 of 2. Contains: design tokens, fluid Persian typography scale,
+   reset/base, layout primitives, the animated background canvas, reveal
+   (scroll-entrance) primitives and utilities.
+   Companion file: rooma-components.css
+
+   Notes
+   -----
+   • Written mobile-first. Every type step is fluid via clamp() so no
+     media-query "font jumps" are needed and mobile never renders the
+     desktop display sizes.
+   • html font-size is deliberately left at the browser default (100%) so a
+     visitor's own font-size / zoom preference keeps working. All sizes are
+     rem + vw based.
+   • Motion is transform/opacity only (compositor friendly) and every
+     animation is disabled under prefers-reduced-motion.
+   • RTL-first: uses logical properties (inline-start/end) throughout.
+   ========================================================================= */
+
+/* ── 1. Design tokens ───────────────────────────────────────────────────── */
+:root {
+    /* Brand — "Garden Classroom": sage green, warm clay, honey amber */
+    --green-50:  #EEF7F1;
+    --green-100: #D9EDE1;
+    --green-200: #B4DBC4;
+    --green-300: #86C3A1;
+    --green-400: #5BA97E;
+    --green-500: #3D8B63;
+    --green-600: #2F6F4F;
+    --green-700: #25573E;
+    --green-800: #1B4030;
+    --green-900: #133026;
+
+    --clay-50:  #FCF2ED;
+    --clay-100: #F7E1D6;
+    --clay-200: #EDC3AE;
+    --clay-300: #DFA080;
+    --clay-400: #D08760;
+    --clay-500: #C4724A;
+    --clay-600: #A65D3A;
+    --clay-700: #85492E;
+
+    --honey-100: #FDF3DC;
+    --honey-200: #F9E1AC;
+    --honey-300: #F2C86B;
+    --honey-400: #E8A838;
+    --honey-500: #CE8C1E;
+
+    --sky-200: #CADEEE;
+    --sky-400: #7FAED2;
+    --sky-500: #5B8DB8;
+
+    --rose-200: #EFD3D3;
+    --rose-400: #D4A0A0;
+
+    /* Semantic — light theme */
+    --primary:        var(--green-500);
+    --primary-dark:   var(--green-600);
+    --primary-deep:   var(--green-700);
+    --primary-light:  var(--green-300);
+    --primary-faint:  var(--green-50);
+    --secondary:      var(--clay-500);
+    --secondary-dark: var(--clay-600);
+    --secondary-light:var(--clay-300);
+    --secondary-faint:var(--clay-50);
+    --accent:         var(--honey-400);
+    --accent-dark:    var(--honey-500);
+    --accent-light:   var(--honey-200);
+
+    --success: #3D8B63;
+    --warning: #E8A838;
+    --danger:  #C85A5A;
+    --info:    #5B8DB8;
+
+    /* Surfaces & ink */
+    --ink:          #1E3A30;   /* strongest text  */
+    --ink-soft:     #3F5B50;
+    --ink-night:    #163026;   /* dark feature blocks */
+    --ink-night-2:  #1F4335;
+    --text:         #253F35;
+    --text-muted:   #5F7269;
+    --text-faint:   #8A9A93;
+
+    --surface:        #FFFFFF;  /* cards */
+    --surface-2:      #FBF8F2;  /* subtle raised */
+    --surface-sunken: #F4EFE5;
+    --page:           #FAF6EE;  /* page background */
+    --paper:          #F7F2E7;
+    --paper-line:     #E7DFCC;
+    --border:         #E6DED1;
+    --border-strong:  #D5C9B6;
+
+    /* Legacy aliases kept so any remaining markup/partial still resolves */
+    --white: var(--surface);
+    --muted: var(--text-muted);
+    --neutral-dark: var(--text);
+    --neutral-medium: var(--text-muted);
+    --neutral-light: var(--page);
+    --neutral-cream: var(--paper);
+    --bg-soft: var(--surface-2);
+    --bg-cream: var(--paper);
+    --card-bg: var(--surface);
+
+    /* Typography families */
+    --font-base: 'Vazirmatn', 'Tahoma', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-display: 'Baloo Bhaijaan 2', 'Vazirmatn', 'Tahoma', sans-serif;
+    --font-num: 'Vazirmatn', system-ui, sans-serif;
+
+    /* ── Fluid type scale ───────────────────────────────────────────────
+       Tuned for Persian: slightly larger x-height demand than Latin, but
+       the mobile end of every ramp is deliberately conservative so a
+       390px screen never gets desktop display sizes.
+       min value ← 360px viewport      max value ← 1280px viewport      */
+    --text-2xs:  0.6875rem;                                    /* 11px    */
+    --text-xs:   0.75rem;                                       /* 12px    */
+    --text-sm:   clamp(0.8125rem, 0.79rem + 0.11vw, 0.875rem);  /* 13→14   */
+    --text-base: clamp(0.9375rem, 0.91rem + 0.14vw, 1rem);      /* 15→16   */
+    --text-md:   clamp(1rem,      0.97rem + 0.17vw, 1.0625rem); /* 16→17   */
+    --text-lg:   clamp(1.0625rem, 1.01rem + 0.28vw, 1.1875rem); /* 17→19   */
+    --text-xl:   clamp(1.1875rem, 1.09rem + 0.45vw, 1.375rem);  /* 19→22   */
+    --text-2xl:  clamp(1.3125rem, 1.13rem + 0.87vw, 1.75rem);   /* 21→28   */
+    --text-3xl:  clamp(1.5rem,    1.22rem + 1.35vw, 2.1875rem); /* 24→35   */
+    --text-4xl:  clamp(1.75rem,   1.33rem + 2.04vw, 2.75rem);   /* 28→44   */
+    --text-5xl:  clamp(2rem,      1.4rem + 2.9vw,   3.25rem);   /* 32→52   */
+
+    --leading-tight: 1.3;
+    --leading-snug:  1.45;
+    --leading-body:  1.8;   /* Persian reads better with air */
+    --leading-loose: 1.95;
+
+    --tracking-tight: -0.01em;
+
+    /* Spacing — 4px base, fluid section rhythm */
+    --space-3xs: 0.125rem;
+    --space-2xs: 0.25rem;
+    --space-xs:  0.5rem;
+    --space-sm:  0.75rem;
+    --space-md:  1rem;
+    --space-lg:  1.5rem;
+    --space-xl:  2rem;
+    --space-2xl: 3rem;
+    --space-3xl: 4rem;
+    --space-4xl: 6rem;
+    /* Vertical rhythm for <section> — shrinks gracefully on phones */
+    --section-y:    clamp(2.75rem, 1.6rem + 5vw, 5.5rem);
+    --section-y-sm: clamp(2rem,    1.3rem + 3.2vw, 3.5rem);
+    --gutter:       clamp(1rem,    0.65rem + 1.6vw, 2rem);
+
+    /* Radii */
+    --radius-xs:   6px;
+    --radius-sm:   10px;
+    --radius-md:   14px;
+    --radius-lg:   20px;
+    --radius-xl:   28px;
+    --radius-2xl:  36px;
+    --radius-full: 9999px;
+
+    /* Elevation — layered, low-alpha, brand-tinted */
+    --shadow-xs: 0 1px 2px rgba(30,58,48,.05), 0 1px 3px rgba(30,58,48,.04);
+    --shadow-sm: 0 2px 4px rgba(30,58,48,.04), 0 4px 12px rgba(30,58,48,.06);
+    --shadow-md: 0 4px 8px rgba(30,58,48,.05), 0 12px 28px rgba(30,58,48,.08);
+    --shadow-lg: 0 8px 16px rgba(30,58,48,.06), 0 24px 48px rgba(30,58,48,.10);
+    --shadow-xl: 0 16px 32px rgba(30,58,48,.08), 0 40px 80px rgba(30,58,48,.12);
+    --shadow-green: 0 10px 30px rgba(61,139,99,.28);
+    --shadow-clay:  0 10px 30px rgba(196,114,74,.26);
+    --ring: 0 0 0 3px rgba(61,139,99,.28);
+
+    /* Gradients */
+    --grad-primary: linear-gradient(135deg, #3D8B63 0%, #5BA97E 100%);
+    --grad-forest:  linear-gradient(140deg, #25573E 0%, #3D8B63 60%, #5BA97E 100%);
+    --grad-earth:   linear-gradient(135deg, #C4724A 0%, #E8A838 100%);
+    --grad-sunset:  linear-gradient(135deg, #E8A838 0%, #C4724A 100%);
+    --grad-soft:    linear-gradient(160deg, #FBF8F2 0%, #F4EFE5 100%);
+    --grad-hero:    linear-gradient(to top, rgba(19,48,38,.94) 0%, rgba(22,48,38,.72) 38%, rgba(22,48,38,.20) 70%, rgba(22,48,38,.06) 100%);
+    --grad-text:    linear-gradient(120deg, #2F6F4F 0%, #3D8B63 45%, #C4724A 100%);
+
+    /* Motion */
+    --ease-out-soft: cubic-bezier(.16, 1, .3, 1);
+    --ease-spring:   cubic-bezier(.34, 1.56, .64, 1);
+    --ease-in-out:   cubic-bezier(.4, 0, .2, 1);
+    --t-fast: .16s var(--ease-in-out);
+    --t-base: .28s var(--ease-in-out);
+    --t-slow: .5s  var(--ease-out-soft);
+
+    /* Layout */
+    --container: 1200px;
+    --container-narrow: 820px;
+    --header-h: 62px;
+    --bottomnav-h: 62px;
+    --z-bg: 0;
+    --z-header: 900;
+    --z-drawer: 1200;
+    --z-overlay: 1150;
+    --z-lightbox: 1400;
+    --z-progress: 1500;
+    --z-toast: 1600;
+
+    color-scheme: light;
+}
+
+/* ── 2. Dark theme ──────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+    --primary:       #5FB489;
+    --primary-dark:  #7FC9A4;
+    --primary-deep:  #A5DCC0;
+    --primary-light: #86C3A1;
+    --primary-faint: rgba(95,180,137,.14);
+    --secondary:      #DB9068;
+    --secondary-dark: #E8A780;
+    --secondary-light:#EDC3AE;
+    --secondary-faint:rgba(219,144,104,.14);
+    --accent:        #F0BC5C;
+    --accent-dark:   #F5D48A;
+    --accent-light:  rgba(240,188,92,.2);
+
+    --ink:        #EAF2ED;
+    --ink-soft:   #C4D3CB;
+    --ink-night:  #0E1F19;
+    --ink-night-2:#152B22;
+    --text:       #E4EDE7;
+    --text-muted: #9BB0A6;
+    --text-faint: #74897F;
+
+    --surface:        #14251E;
+    --surface-2:      #1A2E25;
+    --surface-sunken: #0E1B16;
+    --page:           #0B1712;
+    --paper:          #132420;
+    --paper-line:     #244135;
+    --border:         #264336;
+    --border-strong:  #345449;
+
+    --shadow-xs: 0 1px 3px rgba(0,0,0,.4);
+    --shadow-sm: 0 2px 6px rgba(0,0,0,.42), 0 4px 14px rgba(0,0,0,.34);
+    --shadow-md: 0 6px 16px rgba(0,0,0,.46), 0 14px 34px rgba(0,0,0,.38);
+    --shadow-lg: 0 10px 24px rgba(0,0,0,.5), 0 28px 60px rgba(0,0,0,.44);
+    --shadow-xl: 0 18px 40px rgba(0,0,0,.55), 0 48px 96px rgba(0,0,0,.5);
+    --shadow-green: 0 10px 30px rgba(95,180,137,.24);
+    --shadow-clay:  0 10px 30px rgba(219,144,104,.22);
+    --ring: 0 0 0 3px rgba(95,180,137,.35);
+
+    --grad-soft: linear-gradient(160deg, #16281F 0%, #0F1F19 100%);
+    --grad-hero: linear-gradient(to top, rgba(4,12,9,.96) 0%, rgba(6,16,12,.8) 38%, rgba(6,16,12,.3) 70%, rgba(6,16,12,.08) 100%);
+    --grad-text: linear-gradient(120deg, #7FC9A4 0%, #5FB489 45%, #E8A780 100%);
+
+    color-scheme: dark;
+}
+/* ── 3. Reset & base ────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+* { margin: 0; padding: 0; }
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    /* Anchor targets clear the sticky header */
+    scroll-padding-top: calc(var(--header-h) + 1rem);
+    -moz-tab-size: 4;
+    tab-size: 4;
+}
+
+body {
+    font-family: var(--font-base);
+    font-size: var(--text-base);
+    line-height: var(--leading-body);
+    color: var(--text);
+    background-color: var(--page);
+    min-height: 100dvh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "ss01", "kern";
+    font-variant-ligatures: common-ligatures;
+    /* Room for the fixed mobile bottom nav */
+    padding-bottom: 0;
+    transition: background-color var(--t-base), color var(--t-base);
+}
+
+/* Persian numerals & digits should never fall back to a Latin face */
+body { font-variant-numeric: normal; }
+
+img, picture, video, canvas, svg { display: block; max-width: 100%; }
+img { height: auto; }
+svg { fill: currentColor; }
+
+input, button, textarea, select { font: inherit; color: inherit; }
+
+a { color: var(--primary-dark); text-decoration: none; transition: color var(--t-fast); }
+a:hover { color: var(--primary); }
+
+p { text-wrap: pretty; }
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    color: var(--ink);
+    text-wrap: balance;
+}
+h1 { font-size: var(--text-4xl); }
+h2 { font-size: var(--text-3xl); }
+h3 { font-size: var(--text-xl); }
+h4 { font-size: var(--text-lg); }
+h5 { font-size: var(--text-md); }
+h6 { font-size: var(--text-base); }
+
+ul, ol { list-style: none; }
+
+hr { border: 0; border-top: 1px solid var(--border); }
+
+::selection { background: var(--primary); color: #fff; }
+
+:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+    border-radius: var(--radius-xs);
+}
+:focus:not(:focus-visible) { outline: none; }
+
+/* Scrollbar */
+@supports selector(::-webkit-scrollbar) {
+    ::-webkit-scrollbar { width: 11px; height: 11px; }
+    ::-webkit-scrollbar-track { background: var(--surface-sunken); }
+    ::-webkit-scrollbar-thumb {
+        background: var(--border-strong);
+        border-radius: var(--radius-full);
+        border: 3px solid var(--surface-sunken);
+    }
+    ::-webkit-scrollbar-thumb:hover { background: var(--primary-light); }
+}
+html { scrollbar-color: var(--border-strong) var(--surface-sunken); scrollbar-width: thin; }
+
+/* Skip link */
+.skip-link {
+    position: fixed;
+    inset-inline-start: 50%;
+    top: -100px;
+    transform: translateX(-50%);
+    z-index: var(--z-toast);
+    background: var(--primary);
+    color: #fff;
+    padding: .7rem 1.4rem;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    font-weight: 700;
+    font-size: var(--text-sm);
+    box-shadow: var(--shadow-lg);
+    transition: top var(--t-base);
+}
+.skip-link:focus { top: 0; color: #fff; }
+
+.sr-only {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ── 4. Layout primitives ───────────────────────────────────────────────── */
+.container {
+    width: 100%;
+    max-width: var(--container);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+}
+.container-narrow { max-width: var(--container-narrow); }
+
+.site-main { display: block; }
+
+.section {
+    position: relative;
+    padding-block: var(--section-y);
+}
+.section-sm { padding-block: var(--section-y-sm); }
+.section-tight { padding-block: clamp(1.5rem, 1rem + 2vw, 2.5rem); }
+
+/* Alternating tonal bands give the long page rhythm without hard lines */
+.section-paper  { background: var(--paper); }
+.section-sunken { background: var(--surface-sunken); }
+.section-soft   { background: var(--grad-soft); }
+
+/* Soft feathered divider between bands */
+.section-paper::before,
+.section-sunken::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--paper-line) 20%, var(--paper-line) 80%, transparent);
+}
+
+/* Generic responsive auto-grid */
+.grid { display: grid; gap: var(--space-lg); }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+.grid-4 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); }
+
+.stack { display: flex; flex-direction: column; gap: var(--space-md); }
+.row   { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; }
+
+/* ── 5. Animated background canvas ──────────────────────────────────────
+   A fixed, aria-hidden, pointer-events-none stack of slowly drifting
+   colour fields + a static grain/dot weave. Only `transform` animates, so
+   this stays off the main thread. Injected once by templates/header.php.
+   ------------------------------------------------------------------- */
+.bg-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-bg);
+    pointer-events: none;
+    overflow: hidden;
+    /* Sits behind all content but above the body colour */
+    contain: strict;
+}
+
+/* Drifting colour fields ("aurora blobs") */
+.bg-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(70px);
+    opacity: .5;
+    will-change: transform;
+    /* Keep the blur cheap on mobile GPUs */
+    transform: translate3d(0, 0, 0);
+}
+.bg-blob-1 {
+    width: 46vmax; height: 46vmax;
+    top: -14vmax; inset-inline-end: -10vmax;
+    background: radial-gradient(circle at 30% 30%, rgba(61,139,99,.34), rgba(61,139,99,0) 70%);
+    animation: blobDrift1 34s var(--ease-in-out) infinite alternate;
+}
+.bg-blob-2 {
+    width: 40vmax; height: 40vmax;
+    top: 32%; inset-inline-start: -14vmax;
+    background: radial-gradient(circle at 60% 40%, rgba(196,114,74,.30), rgba(196,114,74,0) 70%);
+    animation: blobDrift2 42s var(--ease-in-out) infinite alternate;
+}
+.bg-blob-3 {
+    width: 34vmax; height: 34vmax;
+    bottom: -12vmax; inset-inline-end: 18%;
+    background: radial-gradient(circle at 40% 60%, rgba(232,168,56,.26), rgba(232,168,56,0) 70%);
+    animation: blobDrift3 38s var(--ease-in-out) infinite alternate;
+}
+.bg-blob-4 {
+    width: 28vmax; height: 28vmax;
+    top: 58%; inset-inline-end: -8vmax;
+    background: radial-gradient(circle at 50% 50%, rgba(91,141,184,.20), rgba(91,141,184,0) 70%);
+    animation: blobDrift1 46s var(--ease-in-out) infinite alternate-reverse;
+}
+
+[data-theme="dark"] .bg-blob { opacity: .40; filter: blur(80px); }
+[data-theme="dark"] .bg-blob-1 { background: radial-gradient(circle at 30% 30%, rgba(95,180,137,.34), transparent 70%); }
+[data-theme="dark"] .bg-blob-2 { background: radial-gradient(circle at 60% 40%, rgba(219,144,104,.26), transparent 70%); }
+[data-theme="dark"] .bg-blob-3 { background: radial-gradient(circle at 40% 60%, rgba(240,188,92,.22), transparent 70%); }
+[data-theme="dark"] .bg-blob-4 { background: radial-gradient(circle at 50% 50%, rgba(127,174,210,.18), transparent 70%); }
+
+@keyframes blobDrift1 {
+    0%   { transform: translate3d(0, 0, 0) scale(1); }
+    50%  { transform: translate3d(-4vmax, 5vmax, 0) scale(1.12); }
+    100% { transform: translate3d(3vmax, -3vmax, 0) scale(.94); }
+}
+@keyframes blobDrift2 {
+    0%   { transform: translate3d(0, 0, 0) scale(1); }
+    50%  { transform: translate3d(6vmax, -4vmax, 0) scale(1.15); }
+    100% { transform: translate3d(-2vmax, 4vmax, 0) scale(.96); }
+}
+@keyframes blobDrift3 {
+    0%   { transform: translate3d(0, 0, 0) scale(1); }
+    50%  { transform: translate3d(-5vmax, -5vmax, 0) scale(1.1); }
+    100% { transform: translate3d(4vmax, 2vmax, 0) scale(.92); }
+}
+
+/* Static woven grain: dots + hairline weave. Cheap, no animation. */
+.bg-grain {
+    position: absolute;
+    inset: -50%;
+    opacity: .55;
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Ccircle cx='3' cy='3' r='1.5' fill='%233d8b63' opacity='.07'/%3E%3Ccircle cx='20' cy='17' r='1.1' fill='%23c4724a' opacity='.06'/%3E%3Ccircle cx='29' cy='30' r='.9' fill='%23e8a838' opacity='.05'/%3E%3C/svg%3E");
+    background-size: 34px 34px;
+}
+[data-theme="dark"] .bg-grain {
+    opacity: .5;
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Ccircle cx='3' cy='3' r='1.5' fill='%235fb489' opacity='.09'/%3E%3Ccircle cx='20' cy='17' r='1.1' fill='%23db9068' opacity='.07'/%3E%3Ccircle cx='29' cy='30' r='.9' fill='%23f0bc5c' opacity='.06'/%3E%3C/svg%3E");
+}
+
+/* Floating motes — a few slow-rising specks for depth. Desktop only. */
+.bg-motes { position: absolute; inset: 0; }
+.bg-mote {
+    position: absolute;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(232,168,56,.55), rgba(232,168,56,0) 70%);
+    opacity: 0;
+    will-change: transform, opacity;
+    animation: moteRise linear infinite;
+}
+.bg-mote:nth-child(1) { inset-inline-start: 12%; animation-duration: 26s; animation-delay: 0s;   }
+.bg-mote:nth-child(2) { inset-inline-start: 28%; animation-duration: 32s; animation-delay: -6s;  width: 6px; height: 6px; }
+.bg-mote:nth-child(3) { inset-inline-start: 47%; animation-duration: 29s; animation-delay: -13s; }
+.bg-mote:nth-child(4) { inset-inline-start: 66%; animation-duration: 35s; animation-delay: -19s; width: 10px; height: 10px; }
+.bg-mote:nth-child(5) { inset-inline-start: 81%; animation-duration: 27s; animation-delay: -24s; width: 5px; height: 5px; }
+.bg-mote:nth-child(6) { inset-inline-start: 92%; animation-duration: 31s; animation-delay: -9s;  }
+
+@keyframes moteRise {
+    0%   { transform: translate3d(0, 102vh, 0) scale(.6); opacity: 0; }
+    12%  { opacity: .8; }
+    88%  { opacity: .5; }
+    100% { transform: translate3d(3vw, -8vh, 0) scale(1.25); opacity: 0; }
+}
+@media (max-width: 767px) { .bg-motes { display: none; } }
+
+/* When the tab is hidden JS adds .bg-paused → stop all background work */
+.bg-paused .bg-blob,
+.bg-paused .bg-mote { animation-play-state: paused; }
+
+/* ── 6. Scroll-reveal primitives ────────────────────────────────────────
+   Elements opt in with [data-reveal]. The hidden state only applies once
+   JS has confirmed IntersectionObserver support (html.js-reveal), so the
+   content is never trapped invisible for no-JS or legacy browsers.
+   ------------------------------------------------------------------- */
+.js-reveal [data-reveal] {
+    opacity: 0;
+    will-change: transform, opacity;
+    transition:
+        opacity .75s var(--ease-out-soft),
+        transform .75s var(--ease-out-soft),
+        filter .75s var(--ease-out-soft);
+    transition-delay: var(--reveal-delay, 0ms);
+}
+.js-reveal [data-reveal="up"]    { transform: translate3d(0, 34px, 0); }
+.js-reveal [data-reveal="down"]  { transform: translate3d(0, -28px, 0); }
+.js-reveal [data-reveal="start"] { transform: translate3d(38px, 0, 0); }  /* from inline-start (RTL: right) */
+.js-reveal [data-reveal="end"]   { transform: translate3d(-38px, 0, 0); }
+.js-reveal [data-reveal="zoom"]  { transform: scale(.9); }
+.js-reveal [data-reveal="blur"]  { filter: blur(10px); transform: translate3d(0, 20px, 0); }
+.js-reveal [data-reveal="rise"]  { transform: translate3d(0, 56px, 0) scale(.97); }
+
+.js-reveal [data-reveal].is-revealed {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    will-change: auto;
+}
+
+/* Stagger container: children animate in sequence via --reveal-delay set by JS */
+[data-reveal-group] > * { --reveal-delay: 0ms; }
+
+/* ── 7. Utilities ───────────────────────────────────────────────────────── */
+.text-center { text-align: center; }
+.text-start  { text-align: start; }
+.text-end    { text-align: end; }
+
+.text-gradient {
+    background: var(--grad-text);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+.text-muted { color: var(--text-muted); }
+.text-primary { color: var(--primary-dark); }
+.text-secondary { color: var(--secondary); }
+
+.fw-500 { font-weight: 500; }
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }
+.fw-800 { font-weight: 800; }
+
+.font-display { font-family: var(--font-display); }
+
+.lead {
+    font-size: var(--text-lg);
+    line-height: var(--leading-body);
+    color: var(--text-muted);
+}
+
+.mt-0 { margin-top: 0; }
+.mb-0 { margin-bottom: 0; }
+.mb-xs { margin-bottom: var(--space-xs); }
+.mb-sm { margin-bottom: var(--space-sm); }
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+.mb-xl { margin-bottom: var(--space-xl); }
+.mt-md { margin-top: var(--space-md); }
+.mt-lg { margin-top: var(--space-lg); }
+.mt-xl { margin-top: var(--space-xl); }
+
+.mx-auto { margin-inline: auto; }
+.w-full { width: 100%; }
+
+.hide-mobile { }
+.hide-desktop { display: none; }
+@media (max-width: 767px) {
+    .hide-mobile { display: none !important; }
+    .hide-desktop { display: revert; }
+}
+
+.no-scroll { overflow: hidden !important; }
+
+/* Persian numerals rendered in tabular form for stat rows/tables */
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* ── 8. Reduced motion ──────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+
+    *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    /* Entrance effects collapse to an instant, fully visible state */
+    .js-reveal [data-reveal] {
+        opacity: 1 !important;
+        transform: none !important;
+        filter: none !important;
+    }
+
+    .bg-blob, .bg-mote { animation: none !important; }
+    .bg-motes { display: none; }
+}

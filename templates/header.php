@@ -8,98 +8,107 @@ if (!defined('ROOMA_APP')) {
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
+require_once __DIR__ . '/../includes/ui.php';
 
-// Send security headers
 sendSecurityHeaders();
 
-$logo = siteLogo();
-$currentPage = basename($_SERVER['PHP_SELF']);
-$currentSlug = $_GET['slug'] ?? '';
-$siteNameValue = siteName();
-$contactPhoneValue = siteContactPhone();
-$contactEmailValue = siteContactEmail();
-$siteAddressValue = siteAddress();
-$workingHoursValue = siteWorkingHours();
-$instagramValue = siteInstagram();
-$telegramValue = siteTelegram();
-$whatsappValue = siteWhatsApp();
-$pageTitleValue = isset($pageTitle) ? e($pageTitle) : e($siteNameValue);
+$logo            = siteLogo();
+$currentPage     = basename($_SERVER['PHP_SELF']);
+$currentSlug     = (string) ($_GET['slug'] ?? '');
+$siteNameValue   = siteName();
+$contactPhone    = siteContactPhone();
+$contactEmail    = siteContactEmail();
+$siteAddressV    = siteAddress();
+$workingHoursV   = siteWorkingHours();
+$instagramV      = siteInstagram();
+$telegramV       = siteTelegram();
+$whatsappV       = siteWhatsApp();
+
+$pageTitleValue       = isset($pageTitle) ? e($pageTitle) : e($siteNameValue);
 $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDescription());
+
+$navItems = roomaPublicNav($currentPage, $currentSlug);
+
+// Canonical URL — strip the base path already present in SITE_URL so a
+// sub-folder install does not end up doubled.
+$canonicalScript = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+$siteUrlPath     = basePath();
+if ($siteUrlPath !== '' && str_starts_with($canonicalScript, $siteUrlPath)) {
+    $canonicalScript = substr($canonicalScript, strlen($siteUrlPath));
+}
+$canonicalUrl = absoluteUrl(ltrim($canonicalScript, '/'));
+
+$ogImage = absoluteUrl(
+    is_file(__DIR__ . '/../assets/img/hero-classroom.jpg')
+        ? 'assets/img/hero-classroom.jpg'
+        : 'assets/img/about-story.jpg'
+);
+
+$topbarEnabled = siteTopbarEnabled();
+$topbarText    = siteTopbarText();
 ?>
 <!doctype html>
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <script>(function(){var t=localStorage.getItem('roma_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <?php // Apply the stored theme before first paint so there is no flash of the wrong theme. ?>
+    <script>(function(){try{var t=localStorage.getItem('roma_theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();</script>
+
+    <title><?php echo $pageTitleValue; ?></title>
     <meta name="description" content="<?php echo $pageDescriptionValue; ?>">
-    <?php
-    // Canonical URL: derive the app-relative script path by stripping the base
-    // path portion of SCRIPT_NAME that is already part of SITE_URL (avoids
-    // doubling the subfolder when the app lives under /subdir/).
-    $canonicalScript = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
-    $siteUrlPath = basePath();
-    if ($siteUrlPath !== '' && str_starts_with($canonicalScript, $siteUrlPath)) {
-        $canonicalScript = substr($canonicalScript, strlen($siteUrlPath));
-    }
-    $canonicalUrl = absoluteUrl(ltrim($canonicalScript, '/'));
-    ?>
     <link rel="canonical" href="<?php echo e($canonicalUrl); ?>">
     <meta name="theme-color" content="#3D8B63" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#0B0F19" media="(prefers-color-scheme: dark)">
-    <title><?php echo $pageTitleValue; ?></title>
-    <?php // Font preloads use unversioned URLs to exactly match what fonts.css requests —
-          // a ?v= mismatch here makes the browser download each font twice.
-          // Long-term caching is handled by .htaccess (max-age=31536000, immutable). ?>
+    <meta name="theme-color" content="#0B1712" media="(prefers-color-scheme: dark)">
+    <meta name="format-detection" content="telephone=no">
+
+    <?php // Font preloads must match the exact URLs fonts.css requests (unversioned)
+          // or the browser downloads each face twice. ?>
     <link rel="preload" href="<?php echo e(url('assets/fonts/Vazirmatn-Regular.woff2')); ?>" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="<?php echo e(url('assets/fonts/Vazirmatn-Medium.woff2')); ?>" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="<?php echo e(url('assets/fonts/Vazirmatn-ExtraBold.woff2')); ?>" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="<?php echo e(url('assets/fonts/Vazirmatn-Bold.woff2')); ?>" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="<?php echo e(url('assets/fonts/BalooBhaijaan2-arabic.woff2')); ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?php echo e(url('assets/css/fonts.css')); ?>">
-    <link rel="icon" href="<?php echo e(asset('favicon.ico')); ?>" type="image/x-icon">
+
+    <link rel="icon" href="<?php echo e(asset('favicon.ico')); ?>" sizes="32x32">
     <link rel="icon" href="<?php echo e(asset('assets/img/favicon.svg')); ?>" type="image/svg+xml">
     <link rel="apple-touch-icon" href="<?php echo e(asset('assets/img/favicon.svg')); ?>">
-    <?php $cssHref = asset('assets/css/style.css'); ?>
-    <link rel="stylesheet" href="<?php echo e($cssHref); ?>">
-    <link rel="stylesheet" href="<?php echo e(asset('assets/css/enhance.css')); ?>">
-    <?php // Speculation Rules: Chromium prerenders internal public pages on hover,
-          // making navigation instant. Conservative settings (no eagerness on
-          // login POST targets; same-origin only). Ignored by non-Chromium browsers. ?>
-    <script type="speculationrules">
-    {
-      "prerender": [
-        {
-          "where": {
-            "and": [
-              { "href_matches": "/*" },
-              { "not": { "href_matches": "/*/admin/*" } },
-              { "not": { "href_matches": "/*/parent/*" } },
-              { "not": { "href_matches": "/*/teacher/*" } },
-              { "not": { "href_matches": "/*logout*" } }
-            ]
-          },
-          "eagerness": "moderate"
-        }
-      ]
-    }
-    </script>
 
-    <!-- Open Graph Metadata -->
+    <link rel="stylesheet" href="<?php echo e(asset('assets/css/rooma-core.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(asset('assets/css/rooma-components.css')); ?>">
+
+    <!-- Open Graph / Twitter -->
     <meta property="og:title" content="<?php echo $pageTitleValue; ?>">
     <meta property="og:description" content="<?php echo $pageDescriptionValue; ?>">
     <meta property="og:type" content="website">
     <meta property="og:url" content="<?php echo e($canonicalUrl); ?>">
     <meta property="og:locale" content="fa_IR">
     <meta property="og:site_name" content="<?php echo e($siteNameValue); ?>">
-    <?php // og:image must be protocol-absolute — relative URLs break WhatsApp/Telegram/Facebook crawlers. ?>
-    <meta property="og:image" content="<?php echo e(absoluteUrl('assets/img/about-story.jpg')); ?>">
-    <meta property="og:image:width" content="800">
-    <meta property="og:image:height" content="533">
+    <meta property="og:image" content="<?php echo e($ogImage); ?>">
+    <meta property="og:image:width" content="1920">
+    <meta property="og:image:height" content="1072">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="<?php echo $pageTitleValue; ?>">
     <meta name="twitter:description" content="<?php echo $pageDescriptionValue; ?>">
-    <meta name="twitter:image" content="<?php echo e(absoluteUrl('assets/img/about-story.jpg')); ?>">
+    <meta name="twitter:image" content="<?php echo e($ogImage); ?>">
 
-    <!-- Schema.org Structured Data (ChildCare / LocalBusiness) -->
+    <?php // Chromium prerenders public pages on hover for instant navigation. ?>
+    <script type="speculationrules">
+    {
+      "prerender": [{
+        "where": { "and": [
+          { "href_matches": "/*" },
+          { "not": { "href_matches": "/*/admin/*" } },
+          { "not": { "href_matches": "/*/parent/*" } },
+          { "not": { "href_matches": "/*/teacher/*" } },
+          { "not": { "href_matches": "/*logout*" } }
+        ]},
+        "eagerness": "moderate"
+      }]
+    }
+    </script>
+
+    <!-- Structured data -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -107,154 +116,251 @@ $pageDescriptionValue = isset($pageDescription) ? e($pageDescription) : e(siteDe
       "name": "<?php echo e($siteNameValue); ?>",
       "description": "<?php echo $pageDescriptionValue; ?>",
       "url": "<?php echo e($canonicalUrl); ?>",
-      "image": "<?php echo e(absoluteUrl('assets/img/about-story.jpg')); ?>",
-<?php $schemaSocial = array_values(array_filter([$instagramValue, $telegramValue, $whatsappValue], fn ($v) => $v !== '')); ?>
+      "image": "<?php echo e($ogImage); ?>",
+<?php $schemaSocial = array_values(array_filter([$instagramV, $telegramV], static fn ($v) => $v !== '')); ?>
 <?php if ($schemaSocial !== []): ?>
       "sameAs": <?php echo json_encode($schemaSocial, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>,
 <?php endif; ?>
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "<?php echo e($siteAddressValue); ?>",
+        "streetAddress": "<?php echo e($siteAddressV); ?>",
         "addressLocality": "تهران",
         "addressCountry": "IR"
       },
-      "telephone": "<?php echo e($contactPhoneValue); ?>",
-      "openingHours": "Sa-We 07:00-16:30, Th 07:00-13:00",
+      "telephone": "<?php echo e(telHref($contactPhone)); ?>",
+      "openingHoursSpecification": [
+        { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Saturday","Sunday","Monday","Tuesday","Wednesday"], "opens": "07:00", "closes": "16:30" },
+        { "@type": "OpeningHoursSpecification", "dayOfWeek": "Thursday", "opens": "07:00", "closes": "13:00" }
+      ],
       "priceRange": "$$"
     }
     </script>
 </head>
 <body>
+
 <a class="skip-link" href="#main-content">پرش به محتوای اصلی</a>
-<div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
-<?php
-$topbarEnabled = siteTopbarEnabled();
-$topbarText = siteTopbarText();
-?>
+
+<?php /* ── Animated background canvas ─────────────────────────────────── */ ?>
+<div class="bg-canvas" aria-hidden="true">
+    <span class="bg-blob bg-blob-1"></span>
+    <span class="bg-blob bg-blob-2"></span>
+    <span class="bg-blob bg-blob-3"></span>
+    <span class="bg-blob bg-blob-4"></span>
+    <span class="bg-grain"></span>
+    <span class="bg-motes">
+        <span class="bg-mote"></span><span class="bg-mote"></span><span class="bg-mote"></span>
+        <span class="bg-mote"></span><span class="bg-mote"></span><span class="bg-mote"></span>
+    </span>
+</div>
+
+<?php /* ── Scroll progress ─────────────────────────────────────────────── */ ?>
+<div class="scroll-progress" aria-hidden="true">
+    <div class="scroll-progress__bar" data-progress-bar></div>
+</div>
+
+<?php /* ── Top bar ─────────────────────────────────────────────────────── */ ?>
 <?php if ($topbarEnabled === '1'): ?>
-<div class="top-bar" id="topBar">
-    <div class="container top-bar-inner">
+<div class="topbar">
+    <div class="container topbar__inner">
         <?php if ($topbarText !== ''): ?>
-            <div class="top-bar-info" style="width:100%;justify-content:center;">
-                <span class="top-bar-item">
-                    <span><?php echo e($topbarText); ?></span>
-                </span>
-            </div>
+            <div class="topbar__marquee"><?php echo e($topbarText); ?></div>
         <?php else: ?>
-            <div class="top-bar-info">
-                <?php if ($contactPhoneValue !== ''): ?>
-                    <a href="tel:<?php echo e(preg_replace('/[^0-9+]/', '', $contactPhoneValue)); ?>" class="top-bar-item">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
-                        <span><?php echo e($contactPhoneValue); ?></span>
+            <div class="topbar__group">
+                <?php if ($contactPhone !== ''): ?>
+                    <a class="topbar__item" href="tel:<?php echo e(telHref($contactPhone)); ?>">
+                        <?php echo icon('phone', 14); ?>
+                        <span><?php echo e(persianNumber($contactPhone)); ?></span>
                     </a>
                 <?php endif; ?>
-                <?php if ($contactEmailValue !== ''): ?>
-                    <a href="mailto:<?php echo e($contactEmailValue); ?>" class="top-bar-item">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                        <span><?php echo e($contactEmailValue); ?></span>
+                <?php if ($contactEmail !== ''): ?>
+                    <a class="topbar__item topbar__item--email" href="mailto:<?php echo e($contactEmail); ?>">
+                        <?php echo icon('mail', 14); ?>
+                        <span><?php echo e($contactEmail); ?></span>
                     </a>
                 <?php endif; ?>
-                <?php if ($workingHoursValue !== ''): ?>
-                    <span class="top-bar-item">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        <span><?php echo e($workingHoursValue); ?></span>
+                <?php if ($workingHoursV !== ''): ?>
+                    <span class="topbar__item topbar__item--hours">
+                        <?php echo icon('clock', 14); ?>
+                        <span><?php echo e(persianNumber($workingHoursV)); ?></span>
                     </span>
                 <?php endif; ?>
             </div>
-            <div class="top-bar-social">
-                <?php if ($instagramValue !== ''): ?>
-                    <a href="<?php echo e($instagramValue); ?>" class="top-bar-social-link" aria-label="اینستاگرام" target="_blank" rel="noopener noreferrer">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-                    </a>
+
+            <?php if ($instagramV !== '' || $telegramV !== '' || $whatsappV !== ''): ?>
+            <div class="topbar__socials">
+                <?php if ($instagramV !== ''): ?>
+                    <a class="topbar__social" href="<?php echo e($instagramV); ?>" target="_blank" rel="noopener noreferrer" aria-label="اینستاگرام روما"><?php echo brandIcon('instagram', 14); ?></a>
                 <?php endif; ?>
-                <?php if ($telegramValue !== ''): ?>
-                    <a href="<?php echo e($telegramValue); ?>" class="top-bar-social-link" aria-label="تلگرام" target="_blank" rel="noopener noreferrer">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-                    </a>
+                <?php if ($telegramV !== ''): ?>
+                    <a class="topbar__social" href="<?php echo e($telegramV); ?>" target="_blank" rel="noopener noreferrer" aria-label="تلگرام روما"><?php echo brandIcon('telegram', 14); ?></a>
                 <?php endif; ?>
-                <?php if ($whatsappValue !== ''): ?>
-                    <a href="https://wa.me/<?php echo e(preg_replace('/[^0-9]/', '', $whatsappValue)); ?>" class="top-bar-social-link" aria-label="واتساپ" target="_blank" rel="noopener noreferrer">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                    </a>
+                <?php if ($whatsappV !== ''): ?>
+                    <a class="topbar__social" href="https://wa.me/<?php echo e(whatsappHref($whatsappV)); ?>" target="_blank" rel="noopener noreferrer" aria-label="واتس‌اپ روما"><?php echo brandIcon('whatsapp', 14); ?></a>
                 <?php endif; ?>
             </div>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 </div>
 <?php endif; ?>
 
-<header class="site-header" id="siteHeader">
-    <div class="container header-inner">
-        <a class="logo" href="<?php echo e(url('index.php')); ?>">
+<?php /* ── Header ──────────────────────────────────────────────────────── */ ?>
+<header class="site-header" id="siteHeader" data-header>
+    <div class="container site-header__inner">
+
+        <a class="brand" href="<?php echo e(url('index.php')); ?>" aria-label="<?php echo e($siteNameValue); ?> — صفحه اصلی">
             <?php if ($logo !== ''): ?>
-                <img src="<?php echo e(url($logo)); ?>" alt="<?php echo e($siteNameValue); ?>" class="site-logo">
+                <img class="brand__logo" src="<?php echo e(url($logo)); ?>" alt="<?php echo e($siteNameValue); ?>" width="150" height="40">
             <?php else: ?>
-                <svg class="logo-icon-svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
-                    <circle cx="16" cy="16" r="15" stroke="url(#logoGrad)" stroke-width="2"/>
-                    <path d="M16 8c-2.5 0-4.5 1.2-4.5 3.5 0 1.5.8 2.5 2 3.2-.5.3-1.2 1-1.5 1.8-.3.8-.2 1.5.3 2 .5.5 1.2.5 1.8.3.6-.2 1-.8 1.2-1.2h.7c.2.4.6 1 1.2 1.2.6.2 1.3.2 1.8-.3.5-.5.6-1.2.3-2-.3-.8-1-1.5-1.5-1.8 1.2-.7 2-1.7 2-3.2 0-2.3-2-3.5-4.5-3.5z" fill="url(#logoGrad)"/>
-                    <circle cx="13.5" cy="12" r="1" fill="white"/>
-                    <circle cx="18.5" cy="12" r="1" fill="white"/>
-                    <path d="M13.5 15.5c0 0 1 1.5 2.5 1.5s2.5-1.5 2.5-1.5" stroke="white" stroke-width="0.8" stroke-linecap="round" fill="none"/>
-                    <defs>
-                        <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
-                            <stop stop-color="#3D8B63"/>
-                            <stop offset="1" stop-color="#C4724A"/>
-                        </linearGradient>
-                    </defs>
-                </svg>
-                <span class="site-name"><?php echo e($siteNameValue); ?></span>
+                <span class="brand__mark"><?php echo roomaLogoMark(40); ?></span>
+                <span class="brand__text">
+                    <span class="brand__name"><?php echo e($siteNameValue); ?></span>
+                    <span class="brand__tag">مهدکودک و پیش‌دبستانی</span>
+                </span>
             <?php endif; ?>
         </a>
 
-        <nav class="site-nav" aria-label="منوی اصلی">
-            <a href="<?php echo e(url('index.php')); ?>" class="nav-link <?php echo $currentPage === 'index.php' ? 'active' : ''; ?>">
-                <svg class="nav-icon-svg" aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                <span class="nav-label">خانه</span>
-            </a>
-            <a href="<?php echo e(url('page.php?slug=about')); ?>" class="nav-link <?php echo $currentPage === 'page.php' && $currentSlug === 'about' ? 'active' : ''; ?>">
-                <svg class="nav-icon-svg" aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                <span class="nav-label">درباره ما</span>
-            </a>
-            <a href="<?php echo e(url('news.php')); ?>" class="nav-link <?php echo $currentPage === 'news.php' ? 'active' : ''; ?>">
-                <svg class="nav-icon-svg" aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
-                <span class="nav-label">اخبار</span>
-            </a>
-            <a href="<?php echo e(url('page.php?slug=classes')); ?>" class="nav-link <?php echo $currentPage === 'page.php' && $currentSlug === 'classes' ? 'active' : ''; ?>">
-                <svg class="nav-icon-svg" aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/></svg>
-                <span class="nav-label">کلاسها</span>
-            </a>
-            <a href="<?php echo e(url('page.php?slug=contact')); ?>" class="nav-link <?php echo $currentPage === 'page.php' && $currentSlug === 'contact' ? 'active' : ''; ?>">
-                <svg class="nav-icon-svg" aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
-                <span class="nav-label">تماس با ما</span>
-            </a>
-
-            <div class="nav-auth">
-                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" aria-label="تغییر حالت شب/روز">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-                </button>
-                <?php if (isParentLoggedIn()): ?>
-                    <a href="<?php echo e(url('parent/index.php')); ?>" class="btn btn-primary btn-sm">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        پنل والدین
-                    </a>
-                <?php else: ?>
-                    <a href="<?php echo e(url('login.php')); ?>" class="btn btn-primary btn-sm">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                        ورود
-                    </a>
-                <?php endif; ?>
-
-                <?php if (isLoggedIn()): ?>
-                    <form class="logout-form" method="post" action="<?php echo e(url('admin/logout.php')); ?>">
-                        <input type="hidden" name="csrf_token" value="<?php echo e(generateCsrfToken()); ?>">
-                        <button type="submit" class="btn btn-sm btn-outline">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                            خروج
-                        </button>
-                    </form>
-                <?php endif; ?>
-            </div>
+        <nav class="nav" aria-label="منوی اصلی" data-nav>
+            <span class="nav__pill" data-nav-pill aria-hidden="true"></span>
+            <?php foreach ($navItems as $item): ?>
+                <a class="nav__link<?php echo $item['active'] ? ' is-active' : ''; ?>"
+                   href="<?php echo e(url($item['href'])); ?>"
+                   <?php echo $item['active'] ? 'aria-current="page"' : ''; ?>>
+                    <?php echo icon($item['icon'], 17); ?>
+                    <span><?php echo e($item['label']); ?></span>
+                </a>
+            <?php endforeach; ?>
         </nav>
+
+        <div class="header-actions">
+            <button type="button" class="icon-btn" data-theme-toggle aria-pressed="false" aria-label="تغییر حالت شب/روز">
+                <span class="theme-toggle__moon"><?php echo icon('moon', 19); ?></span>
+                <span class="theme-toggle__sun"><?php echo icon('sun', 19); ?></span>
+            </button>
+
+            <?php if (isParentLoggedIn()): ?>
+                <a class="btn btn-primary btn-sm hide-mobile" href="<?php echo e(url('parent/index.php')); ?>">
+                    <?php echo icon('user', 16); ?>
+                    <span>پنل والدین</span>
+                </a>
+            <?php elseif (isLoggedIn()): ?>
+                <a class="btn btn-primary btn-sm hide-mobile" href="<?php echo e(url('admin/index.php')); ?>">
+                    <?php echo icon('grid', 16); ?>
+                    <span>پنل مدیریت</span>
+                </a>
+            <?php else: ?>
+                <a class="btn btn-primary btn-sm hide-mobile" href="<?php echo e(url('login.php')); ?>">
+                    <?php echo icon('login', 16); ?>
+                    <span>ورود والدین</span>
+                </a>
+            <?php endif; ?>
+
+            <button type="button" class="icon-btn burger" data-drawer-open aria-expanded="false" aria-controls="roomaDrawer" aria-label="باز کردن منو">
+                <span class="burger__box">
+                    <span class="burger__line"></span>
+                    <span class="burger__line"></span>
+                    <span class="burger__line"></span>
+                </span>
+            </button>
+        </div>
     </div>
 </header>
+
+<?php /* ── Mobile drawer ───────────────────────────────────────────────── */ ?>
+<div class="drawer-overlay" data-drawer-overlay aria-hidden="true"></div>
+
+<aside class="drawer" id="roomaDrawer" data-drawer aria-hidden="true" aria-label="منوی موبایل">
+    <div class="drawer__head">
+        <span class="brand">
+            <span class="brand__mark"><?php echo roomaLogoMark(34, 'drawerLogoGrad'); ?></span>
+            <span class="brand__text">
+                <span class="brand__name"><?php echo e($siteNameValue); ?></span>
+                <span class="brand__tag">مهدکودک و پیش‌دبستانی</span>
+            </span>
+        </span>
+        <button type="button" class="icon-btn" data-drawer-close aria-label="بستن منو">
+            <?php echo icon('close', 19); ?>
+        </button>
+    </div>
+
+    <div class="drawer__body">
+        <nav class="drawer__nav" aria-label="پیوندهای اصلی">
+            <?php foreach ($navItems as $i => $item): ?>
+                <a class="drawer__link<?php echo $item['active'] ? ' is-active' : ''; ?>"
+                   href="<?php echo e(url($item['href'])); ?>"
+                   style="--i: <?php echo (int) $i; ?>"
+                   <?php echo $item['active'] ? 'aria-current="page"' : ''; ?>>
+                    <?php echo icon($item['icon'], 20); ?>
+                    <span><?php echo e($item['label']); ?></span>
+                    <span class="drawer__link-arrow"><?php echo icon('chevron-left', 16); ?></span>
+                </a>
+            <?php endforeach; ?>
+        </nav>
+
+        <div class="drawer__divider"></div>
+
+        <div class="drawer__section-title">حساب کاربری</div>
+        <nav class="drawer__nav" aria-label="حساب کاربری">
+            <?php if (isParentLoggedIn()): ?>
+                <a class="drawer__link" href="<?php echo e(url('parent/index.php')); ?>" style="--i: 5">
+                    <?php echo icon('user', 20); ?>
+                    <span>پنل والدین</span>
+                    <span class="drawer__link-arrow"><?php echo icon('chevron-left', 16); ?></span>
+                </a>
+            <?php elseif (isLoggedIn()): ?>
+                <a class="drawer__link" href="<?php echo e(url('admin/index.php')); ?>" style="--i: 5">
+                    <?php echo icon('grid', 20); ?>
+                    <span>پنل مدیریت</span>
+                    <span class="drawer__link-arrow"><?php echo icon('chevron-left', 16); ?></span>
+                </a>
+            <?php else: ?>
+                <a class="drawer__link" href="<?php echo e(url('login.php')); ?>" style="--i: 5">
+                    <?php echo icon('login', 20); ?>
+                    <span>ورود والدین</span>
+                    <span class="drawer__link-arrow"><?php echo icon('chevron-left', 16); ?></span>
+                </a>
+                <a class="drawer__link" href="<?php echo e(url('register.php')); ?>" style="--i: 6">
+                    <?php echo icon('user', 20); ?>
+                    <span>ثبت‌نام والدین</span>
+                    <span class="drawer__link-arrow"><?php echo icon('chevron-left', 16); ?></span>
+                </a>
+            <?php endif; ?>
+        </nav>
+    </div>
+
+    <div class="drawer__foot">
+        <?php if ($contactPhone !== ''): ?>
+            <a class="drawer__contact" href="tel:<?php echo e(telHref($contactPhone)); ?>">
+                <?php echo icon('phone', 15); ?>
+                <span><?php echo e(persianNumber($contactPhone)); ?></span>
+            </a>
+        <?php endif; ?>
+        <?php if ($workingHoursV !== ''): ?>
+            <span class="drawer__contact">
+                <?php echo icon('clock', 15); ?>
+                <span><?php echo e(persianNumber($workingHoursV)); ?></span>
+            </span>
+        <?php endif; ?>
+
+        <?php if ($instagramV !== '' || $telegramV !== '' || $whatsappV !== ''): ?>
+        <div class="drawer__socials">
+            <?php if ($instagramV !== ''): ?>
+                <a class="drawer__social" href="<?php echo e($instagramV); ?>" target="_blank" rel="noopener noreferrer" aria-label="اینستاگرام روما"><?php echo brandIcon('instagram', 16); ?></a>
+            <?php endif; ?>
+            <?php if ($telegramV !== ''): ?>
+                <a class="drawer__social" href="<?php echo e($telegramV); ?>" target="_blank" rel="noopener noreferrer" aria-label="تلگرام روما"><?php echo brandIcon('telegram', 16); ?></a>
+            <?php endif; ?>
+            <?php if ($whatsappV !== ''): ?>
+                <a class="drawer__social" href="https://wa.me/<?php echo e(whatsappHref($whatsappV)); ?>" target="_blank" rel="noopener noreferrer" aria-label="واتس‌اپ روما"><?php echo brandIcon('whatsapp', 16); ?></a>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
+        <a class="btn btn-primary btn-block" href="<?php echo e(url('page.php?slug=contact')); ?>">
+            <?php echo icon('calendar', 17); ?>
+            <span>رزرو بازدید حضوری</span>
+        </a>
+    </div>
+</aside>
+
 <main class="site-main" id="main-content">

@@ -1,169 +1,275 @@
 <?php
+declare(strict_types=1);
+
 /**
- * Dedicated Contact Us Template
- * Roma Kindergarten
+ * Rooma — Contact page template (page.php?slug=contact)
+ *
+ * The POST handler lives in page.php and exposes $contactFormStatus.
  */
+
+if (!defined('ROOMA_APP')) {
+    die('Access denied.');
+}
+
+require_once __DIR__ . '/../../includes/ui.php';
+
+$siteNameV     = siteName();
+$contactPhone  = siteContactPhone();
+$contactEmail  = siteContactEmail();
+$siteAddressV  = siteAddress();
+$mapEmbedUrl   = siteMapEmbedUrl();
+$mapLink       = siteMapLink();
+$whatsappV     = siteWhatsApp();
+
+$contactFormStatus = $contactFormStatus ?? null;
+
+// Preserve what the visitor typed when validation fails, so nothing is lost.
+$oldName    = $contactFormStatus !== null && !$contactFormStatus['ok'] ? (string) ($_POST['name'] ?? '') : '';
+$oldPhone   = $contactFormStatus !== null && !$contactFormStatus['ok'] ? (string) ($_POST['phone'] ?? '') : '';
+$oldEmail   = $contactFormStatus !== null && !$contactFormStatus['ok'] ? (string) ($_POST['email'] ?? '') : '';
+$oldSubject = $contactFormStatus !== null && !$contactFormStatus['ok'] ? (string) ($_POST['subject'] ?? 'visit') : 'visit';
+$oldMessage = $contactFormStatus !== null && !$contactFormStatus['ok'] ? (string) ($_POST['message'] ?? '') : '';
+
+$heroImg = is_file(__DIR__ . '/../../assets/img/hero-classroom.jpg')
+    ? 'assets/img/hero-classroom.jpg'
+    : 'assets/img/about-story.jpg';
+
+$subjectOptions = [
+    'visit'    => 'درخواست بازدید حضوری از مهدکودک',
+    'register' => 'اطلاعات شهریه و مدارک ثبت‌نام',
+    'consult'  => 'مشاوره با روانشناس مجموعه',
+    'other'    => 'سایر موارد',
+];
 ?>
-<!-- Inner Hero Banner -->
-<section class="inner-hero" style="position: relative; background: var(--gradient-hero), url('<?php echo asset('assets/uploads/slide-hero-legacy.jpg'); ?>') center/cover no-repeat; padding: var(--space-2xl) 0 var(--space-xl) 0; color: var(--white); text-align: center;">
-    <div class="container">
-        <div class="breadcrumb" style="display: flex; justify-content: center; gap: 8px; font-size: var(--text-sm); margin-bottom: var(--space-sm); opacity: 0.9;">
-            <a href="<?php echo e(url('index.php')); ?>" style="color: var(--white); text-decoration: none;">خانه</a>
-            <span>‹</span>
-            <span style="color: var(--accent);">تماس با ما</span>
-        </div>
-        <h1 style="font-family: var(--font-display); font-size: var(--text-4xl); margin-bottom: var(--space-xs);">ارتباط با مهدکودک روما و بازدید حضوری</h1>
-        <p style="font-size: var(--text-lg); max-width: 640px; margin: 0 auto; opacity: 0.95;">
-            خوشحال می‌شویم پاسخگوی سوالات شما باشیم و زمان بازدید از مجموعه را هماهنگ کنیم
+
+<?php /* ═══════════════ PAGE HERO ═══════════════ */ ?>
+<section class="page-hero">
+    <div class="page-hero__media">
+        <img src="<?php echo e(asset($heroImg)); ?>" alt="" width="1920" height="1072" loading="eager" fetchpriority="high">
+    </div>
+    <div class="page-hero__scrim"></div>
+
+    <div class="container page-hero__inner">
+        <nav class="crumbs" aria-label="مسیر صفحه">
+            <a href="<?php echo e(url('index.php')); ?>">خانه</a>
+            <span class="crumbs__sep" aria-hidden="true">‹</span>
+            <span class="crumbs__current" aria-current="page">تماس با ما</span>
+        </nav>
+        <h1 class="page-hero__title">ارتباط با <?php echo e($siteNameV); ?> و رزرو بازدید</h1>
+        <p class="page-hero__sub">
+            خوشحال می‌شویم پاسخ سوال‌هایتان را بدهیم و زمانی برای دیدن مجموعه از نزدیک
+            هماهنگ کنیم.
         </p>
     </div>
 </section>
 
-<!-- Contact Form & Info Grid -->
-<section class="section contact-section" style="padding: var(--space-2xl) 0;">
+<?php /* ═══════════════ QUICK CONTACT CARDS ═══════════════ */ ?>
+<section class="section section-sm">
     <div class="container">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-2xl); align-items: start;">
+        <div class="feature-grid" data-reveal-group data-reveal-step="80">
+            <?php if ($contactPhone !== ''): ?>
+            <a class="card card-hover feature" href="tel:<?php echo e(telHref($contactPhone)); ?>" data-reveal="up">
+                <span class="feature__icon"><?php echo icon('phone', 27); ?></span>
+                <h2 class="feature__title">تماس تلفنی</h2>
+                <p class="feature__text tnum"><?php echo e(persianNumber($contactPhone)); ?></p>
+                <p class="feature__text">سریع‌ترین راه گرفتن پاسخ در ساعات کاری.</p>
+            </a>
+            <?php endif; ?>
 
-            <!-- Column 1: Contact Form -->
-            <div style="background: var(--white); padding: var(--space-2xl); border-radius: var(--radius-xl); border: 1px solid var(--border); box-shadow: var(--shadow-md);">
-                <h2 style="font-family: var(--font-display); font-size: var(--text-2xl); color: var(--neutral-dark); margin-bottom: var(--space-xs);">
-                    ارسال پیام یا درخواست بازدید
-                </h2>
-                <p style="color: var(--muted); font-size: var(--text-sm); margin-bottom: var(--space-lg);">
-                    فرم زیر را پر کنید؛ کارشناسان ما در سریع‌ترین زمان با شما تماس می‌گیرند.
-                </p>
+            <?php if ($whatsappV !== ''): ?>
+            <a class="card card-hover feature" href="https://wa.me/<?php echo e(whatsappHref($whatsappV)); ?>" target="_blank" rel="noopener noreferrer" data-reveal="up">
+                <span class="feature__icon"><?php echo brandIcon('whatsapp', 26); ?></span>
+                <h2 class="feature__title">واتس‌اپ روما</h2>
+                <p class="feature__text">اگر ترجیح می‌دهید بنویسید، همین‌جا پیام بدهید.</p>
+            </a>
+            <?php endif; ?>
 
-                <form id="contactForm" method="post" action="<?php echo e(url('page.php?slug=contact')); ?>" style="display: grid; gap: var(--space-md);">
-                    <input type="hidden" name="csrf_token" value="<?php echo e(generateCsrfToken()); ?>">
-                    <?php if (!empty($contactFormStatus)): ?>
-                        <div role="<?= $contactFormStatus['ok'] ? 'status' : 'alert' ?>" style="padding: 12px; border-radius: var(--radius-sm); font-size: var(--text-sm); background: <?= $contactFormStatus['ok'] ? 'var(--primary-faint)' : 'rgba(220,38,38,0.08)' ?>; color: <?= $contactFormStatus['ok'] ? 'var(--primary-dark)' : 'var(--danger)' ?>; border: 1px solid <?= $contactFormStatus['ok'] ? 'var(--primary)' : 'var(--danger)' ?>;">
-                            <?php echo e($contactFormStatus['text']); ?>
+            <?php if ($contactEmail !== ''): ?>
+            <a class="card card-hover feature" href="mailto:<?php echo e($contactEmail); ?>" data-reveal="up">
+                <span class="feature__icon"><?php echo icon('mail', 27); ?></span>
+                <h2 class="feature__title">ایمیل</h2>
+                <p class="feature__text"><?php echo e($contactEmail); ?></p>
+                <p class="feature__text">برای ارسال مدارک یا سوال‌های تفصیلی.</p>
+            </a>
+            <?php endif; ?>
+
+            <div class="card card-hover feature" data-reveal="up">
+                <span class="feature__icon"><?php echo icon('clock', 27); ?></span>
+                <h2 class="feature__title">ساعات پاسخگویی</h2>
+                <p class="feature__text">شنبه تا چهارشنبه ۰۷:۰۰–۱۶:۳۰</p>
+                <p class="feature__text">پنج‌شنبه ۰۷:۰۰–۱۳:۰۰</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<?php /* ═══════════════ FORM + INFO ═══════════════ */ ?>
+<section class="section section-sm">
+    <div class="container">
+        <div class="split split--wide-start">
+
+            <?php /* ── Form ── */ ?>
+            <div data-reveal="start">
+                <div class="card card-pad">
+                    <div class="info-card__head">
+                        <span class="info-card__icon"><?php echo icon('send', 21); ?></span>
+                        <h2 class="info-card__title">ارسال پیام یا درخواست بازدید</h2>
+                    </div>
+                    <p class="info-card__text mb-lg">
+                        فرم زیر را پر کنید؛ کارشناسان ما در نخستین فرصت کاری با شما تماس می‌گیرند.
+                    </p>
+
+                    <?php if ($contactFormStatus !== null): ?>
+                        <div class="alert <?php echo $contactFormStatus['ok'] ? 'alert-success' : 'alert-danger'; ?> mb-lg"
+                             role="<?php echo $contactFormStatus['ok'] ? 'status' : 'alert'; ?>">
+                            <?php echo icon($contactFormStatus['ok'] ? 'check-circle' : 'alert-triangle', 18); ?>
+                            <span><?php echo e($contactFormStatus['text']); ?></span>
                         </div>
                     <?php endif; ?>
-                    <div>
-                        <label for="contact_name" style="display: block; font-weight: 600; font-size: var(--text-sm); margin-bottom: 6px;">نام و نام خانوادگی <span style="color: var(--danger);">*</span></label>
-                        <input type="text" id="contact_name" name="name" required placeholder="مثال: مریم محمدی" class="form-control" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit;">
-                    </div>
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-sm);">
-                        <div>
-                            <label for="contact_phone" style="display: block; font-weight: 600; font-size: var(--text-sm); margin-bottom: 6px;">شماره تماس <span style="color: var(--danger);">*</span></label>
-                            <input type="tel" id="contact_phone" name="phone" required placeholder="۰۹۱۲XXXXXXX" class="form-control" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit;">
+                    <form class="form-grid" method="post" action="<?php echo e(url('page.php?slug=contact')); ?>">
+                        <input type="hidden" name="csrf_token" value="<?php echo e(generateCsrfToken()); ?>">
+
+                        <div class="field">
+                            <label class="field__label" for="contact_name">
+                                نام و نام خانوادگی <span class="field__req">*</span>
+                            </label>
+                            <input type="text" id="contact_name" name="name" class="form-control"
+                                   value="<?php echo e($oldName); ?>"
+                                   placeholder="مثال: مریم محمدی" autocomplete="name"
+                                   maxlength="100" required>
                         </div>
-                        <div>
-                            <label for="contact_email" style="display: block; font-weight: 600; font-size: var(--text-sm); margin-bottom: 6px;">ایمیل (اختیاری)</label>
-                            <input type="email" id="contact_email" name="email" placeholder="example@mail.com" class="form-control" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit;">
+
+                        <div class="form-row">
+                            <div class="field">
+                                <label class="field__label" for="contact_phone">
+                                    شماره تماس <span class="field__req">*</span>
+                                </label>
+                                <input type="tel" id="contact_phone" name="phone" class="form-control"
+                                       value="<?php echo e($oldPhone); ?>"
+                                       placeholder="۰۹۱۲۱۲۳۴۵۶۷" inputmode="tel"
+                                       autocomplete="tel" dir="ltr" required>
+                            </div>
+                            <div class="field">
+                                <label class="field__label" for="contact_email">ایمیل (اختیاری)</label>
+                                <input type="email" id="contact_email" name="email" class="form-control"
+                                       value="<?php echo e($oldEmail); ?>"
+                                       placeholder="example@mail.com" inputmode="email"
+                                       autocomplete="email" dir="ltr" maxlength="150">
+                            </div>
                         </div>
-                    </div>
 
-                    <div>
-                        <label for="contact_subject" style="display: block; font-weight: 600; font-size: var(--text-sm); margin-bottom: 6px;">موضوع پیام</label>
-                        <select id="contact_subject" name="subject" class="form-control" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; background: var(--white);">
-                            <option value="visit">درخواست بازدید حضوری از مهدکودک</option>
-                            <option value="register">اطلاعات شهریه و مدارک ثبت‌نام</option>
-                            <option value="consult">مشاوره با روانشناس مجموعه</option>
-                            <option value="other">سایر موارد</option>
-                        </select>
-                    </div>
+                        <div class="field">
+                            <label class="field__label" for="contact_subject">موضوع پیام</label>
+                            <select id="contact_subject" name="subject" class="form-control">
+                                <?php foreach ($subjectOptions as $value => $label): ?>
+                                    <option value="<?php echo e($value); ?>" <?php echo $oldSubject === $value ? 'selected' : ''; ?>>
+                                        <?php echo e($label); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
 
-                    <div>
-                        <label for="contact_message" style="display: block; font-weight: 600; font-size: var(--text-sm); margin-bottom: 6px;">متن پیام یا توضیحات <span style="color: var(--danger);">*</span></label>
-                        <textarea id="contact_message" name="message" rows="4" required placeholder="پیام خود را اینجا بنویسید..." class="form-control" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: inherit; resize: vertical;"></textarea>
-                    </div>
+                        <div class="field">
+                            <label class="field__label" for="contact_message">
+                                متن پیام یا توضیحات <span class="field__req">*</span>
+                            </label>
+                            <textarea id="contact_message" name="message" class="form-control" rows="5"
+                                      placeholder="سن فرزندتان و زمان مناسب برای تماس را بنویسید تا سریع‌تر راهنمایی‌تان کنیم…"
+                                      maxlength="5000" required><?php echo e($oldMessage); ?></textarea>
+                            <span class="field__hint">حداکثر ۵۰۰۰ نویسه</span>
+                        </div>
 
-                    <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; padding: 14px;">
-                        ارسال پیام و هماهنگی
-                    </button>
-                </form>
-
-                <!-- Quick Action Direct Buttons -->
-                <div style="margin-top: var(--space-xl); padding-top: var(--space-lg); border-top: 1px solid var(--border); display: flex; gap: var(--space-sm); flex-wrap: wrap;">
-                    <a href="tel:<?php echo e(siteContactPhone()); ?>" class="btn btn-outline" style="flex: 1; min-width: 140px; justify-content: center; gap: 8px;">
-                        <svg style="width: 18px; height: 18px; color: var(--primary);"><use href="<?php echo asset('assets/img/icons.svg#icon-phone'); ?>"/></svg>
-                        تماس مستقیم
-                    </a>
-                    <a href="https://wa.me/<?php echo e(preg_replace('/[^0-9]/', '', siteContactPhone())); ?>" target="_blank" rel="noopener" class="btn btn-outline" style="flex: 1; min-width: 140px; justify-content: center; gap: 8px; color: #25D366; border-color: #25D366;">
-                        <svg style="width: 18px; height: 18px;"><use href="<?php echo asset('assets/img/icons.svg#icon-whatsapp'); ?>"/></svg>
-                        واتس‌اپ روما
-                    </a>
+                        <button type="submit" class="btn btn-primary btn-lg btn-block">
+                            <?php echo icon('send', 19); ?>
+                            ارسال پیام و هماهنگی
+                        </button>
+                    </form>
                 </div>
             </div>
 
-            <!-- Column 2: Information, Map & Working Hours -->
-            <div style="display: grid; gap: var(--space-lg);">
+            <?php /* ── Address / map / hours ── */ ?>
+            <div class="stack" data-reveal="end">
 
-                <!-- Address & Map Embed Card -->
-                <?php $mapEmbedUrl = siteMapEmbedUrl(); ?>
-                <div style="background: var(--paper); padding: var(--space-xl); border-radius: var(--radius-xl); border: 1px solid var(--paper-line);">
-                    <div style="display: flex; gap: var(--space-sm); margin-bottom: var(--space-md);">
-                        <div style="color: var(--primary); flex-shrink: 0; margin-top: 2px;">
-                            <svg style="width: 24px; height: 24px;"><use href="<?php echo asset('assets/img/icons.svg#icon-map-pin'); ?>"/></svg>
-                        </div>
-                        <div>
-                            <h3 style="font-size: var(--text-lg); font-weight: 700; margin-bottom: 4px; color: var(--neutral-dark);">نشانی مهدکودک روما</h3>
-                            <p style="color: var(--neutral-medium); font-size: var(--text-base); margin: 0; line-height: 1.7;">
-                                <?php if (siteAddress() !== ''): ?>
-                                    <?php echo e(siteAddress()); ?>
-                                <?php else: ?>
-                                    به‌زودی نشانی دقیق مجموعه در این بخش اعلام می‌شود. برای اطلاع از موقعیت، با ما تماس بگیرید.
-                                <?php endif; ?>
-                            </p>
-                        </div>
+                <div class="card card-pad">
+                    <div class="info-card__head">
+                        <span class="info-card__icon info-card__icon--clay"><?php echo icon('pin', 21); ?></span>
+                        <h2 class="info-card__title">نشانی مهدکودک <?php echo e($siteNameV); ?></h2>
                     </div>
+                    <p class="info-card__text">
+                        <?php if ($siteAddressV !== ''): ?>
+                            <?php echo e($siteAddressV); ?>
+                        <?php else: ?>
+                            نشانی دقیق مجموعه به‌زودی در این بخش اعلام می‌شود. برای اطلاع از
+                            موقعیت، با ما تماس بگیرید.
+                        <?php endif; ?>
+                    </p>
 
                     <?php if ($mapEmbedUrl !== null): ?>
-                        <!-- Map Embed Container (from admin-set share link) -->
-                        <div style="width: 100%; height: 220px; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--paper-line); margin-top: var(--space-md);">
-                            <iframe
-                                title="نقشه موقعیت روما"
-                                src="<?php echo e($mapEmbedUrl); ?>"
-                                width="100%"
-                                height="100%"
-                                style="border:0;"
-                                allowfullscreen=""
-                                loading="lazy"
-                                referrerpolicy="no-referrer-when-downgrade">
-                            </iframe>
+                        <div class="map-frame">
+                            <iframe title="نقشه موقعیت <?php echo e($siteNameV); ?>"
+                                    src="<?php echo e($mapEmbedUrl); ?>"
+                                    loading="lazy" allowfullscreen
+                                    referrerpolicy="no-referrer-when-downgrade"></iframe>
                         </div>
-                    <?php elseif (siteMapLink() !== ''): ?>
-                        <!-- Provider without iframe support (e.g. Balad): open-in-app button -->
-                        <a href="<?php echo e(siteMapLink()); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="margin-top: var(--space-md); gap: 8px;">
-                            <svg style="width: 18px; height: 18px;"><use href="<?php echo asset('assets/img/icons.svg#icon-map-pin'); ?>"/></svg>
-                            مشاهده موقعیت روی نقشه ↗
+                    <?php elseif ($mapLink !== ''): ?>
+                        <a class="btn btn-outline mt-md" href="<?php echo e($mapLink); ?>" target="_blank" rel="noopener noreferrer">
+                            <?php echo icon('pin', 17); ?>
+                            مشاهده موقعیت روی نقشه
+                            <?php echo icon('external', 15); ?>
                         </a>
                     <?php endif; ?>
                 </div>
 
-                <!-- Working Hours Table Card -->
-                <div style="background: var(--white); padding: var(--space-xl); border-radius: var(--radius-xl); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
-                    <div style="display: flex; gap: var(--space-sm); align-items: center; margin-bottom: var(--space-md);">
-                        <div style="color: var(--secondary);">
-                            <svg style="width: 24px; height: 24px;"><use href="<?php echo asset('assets/img/icons.svg#icon-clock'); ?>"/></svg>
-                        </div>
-                        <h3 style="font-size: var(--text-lg); font-weight: 700; margin: 0; color: var(--neutral-dark);">ساعات کاری و پذیرش</h3>
+                <div class="card card-pad">
+                    <div class="info-card__head">
+                        <span class="info-card__icon info-card__icon--accent"><?php echo icon('clock', 21); ?></span>
+                        <h2 class="info-card__title">ساعات کاری و پذیرش</h2>
                     </div>
-
-                    <table style="width: 100%; border-collapse: collapse; font-size: var(--text-sm);">
+                    <table class="hours">
                         <tbody>
-                            <tr style="border-bottom: 1px solid var(--border);">
-                                <td style="padding: 10px 0; font-weight: 600; color: var(--neutral-dark);">شنبه تا چهارشنبه</td>
-                                <td style="padding: 10px 0; text-align: left; color: var(--primary-dark); font-weight: 700;">۰۷:۰۰ الی ۱۶:۳۰</td>
-                            </tr>
-                            <tr style="border-bottom: 1px solid var(--border);">
-                                <td style="padding: 10px 0; font-weight: 600; color: var(--neutral-dark);">پنج‌شنبه‌ها</td>
-                                <td style="padding: 10px 0; text-align: left; color: var(--primary-dark); font-weight: 700;">۰۷:۰۰ الی ۱۳:۰۰</td>
+                            <tr>
+                                <th scope="row">شنبه تا چهارشنبه</th>
+                                <td>۰۷:۰۰ – ۱۶:۳۰</td>
                             </tr>
                             <tr>
-                                <td style="padding: 10px 0; font-weight: 600; color: var(--muted);">جمعه‌ها و تعطیلات رسمی</td>
-                                <td style="padding: 10px 0; text-align: left; color: var(--danger); font-weight: 700;">تعطیل</td>
+                                <th scope="row">پنج‌شنبه</th>
+                                <td>۰۷:۰۰ – ۱۳:۰۰</td>
+                            </tr>
+                            <tr>
+                                <th scope="row">جمعه و تعطیلات رسمی</th>
+                                <td class="is-closed">تعطیل</td>
                             </tr>
                         </tbody>
                     </table>
+
+                    <div class="alert alert-info mt-md">
+                        <?php echo icon('info', 18); ?>
+                        <span>
+                            برای بازدید حضوری بهتر است بین ساعت ۰۹:۰۰ تا ۱۱:۰۰ بیایید؛
+                            در این ساعت کلاس‌ها در اوج فعالیت هستند و فضا را واقعی می‌بینید.
+                        </span>
+                    </div>
+                </div>
+
+                <div class="card card-pad">
+                    <div class="info-card__head">
+                        <span class="info-card__icon"><?php echo icon('file-text', 21); ?></span>
+                        <h2 class="info-card__title">برای بازدید چه چیزی بیاورم؟</h2>
+                    </div>
+                    <ul class="check-list">
+                        <li><?php echo icon('check', 19); ?><span>سن دقیق فرزندتان (برای معرفی کلاس مناسب)</span></li>
+                        <li><?php echo icon('check', 19); ?><span>سوال‌هایتان درباره تغذیه، خواب و برنامه روزانه</span></li>
+                        <li><?php echo icon('check', 19); ?><span>در صورت وجود، سابقه پزشکی یا حساسیت غذایی</span></li>
+                    </ul>
+                    <p class="info-card__text mt-md">
+                        آوردن فرزندتان به بازدید توصیه می‌شود — واکنش خودش به فضا، بهترین
+                        راهنمای شماست.
+                    </p>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Shared Footer CTA -->
 <?php require __DIR__ . '/../cta-section.php'; ?>

@@ -1,326 +1,344 @@
 <?php
+declare(strict_types=1);
+
 /**
- * Dedicated Classes & Programs Template
- * Roma Kindergarten
+ * Rooma — Classes & programmes page template (page.php?slug=classes)
+ *
+ * The three age groups are described by one data structure and rendered by a
+ * single loop, so the tabs, panels and cards can never fall out of sync.
  */
+
+if (!defined('ROOMA_APP')) {
+    die('Access denied.');
+}
+
+require_once __DIR__ . '/../../includes/ui.php';
+
+$siteNameV = siteName();
+
+$classGroups = [
+    [
+        'id'      => 'nobaaveh',
+        'tab'     => 'نوباوه · ۶ ماه تا ۲ سال',
+        'title'   => 'کلاس نوباوه — مراقبت گرم و دلبستگی ایمن',
+        'age'     => '۶ ماه تا ۲ سال',
+        'ratio'   => 'نسبت مربی ۱ به ۴',
+        'badge'   => 'badge-primary',
+        'head'    => 'class-card__head--green',
+        'icon'    => 'baby',
+        'lead'    => 'در این سن مهم‌ترین کار ما ساختن حس امنیت است. کودک باید یاد بگیرد که '
+                   . 'دنیا جای قابل اعتمادی است و کسی هست که به گریه‌اش پاسخ می‌دهد.',
+        'capacity' => ['fill' => 80, 'text' => '۲ جای خالی از ۱۰'],
+        'skills'  => [
+            'تقویت تعادل، نشستن و گام‌برداری اولیه',
+            'تحریک حسی با اسباب‌بازی‌های لمسی ایمن',
+            'تنظیم ریتم خواب و تغذیه مطابق عادت خانه',
+            'شروع بازی موازی و آشنایی با همسالان',
+        ],
+        'parents' => [
+            'گزارش ساعتی خواب، شیر و پوشک',
+            'مربی ثابت برای هر کودک (اصل مراقب اصلی)',
+            'اتاق خواب مستقل و تاریک با پایش مربی',
+        ],
+        'schedule' => [
+            ['۰۷:۳۰ – ۰۹:۰۰', 'پذیرش، معاینه سلامت و صبحانه'],
+            ['۰۹:۰۰ – ۱۰:۳۰', 'بازی حرکتی، ماساژ کودک و آواز'],
+            ['۱۰:۳۰ – ۱۲:۰۰', 'میان‌وعده میوه و قصه حسی'],
+            ['۱۲:۰۰ – ۱۳:۳۰', 'ناهار و آماده‌سازی خواب'],
+            ['۱۳:۳۰ – ۱۵:۳۰', 'خواب آرام با پایش مربی'],
+            ['۱۵:۳۰ – ۱۶:۳۰', 'میان‌وعده، بازی آزاد و تحویل'],
+        ],
+    ],
+    [
+        'id'      => 'khordsal',
+        'tab'     => 'خردسال · ۲ تا ۴ سال',
+        'title'   => 'کلاس خردسال — انفجار زبان و مهارت اجتماعی',
+        'age'     => '۲ تا ۴ سال',
+        'ratio'   => 'نسبت مربی ۱ به ۶',
+        'badge'   => 'badge-secondary',
+        'head'    => 'class-card__head--clay',
+        'icon'    => 'puzzle',
+        'lead'    => 'سن طلایی زبان و اولین تجربه زندگی گروهی. کودک یاد می‌گیرد نوبت بگیرد، '
+                   . 'احساسش را با کلمه بگوید و به‌جای گرفتن اسباب‌بازی، درخواست کند.',
+        'capacity' => ['fill' => 71, 'text' => '۴ جای خالی از ۱۴'],
+        'skills'  => [
+            'غنی‌سازی واژگان با قصه‌گویی و گفت‌وگو',
+            'بازی‌های گروهی، نوبت‌گیری و مشارکت',
+            'کارگاه هنر، سفالگری و موسیقی کودک',
+            'آموزش استقلال: دستشویی، لباس و غذاخوردن',
+        ],
+        'parents' => [
+            'گزارش روزانه رفتار، تغذیه و خواب',
+            'جلسه مشاوره فصلی با روانشناس مجموعه',
+            'راهنمای خانه برای هم‌راستا کردن قوانین',
+        ],
+        'schedule' => [
+            ['۰۷:۳۰ – ۰۹:۰۰', 'پذیرش و صبحانه گروهی'],
+            ['۰۹:۰۰ – ۱۰:۰۰', 'حلقه صبحگاهی: قصه، تقویم و گفت‌وگو'],
+            ['۱۰:۰۰ – ۱۱:۰۰', 'کارگاه هنر یا موسیقی'],
+            ['۱۱:۰۰ – ۱۲:۰۰', 'میان‌وعده و بازی آزاد در حیاط'],
+            ['۱۲:۰۰ – ۱۳:۳۰', 'ناهار و آماده‌سازی استراحت'],
+            ['۱۳:۳۰ – ۱۵:۰۰', 'استراحت یا فعالیت آرام'],
+            ['۱۵:۰۰ – ۱۶:۳۰', 'بازی هدفمند و تحویل به والدین'],
+        ],
+    ],
+    [
+        'id'      => 'pish',
+        'tab'     => 'پیش‌دبستانی · ۴ تا ۶ سال',
+        'title'   => 'پیش‌دبستانی — آماده‌سازی واقعی برای مدرسه',
+        'age'     => '۴ تا ۶ سال',
+        'ratio'   => 'نسبت مربی ۱ به ۷',
+        'badge'   => 'badge-info',
+        'head'    => 'class-card__head--sky',
+        'icon'    => 'cap',
+        'lead'    => 'آمادگی مدرسه یعنی توان تمرکز، مدیریت هیجان و اعتماد به‌نفس — نه پر کردن '
+                   . 'دفتر مشق. هدف ما این است که کودک با اشتیاق وارد کلاس اول شود.',
+        'capacity' => ['fill' => 80, 'text' => '۳ جای خالی از ۱۵'],
+        'skills'  => [
+            'آمادگی خواندن و نوشتن (آگاهی واج‌شناختی)',
+            'مفاهیم ریاضی، الگو و حل مسئله',
+            'تقویت دست‌ورزی و عضلات ظریف دست',
+            'مهارت‌های زندگی، مسئولیت و کار گروهی',
+        ],
+        'parents' => [
+            'کارنامه توصیفی رشد در پایان هر ترم',
+            'ارزیابی آمادگی مدرسه و مشاوره انتخاب',
+            'نمایشگاه سالانه آثار و اجرای نمایش',
+        ],
+        'schedule' => [
+            ['۰۷:۳۰ – ۰۹:۰۰', 'پذیرش و صبحانه'],
+            ['۰۹:۰۰ – ۱۰:۱۵', 'کارگاه سوادآموزی و زبان'],
+            ['۱۰:۱۵ – ۱۱:۰۰', 'میان‌وعده و بازی در حیاط'],
+            ['۱۱:۰۰ – ۱۲:۰۰', 'ریاضی، علوم و آزمایش ساده'],
+            ['۱۲:۰۰ – ۱۳:۳۰', 'ناهار و زمان آرام'],
+            ['۱۳:۳۰ – ۱۵:۰۰', 'پروژه گروهی، هنر یا نمایش خلاق'],
+            ['۱۵:۰۰ – ۱۶:۳۰', 'ورزش، جمع‌بندی روز و تحویل'],
+        ],
+    ],
+];
+
+$heroImg = is_file(__DIR__ . '/../../assets/img/hero-classroom.jpg')
+    ? 'assets/img/hero-classroom.jpg'
+    : 'assets/img/about-story.jpg';
 ?>
-<!-- Inner Hero Banner -->
-<section class="inner-hero" style="position: relative; background: var(--gradient-hero), url('<?php echo asset('assets/uploads/slide-hero-legacy.jpg'); ?>') center/cover no-repeat; padding: var(--space-2xl) 0 var(--space-xl) 0; color: var(--white); text-align: center;">
-    <div class="container">
-        <div class="breadcrumb" style="display: flex; justify-content: center; gap: 8px; font-size: var(--text-sm); margin-bottom: var(--space-sm); opacity: 0.9;">
-            <a href="<?php echo e(url('index.php')); ?>" style="color: var(--white); text-decoration: none;">خانه</a>
-            <span>‹</span>
-            <span style="color: var(--accent);">کلاس‌ها و دوره‌ها</span>
-        </div>
-        <h1 style="font-family: var(--font-display); font-size: var(--text-4xl); margin-bottom: var(--space-xs);">کلاس‌ها و برنامه‌های سنی روما</h1>
-        <p style="font-size: var(--text-lg); max-width: 640px; margin: 0 auto; opacity: 0.95;">
-            برنامه‌ریزی دقیق آموزشی، مراقبتی و پرورشی متناسب با نیازهای هر رده سنی
+
+<?php /* ═══════════════ PAGE HERO ═══════════════ */ ?>
+<section class="page-hero">
+    <div class="page-hero__media">
+        <img src="<?php echo e(asset($heroImg)); ?>" alt="" width="1920" height="1072" loading="eager" fetchpriority="high">
+    </div>
+    <div class="page-hero__scrim"></div>
+
+    <div class="container page-hero__inner">
+        <nav class="crumbs" aria-label="مسیر صفحه">
+            <a href="<?php echo e(url('index.php')); ?>">خانه</a>
+            <span class="crumbs__sep" aria-hidden="true">‹</span>
+            <span class="crumbs__current" aria-current="page">کلاس‌ها و دوره‌ها</span>
+        </nav>
+        <h1 class="page-hero__title">کلاس‌ها و برنامه‌های سنی <?php echo e($siteNameV); ?></h1>
+        <p class="page-hero__sub">
+            سه گروه سنی، سه فضای مستقل و سه برنامه روزانه متفاوت — چون نیاز یک نوپا با
+            یک کودک پنج‌ساله زمین تا آسمان تفاوت دارد.
         </p>
     </div>
 </section>
 
-<!-- Classes Tabs & Details Section -->
-<section class="section classes-detail-section" style="padding: var(--space-2xl) 0;">
+<?php /* ═══════════════ TABS ═══════════════ */ ?>
+<section class="section">
     <div class="container">
-        <!-- Interactive Age Group Tabs Nav -->
-        <div class="tabs-wrapper" style="margin-bottom: var(--space-xl);">
-            <div class="tabs" id="classTabs" role="tablist" style="justify-content: center; border-bottom-color: var(--paper-line);">
-                <button class="tab-btn is-active" data-target="#tab-nobaaveh" role="tab" aria-selected="true">
-                    کلاس نوباوه (۶ ماه تا ۲ سال)
+
+        <div class="tabs" data-tabs role="tablist" aria-label="انتخاب گروه سنی">
+            <?php foreach ($classGroups as $i => $group): ?>
+                <button type="button"
+                        class="tab<?php echo $i === 0 ? ' is-active' : ''; ?>"
+                        data-tab="#tab-<?php echo e($group['id']); ?>"
+                        role="tab"
+                        id="tabbtn-<?php echo e($group['id']); ?>"
+                        aria-controls="tab-<?php echo e($group['id']); ?>"
+                        aria-selected="<?php echo $i === 0 ? 'true' : 'false'; ?>"
+                        tabindex="<?php echo $i === 0 ? '0' : '-1'; ?>">
+                    <?php echo e($group['tab']); ?>
                 </button>
-                <button class="tab-btn" data-target="#tab-khordsal" role="tab" aria-selected="false">
-                    کلاس خردسال (۲ تا ۴ سال)
-                </button>
-                <button class="tab-btn" data-target="#tab-pish" role="tab" aria-selected="false">
-                    پیش‌دبستانی (۴ تا ۶ سال)
-                </button>
-            </div>
+            <?php endforeach; ?>
         </div>
 
-        <!-- Tab 1: Nobaaveh (0-2 Yrs) -->
-        <div class="tab-pane is-active" id="tab-nobaaveh" role="tabpanel">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-xl); align-items: start;">
-                <div style="background: var(--white); padding: var(--space-xl); border-radius: var(--radius-xl); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md);">
-                        <span class="badge badge-warning" style="font-size: var(--text-sm); padding: 6px 14px;">رده سنی: ۶ ماه تا ۲ سال</span>
-                        <span style="font-size: var(--text-sm); color: var(--muted); font-weight: 600;">نسبت مربی: ۱ به ۴</span>
-                    </div>
-                    <h3 style="font-family: var(--font-display); font-size: var(--text-2xl); color: var(--neutral-dark); margin-bottom: var(--space-sm);">
-                        کلاس نوباوه — مهار و مراقبت گرم
-                    </h3>
-                    <p style="color: var(--neutral-medium); font-size: var(--text-base); line-height: 1.8; margin-bottom: var(--space-lg);">
-                        تمرکز بر حس امنیت، تقویت مهارت‌های حرکتی درشت، خواب منظم و مراقبت ویژه فردی. همراه با گزارش دقیق ساعتی تغذیه و خواب.
-                    </p>
+        <?php foreach ($classGroups as $i => $group): ?>
+            <div class="tab-panel<?php echo $i === 0 ? ' is-active' : ''; ?>"
+                 id="tab-<?php echo e($group['id']); ?>"
+                 role="tabpanel"
+                 aria-labelledby="tabbtn-<?php echo e($group['id']); ?>"
+                 <?php echo $i === 0 ? '' : 'hidden'; ?>>
 
-                    <!-- Capacity Progress Bar -->
-                    <div style="background: var(--paper); padding: var(--space-md); border-radius: var(--radius-md); margin-bottom: var(--space-lg);">
-                        <div style="display: flex; justify-content: space-between; font-size: var(--text-sm); font-weight: 600; margin-bottom: 6px;">
-                            <span>ظرفیت باقیمانده دوره جدید</span>
-                            <span style="color: var(--secondary);">۲ جای خالی از ۱۰</span>
-                        </div>
-                        <div style="height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;">
-                            <div style="width: 80%; height: 100%; background: var(--gradient-earth); border-radius: 4px;"></div>
-                        </div>
-                    </div>
+                <div class="split split--wide-start">
 
-                    <h4 style="font-size: var(--text-base); font-weight: 700; margin-bottom: var(--space-sm);">مهارت‌های کلیدی دوره:</h4>
-                    <ul style="list-style: none; padding: 0; margin: 0; display: grid; gap: 8px;">
-                        <li style="display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); color: var(--neutral-dark);">
-                            <svg style="width:18px; height:18px; color: var(--primary);"><use href="<?php echo asset('assets/img/icons.svg#icon-check'); ?>"/></svg>
-                            تقویت تعادل و گام‌برداری اولیه
-                        </li>
-                        <li style="display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); color: var(--neutral-dark);">
-                            <svg style="width:18px; height:18px; color: var(--primary);"><use href="<?php echo asset('assets/img/icons.svg#icon-check'); ?>"/></svg>
-                            تحریک حسی با اسباب‌بازی‌های لمسی ایمن
-                        </li>
-                        <li style="display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); color: var(--neutral-dark);">
-                            <svg style="width:18px; height:18px; color: var(--primary);"><use href="<?php echo asset('assets/img/icons.svg#icon-check'); ?>"/></svg>
-                            تنظیم نظم خواب و تغذیه ارگانیک
-                        </li>
-                    </ul>
-                </div>
+                    <?php /* Left: description + skills */ ?>
+                    <div>
+                        <div class="card card-pad">
+                            <div class="row mb-md">
+                                <span class="badge <?php echo e($group['badge']); ?>"><?php echo e($group['age']); ?></span>
+                                <span class="badge badge-outline"><?php echo e($group['ratio']); ?></span>
+                            </div>
 
-                <!-- Daily Schedule Timeline -->
-                <div style="background: var(--paper); padding: var(--space-xl); border-radius: var(--radius-xl); border: 1px solid var(--paper-line);">
-                    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--neutral-dark); margin-bottom: var(--space-lg);">
-                        برنامه روزانه کلاس نوباوه
-                    </h3>
-                    <div class="timeline-vertical">
-                        <div class="timeline-item">
-                            <div class="timeline-time">۰۷:۳۰ - ۰۹:۰۰</div>
-                            <div class="timeline-title">پذیرش، معاینه اولیه و صبحانه گرم</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-time">۰۹:۰۰ - ۱۰:۳۰</div>
-                            <div class="timeline-title">بازی حرکتی ارگانیک و ماساژ کودک</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-time">۱۰:۳۰ - ۱۲:۰۰</div>
-                            <div class="timeline-title">میان‌وعده میوه‌ای و قصه حسی</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-time">۱۲:۰۰ - ۱۳:۳۰</div>
-                            <div class="timeline-title">ناهار اصلی و آماده‌سازی خواب</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-time">۱۳:۳۰ - ۱۵:۳۰</div>
-                            <div class="timeline-title">زمان استراحت و خواب آرام</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-time">۱۵:۳۰ - ۱۶:۳۰</div>
-                            <div class="timeline-title">میان‌وعده و تحویل به والدین</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                            <h2 class="split__title mb-sm"><?php echo e($group['title']); ?></h2>
+                            <p class="split__text mb-lg"><?php echo e($group['lead']); ?></p>
 
-        <!-- Tab 2: Khordsal (2-4 Yrs) -->
-        <div class="tab-pane" id="tab-khordsal" role="tabpanel">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-xl); align-items: start;">
-                <div style="background: var(--white); padding: var(--space-xl); border-radius: var(--radius-xl); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md);">
-                        <span class="badge badge-success" style="font-size: var(--text-sm); padding: 6px 14px;">رده سنی: ۲ تا ۴ سال</span>
-                        <span style="font-size: var(--text-sm); color: var(--muted); font-weight: 600;">نسبت مربی: ۱ به ۶</span>
-                    </div>
-                    <h3 style="font-family: var(--font-display); font-size: var(--text-2xl); color: var(--neutral-dark); margin-bottom: var(--space-sm);">
-                        کلاس خردسال — کشف و جامعه‌پذیری
-                    </h3>
-                    <p style="color: var(--neutral-medium); font-size: var(--text-base); line-height: 1.8; margin-bottom: var(--space-lg);">
-                        پایه‌ریزی کلامی، کار گروهی اولیه، سفالگری، شعر خوانی و مستقل شدن در آداب شخصی و اجتماعی.
-                    </p>
+                            <div class="meter mb-lg">
+                                <div class="meter__head">
+                                    <span>ظرفیت تکمیل‌شده دوره جدید</span>
+                                    <span class="text-secondary"><?php echo e($group['capacity']['text']); ?></span>
+                                </div>
+                                <div class="meter__track">
+                                    <div class="meter__fill"
+                                         data-meter="<?php echo (int) $group['capacity']['fill']; ?>%"
+                                         style="--w:<?php echo (int) $group['capacity']['fill']; ?>%"></div>
+                                </div>
+                            </div>
 
-                    <div style="background: var(--paper); padding: var(--space-md); border-radius: var(--radius-md); margin-bottom: var(--space-lg);">
-                        <div style="display: flex; justify-content: space-between; font-size: var(--text-sm); font-weight: 600; margin-bottom: 6px;">
-                            <span>ظرفیت باقیمانده دوره جدید</span>
-                            <span style="color: var(--primary);">۳ جای خالی از ۱۵</span>
-                        </div>
-                        <div style="height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;">
-                            <div style="width: 75%; height: 100%; background: var(--gradient-forest); border-radius: 4px;"></div>
+                            <h3 class="info-card__title mb-sm">مهارت‌های کلیدی این دوره</h3>
+                            <ul class="check-list mb-lg">
+                                <?php foreach ($group['skills'] as $skill): ?>
+                                    <li><?php echo icon('check-circle', 19); ?><span><?php echo e($skill); ?></span></li>
+                                <?php endforeach; ?>
+                            </ul>
+
+                            <h3 class="info-card__title mb-sm">برای شما به‌عنوان والد</h3>
+                            <ul class="check-list">
+                                <?php foreach ($group['parents'] as $item): ?>
+                                    <li><?php echo icon('check', 19); ?><span><?php echo e($item); ?></span></li>
+                                <?php endforeach; ?>
+                            </ul>
+
+                            <div class="row mt-lg">
+                                <a class="btn btn-primary" href="<?php echo e(url('page.php?slug=contact')); ?>">
+                                    <?php echo icon('calendar', 17); ?>
+                                    رزرو بازدید این کلاس
+                                </a>
+                            </div>
                         </div>
                     </div>
 
-                    <h4 style="font-size: var(--text-base); font-weight: 700; margin-bottom: var(--space-sm);">مهارت‌های کلیدی دوره:</h4>
-                    <ul style="list-style: none; padding: 0; margin: 0; display: grid; gap: 8px;">
-                        <li style="display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); color: var(--neutral-dark);">
-                            <svg style="width:18px; height:18px; color: var(--primary);"><use href="<?php echo asset('assets/img/icons.svg#icon-check'); ?>"/></svg>
-                            گسترش واژگان و بیان هوشمندانه احساسات
-                        </li>
-                        <li style="display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); color: var(--neutral-dark);">
-                            <svg style="width:18px; height:18px; color: var(--primary);"><use href="<?php echo asset('assets/img/icons.svg#icon-check'); ?>"/></svg>
-                            کارگاه سفالگری و سفره‌نگاری دستی
-                        </li>
-                        <li style="display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); color: var(--neutral-dark);">
-                            <svg style="width:18px; height:18px; color: var(--primary);"><use href="<?php echo asset('assets/img/icons.svg#icon-check'); ?>"/></svg>
-                            بازی‌های تعاملی رعایت نوبت و اشتراک
-                        </li>
-                    </ul>
-                </div>
+                    <?php /* Right: daily schedule */ ?>
+                    <div>
+                        <div class="card card-pad">
+                            <div class="info-card__head">
+                                <span class="info-card__icon info-card__icon--clay"><?php echo icon('clock', 21); ?></span>
+                                <h3 class="info-card__title">برنامه روزانه</h3>
+                            </div>
 
-                <!-- Daily Schedule Timeline -->
-                <div style="background: var(--paper); padding: var(--space-xl); border-radius: var(--radius-xl); border: 1px solid var(--paper-line);">
-                    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--neutral-dark); margin-bottom: var(--space-lg);">
-                        برنامه روزانه کلاس خردسال
-                    </h3>
-                    <div class="timeline-vertical">
-                        <div class="timeline-item">
-                            <div class="timeline-time">۰۷:۳۰ - ۰۹:۰۰</div>
-                            <div class="timeline-title">پذیرش و صبحانه گروهی</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-time">۰۹:۰۰ - ۱۰:۳۰</div>
-                            <div class="timeline-title">کارگاه زبان و شعرخوانی موزیکال</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-time">۱۰:۳۰ - ۱۲:۰۰</div>
-                            <div class="timeline-title">بازی آزاد در حیاط اختصاصی</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-time">۱۲:۰۰ - ۱۳:۰۰</div>
-                            <div class="timeline-title">سفره ناهار و خود مراقبتی</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-time">۱۳:۰۰ - ۱۵:۰۰</div>
-                            <div class="timeline-title">خواب/قصه آرامش‌بخش</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-time">۱۵:۰۰ - ۱۶:۳۰</div>
-                            <div class="timeline-title">کارگاه هنری و آماده‌سازی تحویل</div>
+                            <div class="timeline">
+                                <?php foreach ($group['schedule'] as $slot): ?>
+                                    <div class="timeline__item">
+                                        <span class="timeline__time"><?php echo e($slot[0]); ?></span>
+                                        <p class="timeline__title"><?php echo e($slot[1]); ?></p>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <div class="alert alert-info mt-lg">
+                                <?php echo icon('info', 18); ?>
+                                <span>
+                                    برنامه بالا چارچوب کلی است. ریتم خواب و تغذیه هر کودک،
+                                    خصوصاً در کلاس نوباوه، به‌صورت فردی تنظیم می‌شود.
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Tab 3: Pish-dabestani (4-6 Yrs) -->
-        <div class="tab-pane" id="tab-pish" role="tabpanel">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-xl); align-items: start;">
-                <div style="background: var(--white); padding: var(--space-xl); border-radius: var(--radius-xl); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md);">
-                        <span class="badge badge-info" style="font-size: var(--text-sm); padding: 6px 14px;">رده سنی: ۴ تا ۶ سال</span>
-                        <span style="font-size: var(--text-sm); color: var(--muted); font-weight: 600;">نسبت مربی: ۱ به ۸</span>
-                    </div>
-                    <h3 style="font-family: var(--font-display); font-size: var(--text-2xl); color: var(--neutral-dark); margin-bottom: var(--space-sm);">
-                        پیش‌دبستانی — آمادگی ورود به مدرسه
-                    </h3>
-                    <p style="color: var(--neutral-medium); font-size: var(--text-base); line-height: 1.8; margin-bottom: var(--space-lg);">
-                        پایه‌ریزی تفکر منطقی، ریاضیات لمسی، مهارت حل مسئله، زبان دوم کاربردی و بالا بردن اعتماد به نفس حضور در کلاس رسمی.
-                    </p>
-
-                    <div style="background: var(--paper); padding: var(--space-md); border-radius: var(--radius-md); margin-bottom: var(--space-lg);">
-                        <div style="display: flex; justify-content: space-between; font-size: var(--text-sm); font-weight: 600; margin-bottom: 6px;">
-                            <span>ظرفیت باقیمانده دوره جدید</span>
-                            <span style="color: var(--info);">۴ جای خالی از ۱۸</span>
-                        </div>
-                        <div style="height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;">
-                            <div style="width: 78%; height: 100%; background: var(--gradient-magic); border-radius: 4px;"></div>
-                        </div>
-                    </div>
-
-                    <h4 style="font-size: var(--text-base); font-weight: 700; margin-bottom: var(--space-sm);">مهارت‌های کلیدی دوره:</h4>
-                    <ul style="list-style: none; padding: 0; margin: 0; display: grid; gap: 8px;">
-                        <li style="display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); color: var(--neutral-dark);">
-                            <svg style="width:18px; height:18px; color: var(--primary);"><use href="<?php echo asset('assets/img/icons.svg#icon-check'); ?>"/></svg>
-                            مهارت‌های دست‌ورزی و پیش‌نوشتاری
-                        </li>
-                        <li style="display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); color: var(--neutral-dark);">
-                            <svg style="width:18px; height:18px; color: var(--primary);"><use href="<?php echo asset('assets/img/icons.svg#icon-check'); ?>"/></svg>
-                            مفاهیم پایه ریاضیات لمسی (مونته‌سوری)
-                        </li>
-                        <li style="display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); color: var(--neutral-dark);">
-                            <svg style="width:18px; height:18px; color: var(--primary);"><use href="<?php echo asset('assets/img/icons.svg#icon-check'); ?>"/></svg>
-                            پروژه‌های پژوهشی و علمی فکری گروهی
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Daily Schedule Timeline -->
-                <div style="background: var(--paper); padding: var(--space-xl); border-radius: var(--radius-xl); border: 1px solid var(--paper-line);">
-                    <h3 style="font-family: var(--font-display); font-size: var(--text-xl); color: var(--neutral-dark); margin-bottom: var(--space-lg);">
-                        برنامه روزانه پیش‌دبستانی
-                    </h3>
-                    <div class="timeline-vertical">
-                        <div class="timeline-item">
-                            <div class="timeline-time">۰۷:۳۰ - ۰۸:۳۰</div>
-                            <div class="timeline-title">ورود و صبحانه سالم</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-time">۰۸:۳۰ - ۱۰:۰۰</div>
-                            <div class="timeline-title">حلقه گفتگو و آموزش پیش‌نوشتاری</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-time">۱۰:۰۰ - ۱۱:۳۰</div>
-                            <div class="timeline-title">کارگاه هوش ریاضی و بازی گروهی</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-time">۱۱:۳۰ - ۱۳:۰۰</div>
-                            <div class="timeline-title">بازی ورزشی، حیاط و ناهار</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-time">۱۳:۰۰ - ۱۴:۳۰</div>
-                            <div class="timeline-title">پروژه علمی کودک و آزمایشگاه خلاق</div>
-                        </div>
-                        <div class="timeline-item">
-                            <div class="timeline-time">۱۴:۳۰ - ۱۶:۳۰</div>
-                            <div class="timeline-title">جمع‌بندی روزانه و تحویل به والدین</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <?php endforeach; ?>
     </div>
 </section>
 
-<!-- Comparison Table Section -->
-<section class="section comparison-section" style="padding: var(--space-2xl) 0; background: var(--bg-soft);">
+<?php /* ═══════════════ COMPARISON ═══════════════ */ ?>
+<section class="section section-paper">
     <div class="container">
-        <div class="section-header text-center" style="margin-bottom: var(--space-xl);">
-            <h2 style="font-family: var(--font-display); font-size: var(--text-3xl); color: var(--neutral-dark);">
-                مقایسه سریع گروه‌های سنی
+        <div class="section-head" data-reveal="up">
+            <span class="eyebrow eyebrow-clay">
+                <?php echo icon('activity', 14); ?>
+                مقایسه سریع
+            </span>
+            <h2 class="section-head__title">
+                کدام کلاس برای فرزند من <span class="u-mark">مناسب است؟</span>
             </h2>
-            <p style="color: var(--muted); font-size: var(--text-base);">بررسی یک‌نگاهی مشخصات دوره‌ها</p>
+            <p class="section-head__sub">
+                اگر مطمئن نیستید، نگران نباشید — در بازدید حضوری با هم تصمیم می‌گیریم.
+            </p>
         </div>
 
-        <div style="background: var(--white); border-radius: var(--radius-xl); padding: var(--space-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); overflow-x: auto;">
-            <table style="width: 100%; border-collapse: collapse; text-align: start;">
-                <thead>
-                    <tr style="border-bottom: 2px solid var(--paper-line);">
-                        <th style="padding: 14px; color: var(--neutral-dark); font-size: var(--text-base);">معیار مقایسه</th>
-                        <th style="padding: 14px; color: var(--primary); font-size: var(--text-base);">کلاس نوباوه</th>
-                        <th style="padding: 14px; color: var(--secondary); font-size: var(--text-base);">کلاس خردسال</th>
-                        <th style="padding: 14px; color: var(--info); font-size: var(--text-base);">پیش‌دبستانی</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr style="border-bottom: 1px solid var(--border);">
-                        <td style="padding: 14px; font-weight: 700; color: var(--neutral-dark);">رده سنی</td>
-                        <td style="padding: 14px;">۶ ماه تا ۲ سال</td>
-                        <td style="padding: 14px;">۲ تا ۴ سال</td>
-                        <td style="padding: 14px;">۴ تا ۶ سال</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid var(--border);">
-                        <td style="padding: 14px; font-weight: 700; color: var(--neutral-dark);">نسبت مربی به کودک</td>
-                        <td style="padding: 14px;">۱ به ۴ (تمرکز ویژه)</td>
-                        <td style="padding: 14px;">۱ به ۶</td>
-                        <td style="padding: 14px;">۱ به ۸</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid var(--border);">
-                        <td style="padding: 14px; font-weight: 700; color: var(--neutral-dark);">ساعات فعالیت</td>
-                        <td style="padding: 14px;">۷:۳۰ الی ۱۶:۳۰</td>
-                        <td style="padding: 14px;">۷:۳۰ الی ۱۶:۳۰</td>
-                        <td style="padding: 14px;">۷:۳۰ الی ۱۶:۳۰</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 14px; font-weight: 700; color: var(--neutral-dark);">گزارش‌دهی روزانه</td>
-                        <td style="padding: 14px;">آنلاین + آنلاین هر ۲ ساعت</td>
-                        <td style="padding: 14px;">روزانه در پنل والدین</td>
-                        <td style="padding: 14px;">روزانه در پنل والدین</td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="class-grid" data-reveal-group data-reveal-step="110">
+            <?php foreach ($classGroups as $group): ?>
+                <article class="card card-hover class-card" data-reveal="rise">
+                    <div class="class-card__head <?php echo e($group['head']); ?>">
+                        <span class="class-card__icon"><?php echo icon($group['icon'], 46); ?></span>
+                    </div>
+                    <div class="class-card__body">
+                        <h3 class="class-card__title"><?php echo e($group['age']); ?></h3>
+                        <span class="badge <?php echo e($group['badge']); ?>"><?php echo e($group['ratio']); ?></span>
+                        <p class="class-card__text"><?php echo e($group['lead']); ?></p>
+                        <ul class="class-card__list">
+                            <?php foreach (array_slice($group['skills'], 0, 3) as $skill): ?>
+                                <li><?php echo icon('check', 17); ?><span><?php echo e($skill); ?></span></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                </article>
+            <?php endforeach; ?>
         </div>
     </div>
 </section>
 
-<!-- Shared Footer CTA -->
+<?php /* ═══════════════ ENROLMENT STEPS ═══════════════ */ ?>
+<section class="section">
+    <div class="container">
+        <div class="section-head" data-reveal="up">
+            <span class="eyebrow">
+                <?php echo icon('file-text', 14); ?>
+                مسیر ثبت‌نام
+            </span>
+            <h2 class="section-head__title">
+                ثبت‌نام در روما در <span class="u-mark">چهار قدم</span>
+            </h2>
+            <p class="section-head__sub">شفاف، بدون کاغذبازی اضافه و بدون هزینه پنهان.</p>
+        </div>
+
+        <div class="feature-grid" data-reveal-group data-reveal-step="90">
+            <article class="card card-hover feature" data-reveal="up">
+                <span class="feature__icon"><?php echo icon('phone', 27); ?></span>
+                <h3 class="feature__title">۱. تماس و هماهنگی</h3>
+                <p class="feature__text">
+                    تلفنی یا از طریق فرم تماس، زمان بازدید را رزرو می‌کنید. بازدیدها در
+                    ساعات فعالیت مهد انجام می‌شود.
+                </p>
+            </article>
+
+            <article class="card card-hover feature" data-reveal="up">
+                <span class="feature__icon"><?php echo icon('users', 27); ?></span>
+                <h3 class="feature__title">۲. بازدید حضوری</h3>
+                <p class="feature__text">
+                    کلاس‌ها، حیاط و آشپزخانه را می‌بینید، با مربی گروه سنی فرزندتان صحبت
+                    می‌کنید و سوال‌هایتان را می‌پرسید.
+                </p>
+            </article>
+
+            <article class="card card-hover feature" data-reveal="up">
+                <span class="feature__icon"><?php echo icon('file-text', 27); ?></span>
+                <h3 class="feature__title">۳. تکمیل مدارک</h3>
+                <p class="feature__text">
+                    شناسنامه، کارت واکسن، فرم سلامت و حساسیت‌های غذایی. حساب پنل والدین
+                    همان روز فعال می‌شود.
+                </p>
+            </article>
+
+            <article class="card card-hover feature" data-reveal="up">
+                <span class="feature__icon"><?php echo icon('heart', 27); ?></span>
+                <h3 class="feature__title">۴. هفته سازگاری</h3>
+                <p class="feature__text">
+                    شروع پله‌ای: روز اول یک ساعت همراه شما، و به‌تدریج تا یک روز کامل —
+                    تا جدایی برای کودک ایمن باشد، نه شوک.
+                </p>
+            </article>
+        </div>
+    </div>
+</section>
+
 <?php require __DIR__ . '/../cta-section.php'; ?>

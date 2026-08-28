@@ -123,29 +123,37 @@ $pageTitle = $page ? $page['title'] . ' | ' . siteName() : 'صفحه یافت ن
 require_once __DIR__ . '/templates/header.php';
 ?>
 
-<section class="section cms-page">
+<section class="section">
     <div class="container">
         <?php if ($notFound): ?>
-            <div class="empty-state" style="text-align: center; padding: var(--space-2xl) 0;">
-                <div class="empty-state-icon" style="width: 100px; height: 100px; margin: 0 auto var(--space-md) auto;">
-                    <svg viewBox="0 0 100 100" style="width:100%; height:100%;"><use href="<?= asset('assets/img/bargoo.svg#bargoo-surprised') ?>"/></svg>
+            <div class="empty">
+                <svg class="empty__art" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+                    <use href="<?= e(asset('assets/img/bargoo.svg#bargoo-surprised')) ?>"/>
+                </svg>
+                <h1 class="empty__title">این صفحه پیدا نشد</h1>
+                <p class="empty__text">
+                    صفحه‌ای که به دنبالش بودید وجود ندارد یا حذف شده است.
+                </p>
+                <div class="row" style="justify-content:center">
+                    <a class="btn btn-primary" href="<?= e(url('index.php')) ?>">
+                        <?= icon('home', 17) ?>
+                        بازگشت به صفحه اصلی
+                    </a>
+                    <a class="btn btn-ghost" href="<?= e(url('page.php?slug=contact')) ?>">تماس با ما</a>
                 </div>
-                <h1 style="font-family: var(--font-display); font-size: var(--text-3xl); margin-bottom: var(--space-xs);">صفحه مورد نظر یافت نشد</h1>
-                <p style="color: var(--muted); margin-bottom: var(--space-lg);">صفحه‌ای که به دنبال آن بودید پیدا نشد یا حذف شده است.</p>
-                <a href="<?= e(url('index.php')) ?>" class="btn btn-primary">بازگشت به صفحه اصلی</a>
             </div>
         <?php else: ?>
-            <div class="breadcrumb">
+            <nav class="crumbs crumbs--page" aria-label="مسیر صفحه">
                 <a href="<?= e(url('index.php')) ?>">خانه</a>
-                <span class="breadcrumb-sep">‹</span>
-                <span class="breadcrumb-current"><?= e($page['title']) ?></span>
-            </div>
+                <span class="crumbs__sep" aria-hidden="true">‹</span>
+                <span class="crumbs__current" aria-current="page"><?= e($page['title']) ?></span>
+            </nav>
 
-            <article class="cms-content">
-                <header class="cms-content-header">
-                    <h1><?= e($page['title']) ?></h1>
+            <article class="article">
+                <header class="article__head">
+                    <h1 class="article__title"><?= e($page['title']) ?></h1>
                 </header>
-                <div class="cms-content-body">
+                <div class="prose">
                     <?= nl2br(e($page['content'])) ?>
                 </div>
             </article>
