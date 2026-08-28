@@ -261,6 +261,12 @@ html {
     scroll-padding-top: calc(var(--header-h) + 1rem);
     -moz-tab-size: 4;
     tab-size: 4;
+    /* Kill the mobile horizontal pan for good.
+       `clip` (unlike `hidden`) never creates a scroll container, so
+       translated reveal elements / off-canvas decorations can never widen
+       the scrollable overflow area. `hidden` is kept as a fallback. */
+    overflow-x: hidden;
+    overflow-x: clip;
 }
 
 body {
@@ -271,6 +277,7 @@ body {
     background-color: var(--page);
     min-height: 100dvh;
     overflow-x: hidden;
+    overflow-x: clip;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -539,6 +546,7 @@ html { scrollbar-color: var(--border-strong) var(--surface-sunken); scrollbar-wi
         filter .75s var(--ease-out-soft);
     transition-delay: var(--reveal-delay, 0ms);
 }
+
 .js-reveal [data-reveal="up"]    { transform: translate3d(0, 34px, 0); }
 .js-reveal [data-reveal="down"]  { transform: translate3d(0, -28px, 0); }
 .js-reveal [data-reveal="start"] { transform: translate3d(38px, 0, 0); }  /* from inline-start (RTL: right) */
@@ -546,6 +554,15 @@ html { scrollbar-color: var(--border-strong) var(--surface-sunken); scrollbar-wi
 .js-reveal [data-reveal="zoom"]  { transform: scale(.9); }
 .js-reveal [data-reveal="blur"]  { filter: blur(10px); transform: translate3d(0, 20px, 0); }
 .js-reveal [data-reveal="rise"]  { transform: translate3d(0, 56px, 0) scale(.97); }
+
+/* On phones, keep the pre-reveal horizontal offsets inside the container
+   padding so unrevealed elements can never stick out past the viewport
+   (older browsers without overflow: clip would otherwise get a horizontal
+   scrollbar until the elements are scrolled into view). */
+@media (max-width: 767px) {
+    .js-reveal [data-reveal="start"] { transform: translate3d(12px, 0, 0); }
+    .js-reveal [data-reveal="end"]   { transform: translate3d(-12px, 0, 0); }
+}
 
 .js-reveal [data-reveal].is-revealed {
     opacity: 1;
