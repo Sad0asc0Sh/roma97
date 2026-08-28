@@ -1,0 +1,14 @@
+# Wasmer/Anybuild configuration for the Rooma PHP application.
+# PHPix serves direct files correctly but does not resolve the root path to
+# the root-level index.php in this project. Use the standard PHP server.
+
+load("//anybuild/tools:php.bzl", "php_build", "php_config", "php_serve")
+
+config = php_config(
+    schema = 1,
+    php_version = "8.3.29",
+    phpix = False,
+)
+
+build = php_build(config)
+php_serve(config, build, name = "roma97")
