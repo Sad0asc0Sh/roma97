@@ -2352,9 +2352,17 @@ a.site-footer__contact:hover { color: #fff; }
 .to-top:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
 .to-top svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.4; }
 
-/* Progress ring around the button */
-.to-top__ring { position: absolute; inset: -1px; transform: rotate(-90deg); pointer-events: none; }
-.to-top__ring circle {
+/* Progress ring around the button — must trace the button's circle exactly,
+   so it needs higher specificity than `.to-top svg` (which sizes the icon). */
+.to-top svg.to-top__ring {
+    position: absolute;
+    inset: -1px;
+    width: calc(100% + 2px);
+    height: calc(100% + 2px);
+    transform: rotate(-90deg);
+    pointer-events: none;
+}
+.to-top svg.to-top__ring circle {
     fill: none;
     stroke: var(--primary);
     stroke-width: 2;

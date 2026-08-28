@@ -115,8 +115,8 @@ $footerNav   = roomaPublicNav($currentPage, $currentSlug);
 
 <?php /* ── Back to top ─────────────────────────────────────────────────── */ ?>
 <button type="button" class="to-top" data-to-top aria-label="بازگشت به بالای صفحه">
-    <svg class="to-top__ring" data-to-top-ring-wrap viewBox="0 0 46 46" aria-hidden="true" focusable="false">
-        <circle data-to-top-ring cx="23" cy="23" r="21"></circle>
+    <svg class="to-top__ring" data-to-top-ring-wrap viewBox="0 0 44 44" aria-hidden="true" focusable="false">
+        <circle data-to-top-ring cx="22" cy="22" r="21"></circle>
     </svg>
     <?php echo icon('chevron-up', 20); ?>
 </button>
