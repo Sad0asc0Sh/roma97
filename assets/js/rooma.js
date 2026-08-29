@@ -160,102 +160,65 @@
         }
     })();
 
-    /* ─── 04. Floating capsule header ──────────────────────────────────────
-     * The header is hidden at rest and revealed by scrolling. Two channels:
+    /* ─── 04. Morphing capsule header ──────────────────────────────────────
+     * The header is FIXED and painted from the very first frame. It never
+     * enters from outside the viewport — there is no reveal, no slide-in and
+     * no hidden state to recover from. This module's whole job is therefore
+     * a single number:
      *
-     *   REVEAL   `.is-revealed` on the <header>. A class (not a per-frame
-     *            style) so the browser owns the easing and the entrance can
-     *            never be chopped up by the scroll cadence.
+     *   `--fh-p`  0 → 1, written at most once per rAF frame.
      *
-     *   CONDENSE `--fh-p`, 0 → 1, written at most once per rAF frame. CSS
-     *            calc()s the height / width / depth from it, so the morph
-     *            tracks the finger or wheel exactly with no transition lag.
+     *             0  the header at rest: transparent, full-bleed, square,
+     *                unblurred — just the logo / nav / burger over content.
+     *             1  a fully condensed floating green glass capsule.
      *
-     * Hysteresis keeps the reveal from flickering when a user hovers right
-     * around the trigger point: it appears at REVEAL_AT and only retracts
-     * once back above HIDE_AT.
+     * CSS calc()s width, border-radius, background opacity, blur, scale,
+     * height and padding from it, so the morph tracks the wheel or finger
+     * exactly instead of trailing a CSS transition behind the scroll.
+     *
+     * MORPH_AT is short on purpose: the transformation should feel like a
+     * direct response to the first flick of the scroll, not a delayed event.
      * ------------------------------------------------------------------- */
-    (function floatingHeader() {
+    (function morphingHeader() {
         var header = $('[data-header]');
         if (!header) return;
 
-        var REVEAL_AT   = 60;    // px scrolled before the header appears
-        var HIDE_AT     = 12;    // px — retract back into hiding below this
-        var CONDENSE_AT = 260;   // px at which the capsule is fully condensed
+        var MORPH_AT = 140;     // px of scroll over which 0 → 1 plays out
+        var GLASS_AT = 0.55;    // p above which the glass counts as "on"
 
-        var revealed = false;
         var lastP = -1;
-        var forced = false;      // keyboard focus pins the header visible
-
-        function setRevealed(next) {
-            if (next === revealed) return;
-            revealed = next;
-            header.classList.toggle('is-revealed', next);
-            // A hidden header must not expose its links to assistive tech or
-            // the tab order. `inert` handles focus where supported; aria-hidden
-            // covers the screen-reader tree everywhere else.
-            header.setAttribute('aria-hidden', next ? 'false' : 'true');
-            if ('inert' in HTMLElement.prototype) header.inert = !next;
-        }
-
-        // Establish the correct a11y state for the initial hidden header
-        // (setRevealed short-circuits when the value has not changed).
-        header.setAttribute('aria-hidden', 'true');
-        if ('inert' in HTMLElement.prototype) header.inert = true;
+        var glass = false;
 
         function update(y) {
-            // While the drawer/lightbox holds the scroll lock the page cannot
-            // move; leave the header exactly as the user last saw it.
+            // While the drawer or lightbox holds the scroll lock the page
+            // cannot move; leave the header exactly as the user last saw it.
             if (root.classList.contains('no-scroll')) return;
 
-            if (forced) {
-                setRevealed(true);
-            } else if (!revealed && y > REVEAL_AT) {
-                setRevealed(true);
-            } else if (revealed && y <= HIDE_AT) {
-                setRevealed(false);
-            }
-
-            // Condense progress, eased so the first pixels of scroll produce
-            // a gentle change rather than an abrupt snap.
-            var raw = clamp((y - REVEAL_AT) / (CONDENSE_AT - REVEAL_AT), 0, 1);
+            // Eased so the first pixels of scroll read as a gentle swell
+            // rather than an abrupt snap into the capsule.
+            var raw = clamp(y / MORPH_AT, 0, 1);
             var p = raw * raw * (3 - 2 * raw);          // smoothstep
             p = Math.round(p * 1000) / 1000;            // avoid style churn
 
             if (p !== lastP) {
                 lastP = p;
                 header.style.setProperty('--fh-p', String(p));
+
+                // Only used by the no-color-mix fallback, which cannot
+                // interpolate the ink and needs a single clean switch.
+                var nextGlass = p >= GLASS_AT;
+                if (nextGlass !== glass) {
+                    glass = nextGlass;
+                    header.classList.toggle('is-glass', glass);
+                }
             }
         }
 
         subscribeScroll(update);
 
-        // Keyboard users tabbing into the header (possible the instant it is
-        // revealed) must never be focused on something invisible.
-        header.addEventListener('focusin', function () {
-            forced = true;
-            setRevealed(true);
-        });
-        header.addEventListener('focusout', function () {
-            // Release the pin only once focus has actually left the header.
-            win.setTimeout(function () {
-                if (header.contains(doc.activeElement)) return;
-                forced = false;
-                update(win.scrollY || 0);
-            }, 0);
-        });
-
-        // Restoring a scrolled position (reload / back-forward cache) should
-        // show the header immediately instead of animating it in.
-        if ((win.scrollY || 0) > REVEAL_AT) {
-            header.classList.add('is-instant');
-            update(win.scrollY || 0);
-            win.requestAnimationFrame(function () {
-                win.requestAnimationFrame(function () {
-                    header.classList.remove('is-instant');
-                });
-            });
-        }
+        // Paint the correct state for a restored scroll position (reload,
+        // back-forward cache, deep link) before the first scroll event.
+        update(win.scrollY || 0);
     })();
 
     /* ─── 05. Desktop nav sliding pill ─────────────────────────────────── */

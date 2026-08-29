@@ -91,282 +91,336 @@ a.topbar__item:hover svg { opacity: 1; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   3. HEADER — floating glass capsule
+   3. HEADER — in-place morphing glass capsule
    --------------------------------------------------------------------------
-   Behaviour
-     • Initial state (scrollY = 0) → completely hidden, non-interactive.
-     • Scrolling down past the trigger → springs in from above, fades up.
-     • Returning to the top → retracts back into the hidden state.
+   The header is FIXED and present from the very first frame. It never enters
+   from outside the viewport — there is no translateY reveal, no slide-in.
 
-   Motion model
-     Two independent channels so they can never fight each other:
-       1. REVEAL   — `.is-revealed` toggles opacity / transform, driven by
-                     CSS transitions (a single, well-eased animation).
-       2. CONDENSE — `--fh-p` (0 → 1) is written by rooma.js once per rAF
-                     frame and interpolates height, width, radius and the
-                     depth layers with calc(). Because the variable is
-                     re-evaluated every frame it needs no transition, which
-                     is what keeps the size change perfectly smooth.
+   At rest (scrollY = 0) it is deliberately minimal: no background, no
+   border, no shadow, no blur — just the bare logo / nav / burger sitting
+   directly on top of the page content, at full width.
+
+   As soon as scrolling starts, that SAME element morphs in place into a
+   floating green glass capsule. Every animated property is a compositor- or
+   paint-cheap one driven by a single scroll progress variable `--fh-p`
+   (0 → 1), written once per rAF frame by rooma.js:
+
+       --fh-p   →  width      (max-width tightens to a capsule)
+                   border-radius
+                   background  (glass fades up via opacity)
+                   blur        (backdrop-filter ramps 0 → full)
+                   opacity     (of the glass layer only, never the content)
+                   transform   (a subtle scale + settle, no vertical entry)
+                   height / padding (compactness)
+
+   Because `--fh-p` is recomputed every frame, these need no CSS transition,
+   which is what makes the morph track the scroll exactly.
    ══════════════════════════════════════════════════════════════════════════ */
 
-/* Progress of the condense morph, 0 = expanded … 1 = condensed */
-.site-header { --fh-p: 0; }
-
-/* Positioning layer — full-bleed, never intercepts pointer events */
 .site-header {
+    --fh-p: 0;
+
     position: fixed;
     inset-inline: 0;
     inset-block-start: 0;
     z-index: var(--z-header);
+
     display: flex;
     justify-content: center;
-    padding-block-start: var(--fh-top);
-    padding-inline: var(--fh-inset);
-    pointer-events: none;   /* only the capsule itself is clickable */
+
+    /* Top offset grows slightly as the capsule detaches from the edge */
+    padding-block-start: calc(var(--fh-top) * var(--fh-p));
+    padding-inline: calc(var(--fh-inset) * var(--fh-p));
+
+    pointer-events: none;   /* only the bar itself is interactive */
 }
 
-/* ── The capsule ── */
+/* A topbar must not push the header down, because then the header would
+   travel upward by the topbar's height as the topbar scrolls away — visible
+   vertical movement, which is exactly what we are eliminating.
+
+   Instead the topbar reserves the header's height inside its OWN dark band,
+   so the header floats over the top of that band and stays pinned at
+   inset-block-start: 0 for the entire scroll. The topbar's content sits in
+   the lower part of the band, clear of the header. Net vertical movement of
+   the header: zero. */
+.topbar { padding-block-start: var(--fh-h); }
+
+/* The band behind a resting header is always dark, so the ink is light on
+   every page that has a topbar — no per-page detection needed. */
+body:has(> .topbar) .site-header__shell {
+    --fh-rest-ink: #fff;
+    --fh-rest-ink-soft: rgba(255,255,255,.82);
+    --fh-rest-chip: rgba(255,255,255,.10);
+    --fh-rest-chip-border: rgba(255,255,255,.20);
+}
+
+/* With a topbar the dark band already clears the header, so ordinary light
+   pages must not add a second helping of top spacing. */
+body:has(> .topbar) .site-main { padding-block-start: 0; }
+body:has(> .topbar) .site-main > .page-hero:first-child {
+    padding-block-start: clamp(2.25rem, 1.5rem + 4vw, 4.25rem);
+}
+
+/* ── The morphing shell ── */
 .site-header__shell {
     position: relative;
     isolation: isolate;
     width: 100%;
-    /* Width tightens slightly as the header condenses */
-    max-width: calc(
-        var(--fh-max-w) + (var(--fh-max-w-min) - var(--fh-max-w)) * var(--fh-p)
-    );
-    border-radius: var(--fh-radius);
 
-    /* Semi-transparent green glass */
-    background-image: var(--fh-glass);
-    -webkit-backdrop-filter: blur(var(--fh-blur)) saturate(190%);
-    backdrop-filter: blur(var(--fh-blur)) saturate(190%);
-    border: 1px solid var(--fh-border);
-    color: var(--fh-ink);
+    /* Full-bleed at rest → capsule once condensed */
+    max-width: calc(100% - (100% - var(--fh-max-w)) * var(--fh-p));
 
-    /* Hidden initial state */
-    opacity: 0;
-    transform: translate3d(0, calc(-100% - var(--fh-top) - 6px), 0) scale(.96);
-    visibility: hidden;
-    pointer-events: none;
+    /* Square at rest → fully rounded capsule */
+    border-radius: calc(var(--fh-radius) * var(--fh-p));
 
-    transition:
-        opacity .5s var(--ease-in-out),
-        transform .62s var(--ease-out-soft),
-        visibility 0s linear .62s;
-    will-change: transform, opacity;
-    -webkit-transform: translate3d(0, calc(-100% - var(--fh-top) - 6px), 0) scale(.96);
-}
+    /* Blur ramps in with the glass. `calc()` inside a filter function is
+       valid and interpolates smoothly. */
+    -webkit-backdrop-filter: blur(calc(var(--fh-blur) * var(--fh-p))) saturate(calc(100% + 90% * var(--fh-p)));
+    backdrop-filter: blur(calc(var(--fh-blur) * var(--fh-p))) saturate(calc(100% + 90% * var(--fh-p)));
 
-/* Revealed */
-.site-header.is-revealed .site-header__shell {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-    -webkit-transform: translate3d(0, 0, 0) scale(1);
-    visibility: visible;
     pointer-events: auto;
-    transition:
-        opacity .42s var(--ease-in-out),
-        transform .66s var(--ease-out-soft),
-        visibility 0s linear 0s;
+    will-change: max-width, border-radius, backdrop-filter;
 }
 
-/* Restored scroll position (reload / back-forward cache): the header must
-   already be there, not animate in after the fact. */
-.site-header.is-instant .site-header__shell { transition: none !important; }
-
-/* Depth stack ─ soft ambient shadow, cross-faded by the condense progress.
-   Two layers on pseudo-elements because box-shadow lists cannot be
-   interpolated with calc(). */
-.site-header__shell::before,
-.site-header__shell::after {
+/* The glass itself lives on a pseudo-element so its opacity can be faded
+   from 0 → 1 without ever touching the opacity of the header CONTENT
+   (fading the content would make the logo/nav blink, which is exactly the
+   cheap effect we want to avoid). */
+.site-header__shell::before {
     content: "";
     position: absolute;
     inset: 0;
+    z-index: -1;
     border-radius: inherit;
-    pointer-events: none;
-}
-.site-header__shell::before {
-    z-index: -2;
+
+    background-image: var(--fh-glass);
+    border: 1px solid var(--fh-border);
     box-shadow: var(--fh-shadow);
-    opacity: calc(1 - var(--fh-p));
-}
-.site-header__shell::after {
-    z-index: -2;
-    box-shadow: var(--fh-shadow-min);
+
     opacity: var(--fh-p);
+    pointer-events: none;
+
+    /* A whisper of scale so the glass swells into place rather than simply
+       switching on. It lives on this layer, not on the shell, because
+       scaling the shell would also scale the logo and nav — and, at rest,
+       would leave the bar a couple of pixels narrower than the page content
+       it is supposed to line up with. No Y translation: the header never
+       appears to arrive from anywhere. */
+    transform: scale(calc(1 - 0.03 * (1 - var(--fh-p))));
+    will-change: opacity, transform;
 }
 
-/* Inner sheen — a 1px top highlight plus a gentle inner glow reads as
-   thickness, which is what separates real glass from a flat tint. */
+/* Browsers without backdrop-filter: swap the translucent glass for an
+   opaque green so the white content never loses contrast. */
+@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+    .site-header__shell::before {
+        background-image: none;
+        background-color: var(--fh-glass-solid);
+    }
+}
+
+/* Inner sheen — a 1px specular top edge plus a soft vertical falloff. Reads
+   as physical thickness. Fades in with the glass. */
 .site-header__glow {
     position: absolute;
     inset: 0;
     z-index: -1;
     border-radius: inherit;
     overflow: hidden;
+    opacity: var(--fh-p);
     pointer-events: none;
 }
 .site-header__glow::before {
-    /* Specular highlight sweeping the top edge */
     content: "";
     position: absolute;
     inset-inline: 8%;
     inset-block-start: 0;
     height: 1px;
-    background: linear-gradient(
-        90deg,
-        transparent 0%,
-        var(--fh-sheen) 22%,
-        var(--fh-sheen) 78%,
-        transparent 100%
-    );
-    opacity: .9;
+    background: linear-gradient(90deg, transparent, var(--fh-sheen) 22%, var(--fh-sheen) 78%, transparent);
 }
 .site-header__glow::after {
-    /* Vertical light falloff for volume */
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-        to bottom,
-        rgba(255,255,255,.16) 0%,
-        rgba(255,255,255,.04) 42%,
-        rgba(0,0,0,.05) 100%
-    );
+    background: linear-gradient(to bottom, rgba(255,255,255,.15) 0%, rgba(255,255,255,.03) 45%, rgba(0,0,0,.05) 100%);
 }
 
-/* Browsers without backdrop-filter get an opaque green so the white
-   header content never loses contrast. */
-@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
-    .site-header__shell { background-image: none; background-color: var(--fh-glass-solid); }
-}
-
-/* ── Capsule contents ── */
+/* ── Bar contents ── */
 .site-header__inner {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-sm);
-    /* Height interpolates continuously with the scroll progress */
-    height: calc(var(--fh-h) + (var(--fh-h-min) - var(--fh-h)) * var(--fh-p));
-    min-height: 0;
-    padding-inline: clamp(.5rem, .35rem + .6vw, .9rem);
-    /* The capsule already provides the outer gutter */
-    max-width: none;
+
+    /* Compact by design, and a touch tighter once condensed */
+    height: calc(var(--fh-h) - (var(--fh-h) - var(--fh-h-min)) * var(--fh-p));
+
+    /* Wide gutters at rest (aligns with page content) → snug in the capsule */
+    padding-inline: calc(var(--gutter) - (var(--gutter) - var(--fh-pad-min)) * var(--fh-p));
+
     width: 100%;
+    max-width: none;
+    min-height: 0;
 }
 
-/* Inside the capsule everything sits on green glass, so the whole content
-   layer switches to the inverted (white) ink ramp. */
+/* ── Adaptive resting ink ──────────────────────────────────────────────────
+   The header is permanently visible and overlays real content, so at rest
+   its ink has to suit whatever is underneath:
+
+     • Pages that open with a dark hero (index, news listing) → white ink.
+     • Pages that open with a light section (page.php, articles, auth)
+       → normal dark page ink.
+
+   Once the green glass has faded in, the ink is white in BOTH cases. The
+   interpolation is driven by --fh-p through color-mix, so the ink crossfades
+   in lockstep with the glass instead of snapping at a threshold.
+   `--fh-rest-*` is set per page-type below.                                */
+.site-header__shell {
+    --fh-rest-ink: var(--ink);
+    --fh-rest-ink-soft: var(--text-muted);
+    --fh-rest-chip: transparent;
+    --fh-rest-chip-border: var(--border);
+}
+
+/* Dark hero directly under the header → start with light ink.
+   :has() lets this be inferred from the markup with no per-page classes. */
+body:has(> .site-main > .hero:first-child) .site-header__shell,
+body:has(> .site-main > .page-hero:first-child) .site-header__shell,
+body:has(> .site-main > section.hero:first-child) .site-header__shell {
+    --fh-rest-ink: #fff;
+    --fh-rest-ink-soft: rgba(255,255,255,.82);
+    --fh-rest-chip: rgba(255,255,255,.10);
+    --fh-rest-chip-border: rgba(255,255,255,.20);
+}
+
+/* Interpolated ink tokens actually used by the content */
+.site-header__shell {
+    --fh-ink-now: color-mix(in srgb, var(--fh-ink) calc(var(--fh-p) * 100%), var(--fh-rest-ink));
+    --fh-ink-soft-now: color-mix(in srgb, var(--fh-ink-soft) calc(var(--fh-p) * 100%), var(--fh-rest-ink-soft));
+    --fh-chip-now: color-mix(in srgb, var(--fh-chip) calc(var(--fh-p) * 100%), var(--fh-rest-chip));
+    --fh-chip-border-now: color-mix(in srgb, var(--fh-chip-border) calc(var(--fh-p) * 100%), var(--fh-rest-chip-border));
+}
+/* No color-mix (older Safari/Firefox): fall back to the resting ink, then
+   hard-switch to white once the glass is mostly opaque. Handled in JS via
+   the .is-glass class so there is still no illegible in-between state. */
+@supports not (color: color-mix(in srgb, red 50%, blue)) {
+    .site-header__shell {
+        --fh-ink-now: var(--fh-rest-ink);
+        --fh-ink-soft-now: var(--fh-rest-ink-soft);
+        --fh-chip-now: var(--fh-rest-chip);
+        --fh-chip-border-now: var(--fh-rest-chip-border);
+    }
+    .site-header.is-glass .site-header__shell {
+        --fh-ink-now: var(--fh-ink);
+        --fh-ink-soft-now: var(--fh-ink-soft);
+        --fh-chip-now: var(--fh-chip);
+        --fh-chip-border-now: var(--fh-chip-border);
+    }
+}
+
+/* Brand */
 .site-header__shell .brand,
-.site-header__shell .brand:hover { color: var(--fh-ink); }
+.site-header__shell .brand:hover { color: var(--fh-ink-now); }
 .site-header__shell .brand__name {
-    /* Drop the clipped gradient — flat white is legible on the glass */
     background: none;
     -webkit-background-clip: initial;
     background-clip: initial;
     -webkit-text-fill-color: currentColor;
-    color: var(--fh-ink);
-    text-shadow: 0 1px 2px rgba(11,32,23,.22);
+    color: var(--fh-ink-now);
+    transition: none;
 }
-.site-header__shell .brand__tag { color: var(--fh-ink-soft); }
+.site-header__shell .brand__tag { color: var(--fh-ink-soft-now); }
 
-/* Brand mark shrinks in step with the capsule.
-   The base `.brand__mark` rule transitions width/height; that must be
-   dropped here or the per-frame calc() updates would lag behind the
-   scroll by one transition duration and look rubbery. Only `transform`
-   (the hover tilt) keeps its transition. */
+/* Logo shrinks a little as things tighten. Sizes are frame-driven, so the
+   inherited width/height transitions must go or they lag the scroll. */
 .site-header__shell .brand__mark {
-    width:  calc(38px - 6px * var(--fh-p));
-    height: calc(38px - 6px * var(--fh-p));
+    width:  calc(var(--fh-mark) - (var(--fh-mark) - var(--fh-mark-min)) * var(--fh-p));
+    height: calc(var(--fh-mark) - (var(--fh-mark) - var(--fh-mark-min)) * var(--fh-p));
     transition: transform var(--t-slow);
 }
 .site-header__shell .brand__logo {
-    height: calc(38px - 6px * var(--fh-p));
+    height: calc(var(--fh-mark) - (var(--fh-mark) - var(--fh-mark-min)) * var(--fh-p));
     transition: none;
 }
-.site-header__shell .brand__name { transition: none; }
 
-/* Nav links */
-.site-header__shell .nav__link { color: var(--fh-ink-soft); }
-.site-header__shell .nav__link:hover,
-.site-header__shell .nav__link.is-active { color: var(--fh-ink); }
-/* The shell is a stacking context (isolation), so give the nav its own one
-   too — that guarantees the z-index:-1 pill lands above the glass and the
-   sheen layers instead of being swallowed by them. */
+/* Nav */
 .site-header__shell .nav { z-index: 0; }
+.site-header__shell .nav__link { color: var(--fh-ink-soft-now); }
+.site-header__shell .nav__link:hover,
+.site-header__shell .nav__link.is-active { color: var(--fh-ink-now); }
 .site-header__shell .nav__pill {
-    background: rgba(255,255,255,.16);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.22);
+    background: color-mix(in srgb, rgba(255,255,255,.16) calc(var(--fh-p) * 100%), var(--primary-faint));
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.18);
 }
 
-/* Icon buttons / burger become frosted chips */
+/* Icon buttons / burger — present from the first frame, they just firm up
+   into frosted chips as the glass arrives. */
 .site-header__shell .icon-btn {
-    background: var(--fh-chip);
-    border-color: var(--fh-chip-border);
-    color: var(--fh-ink);
-    width:  calc(38px - 4px * var(--fh-p));
-    height: calc(38px - 4px * var(--fh-p));
-    /* Size is frame-driven; only colour/press feedback animates */
+    background: var(--fh-chip-now);
+    border-color: var(--fh-chip-border-now);
+    color: var(--fh-ink-now);
+    width:  calc(var(--fh-btn) - (var(--fh-btn) - var(--fh-btn-min)) * var(--fh-p));
+    height: calc(var(--fh-btn) - (var(--fh-btn) - var(--fh-btn-min)) * var(--fh-p));
     transition: background var(--t-fast), color var(--t-fast),
                 border-color var(--t-fast), transform var(--t-fast);
 }
 .site-header__shell .icon-btn:hover {
-    background: var(--fh-chip-hover);
-    border-color: rgba(255,255,255,.34);
-    color: #fff;
+    background: color-mix(in srgb, var(--fh-chip-hover) calc(var(--fh-p) * 100%), var(--primary-faint));
+    border-color: rgba(255,255,255,.32);
+    color: var(--fh-ink-now);
 }
 
-/* Primary CTA — a solid white pill pops cleanly against the green.
-   The ink is the fixed --fh-cta-ink (8.1:1 on white) in both themes. */
+/* Primary CTA. --fh-cta-ink is a fixed dark green (8.1:1 on white) in both
+   themes; --primary-dark would lighten in dark mode and collapse to 1.95:1. */
 .site-header__shell .btn-primary {
     background: rgba(255,255,255,.95);
     color: var(--fh-cta-ink);
-    box-shadow: 0 2px 10px rgba(11,32,23,.18);
+    box-shadow: 0 2px 10px rgba(11,32,23,.16);
 }
 .site-header__shell .btn-primary:hover {
     background: #fff;
     color: var(--fh-cta-ink);
-    box-shadow: 0 6px 18px rgba(11,32,23,.26);
+    box-shadow: 0 6px 18px rgba(11,32,23,.24);
 }
 .site-header__shell .btn-primary svg { color: var(--fh-cta-ink); }
 
-/* Focus rings must stay visible on the darker surface */
+/* Focus rings stay visible against both the light page and the green glass */
 .site-header__shell :focus-visible {
-    outline: 2px solid #fff;
+    outline: 2px solid var(--fh-ink-now);
     outline-offset: 2px;
-    box-shadow: 0 0 0 4px rgba(255,255,255,.22);
 }
 
-/* Phones: the capsule spans the full width minus the inset */
+/* Phones: the capsule uses the full width minus its inset */
 @media (max-width: 767px) {
-    .site-header__inner { padding-inline: .45rem; }
-    .site-header__shell { max-width: none; }
+    .site-header__shell { max-width: 100%; }
 }
 
-/* Users who ask for less motion get the header without the travel:
-   it simply cross-fades, and never moves or rescales. */
+/* Reduced motion: the morph is a scroll-linked state change rather than an
+   animation, so it is kept — but the decorative scale settle is dropped. */
 @media (prefers-reduced-motion: reduce) {
-    .site-header__shell {
-        transform: none !important;
-        -webkit-transform: none !important;
-        transition: opacity .001ms linear, visibility .001ms linear !important;
-    }
+    .site-header__shell::before { transform: none; }
 }
 
-/* No-JS: nothing would ever set `.is-revealed`, so the header — which holds
-   the entire site navigation — must stay permanently open and reachable.
-   The gate is `.js-head`, set by the inline <head> script *before the first
-   paint*, rather than `.js-enabled`, which the deferred rooma.js only adds
-   after parsing. Using the latter would paint the header revealed for the
-   whole boot and then fade it out — a visible flash on slow connections. */
-html:not(.js-head) .site-header__shell {
-    opacity: 1;
-    visibility: visible;
-    transform: none;
-    -webkit-transform: none;
-    pointer-events: auto;
-    transition: none;
+/* ── Room for a fixed header ───────────────────────────────────────────────
+   The header is out of flow, so pages that open with ordinary light content
+   would otherwise start underneath it. Reserve a header's worth of space by
+   default and give it back on pages that open with a full-bleed dark hero,
+   where floating over the artwork is the whole point.
+
+   Written in this direction on purpose: browsers without :has() keep the
+   safe padding rather than losing it.                                      */
+.site-main { padding-block-start: var(--fh-h); }
+
+body:has(> .site-main > .hero:first-child) .site-main,
+body:has(> .site-main > .page-hero:first-child) .site-main {
+    padding-block-start: 0;
+}
+
+/* A dark page-hero is short enough that the header would sit on its title,
+   so it absorbs the header height into its own top padding instead. */
+.site-main > .page-hero:first-child {
+    padding-block-start: calc(var(--fh-h) + clamp(.75rem, .4rem + 1.6vw, 1.75rem));
 }
 
 /* ── Brand ── */
