@@ -150,7 +150,7 @@ function showGenericErrorPage(?Throwable $exception = null): void
         $message = 'اتصال به پایگاه داده ممکن نیست. لطفاً اطمینان حاصل کنید که:';
         $hint = '<ul class="hint-list">
             <li>سرویس MySQL (یا MariaDB) در حال اجراست.</li>
-            <li>پایگاه داده <code>rooma_db</code> ایجاد شده است — برای راه‌اندازی اولیه به <a href="' . $homeUrl . 'setup.php">صفحه نصب</a> بروید.</li>
+            <li>پایگاه داده <code>roma_db</code> ایجاد شده است — برای راه‌اندازی اولیه به <a href="' . $homeUrl . 'setup.php">صفحه نصب</a> بروید.</li>
             <li>اعتبارنامه‌های پایگاه داده در <code>config.local.php</code> صحیح است.</li>
         </ul>';
     } else {

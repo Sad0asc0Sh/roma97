@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Rooma — Classes & programmes page template (page.php?slug=classes)
+ * Roma — Classes & programmes page template (page.php?slug=classes)
  *
  * The three age groups are described by one data structure and rendered by a
  * single loop, so the tabs, panels and cards can never fall out of sync.

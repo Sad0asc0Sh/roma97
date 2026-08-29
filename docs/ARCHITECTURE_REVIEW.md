@@ -484,7 +484,7 @@ No request abstraction. Validation, parsing, and binding are all inlined. This m
 `admin/child-action.php` and `admin/children.php` mutate the same `children`/`child_classroom` tables that `parent/children.php` reads, with no shared service mediating the contract. A change to enrollment rules must be made in both places.
 
 ### 11.6 `functions.php` ↔ `db.php` ↔ `auth.php` ↔ `audit.php` circular-ish
-`functions.php::getSetting()` requires `db.php`; `auth.php` requires `functions.php`; `db.php::initializeDatabase()` requires `audit.php` which requires `db.php`. The include graph is not a clean DAG, which is why each file guards with `if (!defined('ROOMA_APP'))` and `static $initialized` flags.
+`functions.php::getSetting()` requires `db.php`; `auth.php` requires `functions.php`; `db.php::initializeDatabase()` requires `audit.php` which requires `db.php`. The include graph is not a clean DAG, which is why each file guards with `if (!defined('ROMA_APP'))` and `static $initialized` flags.
 
 ### 11.7 Domain knowledge leak
 `currentAuditActor()` (in `audit.php`) knows the session keys for admin/teacher/parent — knowledge duplicated by `isLoggedIn()`/`isParentLoggedIn()`/`isTeacherLoggedIn()` in `auth.php`. Changing the session schema requires editing both.

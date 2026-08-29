@@ -1,6 +1,6 @@
-# Rooma — Production Deployment & Operations Guide
+# Roma — Production Deployment & Operations Guide
 
-This document covers deploying the **Rooma Daycare Management System** to a
+This document covers deploying the **Roma Daycare Management System** to a
 production environment and operating it safely afterwards. For a first-time,
 step-by-step install on shared hosting, see **`INSTALLATION.md`** — this guide
 focuses on production hardening, server configuration, backups, and updates.
@@ -41,15 +41,15 @@ php -m | grep -iE 'pdo_mysql|mbstring|gd|json|openssl'
 
 ```bash
 cd /var/www
-git clone <your-repo-url> rooma
-cd rooma
+git clone <your-repo-url> roma
+cd roma
 git checkout <release-tag-or-main>
 ```
 
 **Option B — Archive**
 
 Upload and extract the project archive into your web root (e.g.
-`/var/www/rooma` or `public_html/`). Ensure hidden files such as `.htaccess`
+`/var/www/roma` or `public_html/`). Ensure hidden files such as `.htaccess`
 are included.
 
 > **Never** commit or upload `config.local.php`. It is git-ignored by design.
@@ -69,8 +69,8 @@ Edit `config.local.php`:
 declare(strict_types=1);
 
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'rooma_db');
-define('DB_USER', 'rooma_user');
+define('DB_NAME', 'roma_db');
+define('DB_USER', 'roma_user');
 define('DB_PASS', 'a-strong-password');
 
 define('SITE_URL', 'https://your-domain.com'); // no trailing slash
@@ -89,10 +89,10 @@ Anything you omit falls back to the safe defaults in `config.php`
 Create the database and a least-privilege user:
 
 ```sql
-CREATE DATABASE rooma_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'rooma_user'@'localhost' IDENTIFIED BY 'a-strong-password';
+CREATE DATABASE roma_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'roma_user'@'localhost' IDENTIFIED BY 'a-strong-password';
 GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES
-    ON rooma_db.* TO 'rooma_user'@'localhost';
+    ON roma_db.* TO 'roma_user'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
@@ -119,9 +119,9 @@ Recommended virtual host:
 ```apache
 <VirtualHost *:443>
     ServerName your-domain.com
-    DocumentRoot /var/www/rooma
+    DocumentRoot /var/www/roma
 
-    <Directory /var/www/rooma>
+    <Directory /var/www/roma>
         AllowOverride All
         Require all granted
     </Directory>
@@ -153,7 +153,7 @@ sudo systemctl reload apache2
 server {
     listen 443 ssl;
     server_name your-domain.com;
-    root /var/www/rooma;
+    root /var/www/roma;
     index index.php;
 
     ssl_certificate     /etc/letsencrypt/live/your-domain.com/fullchain.pem;
@@ -182,13 +182,13 @@ server {
 
 ```bash
 # Replace www-data with your web server user
-sudo chown -R www-data:www-data /var/www/rooma
-sudo find /var/www/rooma -type d -exec chmod 755 {} \;
-sudo find /var/www/rooma -type f -exec chmod 644 {} \;
+sudo chown -R www-data:www-data /var/www/roma
+sudo find /var/www/roma -type d -exec chmod 755 {} \;
+sudo find /var/www/roma -type f -exec chmod 644 {} \;
 
 # Writable runtime directories
-sudo chmod -R 775 /var/www/rooma/logs
-sudo chmod -R 775 /var/www/rooma/assets/uploads
+sudo chmod -R 775 /var/www/roma/logs
+sudo chmod -R 775 /var/www/roma/assets/uploads
 ```
 
 `config.local.php` should be readable by the web server but not world-readable
@@ -293,15 +293,15 @@ DELETE FROM audit_log WHERE created_at < (NOW() - INTERVAL 12 MONTH);
 **Database (daily, via cron):**
 
 ```bash
-0 2 * * * mysqldump --single-transaction -u rooma_user -p'PASS' rooma_db \
-  | gzip > /var/backups/rooma/db-$(date +\%F).sql.gz
+0 2 * * * mysqldump --single-transaction -u roma_user -p'PASS' roma_db \
+  | gzip > /var/backups/roma/db-$(date +\%F).sql.gz
 ```
 
 **Uploaded files** (parent-uploaded photos/documents/certificates):
 
 ```bash
-0 3 * * 0 tar czf /var/backups/rooma/uploads-$(date +\%F).tar.gz \
-  -C /var/www/rooma assets/uploads
+0 3 * * 0 tar czf /var/backups/roma/uploads-$(date +\%F).tar.gz \
+  -C /var/www/roma assets/uploads
 ```
 
 Test restores periodically. Keep at least 7 daily DB backups and 4 weekly
@@ -312,7 +312,7 @@ upload backups off-site.
 ## 12. Updating to a New Release
 
 ```bash
-cd /var/www/rooma
+cd /var/www/roma
 # 1. Back up first (see section 11)
 # 2. Pull the new code
 git fetch --all
@@ -335,7 +335,7 @@ No manual SQL is normally required.
   go to the log only.
 - Tail in real time:
   ```bash
-  tail -f /var/www/rooma/logs/error.log
+  tail -f /var/www/roma/logs/error.log
   ```
 - Rotate logs with `logrotate` to prevent unbounded growth.
 
@@ -357,11 +357,11 @@ No manual SQL is normally required.
 ## 15. Rollback
 
 ```bash
-cd /var/www/rooma
+cd /var/www/roma
 git checkout <previous-release-tag>
 # Restore the matching DB backup if the release included schema changes:
-gunzip < /var/backups/rooma/db-YYYY-MM-DD.sql.gz | mysql -u rooma_user -p rooma_db
+gunzip < /var/backups/roma/db-YYYY-MM-DD.sql.gz | mysql -u roma_user -p roma_db
 ```
 
 ---
-*Rooma Technical Team — Deployment Guide, 2026*
+*Roma Technical Team — Deployment Guide, 2026*

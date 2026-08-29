@@ -25,7 +25,7 @@ function getSettings(PDO $pdo): array
         'site_description' => 'به مهد کودک روما خوش آمدید',
         'logo' => '',
         'contact_phone' => '+98 21 1234 5678',
-        'contact_email' => 'info@rooma.ir',
+        'contact_email' => 'info@roma.ir',
         'site_address' => '',
         'map_link' => '',
         'working_hours' => '',
@@ -192,7 +192,7 @@ try {
         'site_description' => 'به مهد کودک روما خوش آمدید',
         'logo' => '',
         'contact_phone' => '+98 21 1234 5678',
-        'contact_email' => 'info@rooma.ir',
+        'contact_email' => 'info@roma.ir',
         'site_address' => '',
         'map_link' => '',
         'working_hours' => '',
@@ -552,7 +552,7 @@ require_once __DIR__ . '/header.php';
                 <div class="form-group">
                     <label for="contact_email" class="form-label">ایمیل</label>
                     <input type="email" id="contact_email" name="contact_email" class="form-control"
-                        maxlength="100" placeholder="info@rooma.ir"
+                        maxlength="100" placeholder="info@roma.ir"
                         value="<?= e($settings['contact_email'] ?? '') ?>">
                 </div>
 

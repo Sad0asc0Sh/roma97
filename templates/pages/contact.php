@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Rooma — Contact page template (page.php?slug=contact)
+ * Roma — Contact page template (page.php?slug=contact)
  *
  * The POST handler lives in page.php and exposes $contactFormStatus.
  */

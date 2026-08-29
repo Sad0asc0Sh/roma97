@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Rooma — About page template (page.php?slug=about)
+ * Roma — About page template (page.php?slug=about)
  */
 
 if (!defined('ROOMA_APP')) {
@@ -45,6 +45,12 @@ if (!function_exists('roomaTeacherInitials')) {
         }
 
         return $f !== '' ? $f : ($l !== '' ? $l : '؟');
+    }
+}
+if (!function_exists('romaTeacherInitials')) {
+    function romaTeacherInitials(string $first, string $last): string
+    {
+        return roomaTeacherInitials($first, $last);
     }
 }
 

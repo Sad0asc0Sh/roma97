@@ -24,7 +24,7 @@
 - **File:** `teacher/index.php`
 - **Line:** 52
 - **Category:** Fatal error / Invalid SQL
-- **Root cause:** The children-fetching query uses `INNER JOIN کودک ch ON ch.id = cc.child_id` — the Persian word `کودک` (meaning "child") is used as the table alias/name instead of the actual table `children`. MySQL will throw `Table 'rooma_db.کودک' doesn't exist` (or a syntax error depending on identifier quoting), and the exception is caught at line 72, setting `$error` and leaving `$children = []`. The entire teacher dashboard (children list, today's attendance, daily report widget) is **permanently broken** for every teacher on every request.
+- **Root cause:** The children-fetching query uses `INNER JOIN کودک ch ON ch.id = cc.child_id` — the Persian word `کودک` (meaning "child") is used as the table alias/name instead of the actual table `children`. MySQL will throw `Table 'roma_db.کودک' doesn't exist` (or a syntax error depending on identifier quoting), and the exception is caught at line 72, setting `$error` and leaving `$children = []`. The entire teacher dashboard (children list, today's attendance, daily report widget) is **permanently broken** for every teacher on every request.
 - **Impact:** Teacher portal dashboard is non-functional. Teachers cannot see their classroom, children, attendance, or daily reports.
 - **Fix:** Replace `INNER JOIN کودک ch` with `INNER JOIN children ch` (and update any reference if the alias differs). The correct query already exists in `teacher/report.php` line 44 (`INNER JOIN children c ON c.id = cc.child_id`) — copy that pattern.
 

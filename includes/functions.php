@@ -131,7 +131,7 @@ function saveSetting(PDO $pdo, string $key, string $value): void
 
 function siteName(): string
 {
-    return getSetting('site_name', 'Rooma');
+    return getSetting('site_name', 'Roma');
 }
 
 function siteLogo(): string
@@ -141,7 +141,7 @@ function siteLogo(): string
 
 function siteDescription(): string
 {
-    return getSetting('site_description', 'Welcome to Rooma Daycare');
+    return getSetting('site_description', 'Welcome to Roma Daycare');
 }
 
 function siteContactPhone(): string
@@ -152,7 +152,7 @@ function siteContactPhone(): string
 
 function siteContactEmail(): string
 {
-    return getSetting('contact_email', 'info@rooma.ir');
+    return getSetting('contact_email', 'info@roma.ir');
 }
 
 function siteAddress(): string

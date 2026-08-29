@@ -1,4 +1,4 @@
-# Wasmer/Anybuild configuration for the Rooma PHP application.
+# Wasmer/Anybuild configuration for the Roma PHP application.
 # PHPix serves direct files correctly but does not resolve the root path to
 # the root-level index.php in this project. Use the standard PHP server.
 

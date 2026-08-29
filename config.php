@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 // Application constant to prevent direct file access
 defined('ROOMA_APP') || define('ROOMA_APP', true);
+defined('ROMA_APP') || define('ROMA_APP', true);
 
 /*
  * Environment-specific overrides.
@@ -44,7 +45,7 @@ if ($dbPassFromEnv === false || $dbPassFromEnv === '') {
 
 defined('DB_HOST') || define('DB_HOST', $dbHostFromEnv !== false && $dbHostFromEnv !== '' ? $dbHostFromEnv : 'localhost');
 defined('DB_PORT') || define('DB_PORT', $dbPortFromEnv !== false && $dbPortFromEnv !== '' ? $dbPortFromEnv : '3306');
-defined('DB_NAME') || define('DB_NAME', $dbNameFromEnv !== false && $dbNameFromEnv !== '' ? $dbNameFromEnv : 'rooma_db');
+defined('DB_NAME') || define('DB_NAME', $dbNameFromEnv !== false && $dbNameFromEnv !== '' ? $dbNameFromEnv : 'roma_db');
 defined('DB_USER') || define('DB_USER', $dbUserFromEnv !== false && $dbUserFromEnv !== '' ? $dbUserFromEnv : 'root');
 defined('DB_PASS') || define('DB_PASS', $dbPassFromEnv !== false ? $dbPassFromEnv : '');
 

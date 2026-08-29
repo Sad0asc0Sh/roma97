@@ -5,7 +5,7 @@ declare(strict_types=1);
  * Build a clean production release zip for shared hosting deployment.
  *
  * Usage:  php bin/build-release.php
- * Output: dist/rooma-release.zip
+ * Output: dist/roma-release.zip
  *
  * Excludes development artifacts (.git, .agents, docs, dev reports, logs
  * content, local config, install.lock) and local upload content while keeping
@@ -18,7 +18,7 @@ if (PHP_SAPI !== 'cli') {
 
 $root = dirname(__DIR__);
 $distDir = $root . DIRECTORY_SEPARATOR . 'dist';
-$zipPath = $distDir . DIRECTORY_SEPARATOR . 'rooma-release.zip';
+$zipPath = $distDir . DIRECTORY_SEPARATOR . 'roma-release.zip';
 
 $excludedDirs = [
     '.git', '.agents', '.claude', 'dist', 'logs',
@@ -106,7 +106,7 @@ if (extension_loaded('zip')) {
     $zip->close();
 } else {
     // Fallback: Use PowerShell Compress-Archive or tar on Windows
-    $tempList = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'rooma_release_files_' . bin2hex(random_bytes(4));
+    $tempList = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'roma_release_files_' . bin2hex(random_bytes(4));
     @mkdir($tempList, 0777, true);
 
     foreach ($filesToZip as $rel => $abs) {

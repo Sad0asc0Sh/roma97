@@ -1,5 +1,5 @@
 /* ============================================================================
- * ROOMA — public site interaction engine
+ * ROMA — public site interaction engine
  * ----------------------------------------------------------------------------
  * Vanilla JS, no dependencies, IIFE-scoped, defer-loaded.
  *

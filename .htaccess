@@ -1,4 +1,4 @@
-# Rooma Daycare - Production Security Configuration
+# Roma Daycare - Production Security Configuration
 
 # Disable directory browsing
 Options -Indexes

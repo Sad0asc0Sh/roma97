@@ -1,4 +1,4 @@
-# Rooma Daycare - Logs Directory Security
+# Roma Daycare - Logs Directory Security
 # Block all access to log files
 
 Options -Indexes

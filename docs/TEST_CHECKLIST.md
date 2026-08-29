@@ -33,7 +33,7 @@
 | 1.4 | Today's attendance shown per child | Badge per child (حاضر/غایب/تأخیر/ثبت نشده) | ☐ |
 | 1.5 | Daily report widget shows today's report or "create" prompt | Correct | ☐ |
 | 1.6 | Teacher with NO classroom logs in | "هیچ کلاسی به شما اختصاص داده نشده است" message | ☐ |
-| 1.7 | Check `logs/error.log` | No `Table 'rooma_db.کودک'` errors | ☐ |
+| 1.7 | Check `logs/error.log` | No `Table 'roma_db.کودک'` errors | ☐ |
 
 ---
 

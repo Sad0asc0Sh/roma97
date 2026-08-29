@@ -1,4 +1,4 @@
-# Rooma Daycare — robots.txt
+# Roma Daycare — robots.txt
 # Block search engines from indexing admin, parent, and teacher panels
 
 User-agent: *

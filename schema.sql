@@ -435,11 +435,11 @@ DROP PROCEDURE IF EXISTS add_message_index_if_missing;
 
 -- ─── Default settings seed (only inserts if missing) ──────────────────────
 INSERT INTO settings (meta_key, meta_value) VALUES
-    ('site_name', 'Rooma'),
-    ('site_description', 'Welcome to Rooma Daycare'),
+    ('site_name', 'Roma'),
+    ('site_description', 'Welcome to Roma Daycare'),
     ('logo', ''),
     ('contact_phone', '+98 21 1234 5678'),
-    ('contact_email', 'info@rooma.ir'),
+    ('contact_email', 'info@roma.ir'),
     ('site_address', ''),
     ('map_link', ''),
     ('working_hours', 'شنبه تا پنجشنبه ۷:۰۰ الی ۱۷:۰۰'),

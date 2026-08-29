@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /*
- * Rooma — environment-specific configuration template.
+ * Roma — environment-specific configuration template.
  *
  * Copy this file to config.local.php and fill in the real values for your
  * hosting environment. config.local.php is loaded BEFORE the defaults in
@@ -14,13 +14,13 @@ declare(strict_types=1);
 
 // ─── Database (get these from cPanel → MySQL Databases) ────────────────────
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'cpaneluser_rooma');
-define('DB_USER', 'cpaneluser_rooma');
+define('DB_NAME', 'cpaneluser_roma');
+define('DB_USER', 'cpaneluser_roma');
 define('DB_PASS', 'CHANGE-ME-strong-password');
 
 // ─── Public base URL (no trailing slash) ───────────────────────────────────
 // Root domain example:        https://your-domain.com
-// Subfolder deployment:       https://your-domain.com/rooma
+// Subfolder deployment:       https://your-domain.com/roma
 define('SITE_URL', 'https://your-domain.com');
 
 // ─── Security ──────────────────────────────────────────────────────────────

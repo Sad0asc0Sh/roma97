@@ -1,6 +1,6 @@
-# Rooma Installation Guide (Technical Deployment)
+# Roma Installation Guide (Technical Deployment)
 
-This guide provides step-by-step instructions for deploying the **Rooma Daycare Management System** to a shared hosting environment (cPanel, DirectAdmin, etc.) or a VPS.
+This guide provides step-by-step instructions for deploying the **Roma Daycare Management System** to a shared hosting environment (cPanel, DirectAdmin, etc.) or a VPS.
 
 ---
 
@@ -24,7 +24,7 @@ This guide provides step-by-step instructions for deploying the **Rooma Daycare 
 
 ## 3. Database Setup
 
-1. **Create Database:** Use cPanel **MySQL Database Wizard** to create a new database (e.g., `rooma_db`).
+1. **Create Database:** Use cPanel **MySQL Database Wizard** to create a new database (e.g., `roma_db`).
 2. **Create User:** Create a new database user and assign a strong password.
 3. **Privileges:** Assign the user to the database with **ALL PRIVILEGES**.
 4. **Note Credentials:** Save the DB Name, DB User, and DB Password for the next step.
@@ -131,4 +131,4 @@ Ensure the `.htaccess` file in the root is present. It handles routing and preve
 - **Files:** Backup the `assets/uploads/` directory regularly as it contains parent-uploaded documents and photos.
 
 ---
-*Created by Rooma Technical Team - 2026*
+*Created by Roma Technical Team - 2026*

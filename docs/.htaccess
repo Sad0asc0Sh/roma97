@@ -1,4 +1,4 @@
-# Rooma Daycare - Docs Directory Security
+# Roma Daycare - Docs Directory Security
 # Block all access to internal documentation
 
 Options -Indexes

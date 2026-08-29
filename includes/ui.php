@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Rooma — public site UI helpers.
+ * Roma — public site UI helpers.
  *
  * Centralises the inline SVG icon set and small presentational helpers that
  * were previously duplicated (often several times per page) across the
@@ -164,7 +164,7 @@ function brandIcon(string $name, int $size = 18, array $attrs = []): string
 }
 
 /**
- * The Rooma monogram/logo mark.
+ * The Roma monogram/logo mark.
  */
 function roomaLogoMark(int $size = 40, string $gradientId = 'roomaLogoGrad'): string
 {
@@ -216,6 +216,14 @@ function roomaPublicNav(string $currentPage, string $currentSlug): array
 
     return $items;
 }
+
+/**
+ * Aliases for backwards compatibility during identity transition.
+ */
+function romaIconPaths(): array { return roomaIconPaths(); }
+function romaBrandIconPaths(): array { return roomaBrandIconPaths(); }
+function romaLogoMark(int $size = 40, string $gradientId = 'romaLogoGrad'): string { return roomaLogoMark($size, $gradientId); }
+function romaPublicNav(string $currentPage, string $currentSlug): array { return roomaPublicNav($currentPage, $currentSlug); }
 
 /**
  * Normalise a phone number for a tel: href.

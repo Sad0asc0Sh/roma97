@@ -425,7 +425,7 @@ foreach ($galleryItems as $g) {
     </div>
 </section>
 
-<?php /* ═══════════════ A DAY AT ROOMA ═══════════════ */ ?>
+<?php /* ═══════════════ A DAY AT ROMA ═══════════════ */ ?>
 <section class="section">
     <div class="container">
         <div class="split split--wide-start">
