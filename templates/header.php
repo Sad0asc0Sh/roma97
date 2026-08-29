@@ -53,10 +53,9 @@ $topbarText    = siteTopbarText();
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <?php // Apply the stored theme before first paint so there is no flash of the wrong theme.
-          // The same pass marks the document as script-capable ('js-head'), which lets the
-          // floating header start hidden from the very first frame. rooma.js only adds
-          // 'js-enabled' after it is parsed (defer), which is far too late to prevent a flash
-          // of the revealed header on a slow connection. ?>
+          // The same pass marks the document as script-capable ('js-head'). rooma.js only adds
+          // 'js-enabled' after it is parsed (defer), which is too late for anything that must
+          // be correct in the very first painted frame. ?>
     <script>(function(){var r=document.documentElement;try{var t=localStorage.getItem('roma_theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}r.setAttribute('data-theme',t);}catch(e){r.setAttribute('data-theme','light');}r.className+=(r.className?' ':'')+'js-head';})();</script>
 
     <title><?php echo $pageTitleValue; ?></title>
@@ -208,8 +207,13 @@ $topbarText    = siteTopbarText();
 </div>
 <?php endif; ?>
 
-<?php /* ── Header ──────────────────────────────────────────────────────── */ ?>
-<header class="site-header" id="siteHeader" data-header>
+<?php /* ── Header ──────────────────────────────────────────────────────────
+       Fixed and fully painted from the first frame. At rest it is a bare,
+       transparent bar sitting over the page; scrolling morphs this same
+       element in place into a floating green glass capsule. `has-topbar`
+       lets the CSS start it below the topbar and lift it over as it
+       detaches. Nothing here is ever hidden or slid in.                  */ ?>
+<header class="site-header<?php echo $topbarEnabled === '1' ? ' has-topbar' : ''; ?>" id="siteHeader" data-header>
   <div class="site-header__shell" data-header-shell>
     <span class="site-header__glow" aria-hidden="true"></span>
     <div class="site-header__inner">

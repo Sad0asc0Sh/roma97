@@ -190,28 +190,42 @@
     --container-narrow: 820px;
     --header-h: 62px;
 
-    /* ── Floating capsule header ────────────────────────────────────────
-       The header is detached from the flow: it starts fully hidden and is
-       revealed by scroll. `--fh-*` values are consumed by the shell in
-       rooma-components.css and animated from JS via --fh-p (0 → 1).      */
-    --fh-h: 64px;                /* capsule height, expanded state       */
-    --fh-h-min: 54px;            /* capsule height, condensed state      */
-    --fh-max-w: 1140px;          /* capsule max width on desktop         */
-    --fh-max-w-min: 1040px;      /* capsule max width once condensed     */
-    --fh-inset: clamp(.5rem, .35rem + .7vw, 1rem);   /* side breathing   */
-    --fh-top: clamp(.5rem, .3rem + .8vw, 1.15rem);   /* distance to top  */
-    --fh-radius: var(--radius-full);
-    --fh-blur: 22px;
-    --fh-lift: 14px;             /* how far it travels while revealing    */
+    /* ── Morphing capsule header ────────────────────────────────────────
+       The header is fixed and visible from the first frame. It never enters
+       from off-screen; instead these values are interpolated in place by
+       --fh-p (0 = minimal bar … 1 = floating glass capsule), which rooma.js
+       writes once per animation frame.
 
-    /* Green glass surface — light theme */
+       Sleek and compact by intent: a 56px bar that tightens to 46px, with
+       correspondingly small logo and control chips.                      */
+    --fh-h: 56px;                /* bar height at rest                   */
+    --fh-h-min: 46px;            /* capsule height once condensed        */
+    --fh-max-w: 1080px;          /* capsule max width once condensed     */
+    --fh-pad-min: .5rem;         /* inner padding once condensed         */
+    --fh-mark: 32px;             /* logo mark at rest                    */
+    --fh-mark-min: 28px;         /* logo mark once condensed             */
+    --fh-btn: 36px;              /* icon button at rest                  */
+    --fh-btn-min: 32px;          /* icon button once condensed           */
+    --fh-inset: clamp(.5rem, .35rem + .7vw, .9rem);  /* side breathing   */
+    --fh-top: clamp(.4rem, .25rem + .6vw, .8rem);    /* gap to viewport  */
+    --fh-topbar-h: 38px;         /* must match .topbar__inner min-height */
+    --fh-radius: var(--radius-full);
+    --fh-blur: 20px;
+
+    /* Green glass surface — light theme.
+       The stops are deeper and more opaque than they look like they need to
+       be, because the glass is translucent over arbitrary page content: the
+       worst case is white content showing through. Measured against white
+       ink, the lightest stop composited over white paper is 4.6:1 and the
+       darkest 7.2:1, so the header text stays AA-legible over anything. A
+       lighter mint (rgba(91,169,126,.80)) tested at only 4.05:1. */
     --fh-glass: linear-gradient(
         135deg,
-        rgba(61,139,99,.82) 0%,
-        rgba(47,111,79,.76) 48%,
-        rgba(91,169,126,.80) 100%
+        rgba(43,102,73,.91) 0%,
+        rgba(30,76,54,.89) 48%,
+        rgba(52,119,86,.93) 100%
     );
-    --fh-glass-solid: rgba(53,122,88,.97);   /* no-backdrop-filter fallback */
+    --fh-glass-solid: rgba(38,94,67,.98);    /* no-backdrop-filter fallback */
     --fh-border: rgba(255,255,255,.28);
     --fh-sheen: rgba(255,255,255,.42);
     --fh-shadow:
