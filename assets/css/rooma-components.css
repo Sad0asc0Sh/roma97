@@ -34,7 +34,9 @@
    ══════════════════════════════════════════════════════════════════════════ */
 .topbar {
     position: relative;
-    z-index: calc(var(--z-header) + 1);
+    /* Must stay *below* the floating header so the capsule can glide over
+       the bar during the reveal instead of being clipped behind it. */
+    z-index: calc(var(--z-header) - 1);
     background: var(--ink-night);
     color: rgba(255,255,255,.86);
     font-size: var(--text-xs);
@@ -89,54 +91,283 @@ a.topbar__item:hover svg { opacity: 1; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   3. HEADER  — adaptive / shrink-on-scroll / hide-on-scroll-down
+   3. HEADER — floating glass capsule
+   --------------------------------------------------------------------------
+   Behaviour
+     • Initial state (scrollY = 0) → completely hidden, non-interactive.
+     • Scrolling down past the trigger → springs in from above, fades up.
+     • Returning to the top → retracts back into the hidden state.
+
+   Motion model
+     Two independent channels so they can never fight each other:
+       1. REVEAL   — `.is-revealed` toggles opacity / transform, driven by
+                     CSS transitions (a single, well-eased animation).
+       2. CONDENSE — `--fh-p` (0 → 1) is written by rooma.js once per rAF
+                     frame and interpolates height, width, radius and the
+                     depth layers with calc(). Because the variable is
+                     re-evaluated every frame it needs no transition, which
+                     is what keeps the size change perfectly smooth.
    ══════════════════════════════════════════════════════════════════════════ */
+
+/* Progress of the condense morph, 0 = expanded … 1 = condensed */
+.site-header { --fh-p: 0; }
+
+/* Positioning layer — full-bleed, never intercepts pointer events */
 .site-header {
-    position: sticky;
-    top: 0;
+    position: fixed;
+    inset-inline: 0;
+    inset-block-start: 0;
     z-index: var(--z-header);
-    background: color-mix(in srgb, var(--surface) 82%, transparent);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-    backdrop-filter: blur(16px) saturate(180%);
-    border-bottom: 1px solid transparent;
-    transition:
-        background var(--t-base),
-        box-shadow var(--t-base),
-        border-color var(--t-base),
-        transform .38s var(--ease-out-soft);
-    will-change: transform;
-}
-/* Fallback for browsers without color-mix */
-@supports not (background: color-mix(in srgb, red 50%, transparent)) {
-    .site-header { background: rgba(255,255,255,.85); }
-    [data-theme="dark"] .site-header { background: rgba(20,37,30,.85); }
+    display: flex;
+    justify-content: center;
+    padding-block-start: var(--fh-top);
+    padding-inline: var(--fh-inset);
+    pointer-events: none;   /* only the capsule itself is clickable */
 }
 
+/* ── The capsule ── */
+.site-header__shell {
+    position: relative;
+    isolation: isolate;
+    width: 100%;
+    /* Width tightens slightly as the header condenses */
+    max-width: calc(
+        var(--fh-max-w) + (var(--fh-max-w-min) - var(--fh-max-w)) * var(--fh-p)
+    );
+    border-radius: var(--fh-radius);
+
+    /* Semi-transparent green glass */
+    background-image: var(--fh-glass);
+    -webkit-backdrop-filter: blur(var(--fh-blur)) saturate(190%);
+    backdrop-filter: blur(var(--fh-blur)) saturate(190%);
+    border: 1px solid var(--fh-border);
+    color: var(--fh-ink);
+
+    /* Hidden initial state */
+    opacity: 0;
+    transform: translate3d(0, calc(-100% - var(--fh-top) - 6px), 0) scale(.96);
+    visibility: hidden;
+    pointer-events: none;
+
+    transition:
+        opacity .5s var(--ease-in-out),
+        transform .62s var(--ease-out-soft),
+        visibility 0s linear .62s;
+    will-change: transform, opacity;
+    -webkit-transform: translate3d(0, calc(-100% - var(--fh-top) - 6px), 0) scale(.96);
+}
+
+/* Revealed */
+.site-header.is-revealed .site-header__shell {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    -webkit-transform: translate3d(0, 0, 0) scale(1);
+    visibility: visible;
+    pointer-events: auto;
+    transition:
+        opacity .42s var(--ease-in-out),
+        transform .66s var(--ease-out-soft),
+        visibility 0s linear 0s;
+}
+
+/* Restored scroll position (reload / back-forward cache): the header must
+   already be there, not animate in after the fact. */
+.site-header.is-instant .site-header__shell { transition: none !important; }
+
+/* Depth stack ─ soft ambient shadow, cross-faded by the condense progress.
+   Two layers on pseudo-elements because box-shadow lists cannot be
+   interpolated with calc(). */
+.site-header__shell::before,
+.site-header__shell::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+}
+.site-header__shell::before {
+    z-index: -2;
+    box-shadow: var(--fh-shadow);
+    opacity: calc(1 - var(--fh-p));
+}
+.site-header__shell::after {
+    z-index: -2;
+    box-shadow: var(--fh-shadow-min);
+    opacity: var(--fh-p);
+}
+
+/* Inner sheen — a 1px top highlight plus a gentle inner glow reads as
+   thickness, which is what separates real glass from a flat tint. */
+.site-header__glow {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    overflow: hidden;
+    pointer-events: none;
+}
+.site-header__glow::before {
+    /* Specular highlight sweeping the top edge */
+    content: "";
+    position: absolute;
+    inset-inline: 8%;
+    inset-block-start: 0;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--fh-sheen) 22%,
+        var(--fh-sheen) 78%,
+        transparent 100%
+    );
+    opacity: .9;
+}
+.site-header__glow::after {
+    /* Vertical light falloff for volume */
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,.16) 0%,
+        rgba(255,255,255,.04) 42%,
+        rgba(0,0,0,.05) 100%
+    );
+}
+
+/* Browsers without backdrop-filter get an opaque green so the white
+   header content never loses contrast. */
+@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+    .site-header__shell { background-image: none; background-color: var(--fh-glass-solid); }
+}
+
+/* ── Capsule contents ── */
 .site-header__inner {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-sm);
-    min-height: var(--header-h);
-    transition: min-height var(--t-base);
+    /* Height interpolates continuously with the scroll progress */
+    height: calc(var(--fh-h) + (var(--fh-h-min) - var(--fh-h)) * var(--fh-p));
+    min-height: 0;
+    padding-inline: clamp(.5rem, .35rem + .6vw, .9rem);
+    /* The capsule already provides the outer gutter */
+    max-width: none;
+    width: 100%;
 }
 
-/* Condensed state after scrolling past the fold */
-.site-header.is-stuck {
-    background: color-mix(in srgb, var(--surface) 94%, transparent);
-    border-bottom-color: var(--border);
-    box-shadow: var(--shadow-sm);
+/* Inside the capsule everything sits on green glass, so the whole content
+   layer switches to the inverted (white) ink ramp. */
+.site-header__shell .brand,
+.site-header__shell .brand:hover { color: var(--fh-ink); }
+.site-header__shell .brand__name {
+    /* Drop the clipped gradient — flat white is legible on the glass */
+    background: none;
+    -webkit-background-clip: initial;
+    background-clip: initial;
+    -webkit-text-fill-color: currentColor;
+    color: var(--fh-ink);
+    text-shadow: 0 1px 2px rgba(11,32,23,.22);
 }
-@supports not (background: color-mix(in srgb, red 50%, transparent)) {
-    .site-header.is-stuck { background: rgba(255,255,255,.96); }
-    [data-theme="dark"] .site-header.is-stuck { background: rgba(20,37,30,.97); }
-}
-.site-header.is-stuck .site-header__inner { min-height: 54px; }
-.site-header.is-stuck .brand__mark { width: 34px; height: 34px; }
-.site-header.is-stuck .brand__name { font-size: var(--text-md); }
+.site-header__shell .brand__tag { color: var(--fh-ink-soft); }
 
-/* Auto-hide when scrolling down, reveal instantly on scroll up */
-.site-header.is-hidden { transform: translateY(-102%); }
+/* Brand mark shrinks in step with the capsule.
+   The base `.brand__mark` rule transitions width/height; that must be
+   dropped here or the per-frame calc() updates would lag behind the
+   scroll by one transition duration and look rubbery. Only `transform`
+   (the hover tilt) keeps its transition. */
+.site-header__shell .brand__mark {
+    width:  calc(38px - 6px * var(--fh-p));
+    height: calc(38px - 6px * var(--fh-p));
+    transition: transform var(--t-slow);
+}
+.site-header__shell .brand__logo {
+    height: calc(38px - 6px * var(--fh-p));
+    transition: none;
+}
+.site-header__shell .brand__name { transition: none; }
+
+/* Nav links */
+.site-header__shell .nav__link { color: var(--fh-ink-soft); }
+.site-header__shell .nav__link:hover,
+.site-header__shell .nav__link.is-active { color: var(--fh-ink); }
+/* The shell is a stacking context (isolation), so give the nav its own one
+   too — that guarantees the z-index:-1 pill lands above the glass and the
+   sheen layers instead of being swallowed by them. */
+.site-header__shell .nav { z-index: 0; }
+.site-header__shell .nav__pill {
+    background: rgba(255,255,255,.16);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.22);
+}
+
+/* Icon buttons / burger become frosted chips */
+.site-header__shell .icon-btn {
+    background: var(--fh-chip);
+    border-color: var(--fh-chip-border);
+    color: var(--fh-ink);
+    width:  calc(38px - 4px * var(--fh-p));
+    height: calc(38px - 4px * var(--fh-p));
+    /* Size is frame-driven; only colour/press feedback animates */
+    transition: background var(--t-fast), color var(--t-fast),
+                border-color var(--t-fast), transform var(--t-fast);
+}
+.site-header__shell .icon-btn:hover {
+    background: var(--fh-chip-hover);
+    border-color: rgba(255,255,255,.34);
+    color: #fff;
+}
+
+/* Primary CTA — a solid white pill pops cleanly against the green.
+   The ink is the fixed --fh-cta-ink (8.1:1 on white) in both themes. */
+.site-header__shell .btn-primary {
+    background: rgba(255,255,255,.95);
+    color: var(--fh-cta-ink);
+    box-shadow: 0 2px 10px rgba(11,32,23,.18);
+}
+.site-header__shell .btn-primary:hover {
+    background: #fff;
+    color: var(--fh-cta-ink);
+    box-shadow: 0 6px 18px rgba(11,32,23,.26);
+}
+.site-header__shell .btn-primary svg { color: var(--fh-cta-ink); }
+
+/* Focus rings must stay visible on the darker surface */
+.site-header__shell :focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(255,255,255,.22);
+}
+
+/* Phones: the capsule spans the full width minus the inset */
+@media (max-width: 767px) {
+    .site-header__inner { padding-inline: .45rem; }
+    .site-header__shell { max-width: none; }
+}
+
+/* Users who ask for less motion get the header without the travel:
+   it simply cross-fades, and never moves or rescales. */
+@media (prefers-reduced-motion: reduce) {
+    .site-header__shell {
+        transform: none !important;
+        -webkit-transform: none !important;
+        transition: opacity .001ms linear, visibility .001ms linear !important;
+    }
+}
+
+/* No-JS: nothing would ever set `.is-revealed`, so the header — which holds
+   the entire site navigation — must stay permanently open and reachable.
+   The gate is `.js-head`, set by the inline <head> script *before the first
+   paint*, rather than `.js-enabled`, which the deferred rooma.js only adds
+   after parsing. Using the latter would paint the header revealed for the
+   whole boot and then fade it out — a visible flash on slow connections. */
+html:not(.js-head) .site-header__shell {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    -webkit-transform: none;
+    pointer-events: auto;
+    transition: none;
+}
 
 /* ── Brand ── */
 .brand {
@@ -161,7 +392,6 @@ a.topbar__item:hover svg { opacity: 1; }
     object-fit: contain;
     transition: height var(--t-base);
 }
-.site-header.is-stuck .brand__logo { height: 34px; }
 .brand__text { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
 .brand__name {
     font-family: var(--font-display);
@@ -271,9 +501,11 @@ a.topbar__item:hover svg { opacity: 1; }
 [data-theme="dark"] .theme-toggle__moon { display: none; }
 [data-theme="dark"] .theme-toggle__sun  { display: block; }
 
-/* Hamburger — animated to an X */
+/* Hamburger — animated to an X.
+   The floating capsule keeps the burger at every breakpoint (it is part of
+   the requested logo / content / burger triad), so on desktop it opens the
+   drawer as a secondary "all links" panel alongside the inline nav. */
 .burger { display: grid; }
-@media (min-width: 992px) { .burger { display: none; } }
 .burger__box { position: relative; width: 20px; height: 14px; }
 .burger__line {
     position: absolute;
@@ -2403,7 +2635,7 @@ a.site-footer__contact:hover { color: #fff; }
    35. PRINT
    ══════════════════════════════════════════════════════════════════════════ */
 @media print {
-    .topbar, .site-header, .drawer, .drawer-overlay,
+    .topbar, .site-header, .site-header__shell, .drawer, .drawer-overlay,
     .to-top, .scroll-progress, .bg-canvas, .cta, .newsletter,
     .hero__nav, .hero__dots, .hero__playpause, .hero__cue { display: none !important; }
     body { background: #fff; color: #000; padding: 0; }

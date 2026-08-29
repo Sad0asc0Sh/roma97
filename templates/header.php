@@ -52,8 +52,12 @@ $topbarText    = siteTopbarText();
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <?php // Apply the stored theme before first paint so there is no flash of the wrong theme. ?>
-    <script>(function(){try{var t=localStorage.getItem('roma_theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','light');}})();</script>
+    <?php // Apply the stored theme before first paint so there is no flash of the wrong theme.
+          // The same pass marks the document as script-capable ('js-head'), which lets the
+          // floating header start hidden from the very first frame. rooma.js only adds
+          // 'js-enabled' after it is parsed (defer), which is far too late to prevent a flash
+          // of the revealed header on a slow connection. ?>
+    <script>(function(){var r=document.documentElement;try{var t=localStorage.getItem('roma_theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';}r.setAttribute('data-theme',t);}catch(e){r.setAttribute('data-theme','light');}r.className+=(r.className?' ':'')+'js-head';})();</script>
 
     <title><?php echo $pageTitleValue; ?></title>
     <meta name="description" content="<?php echo $pageDescriptionValue; ?>">
@@ -206,7 +210,9 @@ $topbarText    = siteTopbarText();
 
 <?php /* ── Header ──────────────────────────────────────────────────────── */ ?>
 <header class="site-header" id="siteHeader" data-header>
-    <div class="container site-header__inner">
+  <div class="site-header__shell" data-header-shell>
+    <span class="site-header__glow" aria-hidden="true"></span>
+    <div class="site-header__inner">
 
         <a class="brand" href="<?php echo e(url('index.php')); ?>" aria-label="<?php echo e($siteNameValue); ?> — صفحه اصلی">
             <?php if ($logo !== ''): ?>
@@ -264,6 +270,7 @@ $topbarText    = siteTopbarText();
             </button>
         </div>
     </div>
+  </div>
 </header>
 
 <?php /* ── Mobile drawer ───────────────────────────────────────────────── */ ?>

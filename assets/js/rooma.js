@@ -160,49 +160,101 @@
         }
     })();
 
-    /* ─── 04. Adaptive header autohide ─────────────────────────────────── */
-    (function adaptiveHeader() {
+    /* ─── 04. Floating capsule header ──────────────────────────────────────
+     * The header is hidden at rest and revealed by scrolling. Two channels:
+     *
+     *   REVEAL   `.is-revealed` on the <header>. A class (not a per-frame
+     *            style) so the browser owns the easing and the entrance can
+     *            never be chopped up by the scroll cadence.
+     *
+     *   CONDENSE `--fh-p`, 0 → 1, written at most once per rAF frame. CSS
+     *            calc()s the height / width / depth from it, so the morph
+     *            tracks the finger or wheel exactly with no transition lag.
+     *
+     * Hysteresis keeps the reveal from flickering when a user hovers right
+     * around the trigger point: it appears at REVEAL_AT and only retracts
+     * once back above HIDE_AT.
+     * ------------------------------------------------------------------- */
+    (function floatingHeader() {
         var header = $('[data-header]');
         if (!header) return;
 
-        var lastY = win.scrollY || 0;
-        var accumulated = 0;
-        var HIDE_AFTER = 90;   // px of continuous downward scroll before hiding
-        var SHOW_AFTER = 60;   // px of upward scroll before revealing
-        var STUCK_AT = 20;
+        var REVEAL_AT   = 60;    // px scrolled before the header appears
+        var HIDE_AT     = 12;    // px — retract back into hiding below this
+        var CONDENSE_AT = 260;   // px at which the capsule is fully condensed
 
-        subscribeScroll(function (y) {
-            var delta = y - lastY;
-            lastY = y;
+        var revealed = false;
+        var lastP = -1;
+        var forced = false;      // keyboard focus pins the header visible
 
-            if (header) header.classList.toggle('is-stuck', y > STUCK_AT);
+        function setRevealed(next) {
+            if (next === revealed) return;
+            revealed = next;
+            header.classList.toggle('is-revealed', next);
+            // A hidden header must not expose its links to assistive tech or
+            // the tab order. `inert` handles focus where supported; aria-hidden
+            // covers the screen-reader tree everywhere else.
+            header.setAttribute('aria-hidden', next ? 'false' : 'true');
+            if ('inert' in HTMLElement.prototype) header.inert = !next;
+        }
 
-            // Never hide near the very top of the document
-            if (y < 180) {
-                accumulated = 0;
-                if (header) header.classList.remove('is-hidden');
-                return;
-            }
+        // Establish the correct a11y state for the initial hidden header
+        // (setRevealed short-circuits when the value has not changed).
+        header.setAttribute('aria-hidden', 'true');
+        if ('inert' in HTMLElement.prototype) header.inert = true;
 
-            // Don't fight the drawer or a modal
+        function update(y) {
+            // While the drawer/lightbox holds the scroll lock the page cannot
+            // move; leave the header exactly as the user last saw it.
             if (root.classList.contains('no-scroll')) return;
 
-            // Reset the accumulator whenever the direction flips
-            if ((delta > 0 && accumulated < 0) || (delta < 0 && accumulated > 0)) accumulated = 0;
-            accumulated += delta;
-
-            if (accumulated > HIDE_AFTER) {
-                if (header) header.classList.add('is-hidden');
-                accumulated = 0;
-            } else if (accumulated < -SHOW_AFTER) {
-                if (header) header.classList.remove('is-hidden');
-                accumulated = 0;
+            if (forced) {
+                setRevealed(true);
+            } else if (!revealed && y > REVEAL_AT) {
+                setRevealed(true);
+            } else if (revealed && y <= HIDE_AT) {
+                setRevealed(false);
             }
+
+            // Condense progress, eased so the first pixels of scroll produce
+            // a gentle change rather than an abrupt snap.
+            var raw = clamp((y - REVEAL_AT) / (CONDENSE_AT - REVEAL_AT), 0, 1);
+            var p = raw * raw * (3 - 2 * raw);          // smoothstep
+            p = Math.round(p * 1000) / 1000;            // avoid style churn
+
+            if (p !== lastP) {
+                lastP = p;
+                header.style.setProperty('--fh-p', String(p));
+            }
+        }
+
+        subscribeScroll(update);
+
+        // Keyboard users tabbing into the header (possible the instant it is
+        // revealed) must never be focused on something invisible.
+        header.addEventListener('focusin', function () {
+            forced = true;
+            setRevealed(true);
+        });
+        header.addEventListener('focusout', function () {
+            // Release the pin only once focus has actually left the header.
+            win.setTimeout(function () {
+                if (header.contains(doc.activeElement)) return;
+                forced = false;
+                update(win.scrollY || 0);
+            }, 0);
         });
 
-        // Any keyboard focus inside the header must bring it back into view
-        if (header) {
-            header.addEventListener('focusin', function () { header.classList.remove('is-hidden'); });
+        // Restoring a scrolled position (reload / back-forward cache) should
+        // show the header immediately instead of animating it in.
+        if ((win.scrollY || 0) > REVEAL_AT) {
+            header.classList.add('is-instant');
+            update(win.scrollY || 0);
+            win.requestAnimationFrame(function () {
+                win.requestAnimationFrame(function () {
+                    header.classList.remove('is-instant');
+                });
+            });
         }
     })();
 
@@ -374,10 +426,13 @@
         }, { passive: true });
         panel.addEventListener('touchend', function () { tracking = false; }, { passive: true });
 
-        // Leaving the mobile breakpoint must not leave the drawer stuck open
+        // The burger now lives in the floating header at every breakpoint, so
+        // the drawer is a valid desktop surface too and must NOT be force-closed
+        // on resize. Closing on any viewport change still avoids a panel that
+        // was opened for one layout lingering over another.
         if (win.matchMedia) {
             var mqDesktop = win.matchMedia('(min-width: 992px)');
-            var onChange = function (e) { if (e.matches) close(); };
+            var onChange = function () { close(); };
             if (mqDesktop.addEventListener) mqDesktop.addEventListener('change', onChange);
         }
     })();

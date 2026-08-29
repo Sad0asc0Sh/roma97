@@ -189,6 +189,49 @@
     --container: 1200px;
     --container-narrow: 820px;
     --header-h: 62px;
+
+    /* ── Floating capsule header ────────────────────────────────────────
+       The header is detached from the flow: it starts fully hidden and is
+       revealed by scroll. `--fh-*` values are consumed by the shell in
+       rooma-components.css and animated from JS via --fh-p (0 → 1).      */
+    --fh-h: 64px;                /* capsule height, expanded state       */
+    --fh-h-min: 54px;            /* capsule height, condensed state      */
+    --fh-max-w: 1140px;          /* capsule max width on desktop         */
+    --fh-max-w-min: 1040px;      /* capsule max width once condensed     */
+    --fh-inset: clamp(.5rem, .35rem + .7vw, 1rem);   /* side breathing   */
+    --fh-top: clamp(.5rem, .3rem + .8vw, 1.15rem);   /* distance to top  */
+    --fh-radius: var(--radius-full);
+    --fh-blur: 22px;
+    --fh-lift: 14px;             /* how far it travels while revealing    */
+
+    /* Green glass surface — light theme */
+    --fh-glass: linear-gradient(
+        135deg,
+        rgba(61,139,99,.82) 0%,
+        rgba(47,111,79,.76) 48%,
+        rgba(91,169,126,.80) 100%
+    );
+    --fh-glass-solid: rgba(53,122,88,.97);   /* no-backdrop-filter fallback */
+    --fh-border: rgba(255,255,255,.28);
+    --fh-sheen: rgba(255,255,255,.42);
+    --fh-shadow:
+        0 1px 1px rgba(11,32,23,.10),
+        0 8px 20px -6px rgba(11,32,23,.28),
+        0 22px 48px -12px rgba(11,32,23,.34);
+    --fh-shadow-min:
+        0 1px 1px rgba(11,32,23,.12),
+        0 6px 14px -6px rgba(11,32,23,.30),
+        0 16px 36px -14px rgba(11,32,23,.38);
+    --fh-ink: #FFFFFF;                       /* text on the green glass  */
+    --fh-ink-soft: rgba(255,255,255,.76);
+    --fh-chip: rgba(255,255,255,.14);        /* icon-button surface      */
+    --fh-chip-hover: rgba(255,255,255,.24);
+    --fh-chip-border: rgba(255,255,255,.22);
+    /* Ink for the white CTA pill. Deliberately a fixed dark green rather
+       than --primary-dark: that token lightens in the dark theme, which on
+       the always-white pill collapsed contrast to 1.95:1. This is 8.1:1. */
+    --fh-cta-ink: #1E5A3F;
+
     --z-bg: 0;
     --z-header: 900;
     --z-drawer: 1200;
@@ -245,6 +288,30 @@
     --grad-hero: linear-gradient(to top, rgba(4,12,9,.96) 0%, rgba(6,16,12,.8) 38%, rgba(6,16,12,.3) 70%, rgba(6,16,12,.08) 100%);
     --grad-text: linear-gradient(120deg, #7FC9A4 0%, #5FB489 45%, #E8A780 100%);
 
+    /* Floating header — deep forest glass so the blur still reads at night */
+    --fh-glass: linear-gradient(
+        135deg,
+        rgba(24,58,42,.80) 0%,
+        rgba(16,42,31,.74) 48%,
+        rgba(33,73,54,.78) 100%
+    );
+    --fh-glass-solid: rgba(20,48,35,.97);
+    --fh-border: rgba(134,195,161,.24);
+    --fh-sheen: rgba(180,225,201,.26);
+    --fh-shadow:
+        0 1px 1px rgba(0,0,0,.34),
+        0 10px 24px -8px rgba(0,0,0,.52),
+        0 26px 56px -14px rgba(0,0,0,.58);
+    --fh-shadow-min:
+        0 1px 1px rgba(0,0,0,.36),
+        0 6px 16px -7px rgba(0,0,0,.54),
+        0 18px 40px -16px rgba(0,0,0,.60);
+    --fh-ink: #EAF6EF;
+    --fh-ink-soft: rgba(234,246,239,.72);
+    --fh-chip: rgba(255,255,255,.09);
+    --fh-chip-hover: rgba(255,255,255,.17);
+    --fh-chip-border: rgba(255,255,255,.14);
+
     color-scheme: dark;
 }
 /* ── 3. Reset & base ────────────────────────────────────────────────────── */
@@ -256,8 +323,8 @@ html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     scroll-behavior: smooth;
-    /* Anchor targets clear the sticky header */
-    scroll-padding-top: calc(var(--header-h) + 1rem);
+    /* Anchor targets clear the floating capsule header */
+    scroll-padding-top: calc(var(--fh-top) + var(--fh-h) + 1rem);
     -moz-tab-size: 4;
     tab-size: 4;
     /* Kill the mobile horizontal pan for good.
