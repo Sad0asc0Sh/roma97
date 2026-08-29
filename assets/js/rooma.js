@@ -389,10 +389,9 @@
         }, { passive: true });
         panel.addEventListener('touchend', function () { tracking = false; }, { passive: true });
 
-        // The burger now lives in the floating header at every breakpoint, so
-        // the drawer is a valid desktop surface too and must NOT be force-closed
-        // on resize. Closing on any viewport change still avoids a panel that
-        // was opened for one layout lingering over another.
+        // The opener is available below the desktop-nav breakpoint. Close the drawer
+        // when crossing into desktop so a panel opened in a narrower layout
+        // cannot linger underneath the inline navigation after a resize.
         if (win.matchMedia) {
             var mqDesktop = win.matchMedia('(min-width: 992px)');
             var onChange = function () { close(); };

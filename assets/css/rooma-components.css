@@ -555,11 +555,16 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
 [data-theme="dark"] .theme-toggle__moon { display: none; }
 [data-theme="dark"] .theme-toggle__sun  { display: block; }
 
-/* Hamburger — animated to an X.
-   The floating capsule keeps the burger at every breakpoint (it is part of
-   the requested logo / content / burger triad), so on desktop it opens the
-   drawer as a secondary "all links" panel alongside the inline nav. */
+/* Hamburger — animated to an X. Keep it available below the desktop nav
+   breakpoint so tablet/mobile layouts retain a complete navigation path. */
 .burger { display: grid; }
+
+/* The inline navigation is already available at desktop widths. Hide only
+   the redundant opener at the same breakpoint, without removing the drawer
+   markup or changing its mobile/tablet behavior. */
+@media (min-width: 992px) {
+    .site-header__shell .burger { display: none; }
+}
 .burger__box { position: relative; width: 20px; height: 14px; }
 .burger__line {
     position: absolute;
