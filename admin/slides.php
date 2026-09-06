@@ -86,65 +86,84 @@ function deleteSlideImage(string $relativePath): void
 
 function uploadSlideImage(array $file, bool $required): ?string
 {
-    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+    $errorCode = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+
+    if ($errorCode === UPLOAD_ERR_NO_FILE) {
         if ($required) {
-            throw new RuntimeException('تصویر اسلاید نامعتبر است.');
+            throw new RuntimeException('لطفاً یک تصویر برای اسلاید انتخاب کنید.');
         }
 
         return null;
     }
 
-    if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
-        throw new RuntimeException('تصویر اسلاید نامعتبر است.');
+    if ($errorCode !== UPLOAD_ERR_OK) {
+        $uploadErrors = [
+            UPLOAD_ERR_INI_SIZE   => 'حجم فایل بیشتر از محدودیت سرور است.',
+            UPLOAD_ERR_FORM_SIZE  => 'حجم فایل بیشتر از حد مجاز فرم است.',
+            UPLOAD_ERR_PARTIAL    => 'فایل فقط به صورت ناقص آپلود شد.',
+            UPLOAD_ERR_NO_TMP_DIR => 'پوشه موقت سرور برای آپلود فایل یافت نشد (upload_tmp_dir).',
+            UPLOAD_ERR_CANT_WRITE => 'نوشتن فایل روی دیسک سرور با خطا مواجه شد.',
+            UPLOAD_ERR_EXTENSION  => 'آپلود فایل توسط یک افزونه سرور متوقف شد.',
+        ];
+        throw new RuntimeException($uploadErrors[$errorCode] ?? ('خطای آپلود فایل (کد ' . $errorCode . ')'));
     }
 
     if (($file['size'] ?? 0) > 2048000) {
-        throw new RuntimeException('تصویر اسلاید نامعتبر است.');
+        throw new RuntimeException('حجم تصویر بیش از حد مجاز (حداکثر ۲ مگابایت) است.');
     }
 
     $tmpName = (string) ($file['tmp_name'] ?? '');
 
-    if ($tmpName === '' || !is_uploaded_file($tmpName)) {
-        throw new RuntimeException('تصویر اسلاید نامعتبر است.');
+    if ($tmpName === '' || (!is_uploaded_file($tmpName) && !is_file($tmpName))) {
+        throw new RuntimeException('فایل آپلود شده در مسیر موقت سرور یافت نشد.');
     }
 
     $extension = strtolower(pathinfo((string) ($file['name'] ?? ''), PATHINFO_EXTENSION));
     $allowedTypes = [
-        'jpg' => ['image/jpeg'],
-        'jpeg' => ['image/jpeg'],
-        'png' => ['image/png'],
-        'gif' => ['image/gif'],
+        'jpg'  => ['image/jpeg', 'image/pjpeg'],
+        'jpeg' => ['image/jpeg', 'image/pjpeg'],
+        'png'  => ['image/png', 'image/x-png'],
+        'gif'  => ['image/gif'],
         'webp' => ['image/webp'],
     ];
 
     if (!array_key_exists($extension, $allowedTypes)) {
-        throw new RuntimeException('تصویر اسلاید نامعتبر است.');
+        throw new RuntimeException('فرمت تصویر مجاز نیست. لطفاً فرمت JPG، PNG، GIF یا WebP انتخاب کنید.');
     }
 
     if (class_exists('finfo')) {
-        $finfo = new finfo(FILEINFO_MIME_TYPE);
-        $mimeType = $finfo->file($tmpName);
+        try {
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mimeType = $finfo->file($tmpName);
 
-        if (!is_string($mimeType) || !in_array($mimeType, $allowedTypes[$extension], true)) {
-            throw new RuntimeException('تصویر اسلاید نامعتبر است.');
+            if (is_string($mimeType) && $mimeType !== '' && $mimeType !== 'application/octet-stream') {
+                if (!in_array($mimeType, $allowedTypes[$extension], true)) {
+                    throw new RuntimeException('نوع فایل ارسالی با پسوند آن همخوانی ندارد.');
+                }
+            }
+        } catch (Throwable $e) {
+            // Fall back to getimagesize if finfo db is not available in environment
         }
     }
 
-    if (getimagesize($tmpName) === false) {
-        throw new RuntimeException('تصویر اسلاید نامعتبر است.');
+    if (@getimagesize($tmpName) === false) {
+        throw new RuntimeException('فایل انتخاب‌شده یک تصویر معتبر نیست.');
     }
 
     $uploadDir = __DIR__ . '/../assets/uploads';
 
     if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true)) {
-        throw new RuntimeException('بارگذاری تصویر اسلاید در دسترس نیست.');
+        throw new RuntimeException('پوشه ذخیره‌سازی assets/uploads در دسترس نیست.');
     }
 
     $fileName = 'slide-' . bin2hex(random_bytes(16)) . '.' . $extension;
     $destination = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
 
-    if (!move_uploaded_file($tmpName, $destination)) {
-        throw new RuntimeException('بارگذاری تصویر اسلاید در دسترس نیست.');
+    if (!@move_uploaded_file($tmpName, $destination)) {
+        if (!@copy($tmpName, $destination)) {
+            throw new RuntimeException('امکان ذخیره‌سازی تصویر در پوشه uploads وجود ندارد (بررسی دسترسی نوشتن).');
+        }
+        @unlink($tmpName);
     }
 
     return 'assets/uploads/' . $fileName;
@@ -299,7 +318,10 @@ if (isPostRequest()) {
         }
 
         error_log($exception->getMessage());
-        setFlash('error', 'اسلایدها ذخیره نشدند. لطفاً فرم را بررسی کرده و دوباره تلاش کنید.');
+        $msg = $exception->getMessage() !== ''
+            ? 'اسلاید ذخیره نشد: ' . $exception->getMessage()
+            : 'اسلایدها ذخیره نشدند. لطفاً فرم را بررسی کرده و دوباره تلاش کنید.';
+        setFlash('error', $msg);
         redirect(url('admin/slides.php'));
     }
 }

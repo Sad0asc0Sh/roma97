@@ -130,8 +130,11 @@ function uploadNewsImage(array $file): ?string
     $fileName = 'news-' . bin2hex(random_bytes(16)) . '.' . $extension;
     $destination = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
 
-    if (!move_uploaded_file($tmpName, $destination)) {
-        throw new RuntimeException('بارگذاری تصویر خبر در دسترس نیست.');
+    if (!@move_uploaded_file($tmpName, $destination)) {
+        if (!@copy($tmpName, $destination)) {
+            throw new RuntimeException('بارگذاری تصویر خبر در دسترس نیست.');
+        }
+        @unlink($tmpName);
     }
 
     return 'assets/uploads/' . $fileName;

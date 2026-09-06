@@ -147,8 +147,11 @@ function handleLogoUpload(array $file): ?string
     $fileName = 'logo-' . bin2hex(random_bytes(16)) . '.' . $extension;
     $destination = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
 
-    if (!move_uploaded_file($tmpName, $destination)) {
-        throw new RuntimeException('بارگذاری لوگو در دسترس نیست.');
+    if (!@move_uploaded_file($tmpName, $destination)) {
+        if (!@copy($tmpName, $destination)) {
+            throw new RuntimeException('بارگذاری لوگو در دسترس نیست.');
+        }
+        @unlink($tmpName);
     }
 
     return 'assets/uploads/' . $fileName;
