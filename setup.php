@@ -137,12 +137,15 @@ if ($installStep && $installError === '') {
 
     try {
         out('Connecting to database...');
-        $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4';
+        $portPart = defined('DB_PORT') && (string) DB_PORT !== '' && !str_contains(DB_HOST, 'port=') ? ';port=' . DB_PORT : '';
+        $dsn = 'mysql:host=' . DB_HOST . $portPart . ';dbname=' . DB_NAME . ';charset=utf8mb4';
         $pdo = new PDO($dsn, DB_USER, DB_PASS, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_TIMEOUT => 15,
         ]);
+        $pdo->exec("SET sql_mode = 'STRICT_ALL_TABLES,NO_ENGINE_SUBSTITUTION'");
         out('<span class="ok">✓ Connected to ' . DB_NAME . '</span>');
 
         // Execute schema.sql

@@ -27,27 +27,38 @@ date_default_timezone_set(APP_TIMEZONE);
 // ─── Database configuration ────────────────────────────────────────────────
 // Hosted environments, including Wasmer Edge, provide database credentials as
 // environment variables. A local config file still takes precedence over them.
-$dbHostFromEnv = getenv('DB_HOST');
-$dbPortFromEnv = getenv('DB_PORT');
-$dbNameFromEnv = getenv('DB_NAME');
-$dbUserFromEnv = getenv('DB_USER');
-$dbPassFromEnv = getenv('DB_PASSWORD');
+$getEnvVar = static function (string ...$keys): ?string {
+    foreach ($keys as $key) {
+        $val = getenv($key);
+        if ($val !== false && $val !== '') {
+            return (string) $val;
+        }
+        if (isset($_ENV[$key]) && (string) $_ENV[$key] !== '') {
+            return (string) $_ENV[$key];
+        }
+        if (isset($_SERVER[$key]) && (string) $_SERVER[$key] !== '') {
+            return (string) $_SERVER[$key];
+        }
+    }
+    return null;
+};
 
-// Keep DB_USERNAME as a fallback for compatible hosting providers.
-if ($dbUserFromEnv === false || $dbUserFromEnv === '') {
-    $dbUserFromEnv = getenv('DB_USERNAME');
+$dbHostFromEnv = $getEnvVar('DB_HOST');
+$dbPortFromEnv = $getEnvVar('DB_PORT');
+$dbNameFromEnv = $getEnvVar('DB_NAME', 'DB_DATABASE');
+$dbUserFromEnv = $getEnvVar('DB_USERNAME', 'DB_USER');
+$dbPassFromEnv = $getEnvVar('DB_PASSWORD', 'DB_PASS');
+
+defined('DB_HOST') || define('DB_HOST', $dbHostFromEnv ?? 'localhost');
+defined('DB_PORT') || define('DB_PORT', $dbPortFromEnv ?? '3306');
+defined('DB_NAME') || define('DB_NAME', $dbNameFromEnv ?? 'roma_db');
+defined('DB_USER') || define('DB_USER', $dbUserFromEnv ?? 'root');
+defined('DB_PASS') || define('DB_PASS', $dbPassFromEnv ?? '');
+
+$envSiteUrl = $getEnvVar('SITE_URL', 'APP_URL');
+if ($envSiteUrl !== null) {
+    defined('SITE_URL') || define('SITE_URL', rtrim($envSiteUrl, '/'));
 }
-
-// Keep DB_PASS as a fallback for local or legacy environment configuration.
-if ($dbPassFromEnv === false || $dbPassFromEnv === '') {
-    $dbPassFromEnv = getenv('DB_PASS');
-}
-
-defined('DB_HOST') || define('DB_HOST', $dbHostFromEnv !== false && $dbHostFromEnv !== '' ? $dbHostFromEnv : 'localhost');
-defined('DB_PORT') || define('DB_PORT', $dbPortFromEnv !== false && $dbPortFromEnv !== '' ? $dbPortFromEnv : '3306');
-defined('DB_NAME') || define('DB_NAME', $dbNameFromEnv !== false && $dbNameFromEnv !== '' ? $dbNameFromEnv : 'roma_db');
-defined('DB_USER') || define('DB_USER', $dbUserFromEnv !== false && $dbUserFromEnv !== '' ? $dbUserFromEnv : 'root');
-defined('DB_PASS') || define('DB_PASS', $dbPassFromEnv !== false ? $dbPassFromEnv : '');
 
 // Full base URL where this folder is served, without a trailing slash.
 //
