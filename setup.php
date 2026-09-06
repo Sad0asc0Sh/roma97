@@ -175,7 +175,7 @@ if ($installStep && $installError === '') {
         $cleanLines = [];
         foreach (explode("\n", $mainSql) as $line) {
             $trimmed = trim($line);
-            if ($trimmed !== '' && !str_starts_with($trimmed, '--')) {
+            if ($trimmed !== '' && !str_starts_with($trimmed, '--') && !str_contains($trimmed, 'ADD COLUMN IF NOT EXISTS')) {
                 $cleanLines[] = $line;
             }
         }
@@ -197,6 +197,27 @@ if ($installStep && $installError === '') {
             $executed++;
         }
         out('<span class="ok">✓ ' . $executed . ' statements executed</span>');
+
+        // Column migrations for cross-version compatibility
+        $columnsToEnsure = [
+            ['slides', 'subtitle', 'VARCHAR(500) DEFAULT NULL AFTER title'],
+            ['news', 'category', 'VARCHAR(50) DEFAULT NULL AFTER image'],
+            ['gallery_images', 'category', 'VARCHAR(50) DEFAULT NULL AFTER image'],
+        ];
+        foreach ($columnsToEnsure as [$table, $col, $def]) {
+            try {
+                $chk = $pdo->prepare(
+                    "SELECT COUNT(*) FROM information_schema.COLUMNS
+                     WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?"
+                );
+                $chk->execute([$table, $col]);
+                if ((int) $chk->fetchColumn() === 0) {
+                    $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$col}` {$def}");
+                }
+            } catch (Throwable $ignore) {
+                // Silently continue
+            }
+        }
 
         // Messages index migration (BUG-H05)
         out('Running messages index migration...');
