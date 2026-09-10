@@ -43,6 +43,7 @@ $totalGeneralExpenses = 0.0;
 $netProfitLoss = 0.0;
 $overdueChildren = [];
 $expensesByCategory = [];
+$trendRows = [];
 
 // Receivables position for the selected month. Reported alongside cash-in so an
 // owner can tell the difference between "we earned less" and "we simply have not
@@ -105,8 +106,9 @@ try {
 
         $balance = (float) $row['balance'];
 
-        // Anything under 1000 Toman is rounding dust, not a debt worth chasing.
-        if ($balance >= 1000) {
+        // Anything below the shared settle tolerance is rounding dust, not a
+        // debt worth chasing (same threshold as the tuition page and parent portal).
+        if ($balance >= tuitionSettleTolerance()) {
             $outstandingTuition += $balance;
             $overdueChildren[] = [
                 'child_id'     => $childId,
@@ -129,6 +131,38 @@ try {
 
     // Biggest debts first — that is the order an owner wants to make calls in.
     usort($overdueChildren, static fn($a, $b) => $b['balance'] <=> $a['balance']);
+
+    // ── 6-month trend: cash received vs expenses, one bar per Jalali month ──
+    // A single month tells an owner where they stand; the trend tells them
+    // whether the daycare is getting healthier or quietly bleeding.
+    $trendRows = [];
+    $trendAnchor = strtotime($gregStart);
+    for ($i = 5; $i >= 0; $i--) {
+        $monthStart = strtotime('-' . $i . ' months', $trendAnchor);
+        [$tJy, $tJm] = gregorianToJalali((int) date('Y', $monthStart), (int) date('n', $monthStart), 15);
+        $trendMonthYear = sprintf('%04d-%02d', $tJy, $tJm);
+        [$tStart, $tEnd] = jalaliMonthToGregorianRange($trendMonthYear);
+
+        $inStmt = $pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM tuition_payments WHERE month_year = :myear');
+        $inStmt->execute([':myear' => $trendMonthYear]);
+        $in = (float) $inStmt->fetchColumn();
+
+        $salStmt = $pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM salary_payments WHERE month_year = :myear');
+        $salStmt->execute([':myear' => $trendMonthYear]);
+        $tSalaries = (float) $salStmt->fetchColumn();
+
+        $gStmt = $pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE expense_date BETWEEN :gs AND :ge');
+        $gStmt->execute([':gs' => $tStart, ':ge' => $tEnd]);
+        $tGeneral = (float) $gStmt->fetchColumn();
+
+        $trendRows[] = [
+            'label'    => formatShamsiMonthYear($trendMonthYear),
+            'in'       => $in,
+            'out'      => $tSalaries + $tGeneral,
+            'net'      => $in - ($tSalaries + $tGeneral),
+            'is_current' => $trendMonthYear === $selectedMonthYear,
+        ];
+    }
 
 } catch (Throwable $e) {
     error_log($e->getMessage());
@@ -242,6 +276,47 @@ require_once __DIR__ . '/header.php';
             <?php endif; ?>
         </p>
     </div>
+
+    <!-- 6-month cash trend: is the daycare getting healthier or bleeding? -->
+    <?php if ($trendRows !== []): ?>
+    <div class="admin-section" style="margin-bottom:28px;">
+        <div class="admin-section-header">
+            <h2 class="admin-section-title" style="margin:0;">روند ۶ ماه اخیر (ورودی نقدی در برابر هزینه‌ها)</h2>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;align-items:end;margin-top:14px;">
+            <?php
+            $trendMax = 1.0;
+            foreach ($trendRows as $tr) {
+                $trendMax = max($trendMax, (float) $tr['in'], (float) $tr['out']);
+            }
+            ?>
+            <?php foreach ($trendRows as $tr): ?>
+                <?php
+                $inPct = round(((float) $tr['in'] / $trendMax) * 100);
+                $outPct = round(((float) $tr['out'] / $trendMax) * 100);
+                $netPositive = (float) $tr['net'] >= 0;
+                ?>
+                <div style="text-align:center;<?= $tr['is_current'] ? 'background:var(--adm-bg,#f7fafc);border-radius:10px;padding:6px 4px;' : 'padding:6px 4px;' ?>">
+                    <div style="display:flex;justify-content:center;align-items:flex-end;gap:3px;height:110px;margin-bottom:6px;">
+                        <div title="دریافتی: <?= e(persianNumber(number_format((float) $tr['in']))) ?> تومان"
+                            style="width:14px;height:<?= max(2, $inPct) ?>%;background:var(--adm-primary,#3D8B63);border-radius:3px 3px 0 0;"></div>
+                        <div title="هزینه: <?= e(persianNumber(number_format((float) $tr['out']))) ?> تومان"
+                            style="width:14px;height:<?= max(2, $outPct) ?>%;background:#c62828;border-radius:3px 3px 0 0;opacity:0.85;"></div>
+                    </div>
+                    <div style="font-size:0.7rem;font-weight:700;color:<?= $netPositive ? 'var(--adm-success,#2E7D5B)' : 'var(--adm-danger,#c62828)' ?>;">
+                        <?= $netPositive ? '+' : '−' ?><?= e(persianNumber(number_format(abs((float) $tr['net']) / 1000000, 1))) ?>م
+                    </div>
+                    <div style="font-size:0.68rem;color:var(--adm-text-muted);white-space:nowrap;"><?= e($tr['label']) ?></div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <p style="font-size:0.75rem;color:var(--adm-text-muted);margin:10px 0 0;">
+            <span style="display:inline-block;width:10px;height:10px;background:var(--adm-primary,#3D8B63);border-radius:2px;"></span> دریافتی شهریه
+            &nbsp;&nbsp;<span style="display:inline-block;width:10px;height:10px;background:#c62828;border-radius:2px;opacity:0.85;"></span> هزینه‌ها (حقوق + عمومی)
+            · اعداد خالص به میلیون تومان
+        </p>
+    </div>
+    <?php endif; ?>
 
     <div class="admin-two-column">
         <!-- Overdue Children Table -->

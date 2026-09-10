@@ -195,47 +195,60 @@ ON DUPLICATE KEY UPDATE
 SQL
         );
 
-        foreach ($attendanceData as $childKey => $fields) {
-            if (!is_array($fields)) {
-                continue;
-            }
+        // All-or-nothing: a failure halfway through a 200-child sheet must not
+        // leave half the register saved and the rest lost.
+        $pdo->beginTransaction();
 
-            $childId = filter_var($childKey, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-
-            if (!is_int($childId) || !isset($allowedIds[$childId])) {
-                continue;
-            }
-
-            $status = (string) ($fields['status'] ?? 'present');
-
-            if (!in_array($status, $allowedStatuses, true)) {
-                $status = 'present';
-            }
-
-            $checkInRaw = isset($fields['check_in']) ? (string) $fields['check_in'] : '';
-            $checkOutRaw = isset($fields['check_out']) ? (string) $fields['check_out'] : '';
-            $notesRaw = isset($fields['notes']) ? trim((string) $fields['notes']) : '';
-
-            if (function_exists('mb_strlen')) {
-                if (mb_strlen($notesRaw, 'UTF-8') > 5000) {
-                    $notesRaw = mb_substr($notesRaw, 0, 5000, 'UTF-8');
+        try {
+            foreach ($attendanceData as $childKey => $fields) {
+                if (!is_array($fields)) {
+                    continue;
                 }
-            } elseif (strlen($notesRaw) > 5000) {
-                $notesRaw = substr($notesRaw, 0, 5000);
+
+                $childId = filter_var($childKey, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
+                if (!is_int($childId) || !isset($allowedIds[$childId])) {
+                    continue;
+                }
+
+                $status = (string) ($fields['status'] ?? 'present');
+
+                if (!in_array($status, $allowedStatuses, true)) {
+                    $status = 'present';
+                }
+
+                $checkInRaw = isset($fields['check_in']) ? (string) $fields['check_in'] : '';
+                $checkOutRaw = isset($fields['check_out']) ? (string) $fields['check_out'] : '';
+                $notesRaw = isset($fields['notes']) ? trim((string) $fields['notes']) : '';
+
+                if (function_exists('mb_strlen')) {
+                    if (mb_strlen($notesRaw, 'UTF-8') > 5000) {
+                        $notesRaw = mb_substr($notesRaw, 0, 5000, 'UTF-8');
+                    }
+                } elseif (strlen($notesRaw) > 5000) {
+                    $notesRaw = substr($notesRaw, 0, 5000);
+                }
+
+                $notes = $notesRaw === '' ? null : $notesRaw;
+                $checkIn = normalizeAttendanceTime($checkInRaw);
+                $checkOut = normalizeAttendanceTime($checkOutRaw);
+
+                $upsert->execute([
+                    ':child_id' => $childId,
+                    ':attendance_date' => $parsedPostDate,
+                    ':status' => $status,
+                    ':check_in' => $checkIn,
+                    ':check_out' => $checkOut,
+                    ':notes' => $notes,
+                ]);
             }
 
-            $notes = $notesRaw === '' ? null : $notesRaw;
-            $checkIn = normalizeAttendanceTime($checkInRaw);
-            $checkOut = normalizeAttendanceTime($checkOutRaw);
-
-            $upsert->execute([
-                ':child_id' => $childId,
-                ':attendance_date' => $parsedPostDate,
-                ':status' => $status,
-                ':check_in' => $checkIn,
-                ':check_out' => $checkOut,
-                ':notes' => $notes,
-            ]);
+            $pdo->commit();
+        } catch (Throwable $transactionError) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $transactionError;
         }
 
         // ── Notify parents of attendance changes only ────────────────────────

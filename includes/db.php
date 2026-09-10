@@ -491,5 +491,41 @@ function initializeNotificationTables(?PDO $pdo = null): void
 
 function initializeMessagingTable(): void
 {
-    // Schema is created at install time via setup.php / schema.sql
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+    $initialized = true;
+
+    // Migration 010 (parent replies): the messaging table gains the 'parent'
+    // sender type and a routing column so families can answer management from
+    // the portal. Kept idempotent so upgraded installs converge to the same
+    // shape without running the .sql file by hand.
+    try {
+        $pdo = getDb();
+
+        $senderTypeRow = $pdo->query("SHOW COLUMNS FROM messages LIKE 'sender_type'")->fetch();
+        if ($senderTypeRow && is_string($senderTypeRow['Type'] ?? null) && !str_contains($senderTypeRow['Type'], "'parent'")) {
+            $pdo->exec("ALTER TABLE messages MODIFY COLUMN sender_type ENUM('admin','teacher','parent') NOT NULL");
+        }
+
+        $msgCols = $pdo->query("SHOW COLUMNS FROM messages")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('recipient_admin_id', $msgCols, true)) {
+            $pdo->exec("ALTER TABLE messages ADD COLUMN recipient_admin_id INT NULL AFTER sender_id");
+        }
+
+        $hasReplyIndex = $pdo->query("
+            SELECT COUNT(*) FROM information_schema.STATISTICS
+            WHERE table_schema = DATABASE() AND table_name = 'messages' AND index_name = 'idx_messages_recipient_admin'
+        ")->fetchColumn();
+        if ((int) $hasReplyIndex === 0) {
+            try {
+                $pdo->exec("ALTER TABLE messages ADD INDEX idx_messages_recipient_admin (recipient_admin_id, is_read)");
+            } catch (Throwable) {
+                // Index already exists under another name or engine refused — non-fatal.
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('initializeMessagingTable failed: ' . $e->getMessage());
+    }
 }

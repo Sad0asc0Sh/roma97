@@ -38,13 +38,14 @@ try {
     if ($classroom !== null) {
         $classroomId = (int) $classroom['id'];
 
-        // Children currently enrolled in this classroom.
+        // Children currently enrolled in this classroom. Only ACTIVE children —
+        // graduated/withdrawn leftovers must not appear in today's register.
         $kidsStmt = $pdo->prepare(
             <<<'SQL'
 SELECT c.id, c.first_name, c.last_name, c.preferred_name
 FROM child_classroom cc
 INNER JOIN children c ON c.id = cc.child_id
-WHERE cc.classroom_id = :cid
+WHERE cc.classroom_id = :cid AND c.status = 'active'
 ORDER BY c.first_name, c.last_name
 SQL
         );

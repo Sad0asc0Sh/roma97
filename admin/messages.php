@@ -27,6 +27,7 @@ $success = '';
 
 // Handle Send Message
 if (isPostRequest() && isset($_POST['send_message'])) {
+
     if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
         $error = 'توکن CSRF نامعتبر است.';
     } else {
@@ -116,6 +117,46 @@ if (isPostRequest() && isset($_POST['send_message'])) {
 // Fetch Parents for dropdown (only active ones can receive messages)
 $parentsStmt = $pdo->query("SELECT id, first_name, last_name, email FROM parents WHERE status = 'active' ORDER BY last_name, first_name");
 $parents = $parentsStmt->fetchAll();
+
+// ── Parent replies inbox ──────────────────────────────────────────────────────
+// Families can now answer from the portal (sender_type='parent'). Their
+// messages appear here, newest first, with a distinct badge and a read flag
+// independent from the outgoing messages above.
+$parentReplies = [];
+try {
+    $parentRepliesStmt = $pdo->query("
+        SELECT m.id, m.subject, m.body, m.created_at, m.is_read,
+               m.parent_id, p.first_name, p.last_name, p.phone
+        FROM messages m
+        INNER JOIN parents p ON p.id = m.parent_id
+        WHERE m.sender_type = 'parent'
+        ORDER BY m.is_read ASC, m.created_at DESC
+        LIMIT 50
+    ");
+    $parentReplies = $parentRepliesStmt ? $parentRepliesStmt->fetchAll() : [];
+} catch (Throwable $e) {
+    error_log('parent replies query failed: ' . $e->getMessage());
+}
+
+$unreadReplyCount = 0;
+foreach ($parentReplies as $r) {
+    if ((int) $r['is_read'] === 0) {
+        $unreadReplyCount++;
+    }
+}
+
+// Marking a parent reply as read (POST — no accidental GET state change).
+if (isPostRequest() && ($_POST['action'] ?? '') === 'mark_reply_read') {
+    if (validateCsrfToken((string) ($_POST['csrf_token'] ?? ''))) {
+        $replyId = filter_var($_POST['reply_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if (is_int($replyId)) {
+            $pdo->prepare("UPDATE messages SET is_read = 1 WHERE id = :id AND sender_type = 'parent'")
+                ->execute([':id' => $replyId]);
+            setFlash('success', 'پیام والد خوانده‌شده علامت‌گذاری شد.');
+        }
+    }
+    redirect(url('admin/messages.php'));
+}
 
 // Fetch sent messages, grouped so one broadcast appears as ONE row with a
 // recipient count and a read-progress figure — instead of N identical rows,
@@ -293,6 +334,63 @@ require_once __DIR__ . '/header.php';
         <?php endif; ?>
     </div>
 </div>
+
+<?php if ($parentReplies !== []): ?>
+<div class="admin-card mt-4">
+    <div class="admin-card-header">
+        <h2>📨 پیام‌های دریافتی از والدین <?= $unreadReplyCount > 0 ? '<span class="badge badge-warning">' . e(persianNumber((string) $unreadReplyCount)) . ' خوانده‌نشده</span>' : '' ?></h2>
+    </div>
+    <div class="admin-card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>تاریخ</th>
+                        <th>والد</th>
+                        <th>تماس</th>
+                        <th>موضوع</th>
+                        <th>وضعیت</th>
+                        <th>پیام</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($parentReplies as $reply): ?>
+                        <?php
+                        $replyPhone = trim((string) ($reply['phone'] ?? ''));
+                        $replyBodyPreview = mb_substr(trim((string) $reply['body']), 0, 80, 'UTF-8');
+                        ?>
+                        <tr style="<?= (int) $reply['is_read'] === 0 ? 'font-weight:600;' : '' ?>">
+                            <td><?= e(formatPersianDate($reply['created_at'])) ?></td>
+                            <td><?= e(trim($reply['first_name'] . ' ' . $reply['last_name'])) ?></td>
+                            <td>
+                                <?php if ($replyPhone !== ''): ?>
+                                    <a href="tel:<?= e(preg_replace('/\s+/', '', $replyPhone)) ?>"><?= e($replyPhone) ?></a>
+                                <?php else: ?>
+                                    <span class="muted">—</span>
+                                <?php endif; ?>
+                            </td>
+                            <td><?= e((string) $reply['subject']) ?></td>
+                            <td>
+                                <?php if ((int) $reply['is_read'] === 0): ?>
+                                    <form method="post" action="<?= e(url('admin/messages.php')) ?>" class="inline-form">
+                                        <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                                        <input type="hidden" name="action" value="mark_reply_read">
+                                        <input type="hidden" name="reply_id" value="<?= (int) $reply['id'] ?>">
+                                        <button type="submit" class="btn btn-sm btn-primary">علامت‌گذاری خوانده‌شده</button>
+                                    </form>
+                                <?php else: ?>
+                                    <span class="badge badge-success">خوانده شد</span>
+                                <?php endif; ?>
+                            </td>
+                            <td title="<?= e((string) $reply['body']) ?>"><?= e($replyBodyPreview) ?><?= mb_strlen((string) $reply['body'], 'UTF-8') > 80 ? '…' : '' ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php if ($viewMessage): ?>
     <div class="modal-overlay">

@@ -230,6 +230,16 @@ function siteWhatsApp(): string
     return getSetting('whatsapp', '');
 }
 
+/**
+ * Balances below this amount are treated as settled everywhere (rounding dust).
+ * One shared constant so the tuition page, financial report, parent portal and
+ * the reminder cron never disagree about who is a debtor.
+ */
+function tuitionSettleTolerance(): float
+{
+    return 1000.0;
+}
+
 function setFlash(string $key, string $message): void
 {
     if (session_status() !== PHP_SESSION_ACTIVE) {

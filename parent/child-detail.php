@@ -36,6 +36,7 @@ $row = null;
 $parentRow = null;
 $todayAtt = null;
 $dailyReport = null;
+$dailyReportHistory = [];
 $classroom = null;
 
 try {
@@ -118,6 +119,21 @@ SQL
             ':today' => $todayYmd,
         ]);
         $dailyReport = $reportStmt->fetch() ?: null;
+
+        // Report history — the child's growth story, not just today's snapshot.
+        // Capped at 4 weeks so the page stays fast as records accumulate.
+        $historyStmt = $pdo->prepare(
+            <<<'SQL'
+SELECT dr.report_date, dr.mood, dr.activities, dr.notes, t.first_name, t.last_name
+FROM daily_reports dr
+INNER JOIN teachers t ON t.id = dr.teacher_id
+WHERE dr.child_id = :child_id AND dr.report_date < :today
+ORDER BY dr.report_date DESC
+LIMIT 28
+SQL
+        );
+        $historyStmt->execute([':child_id' => $childId, ':today' => $todayYmd]);
+        $dailyReportHistory = $historyStmt->fetchAll();
     }
 } catch (Throwable $exception) {
     error_log($exception->getMessage());
@@ -276,8 +292,41 @@ require_once __DIR__ . '/header.php';
         <?php endif; ?>
   </div>
 
+    <!-- Report History: the last 4 weeks of the child's story -->
+    <?php if ($dailyReportHistory !== []): ?>
+    <div class="child-detail-card">
+        <h2>گزارش‌های روزانه هفته‌های اخیر</h2>
+        <div style="display:grid;gap:12px;">
+            <?php foreach ($dailyReportHistory as $hist): ?>
+                <?php
+                $histMood = match ($hist['mood']) {
+                    'happy'       => '😊 شاد',
+                    'normal'      => '😐 عادی',
+                    'mixed'       => '😅 ترکیبی',
+                    'challenging' => '😤 چالش‌برانگیز',
+                    default       => '—',
+                };
+                ?>
+                <div style="border:1px solid var(--border, #e5e5e5);border-radius:12px;padding:12px 14px;">
+                    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:center;">
+                        <strong style="font-size:0.9rem;"><?= e(shamsiDate((string) $hist['report_date'], 'with_day')) ?></strong>
+                        <span style="font-size:0.85rem;"><?= $histMood ?></span>
+                    </div>
+                    <?php if (trim((string) ($hist['activities'] ?? '')) !== ''): ?>
+                        <p style="margin:8px 0 0;font-size:0.85rem;line-height:1.8;"><strong>فعالیت‌ها:</strong> <?= nl2br(e((string) $hist['activities'])) ?></p>
+                    <?php endif; ?>
+                    <?php if (trim((string) ($hist['notes'] ?? '')) !== ''): ?>
+                        <p style="margin:6px 0 0;font-size:0.85rem;line-height:1.8;"><strong>یادداشت معلم:</strong> <?= nl2br(e((string) $hist['notes'])) ?></p>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Allergies -->
     <?php if ($allergiesText !== ''): ?>
+
         <div class="child-detail-card child-alert-card">
             <h2><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: middle; margin-left: 6px;"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>حساسیت‌ها</h2>
             <p><?= nl2br(e($allergiesText))?></p>

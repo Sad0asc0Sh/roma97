@@ -79,7 +79,8 @@ try {
     $dryRun = reminderOption('dry-run') !== null;
 
     // Ignore rounding dust so a 500-Toman remainder never triggers an SMS.
-    $minBalance = max(0.0, (float) reminderOption('min', '1000'));
+    // Defaults to the shared settle tolerance used across every finance screen.
+    $minBalance = max(0.0, (float) (reminderOption('min') ?? tuitionSettleTolerance()));
 
     cliLog("Tuition reminders for {$monthLabel} ({$monthYear})" . ($dryRun ? ' [DRY RUN]' : ''));
 
