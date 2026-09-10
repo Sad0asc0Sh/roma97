@@ -139,10 +139,21 @@ if ($action === 'assign_classroom') {
         $pdo = getDb();
 
         if ($classroomId > 0) {
-            // Verify classroom exists & check capacity
-            $clStmt = $pdo->prepare('SELECT capacity FROM classrooms WHERE id = :clid LIMIT 1');
-            $clStmt->execute([':clid' => $classroomId]);
-            $clRow = $clStmt->fetch();
+            // Verify classroom exists & check capacity. Only children actually
+            // attending the class (status = active) count toward capacity —
+            // graduated/withdrawn rows must not block new enrolments.
+            $capacityRow = $pdo->prepare(
+                "SELECT COUNT(*) AS enrolled
+                 FROM child_classroom cc
+                 INNER JOIN children c ON c.id = cc.child_id
+                 WHERE cc.classroom_id = :clid AND c.status = 'active' AND cc.child_id != :cid"
+            );
+            $capacityRow->execute([':clid' => $classroomId, ':cid' => $childId]);
+            $enrolledCount = (int) $capacityRow->fetch()['enrolled'];
+
+            $capStmt = $pdo->prepare('SELECT capacity FROM classrooms WHERE id = :clid LIMIT 1');
+            $capStmt->execute([':clid' => $classroomId]);
+            $clRow = $capStmt->fetch();
 
             if (!$clRow) {
                 setFlash('error', 'کلاس انتخاب‌شده معتبر نیست.');
@@ -150,11 +161,6 @@ if ($action === 'assign_classroom') {
             }
 
             $capacity = (int) $clRow['capacity'];
-
-            // Count current enrolled children excluding the current child
-            $countStmt = $pdo->prepare('SELECT COUNT(*) FROM child_classroom WHERE classroom_id = :clid AND child_id != :cid');
-            $countStmt->execute([':clid' => $classroomId, ':cid' => $childId]);
-            $enrolledCount = (int) $countStmt->fetchColumn();
 
             if ($enrolledCount >= $capacity && !$forceOverCapacity) {
                 $_SESSION['waitlist_offer'] = [
@@ -181,6 +187,7 @@ if ($action === 'assign_classroom') {
         }
 
         $pdo->commit();
+
         $auditDetails = ['classroom_id' => $classroomId];
         if ($forceOverCapacity) {
             $auditDetails['over_capacity'] = true;
@@ -235,6 +242,18 @@ try {
         ':status' => $newStatus,
         ':id' => $childId,
     ]);
+
+    // A child leaving the daycare (rejected/inactive/graduated/withdrawn) can no
+    // longer occupy a classroom seat — otherwise graduated ghosts quietly ate
+    // capacity and the class showed as "full" with nobody present.
+    if (in_array($newStatus, ['inactive', 'graduated', 'withdrawn'], true)) {
+        try {
+            $pdo->prepare('DELETE FROM child_classroom WHERE child_id = :cid')->execute([':cid' => $childId]);
+        } catch (Throwable $cleanupError) {
+            error_log('child-action seat cleanup failed: ' . $cleanupError->getMessage());
+        }
+    }
+
 
     $messages = [
         'approve'   => 'ثبت‌نام تأیید شد. کودک اکنون فعال است.',

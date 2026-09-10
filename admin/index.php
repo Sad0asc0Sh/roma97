@@ -42,11 +42,15 @@ try {
     $stmt = $pdo->query("SELECT COUNT(*) FROM events WHERE event_date >= CURDATE() AND event_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)");
     $metrics['upcoming_events'] = (int) $stmt->fetchColumn();
     
-    // This month's tuition total
-    $startMonth = date('Y-m-01');
-    $nextMonth = date('Y-m-d', strtotime('first day of next month'));
-    $stmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM tuition_payments WHERE payment_date >= :start AND payment_date < :next");
-    $stmt->execute([':start' => $startMonth, ':next' => $nextMonth]);
+    // This month's tuition total — keyed on the current SHAMSI month so the
+    // dashboard agrees with the tuition page and the financial report, which
+    // both group by month_year in Jalali. The old Gregorian month window
+    // showed a different number than every other financial screen.
+    require_once __DIR__ . '/../includes/functions.php';
+    [$dashJy, $dashJm] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
+    $dashMonthYear = sprintf('%04d-%02d', $dashJy, $dashJm);
+    $stmt = $pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM tuition_payments WHERE month_year = :myear');
+    $stmt->execute([':myear' => $dashMonthYear]);
     $metrics['monthly_tuition'] = (float) $stmt->fetchColumn();
 
     // Pending parents count

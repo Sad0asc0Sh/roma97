@@ -314,15 +314,17 @@ CREATE TABLE IF NOT EXISTS tuition_reminder_log (
 
 CREATE TABLE IF NOT EXISTS messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    sender_type ENUM('admin','teacher') NOT NULL,
+    sender_type ENUM('admin','teacher','parent') NOT NULL,
     sender_id INT NOT NULL,
+    recipient_admin_id INT NULL,
     parent_id INT NULL,
     subject VARCHAR(255) NOT NULL,
     body TEXT NOT NULL,
     is_read TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_messages_parent_id (parent_id),
-    INDEX idx_messages_parent_read (parent_id, is_read)
+    INDEX idx_messages_parent_read (parent_id, is_read),
+    INDEX idx_messages_recipient_admin (recipient_admin_id, is_read)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ─── Notification Engine ───────────────────────────────────────────────────

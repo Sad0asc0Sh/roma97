@@ -202,9 +202,9 @@ require_once __DIR__ . '/header.php';
 <!-- Current-month tuition status: answers "do I owe anything?" without a phone call -->
 <?php if ($hasActiveChild): ?>
     <?php
-    // Tolerance so rounding dust never shows a settled family as a debtor.
-    $tuitionSettled = $tuitionBalance < 1000;
-    $tuitionCredit  = $tuitionBalance < -1000;
+    // Shared settle tolerance so the portal never disagrees with the office.
+    $tuitionSettled = $tuitionBalance < tuitionSettleTolerance();
+    $tuitionCredit  = $tuitionBalance < -tuitionSettleTolerance();
     ?>
     <section class="parent-section">
         <div class="card" style="padding:16px 18px;border-inline-start:5px solid <?= $tuitionSettled ? '#2e8540' : '#c8860d' ?>;">

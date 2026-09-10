@@ -18,6 +18,7 @@ $errorMessage = getFlash('error');
 
 $payments = [];
 $totalPaid = 0.0;
+$paymentsPagination = null;
 
 // Current-month position per child. Parents previously only saw a list of past
 // payments, with no way to answer "do I still owe anything this month?" — the
@@ -68,6 +69,11 @@ try {
         $totalPaid += (float) $p['amount'];
     }
 
+    // Years of history must not render in one unbounded table — paginate it
+    // like every other list in the portal.
+    $paymentsPagination = paginate(count($payments), currentPageNumber(), 24);
+    $payments = array_slice($payments, $paymentsPagination['offset'], $paymentsPagination['perPage']);
+
 } catch (Throwable $e) {
     error_log($e->getMessage());
     if (!$errorMessage) {
@@ -95,9 +101,9 @@ require_once __DIR__ . '/header.php';
 <!-- Current-month status: the "do I owe anything?" answer -->
 <?php if ($monthBreakdowns !== []): ?>
     <?php
-    // Small tolerance so rounding dust never shows a family as a debtor.
-    $isSettled = $monthTotals['balance'] < 1000;
-    $hasCredit = $monthTotals['balance'] < -1000;
+    // Shared settle tolerance so the portal never disagrees with the office.
+    $isSettled = $monthTotals['balance'] < tuitionSettleTolerance();
+    $hasCredit = $monthTotals['balance'] < -tuitionSettleTolerance();
     ?>
     <div class="card" style="padding:18px;margin-bottom:20px;border-inline-start:5px solid <?= $isSettled ? '#2e8540' : '#c8860d' ?>;">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
@@ -261,6 +267,13 @@ require_once __DIR__ . '/header.php';
            </div>
         <?php endforeach; ?>
    </div>
+<?php endif; ?>
+
+<?php if ($paymentsPagination !== null && $paymentsPagination['total'] > $paymentsPagination['perPage']): ?>
+    <p class="pagination-summary">
+        نمایش <?= e(persianNumber($paymentsPagination['from'])) ?> تا <?= e(persianNumber($paymentsPagination['to'])) ?> از <?= e(persianNumber($paymentsPagination['total'])) ?> پرداخت
+    </p>
+    <?= renderPagination($paymentsPagination, url('parent/payments.php')) ?>
 <?php endif; ?>
 
 <?php require_once __DIR__ . '/footer.php'; ?>

@@ -34,8 +34,12 @@ try {
         $monthYear     = (string) ($_POST['month_year'] ?? date('Y-m'));
         $notes         = trim((string) ($_POST['notes'] ?? ''));
 
-        if ($teacherId === 0 || $amount <= 0 || !preg_match('/^\d{4}-\d{2}$/', $monthYear)) {
-            setFlash('error', 'لطفاً همه فیلدهای الزامی را به‌درستی پر کنید (مبلغ > ۰، ماه معتبر).');
+        $salaryDateCheck = DateTime::createFromFormat('Y-m-d', $paymentDate);
+        $isSalaryDateValid = $salaryDateCheck && $salaryDateCheck->format('Y-m-d') === $paymentDate;
+        $validSalaryMethods = ['cash', 'bank_transfer', 'check'];
+
+        if ($teacherId === 0 || $amount <= 0 || $amount >= 1000000000 || !$isSalaryDateValid || !preg_match('/^\d{4}-\d{2}$/', $monthYear) || !in_array($paymentMethod, $validSalaryMethods, true)) {
+            setFlash('error', 'لطفاً همه فیلدهای الزامی را به‌درستی پر کنید (مبلغ > ۰، تاریخ و ماه معتبر).');
             redirect(url('admin/salary.php'));
         }
 
@@ -121,7 +125,9 @@ require_once __DIR__ . '/header.php';
                         <?php foreach ($teachers as $t): ?>
                             <option value="<?= e((string) $t['id']) ?>">
                                 <?= e(trim($t['first_name'] . ' ' . $t['last_name'])) ?>
-                                (پایه: <?= e(number_format((float) ($t['salary'] ?? 0), 2)) ?>)
+                                <?php if ((float) ($t['salary'] ?? 0) > 0): ?>
+                                    (پایه: <?= e(persianNumber(number_format((float) $t['salary']))) ?> تومان)
+                                <?php endif; ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -198,7 +204,7 @@ require_once __DIR__ . '/header.php';
                                     <td><?= e(shamsiDate($pay['payment_date'])) ?></td>
                                     <td style="font-weight:600;"><?= e(trim($pay['first_name'] . ' ' . $pay['last_name'])) ?></td>
                                     <td><?= e(formatShamsiMonthYear($pay['month_year'])) ?></td>
-                                    <td class="amount-highlight"><?= e(number_format((float) $pay['amount'], 2)) ?> ت</td>
+                                    <td class="amount-highlight"><?= e(persianNumber(number_format((float) $pay['amount']))) ?> تومان</td>
                                     <td><?= e(match((string) $pay['payment_method']) { 'cash' => 'نقدی', 'bank_transfer' => 'انتقال بانکی', 'check' => 'چک', default => $pay['payment_method'] }) ?></td>
                                     <td class="notes-ellipsis"><?= e($pay['notes'] ?? '—') ?></td>
                                 </tr>
