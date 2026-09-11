@@ -153,6 +153,9 @@ body:has(> .topbar) .site-header__shell {
     --fh-rest-ink-soft: rgba(255,255,255,.82);
     --fh-rest-chip: rgba(255,255,255,.10);
     --fh-rest-chip-border: rgba(255,255,255,.20);
+    --fh-rest-pill: rgba(255,255,255,.10);
+    --fh-rest-pill-ring: rgba(255,255,255,.18);
+    --fh-rest-chip-hover: rgba(255,255,255,.18);
 }
 
 /* With a topbar the dark band already clears the header, so ordinary light
@@ -281,6 +284,9 @@ body:has(> .topbar) .site-main > .page-hero:first-child {
     --fh-rest-ink-soft: var(--text-muted);
     --fh-rest-chip: transparent;
     --fh-rest-chip-border: var(--border);
+    --fh-rest-pill: var(--primary-faint);
+    --fh-rest-pill-ring: rgba(61,139,99,.18);
+    --fh-rest-chip-hover: var(--primary-faint);
 }
 
 /* Dark hero directly under the header → start with light ink.
@@ -292,6 +298,9 @@ body:has(> .site-main > section.hero:first-child) .site-header__shell {
     --fh-rest-ink-soft: rgba(255,255,255,.82);
     --fh-rest-chip: rgba(255,255,255,.10);
     --fh-rest-chip-border: rgba(255,255,255,.20);
+    --fh-rest-pill: rgba(255,255,255,.10);
+    --fh-rest-pill-ring: rgba(255,255,255,.18);
+    --fh-rest-chip-hover: rgba(255,255,255,.18);
 }
 
 /* Interpolated ink tokens actually used by the content */
@@ -300,6 +309,9 @@ body:has(> .site-main > section.hero:first-child) .site-header__shell {
     --fh-ink-soft-now: color-mix(in srgb, var(--fh-ink-soft) calc(var(--fh-p) * 100%), var(--fh-rest-ink-soft));
     --fh-chip-now: color-mix(in srgb, var(--fh-chip) calc(var(--fh-p) * 100%), var(--fh-rest-chip));
     --fh-chip-border-now: color-mix(in srgb, var(--fh-chip-border) calc(var(--fh-p) * 100%), var(--fh-rest-chip-border));
+    --fh-pill-now: color-mix(in srgb, var(--fh-chip) calc(var(--fh-p) * 100%), var(--fh-rest-pill));
+    --fh-pill-ring-now: color-mix(in srgb, var(--fh-chip-border) calc(var(--fh-p) * 100%), var(--fh-rest-pill-ring));
+    --fh-chip-hover-now: color-mix(in srgb, var(--fh-chip-hover) calc(var(--fh-p) * 100%), var(--fh-rest-chip-hover));
 }
 /* No color-mix (older Safari/Firefox): fall back to the resting ink, then
    hard-switch to white once the glass is mostly opaque. Handled in JS via
@@ -310,12 +322,18 @@ body:has(> .site-main > section.hero:first-child) .site-header__shell {
         --fh-ink-soft-now: var(--fh-rest-ink-soft);
         --fh-chip-now: var(--fh-rest-chip);
         --fh-chip-border-now: var(--fh-rest-chip-border);
+        --fh-pill-now: var(--fh-rest-pill);
+        --fh-pill-ring-now: var(--fh-rest-pill-ring);
+        --fh-chip-hover-now: var(--fh-rest-chip-hover);
     }
     .site-header.is-glass .site-header__shell {
         --fh-ink-now: var(--fh-ink);
         --fh-ink-soft-now: var(--fh-ink-soft);
         --fh-chip-now: var(--fh-chip);
         --fh-chip-border-now: var(--fh-chip-border);
+        --fh-pill-now: var(--fh-chip);
+        --fh-pill-ring-now: var(--fh-chip-border);
+        --fh-chip-hover-now: var(--fh-chip-hover);
     }
 }
 
@@ -350,8 +368,8 @@ body:has(> .site-main > section.hero:first-child) .site-header__shell {
 .site-header__shell .nav__link:hover,
 .site-header__shell .nav__link.is-active { color: var(--fh-ink-now); }
 .site-header__shell .nav__pill {
-    background: color-mix(in srgb, rgba(255,255,255,.16) calc(var(--fh-p) * 100%), var(--primary-faint));
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.18);
+    background: var(--fh-pill-now);
+    box-shadow: inset 0 0 0 1px var(--fh-pill-ring-now);
 }
 
 /* Icon buttons / burger — present from the first frame, they just firm up
@@ -366,8 +384,8 @@ body:has(> .site-main > section.hero:first-child) .site-header__shell {
                 border-color var(--t-fast), transform var(--t-fast);
 }
 .site-header__shell .icon-btn:hover {
-    background: color-mix(in srgb, var(--fh-chip-hover) calc(var(--fh-p) * 100%), var(--primary-faint));
-    border-color: rgba(255,255,255,.32);
+    background: var(--fh-chip-hover-now);
+    border-color: color-mix(in srgb, rgba(255,255,255,.32) calc(var(--fh-p) * 100%), var(--fh-rest-chip-border));
     color: var(--fh-ink-now);
 }
 
