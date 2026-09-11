@@ -48,7 +48,6 @@ try {
                 setFlash('error', 'لطفاً مقادیر معتبر برای تعیین شهریه مورد انتظار وارد کنید.');
                 redirect(url('admin/tuition.php'));
             }
-
             $planStmt = $pdo->prepare(
                 'INSERT INTO tuition_plans (child_id, month_year, expected_amount)
                  VALUES (:cid, :myear, :exp)
@@ -66,7 +65,7 @@ try {
             ]);
 
             setFlash('success', 'مبلغ شهریه مورد انتظار با موفقیت ذخیره شد.');
-            redirect(url('admin/tuition.php'));
+            redirect(url('admin/tuition.php?month_year=' . rawurlencode($monthYear)));
         }
 
         $childId       = (int) ($_POST['child_id'] ?? 0);
@@ -211,7 +210,7 @@ try {
         $monthTotals['expected'] += $b['expected'];
         $monthTotals['paid']     += $b['paid'];
 
-        if ($b['balance'] > 0) {
+        if ($b['balance'] >= tuitionSettleTolerance()) {
             $monthTotals['outstanding'] += $b['balance'];
             $monthTotals['debtors']++;
         } else {
@@ -230,6 +229,7 @@ try {
     $children = [];
     $dashboardStatus = [];
     $lastPayments = [];
+    $breakdowns = [];
     $monthTotals = ['expected' => 0.0, 'paid' => 0.0, 'outstanding' => 0.0, 'settled' => 0, 'debtors' => 0];
     $pagination = paginate(0, 1, 20);
 }
@@ -278,7 +278,7 @@ require_once __DIR__ . '/header.php';
                     <label for="month_year" class="form-label">ماه شهریه</label>
                     <select name="month_year" id="month_year" class="form-control" required>
                         <?php foreach (getShamsiMonthYearChoices(24, 24) as $choice): ?>
-                            <option value="<?= e($choice['value']) ?>" <?= $choice['is_current'] ? 'selected' : '' ?>>
+                            <option value="<?= e($choice['value']) ?>" <?= $choice['value'] === $viewMonthYear ? 'selected' : '' ?>>
                                 <?= e($choice['label']) ?>
                             </option>
                         <?php endforeach; ?>
@@ -288,6 +288,18 @@ require_once __DIR__ . '/header.php';
                 <div class="form-group">
                     <label for="amount" class="form-label">مبلغ (تومان)</label>
                     <input type="number" step="0.01" name="amount" id="amount" class="form-control" placeholder="۰" required>
+                    <?php
+                    // Prefill the exact remaining balance of the selected child so
+                    // the accountant can settle the month in one click instead of
+                    // reading the number off the status table.
+                    $selectedBreakdown = $selectedChildId > 0 ? ($breakdowns[$selectedChildId] ?? null) : null;
+                    if ($selectedBreakdown !== null && (float) $selectedBreakdown['balance'] > 0):
+                    ?>
+                    <div style="margin-top:6px;font-size:0.78rem;color:var(--adm-text-muted);">
+                        مانده فعلی «<?= e($selectedBreakdown['child_name']) ?>» برای این ماه:
+                        <strong style="color:var(--adm-danger);"><?= e(persianNumber(number_format((float) $selectedBreakdown['balance']))) ?> تومان</strong>
+                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="form-group">
@@ -339,7 +351,7 @@ require_once __DIR__ . '/header.php';
                         <label for="plan_month_year" class="form-label">ماه شهریه</label>
                         <select name="plan_month_year" id="plan_month_year" class="form-control" required>
                             <?php foreach (getShamsiMonthYearChoices(24, 24) as $choice): ?>
-                                <option value="<?= e($choice['value']) ?>" <?= $choice['is_current'] ? 'selected' : '' ?>>
+                                <option value="<?= e($choice['value']) ?>" <?= $choice['value'] === $viewMonthYear ? 'selected' : '' ?>>
                                     <?= e($choice['label']) ?>
                                 </option>
                             <?php endforeach; ?>
