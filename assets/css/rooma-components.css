@@ -888,6 +888,12 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
     position: relative;
     display: inline-block;
     white-space: nowrap;
+    /* Own stacking context. While the parent .section-head runs its reveal
+       transform the ::after highlight (z-index: -1) stays above section
+       backgrounds; the moment `transform: none` lands that context collapses
+       and the highlight would drop behind .section-paper / .section-sunken
+       and vanish mid-draw. isolation pins it inside the word instead. */
+    isolation: isolate;
 }
 .section-head__title .u-mark::after {
     content: '';
@@ -1570,7 +1576,10 @@ html:not(.js-reveal) .meter__fill { width: var(--w, 0); }
 .split__text { font-size: var(--text-md); color: var(--text-muted); line-height: var(--leading-body); margin: 0; }
 
 /* Media frame with layered decoration */
-.split__media { position: relative; }
+/* isolation keeps the ::before/::after plates (z-index: -1) inside this
+   element's own stacking context so a parent's reveal transform collapsing
+   (transform → none) can never drop them behind a section background. */
+.split__media { position: relative; isolation: isolate; }
 .frame {
     position: relative;
     border-radius: var(--radius-xl);
