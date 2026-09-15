@@ -184,9 +184,9 @@ $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
 
 <?php if (isset($_SESSION['waitlist_offer']) && (int)($_SESSION['waitlist_offer']['child_id'] ?? 0) === $childId): ?>
     <?php $wlClassId = (int) $_SESSION['waitlist_offer']['classroom_id']; unset($_SESSION['waitlist_offer']); ?>
-    <div class="card" style="padding:16px; margin-bottom:20px; background:#FEF3C7; border-right:4px solid #F59E0B;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-            <div style="font-size:0.9rem; font-weight:600; color:#92400E;">
+    <div class="alert alert-warning" style="margin-bottom:20px; border-inline-start-width:4px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; width:100%;">
+            <div style="font-size:0.9rem; font-weight:600;">
                 ظرفیت کلاس انتخابی تکمیل است. آیا مایلید این کودک به لیست انتظار این کلاس اضافه شود؟
             </div>
             <form method="post" action="<?= e(url('admin/child-action.php')) ?>" style="margin:0;">
@@ -245,7 +245,7 @@ $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
                     <input type="hidden" name="child_id" value="<?= e($childId) ?>">
                     <input type="hidden" name="action" value="graduate">
                     <input type="hidden" name="redirect" value="<?= e($detailRedirect) ?>">
-                    <button type="submit" class="btn btn-secondary" style="width: 100%; justify-content: center; background:#F3E8FF; color:#6B21A8; border-color:#E9D5FF;">🎓 تغییر به فارغ‌التحصیل</button>
+                    <button type="submit" class="btn btn-secondary btn-graduate" style="width: 100%; justify-content: center;">🎓 تغییر به فارغ‌التحصیل</button>
                 </form>
 
                 <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form" onsubmit="return confirm('ثبت انصراف این کودک انجام شود؟');">

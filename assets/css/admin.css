@@ -45,49 +45,49 @@
 
 /* ── DESIGN TOKENS (Compatibility Layer - Mapped to Brand --app-*) ──── */
 :root {
-    --adm-primary: var(--app-primary);
-    --adm-primary-light: var(--app-primary-light);
-    --adm-primary-dark: var(--app-primary-dark);
-    --adm-primary-50: var(--app-primary-50);
-    --adm-primary-100: var(--app-primary-100);
-    --adm-primary-200: var(--app-primary-100);
+    --adm-primary: var(--app-primary, #3D8B63);
+    --adm-primary-light: var(--app-primary-light, #6AAF8A);
+    --adm-primary-dark: var(--app-primary-dark, #2E6B4C);
+    --adm-primary-50: var(--app-primary-50, #EAF4EE);
+    --adm-primary-100: var(--app-primary-100, #D3E9DC);
+    --adm-primary-200: var(--app-primary-100, #D3E9DC);
     --adm-primary-glow: rgba(61,139,99,0.25);
-    --adm-secondary: var(--app-secondary);
-    --adm-accent: var(--app-accent);
-    --adm-success: var(--app-success);
-    --adm-success-50: var(--app-success-bg);
+    --adm-secondary: var(--app-secondary, #C4724A);
+    --adm-accent: var(--app-accent, #E8A838);
+    --adm-success: var(--app-success, #2E7D5B);
+    --adm-success-50: var(--app-success-bg, #E5F3EC);
     --adm-success-100: #D1FAE5;
-    --adm-warning: var(--app-warning);
-    --adm-warning-50: var(--app-warning-bg);
+    --adm-warning: var(--app-warning, #B8791A);
+    --adm-warning-50: var(--app-warning-bg, #FCF1DE);
     --adm-warning-100: #FEF3C7;
-    --adm-danger: var(--app-danger);
-    --adm-danger-50: var(--app-danger-bg);
+    --adm-danger: var(--app-danger, #B84040);
+    --adm-danger-50: var(--app-danger-bg, #FBEBEB);
     --adm-danger-100: #FEE2E2;
-    --adm-info: var(--app-info);
-    --adm-info-50: var(--app-info-bg);
+    --adm-info: var(--app-info, #3E6FA8);
+    --adm-info-50: var(--app-info-bg, #EAF1F8);
     --adm-info-100: #DBEAFE;
-    --adm-bg: var(--app-bg);
-    --adm-surface: var(--app-surface);
+    --adm-bg: var(--app-bg, #FAFBFA);
+    --adm-surface: var(--app-surface, #FFFFFF);
     --adm-surface-hover: #FAFBFC;
-    --adm-sidebar-bg: var(--app-sidebar-bg);
+    --adm-sidebar-bg: var(--app-sidebar-bg, #1B2622);
     --adm-sidebar-hover: rgba(255,255,255,0.06);
-    --adm-sidebar-active: var(--app-sidebar-active-bg);
-    --adm-sidebar-active-border: var(--app-primary);
-    --adm-sidebar-text: var(--app-sidebar-text);
-    --adm-sidebar-text-active: var(--app-sidebar-text-active);
-    --adm-sidebar-width: var(--app-sidebar-width);
-    --adm-topbar-height: var(--app-topbar-height);
-    --adm-text: var(--app-text);
-    --adm-text-secondary: var(--app-slate-600);
-    --adm-text-muted: var(--app-text-muted);
-    --adm-border: var(--app-border);
-    --adm-border-light: var(--app-border);
-    --adm-radius-xs: var(--app-radius-xs);
-    --adm-radius-sm: var(--app-radius-sm);
-    --adm-radius: var(--app-radius);
-    --adm-radius-lg: var(--app-radius-lg);
-    --adm-radius-xl: var(--app-radius-lg);
-    --adm-radius-full: var(--app-radius-full);
+    --adm-sidebar-active: var(--app-sidebar-active-bg, rgba(61,139,99,0.22));
+    --adm-sidebar-active-border: var(--adm-primary);
+    --adm-sidebar-text: var(--app-sidebar-text, #A9B7B1);
+    --adm-sidebar-text-active: var(--app-sidebar-text-active, #FFFFFF);
+    --adm-sidebar-width: var(--app-sidebar-width, 264px);
+    --adm-topbar-height: var(--app-topbar-height, 60px);
+    --adm-text: var(--app-text, #1B2622);
+    --adm-text-secondary: var(--app-slate-600, #5C6B64);
+    --adm-text-muted: var(--app-text-muted, #5C6B64);
+    --adm-border: var(--app-border, #E9ECEA);
+    --adm-border-light: var(--app-border, #E9ECEA);
+    --adm-radius-xs: var(--app-radius-xs, 6px);
+    --adm-radius-sm: var(--app-radius-sm, 8px);
+    --adm-radius: var(--app-radius, 12px);
+    --adm-radius-lg: var(--app-radius-lg, 16px);
+    --adm-radius-xl: var(--app-radius-lg, 16px);
+    --adm-radius-full: var(--app-radius-full, 9999px);
     --adm-shadow-xs: var(--app-shadow-sm);
     --adm-shadow: var(--app-shadow-sm);
     --adm-shadow-md: var(--app-shadow-md);
@@ -100,7 +100,7 @@
 
     /* Legacy public-site tokens still referenced by inline styles in admin
        pages (style.css is NOT loaded here) — remap onto panel tokens */
-    --adm-primary-faint: var(--app-primary-50);
+    --adm-primary-faint: var(--app-primary-50, #EAF4EE);
     --white: #FFFFFF;
     --muted: var(--adm-text-muted);
     --border: var(--adm-border);
@@ -190,6 +190,99 @@
 [data-theme="dark"] .badge-active,
 [data-theme="dark"] .badge-success {
     color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .admin-hint-box,
+[data-theme="dark"] .app-help-box,
+[data-theme="dark"] .app-hint-box {
+    background: rgba(61, 139, 99, 0.16) !important;
+    border-right-color: #6AAF8A !important;
+    color: #E7ECE9 !important;
+}
+[data-theme="dark"] .admin-hint-box strong,
+[data-theme="dark"] .app-help-box strong,
+[data-theme="dark"] .app-hint-box strong {
+    color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .alert-success,
+[data-theme="dark"] .notice {
+    background: rgba(46, 125, 91, 0.22) !important;
+    color: #86EFAC !important;
+    border-color: rgba(46, 125, 91, 0.45) !important;
+}
+
+[data-theme="dark"] .alert-danger,
+[data-theme="dark"] .alert-error {
+    background: rgba(184, 64, 64, 0.22) !important;
+    color: #FCA5A5 !important;
+    border-color: rgba(184, 64, 64, 0.45) !important;
+}
+
+[data-theme="dark"] .alert-warning {
+    background: rgba(184, 121, 26, 0.22) !important;
+    color: #FDE047 !important;
+    border-color: rgba(184, 121, 26, 0.45) !important;
+}
+
+[data-theme="dark"] .alert-info {
+    background: rgba(62, 111, 168, 0.22) !important;
+    color: #93C5FD !important;
+    border-color: rgba(62, 111, 168, 0.45) !important;
+}
+
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] .app-btn-primary,
+[data-theme="dark"] button.app-btn-primary,
+[data-theme="dark"] button.btn-primary {
+    background-color: #3D8B63 !important;
+    background-image: linear-gradient(135deg, #3D8B63, #2E6B4C) !important;
+    color: #FFFFFF !important;
+    border-color: transparent !important;
+}
+
+[data-theme="dark"] .btn-primary:hover,
+[data-theme="dark"] .app-btn-primary:hover,
+[data-theme="dark"] button.app-btn-primary:hover,
+[data-theme="dark"] button.btn-primary:hover {
+    background-color: #4EA375 !important;
+    background-image: linear-gradient(135deg, #4EA375, #3D8B63) !important;
+    color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .form-control {
+    background: var(--adm-surface) !important;
+    color: var(--adm-text) !important;
+    border-color: var(--adm-border) !important;
+}
+
+[data-theme="dark"] .form-control:focus {
+    border-color: #6AAF8A !important;
+    box-shadow: 0 0 0 3px rgba(61, 139, 99, 0.25) !important;
+}
+
+[data-theme="dark"] .form-label {
+    color: var(--adm-text) !important;
+}
+
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] .admin-section-title,
+[data-theme="dark"] .admin-page-title {
+    color: var(--adm-text) !important;
+}
+
+[data-theme="dark"] .admin-table td {
+    color: var(--adm-text);
+    border-bottom-color: var(--adm-border);
+}
+
+[data-theme="dark"] .admin-table th {
+    background: #141B16;
+    color: var(--adm-text-muted);
+    border-bottom-color: var(--adm-border);
 }
 
 /* ── RESET & BASE ───────────────────────────────────────────── */
@@ -339,6 +432,7 @@ a:hover{color:var(--adm-primary-dark)}
 /* ── ALERTS ─────────────────────────────────────────────────── */
 .alert{padding:14px 18px;border-radius:var(--adm-radius);font-size:0.85rem;font-weight:500;margin-bottom:20px;display:flex;align-items:center;gap:10px;border:1px solid;animation:slideIn 0.3s ease-out}
 @keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.alert:not([class*="alert-"]):not(.notice){background:var(--adm-danger-50);color:var(--adm-danger);border-color:var(--adm-danger)}
 .alert-success{background:var(--adm-success-50);color:var(--adm-success);border-color:transparent}
 .alert-danger{background:var(--adm-danger-50);color:var(--adm-danger);border-color:transparent}
 .alert-warning{background:var(--adm-warning-50);color:var(--adm-warning);border-color:transparent}
@@ -354,14 +448,14 @@ a:hover{color:var(--adm-primary-dark)}
 .empty-state p{font-size:0.85rem;color:var(--adm-text-muted);max-width:360px;margin:0 auto}
 
 /* ── BUTTONS ────────────────────────────────────────────────── */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 20px;border-radius:var(--adm-radius-sm);font-family:var(--adm-font);font-size:0.82rem;font-weight:600;line-height:1;text-decoration:none;border:1px solid transparent;cursor:pointer;transition:all var(--adm-transition);white-space:nowrap;position:relative;overflow:hidden}
-.btn:active{transform:scale(0.97)}
-.btn-sm{padding:7px 14px;font-size:0.75rem;border-radius:var(--adm-radius-xs)}
-.btn-xs{padding:5px 10px;font-size:0.7rem;border-radius:var(--adm-radius-xs)}
-.btn-primary{background:linear-gradient(135deg,var(--adm-primary),var(--adm-primary-dark));color:#fff;box-shadow:0 2px 8px rgba(61,139,99,0.25)}
-.btn-primary:hover{background:linear-gradient(135deg,var(--adm-primary-dark),var(--adm-primary));box-shadow:0 4px 14px rgba(61,139,99,0.35);transform:translateY(-1px);color:#fff}
-.btn-secondary{background:var(--adm-bg);color:var(--adm-text-secondary);border:1px solid var(--adm-border)}
-.btn-secondary:hover{background:var(--adm-surface-hover);border-color:var(--adm-text-muted);color:var(--adm-text)}
+.btn, .app-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 20px;border-radius:var(--adm-radius-sm);font-family:var(--adm-font);font-size:0.82rem;font-weight:600;line-height:1;text-decoration:none;border:1px solid transparent;cursor:pointer;transition:all var(--adm-transition);white-space:nowrap;position:relative;overflow:hidden}
+.btn:active, .app-btn:active{transform:scale(0.97)}
+.btn-sm, .app-btn-sm{padding:7px 14px;font-size:0.75rem;border-radius:var(--adm-radius-xs)}
+.btn-xs, .app-btn-xs{padding:5px 10px;font-size:0.7rem;border-radius:var(--adm-radius-xs)}
+.btn-primary, .app-btn-primary{background-color:#3D8B63;background-image:linear-gradient(135deg,#3D8B63,#2E6B4C);color:#fff !important;box-shadow:0 2px 8px rgba(61,139,99,0.25)}
+.btn-primary:hover, .app-btn-primary:hover{background-color:#2E6B4C;background-image:linear-gradient(135deg,#2E6B4C,#23523A);box-shadow:0 4px 14px rgba(61,139,99,0.35);transform:translateY(-1px);color:#fff !important}
+.btn-secondary, .app-btn-secondary{background:var(--adm-bg);color:var(--adm-text-secondary);border:1px solid var(--adm-border)}
+.btn-secondary:hover, .app-btn-secondary:hover{background:var(--adm-surface-hover);border-color:var(--adm-text-muted);color:var(--adm-text)}
 .btn-outline{background:transparent;color:var(--adm-text-secondary);border:1px solid var(--adm-border)}
 .btn-outline:hover{border-color:var(--adm-primary);color:var(--adm-primary);background:var(--adm-primary-50)}
 .btn-success{background:var(--adm-success);color:#fff}.btn-success:hover{background:#059669;color:#fff}
@@ -373,8 +467,26 @@ a:hover{color:var(--adm-primary-dark)}
    keep the danger look when both classes are present */
 .btn-reject.btn-secondary{background:transparent;color:var(--adm-danger);border-color:var(--adm-border)}
 .btn-reject.btn-secondary:hover{background:var(--adm-danger-50);border-color:var(--adm-danger);color:var(--adm-danger)}
+.btn-graduate{background:#F3E8FF;color:#6B21A8;border-color:#E9D5FF}
+.btn-graduate:hover{background:#E9D5FF;color:#581C87}
+[data-theme="dark"] .btn-graduate{background:rgba(124,58,237,0.22)!important;color:#C4B5FD!important;border-color:rgba(124,58,237,0.4)!important}
+[data-theme="dark"] .btn-graduate:hover{background:rgba(124,58,237,0.32)!important;color:#DDD6FE!important}
 .btn-login-as{background:var(--adm-info-50);color:var(--adm-info);border:1px solid var(--adm-info-100)}
 .btn-login-as:hover{background:var(--adm-info);color:#fff}
+
+/* ── HINT BOXES ─────────────────────────────────────────────── */
+.admin-hint-box,
+.app-help-box,
+.app-hint-box {
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: var(--adm-primary-50, #EAF4EE);
+    border-right: 3px solid var(--adm-primary, #3D8B63);
+    border-radius: var(--adm-radius-sm, 8px);
+    font-size: 0.875rem;
+    line-height: 2;
+    color: var(--adm-text, #1B2622);
+}
 
 /* ── TABLES ─────────────────────────────────────────────────── */
 .admin-table-wrap{overflow-x:auto;border-radius:var(--adm-radius);border:1px solid var(--adm-border);background:var(--adm-surface)}
@@ -907,3 +1019,168 @@ table.attendance-table th{background:var(--adm-bg)}
 .events-list{width:100%}
 .classroom-assign-form{align-items:center}
 .message-form .form-group{margin-bottom:18px}
+
+/* ================================================================
+   ROMA PANEL THEME & COMPONENT CONTRAST HARMONIZATION
+   Guarantees perfect contrast in light and dark mode across all panel pages
+   ================================================================ */
+
+/* Hint Boxes & Dimension Helpers */
+.admin-hint-box,
+.app-help-box,
+.app-hint-box {
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: var(--adm-primary-50, #EAF4EE);
+    border-right: 3px solid var(--adm-primary, #3D8B63);
+    border-radius: var(--adm-radius-sm, 8px);
+    font-size: 0.875rem;
+    line-height: 2;
+    color: var(--adm-text, #1B2622);
+}
+
+.admin-hint-box strong,
+.app-help-box strong,
+.app-hint-box strong {
+    color: var(--adm-text, #1B2622);
+}
+
+[data-theme="dark"] .admin-hint-box,
+[data-theme="dark"] .app-help-box,
+[data-theme="dark"] .app-hint-box {
+    background: rgba(61, 139, 99, 0.16) !important;
+    border-right-color: #6AAF8A !important;
+    color: #E7ECE9 !important;
+}
+
+[data-theme="dark"] .admin-hint-box strong,
+[data-theme="dark"] .app-help-box strong,
+[data-theme="dark"] .app-hint-box strong {
+    color: #FFFFFF !important;
+}
+
+/* Primary Action Buttons (Light & Dark) */
+.btn-primary,
+.app-btn-primary,
+button.btn-primary,
+button.app-btn-primary,
+a.btn-primary,
+a.app-btn-primary {
+    background-color: #3D8B63 !important;
+    background-image: linear-gradient(135deg, #3D8B63, #2E6B4C) !important;
+    color: #FFFFFF !important;
+    border-color: transparent !important;
+    box-shadow: 0 2px 8px rgba(61, 139, 99, 0.25);
+}
+
+.btn-primary:hover,
+.app-btn-primary:hover,
+button.btn-primary:hover,
+button.app-btn-primary:hover,
+a.btn-primary:hover,
+a.app-btn-primary:hover {
+    background-color: #2E6B4C !important;
+    background-image: linear-gradient(135deg, #2E6B4C, #23523A) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 4px 14px rgba(61, 139, 99, 0.35);
+    transform: translateY(-1px);
+}
+
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] .app-btn-primary,
+[data-theme="dark"] button.btn-primary,
+[data-theme="dark"] button.app-btn-primary,
+[data-theme="dark"] a.btn-primary,
+[data-theme="dark"] a.app-btn-primary {
+    background-color: #3D8B63 !important;
+    background-image: linear-gradient(135deg, #3D8B63, #2E6B4C) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .btn-primary:hover,
+[data-theme="dark"] .app-btn-primary:hover,
+[data-theme="dark"] button.btn-primary:hover,
+[data-theme="dark"] button.app-btn-primary:hover,
+[data-theme="dark"] a.btn-primary:hover,
+[data-theme="dark"] a.app-btn-primary:hover {
+    background-color: #4EA375 !important;
+    background-image: linear-gradient(135deg, #4EA375, #3D8B63) !important;
+    color: #FFFFFF !important;
+}
+
+/* Secondary Buttons */
+.btn-secondary,
+.app-btn-secondary {
+    background: var(--adm-bg, #FAFBFA);
+    color: var(--adm-text, #1B2622);
+    border: 1px solid var(--adm-border, #E9ECEA);
+}
+
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .app-btn-secondary {
+    background: var(--app-slate-100, #212B24) !important;
+    color: var(--app-text, #E7ECE9) !important;
+    border-color: var(--app-border, #26312B) !important;
+}
+
+/* Form inputs & controls in Dark mode */
+[data-theme="dark"] .form-control {
+    background-color: var(--adm-surface, #182019) !important;
+    color: var(--adm-text, #E7ECE9) !important;
+    border-color: var(--adm-border, #26312B) !important;
+}
+
+[data-theme="dark"] .form-control::placeholder {
+    color: #7A8C83 !important;
+}
+
+[data-theme="dark"] .form-control:focus {
+    border-color: #6AAF8A !important;
+    box-shadow: 0 0 0 3px rgba(61, 139, 99, 0.25) !important;
+}
+
+[data-theme="dark"] .form-label {
+    color: var(--adm-text, #E7ECE9) !important;
+}
+
+[data-theme="dark"] .form-card,
+[data-theme="dark"] .admin-card,
+[data-theme="dark"] .app-drawer {
+    background-color: var(--adm-surface, #182019) !important;
+    border-color: var(--adm-border, #26312B) !important;
+    color: var(--adm-text, #E7ECE9);
+}
+
+[data-theme="dark"] .app-drawer-title,
+[data-theme="dark"] .form-card h2,
+[data-theme="dark"] .admin-card-header h2 {
+    color: var(--adm-text, #E7ECE9) !important;
+}
+
+/* Flash alerts in Dark mode */
+[data-theme="dark"] .alert-success,
+[data-theme="dark"] .notice {
+    background: rgba(46, 125, 91, 0.22) !important;
+    color: #86EFAC !important;
+    border-color: rgba(46, 125, 91, 0.45) !important;
+}
+
+[data-theme="dark"] .alert-danger,
+[data-theme="dark"] .alert-error {
+    background: rgba(184, 64, 64, 0.22) !important;
+    color: #FCA5A5 !important;
+    border-color: rgba(184, 64, 64, 0.45) !important;
+}
+
+[data-theme="dark"] .alert-warning {
+    background: rgba(184, 121, 26, 0.22) !important;
+    color: #FDE047 !important;
+    border-color: rgba(184, 121, 26, 0.45) !important;
+}
+
+[data-theme="dark"] .alert-info {
+    background: rgba(62, 111, 168, 0.22) !important;
+    color: #93C5FD !important;
+    border-color: rgba(62, 111, 168, 0.45) !important;
+}

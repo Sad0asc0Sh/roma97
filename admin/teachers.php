@@ -391,7 +391,7 @@ require_once __DIR__ . '/header.php';
 <div class="card" style="padding:16px; margin-bottom:20px; border-right:4px solid var(--adm-primary,#3182ce);">
     <div style="font-weight:700; margin-bottom:8px;">🔑 لینک بازیابی رمز عبور معلم تولید شد (اعتبار: ۱ ساعت):</div>
     <div style="display:flex; gap:10px; align-items:center;">
-        <input type="text" value="<?= e($resetLinkUrl) ?>" readonly onclick="this.select()" style="flex:1; padding:8px 12px; border-radius:6px; border:1px solid #cbd5e0; font-family:monospace; direction:ltr;">
+        <input type="text" value="<?= e($resetLinkUrl) ?>" readonly onclick="this.select()" class="form-control" style="flex:1; font-family:monospace; direction:ltr;">
         <button type="button" class="btn btn-secondary" onclick="navigator.clipboard.writeText('<?= e($resetLinkUrl) ?>'); alert('لینک در حافظه کپی شد.');">کپی لینک</button>
     </div>
 </div>

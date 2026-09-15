@@ -319,10 +319,10 @@ require_once __DIR__ . '/header.php';
     <?php endif; ?>
 
     <!-- ── Gateway health ─────────────────────────────────────────── -->
-    <div class="admin-section" style="border-inline-start:5px solid <?= $gateway['ready'] ? 'var(--app-success, #2E7D5B)' : ($gateway['critical_issues'] === [] ? '#c8860d' : 'var(--adm-danger, #c62828)') ?>;">
+    <div class="admin-section" style="border-inline-start:5px solid <?= $gateway['ready'] ? 'var(--app-success, #2E7D5B)' : ($gateway['critical_issues'] === [] ? 'var(--adm-warning, #c8860d)' : 'var(--adm-danger, #c62828)') ?>;">
         <div class="admin-section-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
             <h2 class="admin-section-title" style="margin:0;">سلامت سامانه پیامک</h2>
-            <span style="font-weight:800;font-size:0.95rem;color:<?= $gateway['ready'] ? '#1e632b' : '#c62828' ?>;">
+            <span style="font-weight:800;font-size:0.95rem;color:<?= $gateway['ready'] ? 'var(--adm-success)' : 'var(--adm-danger)' ?>;">
                 <?= $gateway['ready'] ? '✅ آماده ارسال' : '⛔ ارسال پیامک انجام نمی‌شود' ?>
             </span>
         </div>
@@ -330,13 +330,13 @@ require_once __DIR__ . '/header.php';
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px;">
             <div class="card" style="padding:12px 14px;">
                 <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">کلید وب‌سرویس</div>
-                <div style="font-size:0.95rem;font-weight:800;color:<?= $gateway['api_key_set'] ? '#1e632b' : '#c62828' ?>;">
+                <div style="font-size:0.95rem;font-weight:800;color:<?= $gateway['api_key_set'] ? 'var(--adm-success)' : 'var(--adm-danger)' ?>;">
                     <?= $gateway['api_key_set'] ? 'ثبت شده' : 'ثبت نشده' ?>
                 </div>
             </div>
             <div class="card" style="padding:12px 14px;">
                 <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">ارسال سیستمی</div>
-                <div style="font-size:0.95rem;font-weight:800;color:<?= $gateway['enabled'] ? '#1e632b' : '#c8860d' ?>;">
+                <div style="font-size:0.95rem;font-weight:800;color:<?= $gateway['enabled'] ? 'var(--adm-success)' : 'var(--adm-warning)' ?>;">
                     <?= $gateway['enabled'] ? 'فعال' : 'غیرفعال' ?>
                 </div>
             </div>
@@ -357,13 +357,13 @@ require_once __DIR__ . '/header.php';
         </div>
 
         <?php foreach ($gateway['critical_issues'] as $issue): ?>
-            <div style="background:rgba(198,40,40,0.08);border:1px solid rgba(198,40,40,0.3);color:#8e1d1d;padding:10px 12px;border-radius:8px;margin-bottom:8px;font-size:0.88rem;line-height:1.7;">
+            <div style="background:rgba(198,40,40,0.12);border:1px solid rgba(198,40,40,0.3);color:var(--adm-danger);padding:10px 12px;border-radius:8px;margin-bottom:8px;font-size:0.88rem;line-height:1.7;">
                 ⛔ <?= e($issue) ?>
             </div>
         <?php endforeach; ?>
 
         <?php foreach ($gateway['warnings'] as $warning): ?>
-            <div style="background:rgba(200,134,13,0.08);border:1px solid rgba(200,134,13,0.3);color:#7a5205;padding:10px 12px;border-radius:8px;margin-bottom:8px;font-size:0.88rem;line-height:1.7;">
+            <div style="background:rgba(200,134,13,0.12);border:1px solid rgba(200,134,13,0.3);color:var(--adm-warning);padding:10px 12px;border-radius:8px;margin-bottom:8px;font-size:0.88rem;line-height:1.7;">
                 ⚠️ <?= e($warning) ?>
             </div>
         <?php endforeach; ?>
@@ -403,11 +403,11 @@ require_once __DIR__ . '/header.php';
             </div>
             <div class="card" style="padding:12px 14px;border-inline-start:4px solid var(--adm-danger, #c62828);">
                 <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">ناموفق (نیاز به بررسی)</div>
-                <div style="font-size:1.3rem;font-weight:800;color:#c62828;"><?= e(persianNumber((string) $stats['failed'])) ?></div>
+                <div style="font-size:1.3rem;font-weight:800;color:var(--adm-danger);"><?= e(persianNumber((string) $stats['failed'])) ?></div>
             </div>
             <div class="card" style="padding:12px 14px;border-inline-start:4px solid var(--app-success, #2E7D5B);">
                 <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">ارسال‌شده امروز</div>
-                <div style="font-size:1.3rem;font-weight:800;color:#1e632b;"><?= e(persianNumber((string) $stats['sent_today'])) ?></div>
+                <div style="font-size:1.3rem;font-weight:800;color:var(--adm-success);"><?= e(persianNumber((string) $stats['sent_today'])) ?></div>
             </div>
             <div class="card" style="padding:12px 14px;">
                 <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">خطای امروز</div>
@@ -455,9 +455,9 @@ require_once __DIR__ . '/header.php';
                             <?php
                             $qStatus = (string) $row['status'];
                             $statusMeta = match ($qStatus) {
-                                'pending' => ['⏳ در انتظار', '#7a5205'],
-                                'sending' => ['📤 در حال ارسال', '#0b5c8a'],
-                                'failed'  => ['❌ ناموفق', '#c62828'],
+                                'pending' => ['⏳ در انتظار', 'var(--adm-warning)'],
+                                'sending' => ['📤 در حال ارسال', 'var(--adm-info)'],
+                                'failed'  => ['❌ ناموفق', 'var(--adm-danger)'],
                                 default   => [$qStatus, 'var(--adm-text-muted)'],
                             };
                             $eventLabel = (string) ($catalog[(string) $row['event_type']]['label'] ?? $row['event_type']);
@@ -472,7 +472,7 @@ require_once __DIR__ . '/header.php';
                                 <td style="font-size:0.83rem;"><?= e($eventLabel) ?></td>
                                 <td style="font-weight:700;color:<?= e($statusMeta[1]) ?>;font-size:0.85rem;"><?= e($statusMeta[0]) ?></td>
                                 <td><?= e(persianNumber((string) $row['attempts'])) ?></td>
-                                <td style="font-size:0.78rem;color:#c62828;max-width:220px;">
+                                <td style="font-size:0.78rem;color:var(--adm-danger);max-width:220px;">
                                     <?= $row['last_error'] !== null && $row['last_error'] !== '' ? e((string) $row['last_error']) : '<span style="color:var(--adm-text-muted);">—</span>' ?>
                                 </td>
                                 <td>
@@ -492,7 +492,7 @@ require_once __DIR__ . '/header.php';
                                             <input type="hidden" name="queue_id" value="<?= e((string) $row['id']) ?>">
                                             <input type="hidden" name="return_status" value="<?= e($statusFilter) ?>">
                                             <input type="hidden" name="return_event" value="<?= e($eventFilter) ?>">
-                                            <button type="submit" class="btn btn-secondary" style="font-size:0.75rem;padding:4px 10px;color:#c62828;">✕ لغو</button>
+                                            <button type="submit" class="btn btn-secondary" style="font-size:0.75rem;padding:4px 10px;color:var(--adm-danger);">✕ لغو</button>
                                         </form>
                                     </div>
                                 </td>
@@ -543,11 +543,11 @@ require_once __DIR__ . '/header.php';
                             </td>
                             <td style="font-size:0.83rem;font-weight:700;">
                                 <?php if (!$gateway['enabled']): ?>
-                                    <span style="color:#7a5205;">⚪ پیامک غیرفعال</span>
+                                    <span style="color:var(--adm-warning);">⚪ پیامک غیرفعال</span>
                                 <?php elseif ($bodyId > 0): ?>
-                                    <span style="color:#1e632b;">✅ فعال</span>
+                                    <span style="color:var(--adm-success);">✅ فعال</span>
                                 <?php else: ?>
-                                    <span style="color:#c62828;">⛔ الگو تنظیم نشده</span>
+                                    <span style="color:var(--adm-danger);">⛔ الگو تنظیم نشده</span>
                                 <?php endif; ?>
                             </td>
                             <td style="font-size:0.82rem;">
@@ -556,9 +556,9 @@ require_once __DIR__ . '/header.php';
                                     : 'بله' ?>
                             </td>
                             <td style="font-size:0.83rem;">
-                                <span style="color:#1e632b;font-weight:700;"><?= e(persianNumber((string) $vol['sent'])) ?></span>
+                                <span style="color:var(--adm-success);font-weight:700;"><?= e(persianNumber((string) $vol['sent'])) ?></span>
                                 <?php if ($vol['failed'] > 0): ?>
-                                    <span style="color:#c62828;"> / <?= e(persianNumber((string) $vol['failed'])) ?> خطا</span>
+                                    <span style="color:var(--adm-danger);"> / <?= e(persianNumber((string) $vol['failed'])) ?> خطا</span>
                                 <?php endif; ?>
                             </td>
                             <td style="font-size:0.76rem;color:var(--adm-text-muted);">
@@ -687,9 +687,9 @@ require_once __DIR__ . '/header.php';
                                 <td dir="ltr" style="text-align:right;font-family:monospace;font-size:0.8rem;"><?= e((string) ($log['rec_id'] ?? '—')) ?></td>
                                 <td style="font-size:0.83rem;">
                                     <?php if ((string) ($log['status'] ?? '') === 'sent'): ?>
-                                        <span style="color:#1e632b;font-weight:700;">✅ موفق</span>
+                                        <span style="color:var(--adm-success);font-weight:700;">✅ موفق</span>
                                     <?php else: ?>
-                                        <span style="color:#c62828;font-weight:700;" title="<?= e((string) ($log['error_message'] ?? '')) ?>">
+                                        <span style="color:var(--adm-danger);font-weight:700;" title="<?= e((string) ($log['error_message'] ?? '')) ?>">
                                             ❌ <?= e((string) ($log['error_message'] ?: ($log['status'] ?? 'ناموفق'))) ?>
                                         </span>
                                     <?php endif; ?>

@@ -589,7 +589,7 @@ require_once __DIR__ . '/header.php';
                                         loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
                                 </div>
                             <?php else: ?>
-                                <div style="padding:10px 14px;background:rgba(232,168,56,0.12);border:1px solid rgba(232,168,56,0.35);border-radius:var(--radius-sm);font-size:0.8125rem;color:#A07018;">
+                                <div style="padding:10px 14px;background:var(--adm-warning-50, rgba(232,168,56,0.12));border:1px solid rgba(232,168,56,0.35);border-radius:var(--radius-sm);font-size:0.8125rem;color:var(--adm-warning, #B8791A);">
                                     لینک ثبت شده است، اما پیش‌نمایش داخلی برای این سرویس ممکن نیست (مثلاً بلد). لینک در صفحه تماس به‌صورت دکمه نمایش داده می‌شود.
                                 </div>
                             <?php endif; ?>
@@ -791,7 +791,7 @@ require_once __DIR__ . '/header.php';
                     </div>
                 </div>
 
-                <h3 style="font-size:1.05rem;margin-bottom:var(--space-md);color:var(--text);border-bottom:1px dashed var(--border);padding-bottom:8px;">
+                <h3 style="font-size:1.05rem;margin-bottom:var(--space-md);color:var(--adm-text);border-bottom:1px dashed var(--adm-border);padding-bottom:8px;">
                     📋 شناسه‌های الگوهای متنی تایید شده در ملی‌پیامک (با لحن گرم و کودک‌محور)
                 </h3>
 
@@ -895,9 +895,9 @@ require_once __DIR__ . '/header.php';
             </form>
 
             <!-- Test SMS Form -->
-            <div style="background:rgba(46,133,64,0.06);border:1px solid rgba(46,133,64,0.25);padding:18px;border-radius:var(--radius-md);margin-bottom:var(--space-xl);">
-                <h3 style="font-size:1rem;color:#1e632b;margin-bottom:8px;">🧪 تست زنده ارسال پیامک خدماتی با الگو</h3>
-                <p style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;">برای اطمینان از صحت کلید API و شناسه الگو، یک پیامک تستی به شماره دلخواه ارسال کنید.</p>
+            <div style="background:var(--adm-primary-50, rgba(46,133,64,0.06));border:1px solid var(--adm-border);padding:18px;border-radius:var(--radius-md);margin-bottom:var(--space-xl);">
+                <h3 style="font-size:1rem;color:var(--adm-primary,#3D8B63);margin-bottom:8px;">🧪 تست زنده ارسال پیامک خدماتی با الگو</h3>
+                <p style="font-size:0.85rem;color:var(--adm-text-muted);margin-bottom:12px;">برای اطمینان از صحت کلید API و شناسه الگو، یک پیامک تستی به شماره دلخواه ارسال کنید.</p>
                 <form method="post" action="<?= e(url('admin/settings.php#sms-section')) ?>" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
                     <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                     <input type="hidden" name="action" value="test_sms">
@@ -922,14 +922,14 @@ require_once __DIR__ . '/header.php';
                         <input type="text" name="test_arg2" class="form-control" placeholder="روما">
                     </div>
 
-                    <button type="submit" class="btn" style="background:#2e8540;color:#fff;border:none;padding:10px 18px;font-size:0.88rem;cursor:pointer;border-radius:var(--radius-sm);">
+                    <button type="submit" class="btn btn-primary" style="padding:10px 18px;font-size:0.88rem;cursor:pointer;border-radius:var(--radius-sm);">
                         🚀 ارسال پیامک تست
                     </button>
                 </form>
             </div>
 
             <!-- Recent SMS Logs Table -->
-            <h3 style="font-size:1.05rem;margin-bottom:var(--space-md);color:var(--text);">
+            <h3 style="font-size:1.05rem;margin-bottom:var(--space-md);color:var(--adm-text);">
                 📜 آخرین پیامک‌های ارسالی سیستم (لاگ وضعیت)
             </h3>
             <?php if (!empty($recentSmsLogs)): ?>
@@ -952,7 +952,7 @@ require_once __DIR__ . '/header.php';
                                 <tr>
                                     <td><?= e($log['id']) ?></td>
                                     <td dir="ltr" style="text-align:right;font-family:monospace;"><?= e($log['recipient_phone']) ?></td>
-                                    <td><?= !empty($log['p_first']) ? e($log['p_first'] . ' ' . $log['p_last']) : '<span style="color:var(--muted);">-</span>' ?></td>
+                                    <td><?= !empty($log['p_first']) ? e($log['p_first'] . ' ' . $log['p_last']) : '<span style="color:var(--adm-text-muted);">-</span>' ?></td>
                                     <td>
                                         <span class="badge badge-secondary" style="font-size:0.75rem;">
                                             <?= e($log['message_type'] ?? 'pattern') ?>
@@ -962,14 +962,14 @@ require_once __DIR__ . '/header.php';
                                     <td dir="ltr" style="text-align:right;font-family:monospace;"><?= e($log['rec_id'] ?? '-') ?></td>
                                     <td>
                                         <?php if (($log['status'] ?? '') === 'sent'): ?>
-                                            <span style="color:#2e8540;font-weight:bold;">✅ موفق</span>
+                                            <span style="color:var(--adm-success);font-weight:bold;">✅ موفق</span>
                                         <?php else: ?>
-                                            <span style="color:#c62828;font-weight:bold;" title="<?= e($log['error_message'] ?? '') ?>">
+                                            <span style="color:var(--adm-danger);font-weight:bold;" title="<?= e($log['error_message'] ?? '') ?>">
                                                 ❌ <?= e($log['error_message'] ?: ($log['status'] ?? 'ناموفق')) ?>
                                             </span>
                                         <?php endif; ?>
                                     </td>
-                                    <td style="font-size:0.78rem;color:var(--muted);"><?= e(shamsiDate((string)$log['created_at'], 'with_time')) ?></td>
+                                    <td style="font-size:0.78rem;color:var(--adm-text-muted);"><?= e(shamsiDate((string)$log['created_at'], 'with_time')) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>

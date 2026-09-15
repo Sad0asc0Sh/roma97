@@ -423,7 +423,7 @@ require_once __DIR__ . '/header.php';
 
 <section class="dashboard">
     <div class="app-toolbar">
-        <h1 style="margin:0;font-size:1.5rem;font-weight:800">مدیریت اسلایدها</h1>
+        <h1 class="m-0 font-bold" style="font-size:1.5rem;color:var(--adm-text);">مدیریت اسلایدها</h1>
         <div class="app-toolbar-actions">
             <button type="button" class="app-btn app-btn-primary" onclick="openSlideDrawer()">
                 + افزودن اسلاید جدید
@@ -442,7 +442,9 @@ require_once __DIR__ . '/header.php';
     <?php endif; ?>
 
     <template id="slideFormTemplate">
-        <div style="margin-bottom:16px;padding:12px 16px;background:#f0f9f4;border-right:3px solid #3D8B63;border-radius:8px;font-size:0.875rem;line-height:2"><strong>راهنمای ابعاد بنر:</strong> دسکتاپ ۱۹۲۰×۶۰۰ (نسبت ۱۶:۵) — الزامی. تصویر موبایل: اختیاری، برای جلوگیری از کراپ بیش‌ازحد روی گوشی پیشنهاد می‌شود، نسبت حدود ۴:۳ (مثلاً ۱۰۰۰×۷۵۰). اگر آپلود نشود، همان تصویر دسکتاپ به‌صورت خودکار روی موبایل هم استفاده می‌شود.</div>
+        <div class="admin-hint-box">
+            <strong>راهنمای ابعاد بنر:</strong> دسکتاپ ۱۹۲۰×۶۰۰ (نسبت ۱۶:۵) — الزامی. تصویر موبایل: اختیاری، برای جلوگیری از کراپ بیش‌ازحد روی گوشی پیشنهاد می‌شود، نسبت حدود ۴:۳ (مثلاً ۱۰۰۰×۷۵۰). اگر آپلود نشود، همان تصویر دسکتاپ به‌صورت خودکار روی موبایل هم استفاده می‌شود.
+        </div>
         <form method="post" action="<?= e(url('admin/slides.php')) ?>" enctype="multipart/form-data" novalidate>
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="save_slide">
@@ -460,7 +462,7 @@ require_once __DIR__ . '/header.php';
             </div>
 
             <div class="form-group">
-                <label for="subtitle" class="form-label">زیرعنوان <span style="color:var(--muted);font-weight:400">(اختیاری)</span></label>
+                <label for="subtitle" class="form-label">زیرعنوان <span style="color:var(--adm-text-muted);font-weight:400">(اختیاری)</span></label>
                 <input type="text" id="subtitle" name="subtitle" class="form-control"
                     maxlength="500"
                     placeholder="متن توضیحی زیر عنوان بنر"
@@ -488,7 +490,7 @@ require_once __DIR__ . '/header.php';
                 <input type="file" id="image" name="image" class="form-control"
                     accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                     <?= $editSlide ? '' : 'required' ?>>
-                <small style="color:var(--muted);font-size:0.85rem;">فرمت: JPG, PNG, WebP — حداکثر ۲ مگابایت — ابعاد پیشنهادی: ۱۹۲۰×۶۰۰ px</small>
+                <small style="color:var(--adm-text-muted);font-size:0.85rem;">فرمت: JPG, PNG, WebP — حداکثر ۲ مگابایت — ابعاد پیشنهادی: ۱۹۲۰×۶۰۰ px</small>
             </div>
 
             <?php if ($editSlide && !empty($editSlide['image_mobile'])): ?>
@@ -499,14 +501,14 @@ require_once __DIR__ . '/header.php';
             <?php endif; ?>
 
             <div class="form-group">
-                <label for="image_mobile" class="form-label">تصویر اختصاصی موبایل <span style="color:var(--muted);font-weight:400">(اختیاری)</span></label>
+                <label for="image_mobile" class="form-label">تصویر اختصاصی موبایل <span style="color:var(--adm-text-muted);font-weight:400">(اختیاری)</span></label>
                 <input type="file" id="image_mobile" name="image_mobile" class="form-control"
                     accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-                <small style="color:var(--muted);font-size:0.85rem;">اختیاری — برای جلوگیری از کراپ بیش‌ازحد روی گوشی پیشنهاد می‌شود، نسبت حدود ۴:۳ (مثلاً ۱۰۰۰×۷۵۰ px)</small>
+                <small style="color:var(--adm-text-muted);font-size:0.85rem;">اختیاری — برای جلوگیری از کراپ بیش‌ازحد روی گوشی پیشنهاد می‌شود، نسبت حدود ۴:۳ (مثلاً ۱۰۰۰×۷۵۰ px)</small>
             </div>
 
             <div class="form-actions" style="margin-top:1.5rem;">
-                <button type="submit" class="btn btn-primary" style="width:100%">
+                <button type="submit" class="app-btn app-btn-primary btn btn-primary" style="width:100%">
                     <?= $editSlide ? 'به‌روزرسانی اسلاید' : 'افزودن اسلاید' ?>
                 </button>
             </div>

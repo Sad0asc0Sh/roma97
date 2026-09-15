@@ -5,14 +5,14 @@
    ================================================================ */
 
 :root {
-  /* Brand Tokens - Synced with main site brand */
-  --app-primary: var(--primary, #3D8B63);
-  --app-primary-dark: var(--primary-dark, #2E6B4C);
-  --app-primary-light: var(--primary-light, #6AAF8A);
+  /* Brand Tokens - Clean concrete values preventing circular dependency */
+  --app-primary: #3D8B63;
+  --app-primary-dark: #2E6B4C;
+  --app-primary-light: #6AAF8A;
   --app-primary-50: #EAF4EE;
   --app-primary-100: #D3E9DC;
-  --app-secondary: var(--secondary, #C4724A);
-  --app-accent: var(--accent, #E8A838);
+  --app-secondary: #C4724A;
+  --app-accent: #E8A838;
 
   /* Spacing Scale Tokens - Synced with root design scale */
   --space-3xs: 2px;
@@ -847,13 +847,25 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
 }
 
 .app-btn-primary {
-  background: var(--app-primary);
-  color: #FFFFFF;
+  background: var(--app-primary, #3D8B63);
+  background-color: #3D8B63;
+  color: #FFFFFF !important;
 }
 
 .app-btn-primary:hover {
-  background: var(--app-primary-dark);
-  color: #FFFFFF;
+  background: var(--app-primary-dark, #2E6B4C);
+  background-color: #2E6B4C;
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .app-btn-primary {
+  background: var(--app-primary, #3D8B63) !important;
+  color: #FFFFFF !important;
+}
+
+[data-theme="dark"] .app-btn-primary:hover {
+  background: var(--app-primary-dark, #2E6B4C) !important;
+  color: #FFFFFF !important;
 }
 
 .app-btn-secondary {
@@ -864,6 +876,34 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
 
 .app-btn-secondary:hover {
   background: var(--app-slate-200);
+}
+
+/* ── HINT & INFO BOXES ─────────────────────────────────────── */
+.admin-hint-box,
+.app-help-box,
+.app-hint-box {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: var(--app-primary-50, #EAF4EE);
+  border-right: 3px solid var(--app-primary, #3D8B63);
+  border-radius: var(--app-radius-sm, 8px);
+  font-size: var(--app-text-sm, 0.875rem);
+  line-height: 2;
+  color: var(--app-text, #1B2622);
+}
+
+[data-theme="dark"] .admin-hint-box,
+[data-theme="dark"] .app-help-box,
+[data-theme="dark"] .app-hint-box {
+  background: rgba(61, 139, 99, 0.16) !important;
+  border-right-color: #6AAF8A !important;
+  color: #E7ECE9 !important;
+}
+
+[data-theme="dark"] .admin-hint-box strong,
+[data-theme="dark"] .app-help-box strong,
+[data-theme="dark"] .app-hint-box strong {
+  color: #FFFFFF !important;
 }
 
 /* ── SHAMSI DATEPICKER COMPONENT ───────────────────────────── */
