@@ -13,8 +13,21 @@ $galleryItems = [];
 try {
     $pdo = getDb();
 
-    $stmt = $pdo->query('SELECT id, title, subtitle, image, image_mobile FROM slides ORDER BY sort_order ASC, created_at DESC');
-    $slides = $stmt->fetchAll();
+    try {
+        $stmt = $pdo->query('SELECT id, title, subtitle, image, image_mobile FROM slides ORDER BY sort_order ASC, created_at DESC');
+        $slides = $stmt->fetchAll();
+    } catch (Throwable $slideException) {
+        if (str_contains($slideException->getMessage(), 'image_mobile')) {
+            $stmt = $pdo->query('SELECT id, title, subtitle, image FROM slides ORDER BY sort_order ASC, created_at DESC');
+            $slides = $stmt->fetchAll();
+            foreach ($slides as &$slide) {
+                $slide['image_mobile'] = null;
+            }
+            unset($slide);
+        } else {
+            throw $slideException;
+        }
+    }
 
     $stmt = $pdo->query('SELECT id, title, content, image, category, created_at FROM news ORDER BY created_at DESC LIMIT 3');
     $latestNews = $stmt->fetchAll();

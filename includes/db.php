@@ -67,7 +67,25 @@ function initializeDatabase(): bool
 
 function initializeCmsTables(): void
 {
-    // Schema is created at install time via setup.php / schema.sql
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+    $initialized = true;
+
+    try {
+        $pdo = getDb();
+        $cols = $pdo->query("SHOW COLUMNS FROM slides")->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!in_array('subtitle', $cols, true)) {
+            $pdo->exec("ALTER TABLE slides ADD COLUMN subtitle VARCHAR(500) DEFAULT NULL AFTER title");
+        }
+        if (!in_array('image_mobile', $cols, true)) {
+            $pdo->exec("ALTER TABLE slides ADD COLUMN image_mobile VARCHAR(255) DEFAULT NULL AFTER image");
+        }
+    } catch (Throwable $e) {
+        error_log($e->getMessage());
+    }
 }
 
 /**

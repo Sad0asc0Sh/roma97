@@ -19,22 +19,53 @@ function slideStringLength(string $value): int
 
 function findSlide(PDO $pdo, int $id): ?array
 {
-    $statement = $pdo->prepare('SELECT id, title, subtitle, image, image_mobile, sort_order, created_at FROM slides WHERE id = :id LIMIT 1');
-    $statement->execute([':id' => $id]);
-    $slide = $statement->fetch();
+    try {
+        $statement = $pdo->prepare('SELECT id, title, subtitle, image, image_mobile, sort_order, created_at FROM slides WHERE id = :id LIMIT 1');
+        $statement->execute([':id' => $id]);
+        $slide = $statement->fetch();
 
-    return $slide ?: null;
+        return $slide ?: null;
+    } catch (PDOException $e) {
+        if (str_contains($e->getMessage(), 'image_mobile')) {
+            $statement = $pdo->prepare('SELECT id, title, subtitle, image, sort_order, created_at FROM slides WHERE id = :id LIMIT 1');
+            $statement->execute([':id' => $id]);
+            $slide = $statement->fetch();
+            if ($slide) {
+                $slide['image_mobile'] = null;
+                return $slide;
+            }
+            return null;
+        }
+        throw $e;
+    }
 }
 
 function getAllSlides(PDO $pdo, int $limit = 20, int $offset = 0): array
 {
-    $statement = $pdo->prepare(
-        'SELECT id, title, subtitle, image, image_mobile, sort_order, created_at FROM slides ORDER BY sort_order ASC, created_at DESC'
-        . ' LIMIT ' . (int) $limit . ' OFFSET ' . (int) $offset
-    );
-    $statement->execute();
+    try {
+        $statement = $pdo->prepare(
+            'SELECT id, title, subtitle, image, image_mobile, sort_order, created_at FROM slides ORDER BY sort_order ASC, created_at DESC'
+            . ' LIMIT ' . (int) $limit . ' OFFSET ' . (int) $offset
+        );
+        $statement->execute();
 
-    return $statement->fetchAll();
+        return $statement->fetchAll();
+    } catch (PDOException $e) {
+        if (str_contains($e->getMessage(), 'image_mobile')) {
+            $statement = $pdo->prepare(
+                'SELECT id, title, subtitle, image, sort_order, created_at FROM slides ORDER BY sort_order ASC, created_at DESC'
+                . ' LIMIT ' . (int) $limit . ' OFFSET ' . (int) $offset
+            );
+            $statement->execute();
+            $slides = $statement->fetchAll();
+            foreach ($slides as &$slide) {
+                $slide['image_mobile'] = null;
+            }
+            unset($slide);
+            return $slides;
+        }
+        throw $e;
+    }
 }
 
 function countSlides(PDO $pdo): int
@@ -225,17 +256,34 @@ if (isPostRequest()) {
             }
 
             if ($isEdit) {
-                $statement = $pdo->prepare(
-                    'UPDATE slides SET title = :title, subtitle = :subtitle, image = :image, image_mobile = :image_mobile, sort_order = :sort_order WHERE id = :id'
-                );
-                $statement->execute([
-                    ':title' => $title,
-                    ':subtitle' => $subtitle !== '' ? $subtitle : null,
-                    ':image' => $imagePath,
-                    ':image_mobile' => $imageMobilePath,
-                    ':sort_order' => $sortOrder,
-                    ':id' => $slideId,
-                ]);
+                try {
+                    $statement = $pdo->prepare(
+                        'UPDATE slides SET title = :title, subtitle = :subtitle, image = :image, image_mobile = :image_mobile, sort_order = :sort_order WHERE id = :id'
+                    );
+                    $statement->execute([
+                        ':title' => $title,
+                        ':subtitle' => $subtitle !== '' ? $subtitle : null,
+                        ':image' => $imagePath,
+                        ':image_mobile' => $imageMobilePath,
+                        ':sort_order' => $sortOrder,
+                        ':id' => $slideId,
+                    ]);
+                } catch (PDOException $e) {
+                    if (str_contains($e->getMessage(), 'image_mobile')) {
+                        $statement = $pdo->prepare(
+                            'UPDATE slides SET title = :title, subtitle = :subtitle, image = :image, sort_order = :sort_order WHERE id = :id'
+                        );
+                        $statement->execute([
+                            ':title' => $title,
+                            ':subtitle' => $subtitle !== '' ? $subtitle : null,
+                            ':image' => $imagePath,
+                            ':sort_order' => $sortOrder,
+                            ':id' => $slideId,
+                        ]);
+                    } else {
+                        throw $e;
+                    }
+                }
 
                 if ($newImage !== null) {
                     deleteSlideImage((string) $currentSlide['image']);
@@ -249,16 +297,32 @@ if (isPostRequest()) {
                 redirect(url('admin/slides.php'));
             }
 
-            $statement = $pdo->prepare(
-                'INSERT INTO slides (title, subtitle, image, image_mobile, sort_order) VALUES (:title, :subtitle, :image, :image_mobile, :sort_order)'
-            );
-            $statement->execute([
-                ':title' => $title,
-                ':subtitle' => $subtitle !== '' ? $subtitle : null,
-                ':image' => $imagePath,
-                ':image_mobile' => $imageMobilePath,
-                ':sort_order' => $sortOrder,
-            ]);
+            try {
+                $statement = $pdo->prepare(
+                    'INSERT INTO slides (title, subtitle, image, image_mobile, sort_order) VALUES (:title, :subtitle, :image, :image_mobile, :sort_order)'
+                );
+                $statement->execute([
+                    ':title' => $title,
+                    ':subtitle' => $subtitle !== '' ? $subtitle : null,
+                    ':image' => $imagePath,
+                    ':image_mobile' => $imageMobilePath,
+                    ':sort_order' => $sortOrder,
+                ]);
+            } catch (PDOException $e) {
+                if (str_contains($e->getMessage(), 'image_mobile')) {
+                    $statement = $pdo->prepare(
+                        'INSERT INTO slides (title, subtitle, image, sort_order) VALUES (:title, :subtitle, :image, :sort_order)'
+                    );
+                    $statement->execute([
+                        ':title' => $title,
+                        ':subtitle' => $subtitle !== '' ? $subtitle : null,
+                        ':image' => $imagePath,
+                        ':sort_order' => $sortOrder,
+                    ]);
+                } else {
+                    throw $e;
+                }
+            }
 
             recordAudit('slide.create', 'slide', (int) $pdo->lastInsertId());
             setFlash('success', 'اسلاید با موفقیت ایجاد شد.');
