@@ -19,7 +19,7 @@ function slideStringLength(string $value): int
 
 function findSlide(PDO $pdo, int $id): ?array
 {
-    $statement = $pdo->prepare('SELECT id, title, subtitle, image, sort_order, created_at FROM slides WHERE id = :id LIMIT 1');
+    $statement = $pdo->prepare('SELECT id, title, subtitle, image, image_mobile, sort_order, created_at FROM slides WHERE id = :id LIMIT 1');
     $statement->execute([':id' => $id]);
     $slide = $statement->fetch();
 
@@ -29,7 +29,7 @@ function findSlide(PDO $pdo, int $id): ?array
 function getAllSlides(PDO $pdo, int $limit = 20, int $offset = 0): array
 {
     $statement = $pdo->prepare(
-        'SELECT id, title, subtitle, image, sort_order, created_at FROM slides ORDER BY sort_order ASC, created_at DESC'
+        'SELECT id, title, subtitle, image, image_mobile, sort_order, created_at FROM slides ORDER BY sort_order ASC, created_at DESC'
         . ' LIMIT ' . (int) $limit . ' OFFSET ' . (int) $offset
     );
     $statement->execute();
@@ -196,6 +196,7 @@ if (isPostRequest()) {
             $isEdit = $slideId > 0;
             $currentSlide = null;
             $newImage = null;
+            $newImageMobile = null;
 
             if ($title === '' || slideStringLength($title) > 255 || $sortOrder === null) {
                 setFlash('error', 'لطفاً عنوان و ترتیب نمایش معتبر وارد کنید.');
@@ -214,6 +215,10 @@ if (isPostRequest()) {
             $newImage = uploadSlideImage($_FILES['image'] ?? [], !$isEdit);
             $imagePath = $newImage ?? (string) ($currentSlide['image'] ?? '');
 
+            $newImageMobile = uploadSlideImage($_FILES['image_mobile'] ?? [], false);
+            $imageMobilePath = $newImageMobile ?? (string) ($currentSlide['image_mobile'] ?? '');
+            $imageMobilePath = $imageMobilePath !== '' ? $imageMobilePath : null;
+
             if ($imagePath === '') {
                 setFlash('error', 'لطفاً تصویر معتبر اسلاید را بارگذاری کنید.');
                 redirect($isEdit ? url('admin/slides.php?edit=' . $slideId) : url('admin/slides.php'));
@@ -221,18 +226,22 @@ if (isPostRequest()) {
 
             if ($isEdit) {
                 $statement = $pdo->prepare(
-                    'UPDATE slides SET title = :title, subtitle = :subtitle, image = :image, sort_order = :sort_order WHERE id = :id'
+                    'UPDATE slides SET title = :title, subtitle = :subtitle, image = :image, image_mobile = :image_mobile, sort_order = :sort_order WHERE id = :id'
                 );
                 $statement->execute([
                     ':title' => $title,
                     ':subtitle' => $subtitle !== '' ? $subtitle : null,
                     ':image' => $imagePath,
+                    ':image_mobile' => $imageMobilePath,
                     ':sort_order' => $sortOrder,
                     ':id' => $slideId,
                 ]);
 
                 if ($newImage !== null) {
                     deleteSlideImage((string) $currentSlide['image']);
+                }
+                if ($newImageMobile !== null && !empty($currentSlide['image_mobile'])) {
+                    deleteSlideImage((string) $currentSlide['image_mobile']);
                 }
 
                 recordAudit('slide.update', 'slide', (int) $slideId);
@@ -241,12 +250,13 @@ if (isPostRequest()) {
             }
 
             $statement = $pdo->prepare(
-                'INSERT INTO slides (title, subtitle, image, sort_order) VALUES (:title, :subtitle, :image, :sort_order)'
+                'INSERT INTO slides (title, subtitle, image, image_mobile, sort_order) VALUES (:title, :subtitle, :image, :image_mobile, :sort_order)'
             );
             $statement->execute([
                 ':title' => $title,
                 ':subtitle' => $subtitle !== '' ? $subtitle : null,
                 ':image' => $imagePath,
+                ':image_mobile' => $imageMobilePath,
                 ':sort_order' => $sortOrder,
             ]);
 
@@ -267,6 +277,9 @@ if (isPostRequest()) {
             $statement = $pdo->prepare('DELETE FROM slides WHERE id = :id');
             $statement->execute([':id' => $slideId]);
             deleteSlideImage((string) $slide['image']);
+            if (!empty($slide['image_mobile'])) {
+                deleteSlideImage((string) $slide['image_mobile']);
+            }
 
             recordAudit('slide.delete', 'slide', (int) $slideId);
             setFlash('success', 'اسلاید با موفقیت حذف شد.');
@@ -317,6 +330,10 @@ if (isPostRequest()) {
             deleteSlideImage($newImage);
         }
 
+        if (isset($newImageMobile) && is_string($newImageMobile)) {
+            deleteSlideImage($newImageMobile);
+        }
+
         error_log($exception->getMessage());
         $msg = $exception->getMessage() !== ''
             ? 'اسلاید ذخیره نشد: ' . $exception->getMessage()
@@ -361,7 +378,7 @@ require_once __DIR__ . '/header.php';
     <?php endif; ?>
 
     <template id="slideFormTemplate">
-        <div style="margin-bottom:16px;padding:12px 16px;background:#f0f9f4;border-right:3px solid #3D8B63;border-radius:8px;font-size:0.875rem;line-height:2"><strong>راهنمای ابعاد بنر:</strong> دسکتاپ: ۱۹۲۰×۶۰۰ | تبلت: ۱۰۲۴×۴۵۰ | موبایل: ۷۵۰×۱۰۰۰ — فرمت: JPG/PNG/WebP — حداکثر ۲MB — نسبت ایده‌آل: <strong>۱۶:۵</strong></div>
+        <div style="margin-bottom:16px;padding:12px 16px;background:#f0f9f4;border-right:3px solid #3D8B63;border-radius:8px;font-size:0.875rem;line-height:2"><strong>راهنمای ابعاد بنر:</strong> دسکتاپ ۱۹۲۰×۶۰۰ (نسبت ۱۶:۵) — الزامی. تصویر موبایل: اختیاری، برای جلوگیری از کراپ بیش‌ازحد روی گوشی پیشنهاد می‌شود، نسبت حدود ۴:۳ (مثلاً ۱۰۰۰×۷۵۰). اگر آپلود نشود، همان تصویر دسکتاپ به‌صورت خودکار روی موبایل هم استفاده می‌شود.</div>
         <form method="post" action="<?= e(url('admin/slides.php')) ?>" enctype="multipart/form-data" novalidate>
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="save_slide">
@@ -397,17 +414,31 @@ require_once __DIR__ . '/header.php';
 
             <?php if ($editSlide): ?>
                 <div class="form-group">
-                    <label class="form-label">تصویر فعلی</label>
+                    <label class="form-label">تصویر دسکتاپ فعلی</label>
                     <img src="<?= e(url($editSlide['image'])) ?>" alt="<?= e($editSlide['title']) ?>" class="admin-image-preview">
                 </div>
             <?php endif; ?>
 
             <div class="form-group">
-                <label for="image" class="form-label">تصویر <?= $editSlide ? '(اختیاری - برای تغییر)' : '' ?></label>
+                <label for="image" class="form-label">تصویر دسکتاپ <?= $editSlide ? '(اختیاری - برای تغییر)' : '' ?></label>
                 <input type="file" id="image" name="image" class="form-control"
                     accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                     <?= $editSlide ? '' : 'required' ?>>
                 <small style="color:var(--muted);font-size:0.85rem;">فرمت: JPG, PNG, WebP — حداکثر ۲ مگابایت — ابعاد پیشنهادی: ۱۹۲۰×۶۰۰ px</small>
+            </div>
+
+            <?php if ($editSlide && !empty($editSlide['image_mobile'])): ?>
+                <div class="form-group">
+                    <label class="form-label">تصویر اختصاصی موبایل فعلی</label>
+                    <img src="<?= e(url($editSlide['image_mobile'])) ?>" alt="موبایل - <?= e($editSlide['title']) ?>" class="admin-image-preview" style="max-width:180px;border-radius:8px;aspect-ratio:4/3;object-fit:cover;">
+                </div>
+            <?php endif; ?>
+
+            <div class="form-group">
+                <label for="image_mobile" class="form-label">تصویر اختصاصی موبایل <span style="color:var(--muted);font-weight:400">(اختیاری)</span></label>
+                <input type="file" id="image_mobile" name="image_mobile" class="form-control"
+                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                <small style="color:var(--muted);font-size:0.85rem;">اختیاری — برای جلوگیری از کراپ بیش‌ازحد روی گوشی پیشنهاد می‌شود، نسبت حدود ۴:۳ (مثلاً ۱۰۰۰×۷۵۰ px)</small>
             </div>
 
             <div class="form-actions" style="margin-top:1.5rem;">
@@ -450,7 +481,12 @@ require_once __DIR__ . '/header.php';
                             <?php foreach ($slides as $slide): ?>
                                 <tr>
                                     <td>
-                                        <img src="<?= e(url($slide['image'])) ?>" alt="<?= e($slide['title']) ?>" class="admin-slide-thumb">
+                                        <div style="display:flex;align-items:center;gap:8px;">
+                                            <img src="<?= e(url($slide['image'])) ?>" alt="<?= e($slide['title']) ?>" class="admin-slide-thumb" title="تصویر دسکتاپ">
+                                            <?php if (!empty($slide['image_mobile'])): ?>
+                                                <img src="<?= e(url($slide['image_mobile'])) ?>" alt="تصویر موبایل" class="admin-slide-thumb" style="width:36px;height:36px;border:2px solid #3D8B63;border-radius:6px;object-fit:cover;" title="دارای تصویر اختصاصی موبایل">
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                     <td style="font-weight:600;"><?= e($slide['title']) ?></td>
                                     <td>

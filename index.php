@@ -13,7 +13,7 @@ $galleryItems = [];
 try {
     $pdo = getDb();
 
-    $stmt = $pdo->query('SELECT id, title, subtitle, image FROM slides ORDER BY sort_order ASC, created_at DESC');
+    $stmt = $pdo->query('SELECT id, title, subtitle, image, image_mobile FROM slides ORDER BY sort_order ASC, created_at DESC');
     $slides = $stmt->fetchAll();
 
     $stmt = $pdo->query('SELECT id, title, content, image, category, created_at FROM news ORDER BY created_at DESC LIMIT 3');
@@ -110,13 +110,18 @@ foreach ($galleryItems as $g) {
                      aria-roledescription="اسلاید"
                      aria-label="<?php echo e(persianNumber((string) ($index + 1))) . ' از ' . e(persianNumber((string) count($slides))); ?>">
                     <div class="hero__media">
-                        <img class="hero__img"
-                             src="<?php echo e(url((string) $slide['image'])); ?>"
-                             alt="<?php echo e($title); ?>"
-                             width="1920" height="1072"
-                             loading="<?php echo $isFirst ? 'eager' : 'lazy'; ?>"
-                             decoding="<?php echo $isFirst ? 'sync' : 'async'; ?>"
-                             <?php echo $isFirst ? 'fetchpriority="high"' : ''; ?>>
+                        <picture>
+                            <?php if (!empty($slide['image_mobile'])): ?>
+                                <source media="(max-width: 767px)" srcset="<?php echo e(url((string) $slide['image_mobile'])); ?>">
+                            <?php endif; ?>
+                            <img class="hero__img"
+                                 src="<?php echo e(url((string) $slide['image'])); ?>"
+                                 alt="<?php echo e($title); ?>"
+                                 width="1920" height="1072"
+                                 loading="<?php echo $isFirst ? 'eager' : 'lazy'; ?>"
+                                 decoding="<?php echo $isFirst ? 'sync' : 'async'; ?>"
+                                 <?php echo $isFirst ? 'fetchpriority="high"' : ''; ?>>
+                        </picture>
                         <div class="hero__scrim"></div>
                     </div>
 

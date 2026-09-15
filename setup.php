@@ -201,6 +201,7 @@ if ($installStep && $installError === '') {
         // Column migrations for cross-version compatibility
         $columnsToEnsure = [
             ['slides', 'subtitle', 'VARCHAR(500) DEFAULT NULL AFTER title'],
+            ['slides', 'image_mobile', 'VARCHAR(255) DEFAULT NULL AFTER image'],
             ['news', 'category', 'VARCHAR(50) DEFAULT NULL AFTER image'],
             ['gallery_images', 'category', 'VARCHAR(50) DEFAULT NULL AFTER image'],
         ];
