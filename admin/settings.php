@@ -37,7 +37,7 @@ function getSettings(PDO $pdo): array
         'default_tuition_amount' => '0',
         'sms_enabled' => '0',
         'sms_api_key' => '',
-        'sms_subscription_monthly_fee' => '30000',
+        'sms_detailed_report_enabled' => '0',
         'sms_pattern_otp' => '',
         'sms_pattern_welcome' => '',
         'sms_pattern_daily_report_brief' => '',
@@ -314,7 +314,7 @@ if (isPostRequest()) {
     if ($action === 'update_sms_settings') {
         $smsEnabled = isset($_POST['sms_enabled']) ? '1' : '0';
         $smsApiKey  = trim((string) ($_POST['sms_api_key'] ?? ''));
-        $smsVipFee  = trim((string) ($_POST['sms_subscription_monthly_fee'] ?? '30000'));
+        $smsDetailed = isset($_POST['sms_detailed_report_enabled']) ? '1' : '0';
         $bodyOtp    = trim((string) ($_POST['sms_pattern_otp'] ?? ''));
         $bodyWel    = trim((string) ($_POST['sms_pattern_welcome'] ?? ''));
         $bodyBrief  = trim((string) ($_POST['sms_pattern_daily_report_brief'] ?? ''));
@@ -338,7 +338,7 @@ if (isPostRequest()) {
 
         saveSetting($pdo, 'sms_enabled', $smsEnabled);
         saveSetting($pdo, 'sms_api_key', $smsApiKey);
-        saveSetting($pdo, 'sms_subscription_monthly_fee', $smsVipFee);
+        saveSetting($pdo, 'sms_detailed_report_enabled', $smsDetailed);
         saveSetting($pdo, 'sms_pattern_otp', $bodyOtp);
         saveSetting($pdo, 'sms_pattern_welcome', $bodyWel);
         saveSetting($pdo, 'sms_pattern_daily_report_brief', $bodyBrief);
@@ -783,11 +783,12 @@ require_once __DIR__ . '/header.php';
                     </div>
 
                     <div class="form-group" style="margin-bottom:0;">
-                        <label for="sms_subscription_monthly_fee" class="form-label">مبلغ ماهانه اشتراک بسته پیامک تفصیلی (تومان)</label>
-                        <input type="number" id="sms_subscription_monthly_fee" name="sms_subscription_monthly_fee" class="form-control" dir="ltr"
-                            placeholder="۳۰۰۰۰"
-                            value="<?= e($settings['sms_subscription_monthly_fee'] ?? '30000') ?>">
-                        <small style="color:var(--muted);font-size:0.85rem;">این مبلغ به صورت خودکار به شهریه ماهانه والدینی که «بسته پیامک تفصیلی» را فعال کنند اضافه می‌شود تا هزینه پیامک‌ها جبران شود.</small>
+                        <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:bold;">
+                            <input type="checkbox" name="sms_detailed_report_enabled" value="1" style="width:18px;height:18px;cursor:pointer;"
+                                <?= ($settings['sms_detailed_report_enabled'] ?? '0') === '1' ? 'checked' : '' ?>>
+                            گزارش روزانه تفصیلی برای همه (حالت کلی)
+                        </label>
+                        <small style="color:var(--muted);font-size:0.85rem;">خاموش = همه والدین پیامک خلاصه ارجاع به پنل می‌گیرند. روشن = همه والدین پیامک تفصیلی می‌گیرند. هزینه پیامک از جیب مهد است و به شهریه اضافه نمی‌شود؛ در گزارش مالی بخش خدمات جانبی ثبت می‌شود.</small>
                     </div>
                 </div>
 
@@ -816,7 +817,7 @@ require_once __DIR__ . '/header.php';
 
                     <div class="form-group">
                         <label for="sms_pattern_daily_report_brief" class="form-label">
-                            ۳. گزارش روزانه خلاصه (رایگان / ارجاع به پنل) 💡
+                            ۳. گزارش روزانه خلاصه (ارجاع به پنل) 💡
                         </label>
                         <input type="number" id="sms_pattern_daily_report_brief" name="sms_pattern_daily_report_brief" class="form-control" dir="ltr"
                             placeholder="مثال: 530" value="<?= e($settings['sms_pattern_daily_report_brief'] ?? '') ?>">
@@ -825,7 +826,7 @@ require_once __DIR__ . '/header.php';
 
                     <div class="form-group">
                         <label for="sms_pattern_daily_report" class="form-label">
-                            ۴. گزارش روزانه تفصیلی (اشتراک VIP) ⭐
+                            ۴. گزارش روزانه تفصیلی ⭐
                         </label>
                         <input type="number" id="sms_pattern_daily_report" name="sms_pattern_daily_report" class="form-control" dir="ltr"
                             placeholder="مثال: 526" value="<?= e($settings['sms_pattern_daily_report'] ?? '') ?>">

@@ -295,15 +295,13 @@ if (isPostRequest()) {
         $prefAtt   = isset($_POST['sms_pref_attendance']) ? 1 : 0;
         $prefTui   = isset($_POST['sms_pref_tuition']) ? 1 : 0;
         $prefAnn   = isset($_POST['sms_pref_announcements']) ? 1 : 0;
-        $prefVip   = isset($_POST['sms_vip_subscription']) ? 1 : 0;
 
         $upStmt = $pdo->prepare('
             UPDATE parents
             SET sms_pref_daily_report = :daily,
                 sms_pref_attendance = :att,
                 sms_pref_tuition = :tui,
-                sms_pref_announcements = :ann,
-                sms_vip_subscription = :vip
+                sms_pref_announcements = :ann
             WHERE id = :id
         ');
         $upStmt->execute([
@@ -311,11 +309,10 @@ if (isPostRequest()) {
             ':att'   => $prefAtt,
             ':tui'   => $prefTui,
             ':ann'   => $prefAnn,
-            ':vip'   => $prefVip,
             ':id'    => $parentId,
         ]);
 
-        recordAudit('parent.update_sms_prefs', 'parent', $parentId, ['vip_pack' => $prefVip]);
+        recordAudit('parent.update_sms_prefs', 'parent', $parentId);
         setFlash('success', 'تنظیمات دریافت پیامک‌های شما با موفقیت ذخیره شد.');
         redirect(url('parent/profile.php#sms-prefs'));
     } elseif ($action === 'remove_avatar') {
@@ -524,26 +521,7 @@ require_once __DIR__ . '/header.php';
                 </label>
             </div>
 
-            <!-- Detailed SMS Pack VIP Subscription Option -->
-            <?php $vipMonthlyFee = (float) getSetting('sms_subscription_monthly_fee', '30000'); ?>
-            <div style="background:rgba(232,168,56,0.1);border:1.5px solid rgba(232,168,56,0.4);border-radius:12px;padding:16px;margin-bottom:24px;">
-                <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;">
-                    <input type="checkbox" name="sms_vip_subscription" value="1" style="width:22px;height:22px;margin-top:2px;cursor:pointer;"
-                        <?= ((int)($parent['sms_vip_subscription'] ?? 0) === 1) ? 'checked' : '' ?>>
-                    <div>
-                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                            <strong style="font-size:1rem;color:#966408;">⭐ فعال‌سازی بسته پیامک‌های تفصیلی و لحظه‌ای (اشتراک اختیاری)</strong>
-                            <span style="background:#e8a838;color:#fff;font-size:0.75rem;padding:2px 8px;border-radius:12px;font-weight:700;">
-                                +<?= e(persianNumber(number_format($vipMonthlyFee))) ?> تومان/ماه
-                            </span>
-                        </div>
-                        <p style="font-size:0.85rem;color:var(--text);margin:6px 0 0 0;line-height:1.7;">
-                            <strong>حالت رایگان (پیش‌فرض):</strong> یک پیامک خلاصه با متن «گزارش روزانه دلبندتان ثبت شد؛ جهت مشاهده جزئیات به پنل روما مراجعه کنید» دریافت می‌کنید.<br>
-                            <strong>در صورت فعال‌سازی این بسته:</strong> تمام جزئیات تغذیه، ساعت خواب، احوال کودک و ریز فعالیت‌ها به صورت مستقیم به پیامک شما ارسال می‌شود و هزینه آن ماهانه به شهریه افزوده می‌گردد.
-                        </p>
-                    </div>
-                </label>
-            </div>
+            <p style="font-size:0.82rem;color:var(--muted);margin:0 0 20px;line-height:1.8;">نوع پیامک گزارش روزانه توسط مدیریت مهد تنظیم می‌شود.</p>
 
             <button class="btn btn-primary" type="submit">💾 ذخیره اولویت‌های پیامک</button>
         </form>

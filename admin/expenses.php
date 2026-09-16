@@ -23,6 +23,7 @@ function expenseCategoryLabel(string $category): string
         'maintenance' => 'تعمیر و نگهداری',
         'supplies'    => 'ملزومات',
         'insurance'   => 'بیمه',
+        'sms'         => 'پیامک',
         'other'       => 'سایر',
         default       => $category,
     };
@@ -65,7 +66,7 @@ try {
         $dateTimeCheck = DateTime::createFromFormat('Y-m-d', $expenseDate);
         $isValidDate = $dateTimeCheck && $dateTimeCheck->format('Y-m-d') === $expenseDate;
 
-        $allowedCategories = ['rent', 'utilities', 'food', 'maintenance', 'supplies', 'insurance', 'other'];
+        $allowedCategories = ['rent', 'utilities', 'food', 'maintenance', 'supplies', 'insurance', 'sms', 'other'];
         $allowedMethods    = ['cash', 'bank_transfer', 'check'];
 
         if (
@@ -163,6 +164,7 @@ require_once __DIR__ . '/header.php';
                         <option value="maintenance">تعمیر و نگهداری</option>
                         <option value="supplies">ملزومات و لوازم تحریر</option>
                         <option value="insurance">بیمه</option>
+                        <option value="sms">پیامک / شارژ پنل پیامک</option>
                         <option value="other" selected>سایر</option>
                     </select>
                 </div>

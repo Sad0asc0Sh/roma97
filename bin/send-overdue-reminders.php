@@ -130,11 +130,6 @@ try {
             . "— وضعیت شهریه ماه {$monthLabel} —\n"
             . '• مبلغ ماه: ' . persianNumber(number_format((float) $row['expected'])) . " تومان\n";
 
-        if ((float) $row['sms_fee'] > 0) {
-            $body .= '  (شهریه ' . persianNumber(number_format((float) $row['base']))
-                . ' + بسته پیامک تفصیلی ' . persianNumber(number_format((float) $row['sms_fee'])) . " تومان)\n";
-        }
-
         $body .= '• پرداخت‌شده تا این لحظه: ' . persianNumber(number_format((float) $row['paid'])) . " تومان\n"
             . "• مانده: {$amountFa} تومان\n\n"
             . "خواهش می‌کنیم در فرصت مناسب نسبت به تسویه اقدام فرمایید. در صورت هرگونه پرسش یا هماهنگی، ما در خدمت شما هستیم.\n\n"

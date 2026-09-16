@@ -94,24 +94,24 @@ function notificationCatalog(): array
             'description' => 'تنها زمانی ارسال می‌شود که وضعیت حضور کودک تغییر کرده باشد (ذخیره مجدد فرم پیامک تکراری نمی‌فرستد).',
         ],
         'daily_report_brief' => [
-            'label'       => 'گزارش روزانه خلاصه (رایگان)',
+            'label'       => 'گزارش روزانه خلاصه',
             'group'       => 'مراقبت روزانه',
             'pattern_key' => 'sms_pattern_daily_report_brief',
             'pref_column' => 'sms_pref_daily_report',
             'args'        => ['نام کودک', 'نام مهد'],
             'inline'      => false,
             'portal'      => false,
-            'description' => 'حالت پیش‌فرض همه والدین: یک پیامک کوتاه با ارجاع به پنل روما.',
+            'description' => 'پیامک کوتاه ارجاع به پنل روما.',
         ],
         'daily_report_vip' => [
-            'label'       => 'گزارش روزانه تفصیلی (اشتراک ویژه)',
+            'label'       => 'گزارش روزانه تفصیلی',
             'group'       => 'مراقبت روزانه',
             'pattern_key' => 'sms_pattern_daily_report',
             'pref_column' => 'sms_pref_daily_report',
             'args'        => ['نام کودک', 'تاریخ', 'حال و هوا'],
             'inline'      => false,
             'portal'      => false,
-            'description' => 'تنها برای والدینی که بسته پیامک تفصیلی را فعال کرده‌اند.',
+            'description' => 'پیامک تفصیلی گزارش روزانه.',
         ],
         'tuition_reminder' => [
             'label'       => 'یادآوری دوستانه شهریه',
@@ -609,7 +609,7 @@ function notifyParent(int $parentId, string $eventKey, array $options = []): arr
         $pdo = getDb();
 
         $prefColumn = $event['pref_column'];
-        $columns = 'id, first_name, last_name, phone, status, sms_vip_subscription';
+        $columns = 'id, first_name, last_name, phone, status';
         if ($prefColumn !== null) {
             $columns .= ', ' . $prefColumn;
         }

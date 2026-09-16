@@ -442,13 +442,7 @@ require_once __DIR__ . '/header.php';
                                     <td><?= e($s['parent_name']) ?></td>
                                     <td>
                                         <strong><?= e(persianNumber(number_format((float) $s['expected']))) ?></strong> تومان
-                                        <?php if ((float) $s['sms_fee'] > 0): ?>
-                                            <br>
-                                            <small class="muted" style="font-size:0.75rem;">
-                                                شهریه <?= e(persianNumber(number_format((float) $s['base']))) ?>
-                                                + بسته پیامک <?= e(persianNumber(number_format((float) $s['sms_fee']))) ?>
-                                            </small>
-                                        <?php elseif (!$s['has_plan']): ?>
+                                        <?php if (!$s['has_plan']): ?>
                                             <br><small class="muted" style="font-size:0.75rem;">بر پایه شهریه پیش‌فرض</small>
                                         <?php endif; ?>
                                     </td>

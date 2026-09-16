@@ -235,7 +235,7 @@ function initializeFinancialTables(): void
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS expenses (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                category ENUM('rent','utilities','food','maintenance','supplies','insurance','other') NOT NULL DEFAULT 'other',
+                category ENUM('rent','utilities','food','maintenance','supplies','insurance','sms','other') NOT NULL DEFAULT 'other',
                 title VARCHAR(255) NOT NULL,
                 amount DECIMAL(12,2) NOT NULL,
                 expense_date DATE NOT NULL,
@@ -248,6 +248,11 @@ function initializeFinancialTables(): void
                     ON DELETE SET NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
+
+        // Idempotently widen expenses.category ENUM for pre-existing installs.
+        try {
+            $pdo->exec("ALTER TABLE expenses MODIFY COLUMN category ENUM('rent','utilities','food','maintenance','supplies','insurance','sms','other') NOT NULL DEFAULT 'other'");
+        } catch (Throwable) {}
 
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -370,9 +375,6 @@ function initializeFinancialTables(): void
         }
         if (!in_array('sms_pref_announcements', $parentCols, true)) {
             $pdo->exec("ALTER TABLE parents ADD COLUMN sms_pref_announcements TINYINT(1) NOT NULL DEFAULT 1 AFTER sms_pref_tuition");
-        }
-        if (!in_array('sms_vip_subscription', $parentCols, true)) {
-            $pdo->exec("ALTER TABLE parents ADD COLUMN sms_vip_subscription TINYINT(1) NOT NULL DEFAULT 0 AFTER sms_pref_announcements");
         }
 
         // Idempotently modify children.status ENUM

@@ -884,10 +884,11 @@ function renderPagination(array $meta, string $baseUrl, array $query = [], strin
  * Full, itemised tuition position for one child in one Shamsi month.
  *
  * Returning the breakdown (rather than a bare number) is what lets every panel
- * show the SAME figures and explain them. Previously the balance silently
- * included the optional SMS-pack fee while the "expected amount" column showed
- * only the base tuition, so a fully-paid child appeared to owe 30,000 Toman
- * with no visible reason — the single most confusing thing in the finance UI.
+ * show the SAME figures and explain them.
+ *
+ * SMS cost is decoupled from tuition: sms_fee is always 0.0 and is_vip is
+ * always false here. SMS subscription is an ancillary expense only and never
+ * part of expected/balance. The sms_fee/is_vip keys are kept for BC.
  *
  * @return array{
  *     base:float, sms_fee:float, expected:float, paid:float,
@@ -896,14 +897,14 @@ function renderPagination(array $meta, string $baseUrl, array $query = [], strin
  */
 function childTuitionBreakdown(PDO $pdo, int $childId, string $monthYear): array
 {
-    // One round-trip for the plan, the SMS-pack flag and the payments total.
+    // One round-trip for the plan and the payments total.
+    // SMS cost is decoupled from tuition (ancillary expense only).
     $stmt = $pdo->prepare(
         'SELECT
             (SELECT tp.expected_amount FROM tuition_plans tp
               WHERE tp.child_id = c.id AND tp.month_year = :myear LIMIT 1) AS expected_amount,
             (SELECT COALESCE(SUM(pay.amount), 0) FROM tuition_payments pay
-              WHERE pay.child_id = c.id AND pay.month_year = :myear2) AS total_paid,
-            p.sms_vip_subscription
+              WHERE pay.child_id = c.id AND pay.month_year = :myear2) AS total_paid
          FROM children c
          INNER JOIN parents p ON p.id = c.parent_id
          WHERE c.id = :cid
@@ -928,17 +929,9 @@ function childTuitionBreakdown(PDO $pdo, int $childId, string $monthYear): array
         ? (float) $row['expected_amount']
         : (float) getSetting('default_tuition_amount', '0');
 
-    $isVip = ((int) ($row['sms_vip_subscription'] ?? 0) === 1);
     $smsFee = 0.0;
 
-    if ($isVip) {
-        $configuredFee = (float) getSetting('sms_subscription_monthly_fee', '30000');
-        if ($configuredFee > 0) {
-            $smsFee = $configuredFee;
-        }
-    }
-
-    $expected  = $base + $smsFee;
+    $expected  = $base;
     $totalPaid = (float) ($row['total_paid'] ?? 0);
 
     return [
@@ -948,7 +941,7 @@ function childTuitionBreakdown(PDO $pdo, int $childId, string $monthYear): array
         'paid'     => $totalPaid,
         'balance'  => $expected - $totalPaid,
         'has_plan' => $hasPlan,
-        'is_vip'   => $isVip,
+        'is_vip'   => false,
     ];
 }
 
@@ -981,13 +974,12 @@ function childOutstandingBalance(PDO $pdo, int $childId, string $monthYear): flo
 function activeChildrenTuitionBreakdown(PDO $pdo, string $monthYear): array
 {
     $defaultTuition = (float) getSetting('default_tuition_amount', '0');
-    $configuredSmsFee = (float) getSetting('sms_subscription_monthly_fee', '30000');
 
     $stmt = $pdo->prepare(
         "SELECT
             c.id AS child_id, c.first_name, c.last_name,
             p.id AS parent_id, p.first_name AS p_first, p.last_name AS p_last,
-            p.phone AS p_phone, p.sms_vip_subscription,
+            p.phone AS p_phone,
             tp.expected_amount,
             COALESCE(paid.total_paid, 0) AS total_paid
          FROM children c
@@ -1010,10 +1002,9 @@ function activeChildrenTuitionBreakdown(PDO $pdo, string $monthYear): array
         $hasPlan = $row['expected_amount'] !== null;
         $base = $hasPlan ? (float) $row['expected_amount'] : $defaultTuition;
 
-        $isVip = ((int) ($row['sms_vip_subscription'] ?? 0) === 1);
-        $smsFee = ($isVip && $configuredSmsFee > 0) ? $configuredSmsFee : 0.0;
+        $smsFee = 0.0;
 
-        $expected = $base + $smsFee;
+        $expected = $base;
         $paid = (float) $row['total_paid'];
 
         $result[(int) $row['child_id']] = [
@@ -1028,7 +1019,7 @@ function activeChildrenTuitionBreakdown(PDO $pdo, string $monthYear): array
             'paid'         => $paid,
             'balance'      => $expected - $paid,
             'has_plan'     => $hasPlan,
-            'is_vip'       => $isVip,
+            'is_vip'       => false,
         ];
     }
 

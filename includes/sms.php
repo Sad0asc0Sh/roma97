@@ -54,12 +54,12 @@ function getSmsSettings(?PDO $pdo = null): array
     $defaults = [
         'sms_enabled'                     => '0',
         'sms_api_key'                     => '',
-        'sms_subscription_monthly_fee'    => '30000', // Default 30,000 Toman for detailed SMS pack
+        'sms_detailed_report_enabled'     => '0', // global daily-report mode 0=brief for all 1=detailed for all
         'sms_inline_budget_seconds'       => '8',     // Max seconds a web request may spend flushing the queue
         'sms_pattern_otp'                 => '',
         'sms_pattern_welcome'             => '',
-        'sms_pattern_daily_report_brief'  => '', // Short/Brief daily report pattern (free/portal referral)
-        'sms_pattern_daily_report'        => '', // Detailed daily report pattern (VIP subscription)
+        'sms_pattern_daily_report_brief'  => '', // Short daily report pattern (portal referral)
+        'sms_pattern_daily_report'        => '', // Detailed daily report pattern
         'sms_pattern_attendance'          => '',
         'sms_pattern_tuition_reminder'    => '',
         'sms_pattern_payment_receipt'     => '', // Receipt sent when a tuition payment is recorded
@@ -83,6 +83,18 @@ function getSmsSettings(?PDO $pdo = null): array
     }
 
     return $defaults;
+}
+
+/**
+ * Global daily-report mode: true = all parents get the detailed report SMS.
+ * False (default) = all parents get the brief portal-referral SMS.
+ */
+function smsDetailedReportEnabled(?PDO $pdo = null): bool
+{
+    if ($pdo !== null) {
+        return getSmsSettings($pdo)['sms_detailed_report_enabled'] === '1';
+    }
+    return getSetting('sms_detailed_report_enabled', '0') === '1';
 }
 
 /**

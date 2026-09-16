@@ -31,6 +31,7 @@ function expenseCategoryLabel(string $category): string
         'maintenance' => 'تعمیر و نگهداری',
         'supplies'    => 'ملزومات',
         'insurance'   => 'بیمه',
+        'sms'         => 'پیامک',
         'other'       => 'سایر',
         default       => $category,
     };
@@ -54,7 +55,7 @@ $outstandingTuition = 0.0;
 $collectionRate = 0.0;
 $activeChildCount = 0;
 $settledCount = 0;
-$vipSmsRevenue = 0.0;
+$smsCost = 0.0;
 
 try {
     initializeFinancialTables();
@@ -85,6 +86,9 @@ try {
             $expensesByCategory[$cat] = 0.0;
         }
         $expensesByCategory[$cat] += $amt;
+        if ($cat === 'sms') {
+            $smsCost += $amt;
+        }
     }
 
     $totalExpenses = $totalSalaries + $totalGeneralExpenses;
@@ -102,7 +106,6 @@ try {
     foreach ($breakdowns as $childId => $row) {
         $expectedTuition  += (float) $row['expected'];
         $collectedTuition += (float) $row['paid'];
-        $vipSmsRevenue    += (float) $row['sms_fee'];
 
         $balance = (float) $row['balance'];
 
@@ -258,13 +261,11 @@ require_once __DIR__ . '/header.php';
                 </div>
             </div>
 
-            <?php if ($vipSmsRevenue > 0): ?>
-                <div class="card" style="padding:14px 16px;">
-                    <div style="font-size:0.8rem;color:var(--adm-text-muted);font-weight:600;">درآمد بسته پیامک تفصیلی</div>
-                    <div style="font-size:1.15rem;font-weight:800;"><?= e(persianNumber(number_format($vipSmsRevenue))) ?> <span style="font-size:0.75rem;font-weight:normal;">تومان</span></div>
-                    <div style="font-size:0.75rem;color:var(--adm-text-muted);margin-top:4px;">بخشی از شهریه قابل وصول بالا</div>
-                </div>
-            <?php endif; ?>
+            <div class="card" style="padding:14px 16px;">
+                <div style="font-size:0.8rem;color:var(--adm-text-muted);font-weight:600;">هزینه پیامک ماه (خدمات جانبی)</div>
+                <div style="font-size:1.15rem;font-weight:800;"><?= e(persianNumber(number_format($smsCost))) ?> <span style="font-size:0.75rem;font-weight:normal;">تومان</span></div>
+                <div style="font-size:0.75rem;color:var(--adm-text-muted);margin-top:4px;">جزئی از هزینه‌های عمومی بالا، از جیب مهد</div>
+            </div>
         </div>
 
         <p style="font-size:0.82rem;color:var(--adm-text-muted);margin:0;line-height:1.8;">

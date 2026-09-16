@@ -139,18 +139,12 @@ require_once __DIR__ . '/header.php';
             </div>
         </div>
 
-        <?php if (count($monthBreakdowns) > 1 || (float) $monthBreakdowns[0]['sms_fee'] > 0): ?>
+        <?php if (count($monthBreakdowns) > 1): ?>
             <div style="border-top:1px dashed var(--border, #ddd);padding-top:12px;">
                 <?php foreach ($monthBreakdowns as $item): ?>
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;font-size:0.85rem;padding:5px 0;flex-wrap:wrap;">
                         <div>
                             <strong><?= e((string) $item['child_name']) ?></strong>
-                            <?php if ((float) $item['sms_fee'] > 0): ?>
-                                <div style="font-size:0.73rem;color:var(--muted);margin-top:2px;">
-                                    شهریه <?= e(persianNumber(number_format((float) $item['base']))) ?>
-                                    + بسته پیامک تفصیلی <?= e(persianNumber(number_format((float) $item['sms_fee']))) ?> تومان
-                                </div>
-                            <?php endif; ?>
                         </div>
                         <div style="text-align:left;">
                             <span style="color:#1e632b;"><?= e(persianNumber(number_format((float) $item['paid']))) ?></span>
@@ -160,13 +154,6 @@ require_once __DIR__ . '/header.php';
                     </div>
                 <?php endforeach; ?>
             </div>
-        <?php endif; ?>
-
-        <?php if ((float) ($monthBreakdowns[0]['sms_fee'] ?? 0) > 0): ?>
-            <p style="font-size:0.78rem;color:var(--muted);margin:10px 0 0;line-height:1.8;">
-                💡 «بسته پیامک تفصیلی» اشتراک اختیاری دریافت گزارش کامل روزانه با پیامک است و می‌توانید آن را در
-                <a href="<?= e(url('parent/profile.php#sms-prefs')) ?>">تنظیمات پیام‌ها</a> غیرفعال کنید.
-            </p>
         <?php endif; ?>
     </div>
 <?php endif; ?>

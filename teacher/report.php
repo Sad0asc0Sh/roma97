@@ -161,7 +161,7 @@ SQL;
                 $childIdList = implode(',', array_map('intval', array_keys($changedChildren)));
                 $recipientStmt = $pdo->query("
                     SELECT c.id AS child_id, c.first_name AS c_first, c.last_name AS c_last,
-                           p.id AS parent_id, p.sms_vip_subscription
+                           p.id AS parent_id
                     FROM children c
                     INNER JOIN parents p ON p.id = c.parent_id
                     WHERE c.id IN ({$childIdList})
@@ -169,19 +169,17 @@ SQL;
                 $recipients = $recipientStmt ? $recipientStmt->fetchAll() : [];
 
                 $todayFa = shamsiDate($today);
+                $detailedAll = function_exists('smsDetailedReportEnabled') ? smsDetailedReportEnabled($pdo) : ((string)getSetting('sms_detailed_report_enabled','0')==='1');
 
                 foreach ($recipients as $row) {
                     $childId  = (int) $row['child_id'];
                     $parentId = (int) $row['parent_id'];
                     $childName = trim((string) $row['c_first'] . ' ' . (string) $row['c_last']);
-                    $isVip = ((int) ($row['sms_vip_subscription'] ?? 0) === 1);
                     $mood = (string) ($changedChildren[$childId]['mood'] ?? 'normal');
                     $moodFa = $moodLabels[$mood] ?? 'خوب';
 
-                    // Parents on the detailed pack get the full report by SMS;
-                    // everyone else gets the short "check the portal" message.
-                    $eventKey = $isVip ? 'daily_report_vip' : 'daily_report_brief';
-                    $args = $isVip
+                    $eventKey = $detailedAll ? 'daily_report_vip' : 'daily_report_brief';
+                    $args = $detailedAll
                         ? [$childName, $todayFa, $moodFa]
                         : [$childName, siteName()];
 
