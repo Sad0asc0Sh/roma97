@@ -90,7 +90,18 @@ body.parent-auth { margin: 0; background: var(--entry-surface); color: var(--ent
 .entry-resend { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 18px; font-size: 12px; color: var(--entry-muted); }
 .entry-resend button { background: none; border: none; color: var(--entry-green); text-decoration: underline; text-underline-offset: 5px; min-height: 44px; cursor: pointer; padding: 4px; }
 .entry-resend button:disabled { color: var(--entry-muted); cursor: default; text-decoration: none; }
-@media (min-width: 1100px) { .entry-layout { min-height: calc(100dvh - 132px); } }
+@media (min-width: 1100px) {
+    body.parent-auth { overflow: hidden; }
+    .entry-layout { height: calc(100dvh - 114px); min-height: 560px; margin-bottom: 20px; }
+    .entry-main { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #bcccba transparent; }
+    .entry-main::-webkit-scrollbar { width: 8px; }
+    .entry-main::-webkit-scrollbar-thumb { background: #c9d5c4; border-radius: 8px; }
+    .entry-main::-webkit-scrollbar-thumb:hover { background: #b0c2ad; }
+    .entry-main::-webkit-scrollbar-track { background: transparent; }
+    .entry-card { margin-block: auto; }
+    .entry-bottom { margin-top: 12px; padding-bottom: 6px; }
+    .entry-story { height: 100%; min-height: 0; }
+}
 @media (max-width: 1000px) { .entry-layout { gap: 12px; padding-inline: 20px; } .entry-main { padding-inline: 12px; } .entry-story { padding-inline: 18px; } .entry-story h2 { font-size: 45px; } }
 @media (max-width: 760px) {
     .entry-topbar { padding: 16px 24px; }
