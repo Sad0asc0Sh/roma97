@@ -8,6 +8,7 @@ if (!defined('ROOMA_APP')) {
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/auth_flow.php';
 
 /**
  * Standardizes Iranian phone numbers to 11 digits format (e.g. 09123456789).
@@ -124,8 +125,13 @@ function sendMeliPayamakPattern(
         return ['success' => false, 'recId' => null, 'status' => 'شناسه الگوی پیامک (bodyId) تنظیم نشده است.'];
     }
 
-    $pdo = getDb();
-    $settings = getSmsSettings($pdo);
+    try {
+        $pdo = getDb();
+        $settings = getSmsSettings($pdo);
+    } catch (Throwable $e) {
+        error_log('SMS storage unavailable.');
+        return ['success' => false, 'recId' => null, 'status' => 'ارسال پیامک موقتاً در دسترس نیست.'];
+    }
 
     if (($settings['sms_enabled'] ?? '0') !== '1') {
         // SMS is disabled in admin settings; record log and return gracefully
@@ -231,6 +237,19 @@ function logSmsDelivery(
  * Generates and sends a 5-digit verification code (OTP) for registration or password reset.
  * Rate-limited to at most 1 code per 60 seconds per phone number.
  */
+function smsOtpResendAvailableAt(PDO $pdo, string $phone, string $actionType): int
+{
+    $stmt = $pdo->prepare("SELECT GREATEST(0, 60 - TIMESTAMPDIFF(SECOND, created_at, NOW())) AS remaining
+        FROM sms_verification_codes
+        WHERE phone = :phone AND action_type = :action
+        ORDER BY id DESC LIMIT 1
+    ");
+    $stmt->execute([':phone' => normalizeIranianPhone($phone), ':action' => $actionType]);
+    $row = $stmt->fetch();
+    $remaining = $row ? max(0, (int) $row['remaining']) : 0;
+    return $remaining > 0 ? time() + $remaining : 0;
+}
+
 function generateAndSendSmsOtp(
     string $phone,
     string $actionType = 'register',
@@ -241,17 +260,15 @@ function generateAndSendSmsOtp(
         return ['success' => false, 'message' => 'شماره موبایل وارد شده نامعتبر است (مثال: 09123456789).'];
     }
 
-    $pdo = getDb();
-    initializeFinancialTables();
+    try {
+        $pdo = getDb();
+        initializeFinancialTables();
+    } catch (Throwable $e) {
+        error_log('generateAndSendSmsOtp storage unavailable.');
+        return ['success' => false, 'message' => 'ارسال کد تایید موقتاً در دسترس نیست. لطفاً بعداً تلاش کنید.'];
+    }
 
-    // Check rate limit: 1 code every 60 seconds
-    $stmt = $pdo->prepare("
-        SELECT created_at FROM sms_verification_codes
-        WHERE phone = :phone AND action_type = :action AND is_used = 0 AND created_at > DATE_SUB(NOW(), INTERVAL 60 SECOND)
-        ORDER BY id DESC LIMIT 1
-    ");
-    $stmt->execute([':phone' => $normalized, ':action' => $actionType]);
-    if ($stmt->fetch()) {
+    if (smsOtpResendAvailableAt($pdo, $normalized, $actionType) > time()) {
         return ['success' => false, 'message' => 'کد تایید به‌تازگی ارسال شده است. لطفاً ۶۰ ثانیه بعد دوباره درخواست دهید.'];
     }
 
@@ -328,23 +345,28 @@ function generateAndSendSmsOtp(
  *
  * @return array{valid: bool, message: string, payload: array|null}
  */
-function verifySmsOtp(string $phone, string $code, string $actionType = 'register'): array
+function verifySmsOtp(string $phone, string $code, string $actionType = 'register', ?string $challenge = null): array
 {
     $normalized = normalizeIranianPhone($phone);
-    $cleanCode  = trim($code);
+    $cleanCode  = authNormalizeOtp($code);
 
-    if (!isValidIranianMobile($normalized) || $cleanCode === '') {
+    if (!isValidIranianMobile($normalized) || preg_match('/\A[0-9]{5}\z/', $cleanCode) !== 1) {
         return ['valid' => false, 'message' => 'شماره موبایل یا کد تایید وارد شده نامعتبر است.', 'payload' => null];
     }
 
-    $pdo = getDb();
-    initializeFinancialTables();
+    try {
+        $pdo = getDb();
+        initializeFinancialTables();
+    } catch (Throwable $e) {
+        error_log('verifySmsOtp storage unavailable.');
+        return ['valid' => false, 'message' => 'تایید کد موقتاً در دسترس نیست. لطفاً بعداً تلاش کنید.', 'payload' => null];
+    }
 
     $stmt = $pdo->prepare("
         SELECT id, code, payload_json, attempts, expires_at, is_used
         FROM sms_verification_codes
         WHERE phone = :phone AND action_type = :action AND is_used = 0
-        ORDER BY id DESC LIMIT 1
+        ORDER BY id DESC LIMIT 1 FOR UPDATE
     ");
     $stmt->execute([':phone' => $normalized, ':action' => $actionType]);
     $row = $stmt->fetch();
@@ -353,16 +375,25 @@ function verifySmsOtp(string $phone, string $code, string $actionType = 'registe
         return ['valid' => false, 'message' => 'کد تایید یافت نشد یا قبلاً استفاده شده است.', 'payload' => null];
     }
 
+    $payload = null;
+    if (!empty($row['payload_json'])) {
+        $payload = json_decode((string) $row['payload_json'], true);
+    }
+
+    if (is_string($challenge) && $challenge !== ''
+        && (!is_array($payload) || !is_string($payload['challenge'] ?? null)
+            || !hash_equals($challenge, $payload['challenge']))) {
+        return ['valid' => false, 'message' => 'کد تایید نامعتبر است. لطفاً دوباره درخواست دهید.', 'payload' => null];
+    }
+
     $id = (int) $row['id'];
     $attempts = (int) $row['attempts'];
 
-    // Check maximum attempts (max 5 failed tries)
     if ($attempts >= 5) {
         $pdo->prepare("UPDATE sms_verification_codes SET is_used = 1 WHERE id = :id")->execute([':id' => $id]);
         return ['valid' => false, 'message' => 'تعداد تلاش‌های ناموفق بیش از حد مجاز است. لطفاً کد جدید دریافت کنید.', 'payload' => null];
     }
 
-    // Check expiration
     if (strtotime((string) $row['expires_at']) < time()) {
         $pdo->prepare("UPDATE sms_verification_codes SET is_used = 1 WHERE id = :id")->execute([':id' => $id]);
         return ['valid' => false, 'message' => 'کد تایید منقضی شده است. لطفاً کد جدید دریافت کنید.', 'payload' => null];
@@ -379,12 +410,12 @@ function verifySmsOtp(string $phone, string $code, string $actionType = 'registe
         ];
     }
 
-    // Mark as used
-    $pdo->prepare("UPDATE sms_verification_codes SET is_used = 1 WHERE id = :id")->execute([':id' => $id]);
-
-    $payload = null;
-    if (!empty($row['payload_json'])) {
-        $payload = json_decode((string) $row['payload_json'], true);
+    // Mark as used (atomic, prevents double-consume race)
+    $consume = $pdo->prepare("UPDATE sms_verification_codes SET is_used = 1
+        WHERE id = :id AND is_used = 0");
+    $consume->execute([':id' => $id]);
+    if ($consume->rowCount() !== 1) {
+        return ['valid' => false, 'message' => 'کد تایید قبلاً استفاده شده است. لطفاً دوباره درخواست دهید.', 'payload' => null];
     }
 
     return [

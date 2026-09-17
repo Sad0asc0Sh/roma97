@@ -3,8 +3,8 @@
     "configurations": [
         {
             "name": "roma97",
-            "runtimeExecutable": "C:\\xampp\\php\\php.exe",
-            "runtimeArgs": ["-S", "127.0.0.1:8915", "-t", "C:\\xampp\\htdocs\\roma97"],
+            "runtimeExecutable": "C:\\Users\\SadraPc\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.NTS.8.5_Microsoft.Winget.Source_8wekyb3d8bbwe\\php.exe",
+            "runtimeArgs": ["-d", "extension_dir=C:/Users/SadraPc/AppData/Local/Microsoft/WinGet/Packages/PHP.PHP.NTS.8.5_Microsoft.Winget.Source_8wekyb3d8bbwe/ext", "-d", "extension=pdo_mysql", "-d", "extension=mbstring", "-S", "127.0.0.1:8915", "-t", "D:\\project\\roma97"],
             "port": 8915,
             "autoPort": true
         }
