@@ -79,19 +79,20 @@ $renderField = static function (string $id, string $label, string $type, string 
     <main class="entry-main" id="entry-main">
         <div class="entry-card">
             <?php if (!$isForgot && !$isReset): ?>
-            <nav class="entry-tabs" aria-label="حساب والدین">
-                <a href="<?= e(url('login.php')) ?>" <?= !$isRegister ? 'aria-current="page"' : '' ?>>ورود به حساب</a>
-                <a href="<?= e(url('register.php')) ?>" <?= $isRegister ? 'aria-current="page"' : '' ?>>ثبت‌نام والدین</a>
-            </nav>
-            <?php else: ?>
-            <a class="entry-back" href="<?= e(url(!empty($teacherRecovery) ? 'teacher/login.php' : 'login.php')) ?>">بازگشت به ورود</a>
-            <?php endif; ?>
-            <?php if ($isRegister): ?>
-            <ol class="entry-steps" aria-label="مراحل ثبت‌نام">
-                <li <?= !$isVerify ? 'aria-current="step"' : 'class="is-done"' ?>><span>۱</span> اطلاعات والد</li>
-                <li <?= $isVerify ? 'aria-current="step"' : '' ?>><span>۲</span> تأیید موبایل</li>
-                <li><span>۳</span> بررسی مدیریت</li>
-            </ol>
+            <div class="entry-sticky">
+                <nav class="entry-tabs" aria-label="حساب والدین">
+                    <a href="<?= e(url('login.php')) ?>" <?= !$isRegister ? 'aria-current="page"' : '' ?>>ورود به حساب</a>
+                    <a href="<?= e(url('register.php')) ?>" <?= $isRegister ? 'aria-current="page"' : '' ?>>ثبت‌نام والدین</a>
+                </nav>
+                <?php if ($isRegister): ?>
+                <ol class="entry-steps" aria-label="مراحل ثبت‌نام">
+                    <li <?= !$isVerify ? 'aria-current="step"' : 'class="is-done"' ?>><span><?= $isVerify ? '✓' : '۱' ?></span> اطلاعات والد</li>
+                    <li <?= $isVerify ? 'aria-current="step"' : '' ?>><span>۲</span> تأیید موبایل</li>
+                    <li><span>۳</span> بررسی مدیریت</li>
+                    <li><span>۴</span> ورود به پنل</li>
+                </ol>
+                <?php endif; ?>
+            </div>
             <?php endif; ?>
             <div class="entry-heading"><h1><?= e($heading) ?></h1><p><?= e($description) ?></p></div>
             <?php if ($success): ?><div class="entry-notice entry-notice-success" role="status"><?= e($success) ?></div><?php endif; ?>
