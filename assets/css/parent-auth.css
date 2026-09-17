@@ -93,12 +93,13 @@ body.parent-auth { margin: 0; background: var(--entry-surface); color: var(--ent
 @media (min-width: 1100px) {
     body.parent-auth { overflow: hidden; }
     .entry-layout { height: calc(100dvh - 114px); min-height: 560px; margin-bottom: 20px; }
-    .entry-main { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #bcccba transparent; }
+    .entry-main { justify-content: flex-start; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #bcccba transparent; scroll-padding-top: 70px; }
     .entry-main::-webkit-scrollbar { width: 8px; }
     .entry-main::-webkit-scrollbar-thumb { background: #c9d5c4; border-radius: 8px; }
     .entry-main::-webkit-scrollbar-thumb:hover { background: #b0c2ad; }
     .entry-main::-webkit-scrollbar-track { background: transparent; }
     .entry-card { margin-block: auto; }
+    .entry-tabs { position: sticky; top: 0; z-index: 3; background: var(--entry-surface); padding-block: 10px 6px; margin-bottom: 26px; }
     .entry-bottom { margin-top: 12px; padding-bottom: 6px; }
     .entry-story { height: 100%; min-height: 0; }
 }
