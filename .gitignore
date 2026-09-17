@@ -24,6 +24,9 @@ assets/uploads/*
 !assets/uploads/gallery/index.html
 !assets/uploads/gallery/.htaccess
 
+# Local agent worktrees
+.claude/worktrees/
+
 # Editor / OS noise
 .DS_Store
 Thumbs.db
