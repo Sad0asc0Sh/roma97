@@ -1087,3 +1087,34 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
     padding: 14px 16px;
   }
 }
+
+@media (max-width: 640px) {
+  /* ── Mobile breadcrumb: current section only ─────────────────
+     Next to the hamburger there is no room for the full trail
+     («داشبورد ‹ عنوان»), so ancestor crumbs used to squeeze the
+     current title and cut words mid-text. Show only the active
+     (current) title; ancestors stay one tap away in the side menu. */
+  .app-topbar-right {
+    flex: 1;
+    min-width: 0;
+  }
+  .app-topbar-left {
+    flex-shrink: 0;
+  }
+  .app-breadcrumb {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+  }
+  .app-breadcrumb .app-breadcrumb-item:not(.active),
+  .app-breadcrumb .app-breadcrumb-separator {
+    display: none;
+  }
+  .app-breadcrumb-item.active {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

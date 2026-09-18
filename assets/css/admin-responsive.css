@@ -481,7 +481,6 @@ section.dashboard > h1,
     }
     .app-breadcrumb {
         font-size: 0.78rem;
-        max-width: 38vw;
     }
 }
 
@@ -500,9 +499,6 @@ section.dashboard > h1,
     .app-topbar .theme-toggle-btn {
         display: inline-flex;
         flex-shrink: 0;
-    }
-    .app-topbar .app-breadcrumb {
-        max-width: 30vw;
     }
 }
 
