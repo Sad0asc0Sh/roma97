@@ -1276,7 +1276,193 @@ a.app-btn-primary:hover {
     to { transform: rotate(360deg); }
 }
 
-/* ── SLIDE PROMPT HELPER BUTTON & POPOVER ───────────────────── */
+/* ── CLASSY SLIDE STUDIO CANVAS & BANNER VIEWPORT ──────────── */
+.slide-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 140px;
+    gap: 12px;
+}
+@media (max-width: 480px) {
+    .slide-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.slide-canvas-wrap {
+    position: relative;
+    width: 100%;
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--adm-bg, #FAFBFA);
+    border: 2px dashed var(--adm-border, #CBD5E1);
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    user-select: none;
+}
+.slide-canvas-wrap:hover {
+    border-color: #3D8B63;
+    background: rgba(61, 139, 99, 0.03);
+    box-shadow: 0 4px 16px rgba(61, 139, 99, 0.08);
+}
+.slide-canvas-wrap.is-dragover {
+    border-color: #3D8B63;
+    border-style: solid;
+    background: rgba(61, 139, 99, 0.1);
+    box-shadow: 0 0 0 4px rgba(61, 139, 99, 0.2);
+    transform: scale(1.005);
+}
+[data-theme="dark"] .slide-canvas-wrap {
+    background: #141C16;
+    border-color: #27362B;
+}
+[data-theme="dark"] .slide-canvas-wrap:hover {
+    border-color: #6AAF8A;
+    background: rgba(61, 139, 99, 0.08);
+}
+[data-theme="dark"] .slide-canvas-wrap.is-dragover {
+    border-color: #86EFAC;
+    background: rgba(61, 139, 99, 0.18);
+}
+
+.slide-canvas-desktop {
+    aspect-ratio: 16 / 5.2;
+    min-height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.slide-canvas-mobile {
+    aspect-ratio: 4 / 3;
+    max-width: 240px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.slide-canvas-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 24px 16px;
+    text-align: center;
+    pointer-events: none;
+}
+.slide-canvas-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: rgba(61, 139, 99, 0.08);
+    color: #3D8B63;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+.slide-canvas-wrap:hover .slide-canvas-icon {
+    transform: scale(1.1);
+    background: #3D8B63;
+    color: #FFFFFF;
+}
+[data-theme="dark"] .slide-canvas-icon {
+    background: rgba(106, 175, 138, 0.12);
+    color: #86EFAC;
+}
+[data-theme="dark"] .slide-canvas-wrap:hover .slide-canvas-icon {
+    background: #3D8B63;
+    color: #FFFFFF;
+}
+.slide-canvas-text {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--adm-text, #1E293B);
+}
+.slide-canvas-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.74rem;
+    color: var(--adm-text-muted, #64748B);
+    font-weight: 500;
+}
+
+.slide-canvas-filled {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+.slide-canvas-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.slide-canvas-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(14, 22, 17, 0.65);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.slide-canvas-wrap:hover .slide-canvas-overlay,
+.slide-canvas-wrap:focus-within .slide-canvas-overlay {
+    opacity: 1;
+}
+.slide-canvas-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.18s ease;
+}
+.slide-canvas-action-btn.change {
+    background: #FFFFFF;
+    color: #1A2621;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+.slide-canvas-action-btn.change:hover {
+    background: #F0FDF4;
+    color: #2E7D5B;
+    transform: translateY(-1px);
+}
+.slide-canvas-action-btn.remove {
+    background: rgba(239, 68, 68, 0.9);
+    color: #FFFFFF;
+}
+.slide-canvas-action-btn.remove:hover {
+    background: #DC2626;
+    transform: translateY(-1px);
+}
+.slide-canvas-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(6px);
+    color: #FFFFFF;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    pointer-events: none;
+    letter-spacing: 0.02em;
+}
+
+/* ── CLASSY PROMPT POPOVER ──────────────────────────────────── */
 .slide-prompt-btn {
     background: transparent;
     border: 1px solid var(--adm-border, #CBD5E1);
@@ -1285,88 +1471,97 @@ a.app-btn-primary:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
-    transition: all 0.2s ease;
+    transition: all 0.18s ease;
     padding: 0;
     line-height: 1;
 }
 .slide-prompt-btn:hover {
-    color: #4EAB87;
-    border-color: #4EAB87;
-    background: rgba(78, 171, 135, 0.12);
-    transform: scale(1.1);
+    color: #3D8B63;
+    border-color: #3D8B63;
+    background: rgba(61, 139, 99, 0.1);
+    transform: scale(1.15);
 }
+[data-theme="dark"] .slide-prompt-btn:hover {
+    color: #86EFAC;
+    border-color: #86EFAC;
+    background: rgba(106, 175, 138, 0.2);
+}
+
 .slide-prompt-popover {
-    background: var(--adm-surface, #FFFFFF);
-    border: 1px solid var(--adm-border, #E2E8F0);
+    background: #0E1612;
+    border: 1px solid #1E3024;
     border-radius: 12px;
     padding: 12px 14px;
     margin-bottom: 12px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-    animation: promptFadeIn 0.2s ease-out;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    animation: promptIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
-@keyframes promptFadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
+@keyframes promptIn {
+    from { opacity: 0; transform: translateY(-6px); }
     to { opacity: 1; transform: translateY(0); }
 }
-[data-theme="dark"] .slide-prompt-popover {
-    background: #1C261F;
-    border-color: #2D3A31;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-}
-.slide-prompt-popover-header {
+.slide-prompt-popover-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #1A281F;
 }
-.slide-prompt-popover-title {
-    font-size: 0.82rem;
+.slide-prompt-popover-tag {
+    font-size: 0.76rem;
     font-weight: 700;
-    color: var(--adm-text, #1E293B);
+    color: #86EFAC;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.slide-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: #3D8B63;
+    color: #FFFFFF !important;
+    border: none;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+.slide-copy-btn:hover {
+    background: #4EA375;
+    transform: translateY(-1px);
 }
 .slide-prompt-close {
     background: none;
     border: none;
     font-size: 1.15rem;
     line-height: 1;
-    color: var(--adm-text-muted);
+    color: #7A8C83;
     cursor: pointer;
     padding: 0 4px;
 }
 .slide-prompt-close:hover {
-    color: var(--adm-text);
+    color: #FFFFFF;
 }
-.slide-prompt-content {
+.slide-prompt-text {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 0.78rem;
-    line-height: 1.55;
-    background: var(--adm-bg, #F8FAFC);
-    border: 1px solid var(--adm-border, #E2E8F0);
-    border-radius: 8px;
-    padding: 10px 12px;
-    color: var(--adm-text-secondary, #334155);
+    font-size: 0.77rem;
+    line-height: 1.6;
+    color: #D1E4D8;
     user-select: all;
-    max-height: 120px;
+    max-height: 110px;
     overflow-y: auto;
     word-break: break-word;
+    direction: ltr;
+    text-align: left;
 }
-[data-theme="dark"] .slide-prompt-content {
-    background: #141A16;
-    border-color: #253328;
-    color: #D1D9D4;
-}
-.slide-copy-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.72rem;
-    padding: 3px 8px;
-    border-radius: 6px;
-    cursor: pointer;
-}
+
 
 
 
