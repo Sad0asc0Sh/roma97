@@ -71,16 +71,27 @@ function absoluteUrl(string $path = ''): string
  * URL for a static asset (CSS, JS, image, font) with cache-busting based on
  * the file's modification time. Host-relative (see url()) so assets stay
  * same-origin under any host/port and are never blocked by CSP.
+ *
+ * Fragments are preserved: asset('assets/img/bargoo.svg#bargoo-sleeping')
+ * must resolve to file.svg?v=…#bargoo-sleeping — never file.svg#id?v=…,
+ * which makes the browser look up a non-existent id and hide the artwork.
  */
 function asset(string $path = ''): string
 {
+    $fragment = '';
+    $hashPos  = strpos($path, '#');
+    if ($hashPos !== false) {
+        $fragment = substr($path, $hashPos);
+        $path     = substr($path, 0, $hashPos);
+    }
+
     $url = url($path);
     $localFile = __DIR__ . '/../' . ltrim($path, '/');
     $version = defined('APP_BUILD') ? (string) APP_BUILD : '1.0';
     if (is_file($localFile)) {
         $version .= '.' . filemtime($localFile);
     }
-    $url .= (str_contains($url, '?') ? '&' : '?') . 'v=' . $version;
+    $url .= (str_contains($url, '?') ? '&' : '?') . 'v=' . $version . $fragment;
     return $url;
 }
 

@@ -164,6 +164,44 @@ function brandIcon(string $name, int $size = 18, array $attrs = []): string
 }
 
 /**
+ * Inline Bargoo mascot (public empty states / CTA).
+ *
+ * Rendered in the page DOM instead of via external <use href="bargoo.svg#id">
+ * so the logo cannot vanish when fragment resolution or sprite loading fails.
+ *
+ * @param array<string, mixed> $attrs
+ */
+function bargooSvg(string $pose = 'happy', array $attrs = []): string
+{
+    static $poses = [
+        'happy'     => '<path d="M50,5 C75,5 92,30 90,60 C88,85 68,95 50,95 C32,95 12,85 10,60 C8,30 25,5 50,5 Z" fill="#3D8B63"/><path d="M50,15 Q55,45 50,85" stroke="#2E6B4C" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="32" cy="56" r="6" fill="#C4724A" opacity="0.4"/><circle cx="68" cy="56" r="6" fill="#C4724A" opacity="0.4"/><path d="M30,48 Q35,42 40,48" stroke="#FFFFFF" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M60,48 Q65,42 70,48" stroke="#FFFFFF" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M38,60 Q50,72 62,60" stroke="#FFFFFF" stroke-width="3.5" fill="none" stroke-linecap="round"/><path d="M50,5 C48,-2 52,-5 54,-3" stroke="#2E6B4C" stroke-width="3" fill="none" stroke-linecap="round"/>',
+        'sleeping'  => '<path d="M50,5 C75,5 92,30 90,60 C88,85 68,95 50,95 C32,95 12,85 10,60 C8,30 25,5 50,5 Z" fill="#3D8B63"/><path d="M50,15 Q55,45 50,85" stroke="#2E6B4C" stroke-width="2" fill="none"/><circle cx="32" cy="56" r="7" fill="#E8A838" opacity="0.4"/><circle cx="68" cy="56" r="7" fill="#E8A838" opacity="0.4"/><path d="M30,48 Q35,53 40,48" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M60,48 Q65,53 70,48" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M42,62 Q50,67 58,62" stroke="#FFFFFF" stroke-width="3" fill="none" stroke-linecap="round"/><text x="72" y="30" fill="#E8A838" font-family="sans-serif" font-weight="bold" font-size="14">z</text><text x="82" y="20" fill="#E8A838" font-family="sans-serif" font-weight="bold" font-size="11">z</text>',
+        'surprised' => '<path d="M50,5 C75,5 92,30 90,60 C88,85 68,95 50,95 C32,95 12,85 10,60 C8,30 25,5 50,5 Z" fill="#3D8B63"/><path d="M50,15 Q55,45 50,85" stroke="#2E6B4C" stroke-width="2" fill="none"/><circle cx="30" cy="55" r="5" fill="#C4724A" opacity="0.4"/><circle cx="70" cy="55" r="5" fill="#C4724A" opacity="0.4"/><circle cx="36" cy="46" r="6" fill="#FFFFFF"/><circle cx="36" cy="46" r="3" fill="#1F3B32"/><circle cx="64" cy="46" r="6" fill="#FFFFFF"/><circle cx="64" cy="46" r="3" fill="#1F3B32"/><circle cx="50" cy="64" r="6" fill="#FFFFFF"/>',
+        'waving'    => '<path d="M78,45 Q94,30 88,20 C82,15 74,32 72,40 Z" fill="#3D8B63"/><path d="M50,5 C75,5 92,30 90,60 C88,85 68,95 50,95 C32,95 12,85 10,60 C8,30 25,5 50,5 Z" fill="#3D8B63"/><path d="M50,15 Q55,45 50,85" stroke="#2E6B4C" stroke-width="2" fill="none"/><circle cx="32" cy="56" r="6" fill="#C4724A" opacity="0.4"/><circle cx="68" cy="56" r="6" fill="#C4724A" opacity="0.4"/><circle cx="35" cy="46" r="4" fill="#FFFFFF"/><circle cx="65" cy="46" r="4" fill="#FFFFFF"/><path d="M36,58 Q50,75 64,58 Z" fill="#FFFFFF"/>',
+    ];
+
+    if (!isset($poses[$pose])) {
+        $pose = 'happy';
+    }
+
+    $class = 'empty__art';
+    if (isset($attrs['class'])) {
+        $class = (string) $attrs['class'];
+        unset($attrs['class']);
+    }
+
+    $extra = '';
+    foreach ($attrs as $key => $value) {
+        $extra .= ' ' . $key . '="' . e((string) $value) . '"';
+    }
+
+    return '<svg class="' . e($class) . '" viewBox="0 0 100 100"'
+        . ' aria-hidden="true" focusable="false"' . $extra . '>'
+        . $poses[$pose]
+        . '</svg>';
+}
+
+/**
  * The Roma monogram/logo mark.
  */
 function roomaLogoMark(int $size = 40, string $gradientId = 'roomaLogoGrad'): string

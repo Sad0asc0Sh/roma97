@@ -156,9 +156,7 @@ require_once __DIR__ . '/templates/header.php';
     <section class="section">
         <div class="container">
             <div class="empty">
-                <svg class="empty__art" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
-                    <use href="<?php echo e(asset('assets/img/bargoo.svg#bargoo-surprised')); ?>"/>
-                </svg>
+                <?php echo bargooSvg('surprised'); ?>
                 <h1 class="empty__title">این خبر پیدا نشد</h1>
                 <p class="empty__text">
                     خبری که به دنبالش بودید یافت نشد یا حذف شده است.
@@ -335,9 +333,7 @@ require_once __DIR__ . '/templates/header.php';
 
             <?php if ($newsItems === []): ?>
                 <div class="empty">
-                    <svg class="empty__art" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
-                        <use href="<?php echo e(asset('assets/img/bargoo.svg#bargoo-sleeping')); ?>"/>
-                    </svg>
+                    <?php echo bargooSvg('sleeping'); ?>
                     <h2 class="empty__title">هنوز خبری در این بخش نیست</h2>
                     <p class="empty__text">
                         به‌زودی تازه‌های روما را همین‌جا منتشر می‌کنیم.

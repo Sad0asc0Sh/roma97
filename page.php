@@ -127,9 +127,7 @@ require_once __DIR__ . '/templates/header.php';
     <div class="container">
         <?php if ($notFound): ?>
             <div class="empty">
-                <svg class="empty__art" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
-                    <use href="<?= e(asset('assets/img/bargoo.svg#bargoo-surprised')) ?>"/>
-                </svg>
+                <?= bargooSvg('surprised') ?>
                 <h1 class="empty__title">این صفحه پیدا نشد</h1>
                 <p class="empty__text">
                     صفحه‌ای که به دنبالش بودید وجود ندارد یا حذف شده است.

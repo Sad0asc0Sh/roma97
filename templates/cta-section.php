@@ -39,7 +39,5 @@ $ctaPhone = siteContactPhone();
         </div>
     </div>
 
-    <svg class="cta__mascot" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
-        <use href="<?php echo e(asset('assets/img/bargoo.svg#bargoo-waving')); ?>"/>
-    </svg>
+    <?php echo bargooSvg('waving', ['class' => 'cta__mascot']); ?>
 </section>
