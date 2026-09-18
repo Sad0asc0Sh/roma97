@@ -838,7 +838,60 @@ code{font-size:0.8rem;background:var(--adm-primary-50);padding:2px 8px;border-ra
 /* ── QUICK ACTION TEXT ──────────────────────────────────────── */
 .quick-action-text{font-size:0.8rem;font-weight:600;color:inherit;transition:color var(--adm-transition)}
 .quick-action:hover .quick-action-text{color:var(--adm-primary)}
-.admin-gallery-thumb{width:80px;height:60px;object-fit:cover;border-radius:var(--adm-radius-xs);border:1px solid var(--adm-border)}
+.admin-gallery-thumb {
+    width: 84px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: var(--adm-radius-sm, 8px);
+    border: 1px solid var(--adm-border);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    display: block;
+}
+.admin-gallery-thumb:hover {
+    transform: scale(1.06);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+}
+.gallery-status-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+.gallery-status-btn.active {
+    background: rgba(46, 125, 91, 0.14);
+    color: #2E7D5B;
+    border-color: rgba(46, 125, 91, 0.35);
+}
+.gallery-status-btn.active:hover {
+    background: rgba(46, 125, 91, 0.22);
+    transform: scale(1.03);
+}
+.gallery-status-btn.inactive {
+    background: rgba(148, 163, 184, 0.14);
+    color: #64748B;
+    border-color: rgba(148, 163, 184, 0.35);
+}
+.gallery-status-btn.inactive:hover {
+    background: rgba(148, 163, 184, 0.22);
+    transform: scale(1.03);
+}
+[data-theme="dark"] .gallery-status-btn.active {
+    background: rgba(78, 171, 135, 0.2);
+    color: #86EFAC;
+    border-color: rgba(106, 175, 138, 0.4);
+}
+[data-theme="dark"] .gallery-status-btn.inactive {
+    background: rgba(148, 163, 184, 0.12);
+    color: #94A3B8;
+    border-color: rgba(148, 163, 184, 0.3);
+}
 .admin-image-preview-wrap{margin-top:8px}.admin-image-preview-wrap img{max-width:220px;border-radius:var(--adm-radius-sm);border:1px solid var(--adm-border)}
 .btn-xs{padding:3px 8px;font-size:0.7rem}.btn-success{background:#10B981;color:#fff;border:none}.btn-success:hover{background:#059669}.btn-muted{background:#9CA3AF;color:#fff;border:none}
 
