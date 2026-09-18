@@ -123,3 +123,27 @@ body.parent-auth { margin: 0; background: var(--entry-surface); color: var(--ent
 }
 @media (max-width: 370px) { .entry-layout { padding-inline: 16px; } .entry-topbar { padding-inline: 16px; } .entry-name-row { grid-template-columns: 1fr; } .entry-steps { font-size: 9.5px; } .entry-heading h1 { font-size: 25px; } }
 @media (prefers-reduced-motion: reduce) { .parent-auth *, .parent-auth *::before, .parent-auth *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* ── Navigation feedback (افزودنی؛ هیچ قانون موجودی تغییر نکرده) ──────────
+   نوار پیشرفت بالای صفحه + کم‌نور شدن لینک‌ها هنگام ناوبری تا تأخیر سرور
+   حس «کلیکِ مرده» ندهد. همه‌چیز تزئینی است و منطق فرم/اعتبارسنجی دست‌نخورده است. */
+.entry-progress { position: fixed; top: 0; right: 0; left: 0; height: 3px; z-index: 60; pointer-events: none; opacity: 0; transition: opacity .2s ease; }
+.entry-progress span { display: block; height: 100%; width: 35%; background: #3d8b63; border-radius: 3px; }
+html.is-navigating .entry-progress { opacity: 1; }
+html.is-navigating .entry-progress span { animation: entry-progress-slide 1.1s ease-in-out infinite; }
+@keyframes entry-progress-slide { 0% { transform: translateX(120%); } 50% { transform: translateX(0); } 100% { transform: translateX(-120%); } }
+html.is-navigating body { cursor: progress; }
+html.is-navigating .entry-tabs a:not(.is-pending),
+html.is-navigating .entry-switch a,
+html.is-navigating .entry-staff a,
+html.is-navigating .entry-home,
+html.is-navigating .entry-forgot,
+html.is-navigating .entry-recipient a { opacity: .55; pointer-events: none; }
+.entry-tabs a.is-pending,
+.entry-switch a.is-pending,
+.entry-staff a.is-pending { opacity: .8; pointer-events: none; }
+.entry-tabs a.is-pending::after { content: ''; display: inline-block; width: 12px; height: 12px; margin-inline-start: 8px; vertical-align: -2px; border: 2px solid #28634440; border-top-color: #286344; border-radius: 50%; animation: entry-spin .8s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+    html.is-navigating .entry-progress span { animation: none; transform: none; width: 100%; }
+    .entry-tabs a.is-pending::after { animation: none; }
+}

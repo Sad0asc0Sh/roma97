@@ -35,7 +35,8 @@ if ($recoveryType !== 'parent') {
     $error = $teacherRecovery
         ? 'برای بازیابی رمز مربی از مدیریت مهد درخواست لینک بازیابی کنید.'
         : 'نوع حساب نامعتبر است.';
-} else {
+} elseif (isPostRequest() || isValidIranianMobile($phone)) {
+    // اتصال تنبل: نمایش خالی فرم بازیابی (GET بدون شماره) نیازی به DB ندارد.
     try {
         initializeFinancialTables();
         $pdo = getDb();

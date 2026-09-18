@@ -20,12 +20,16 @@ $successMessage = getFlash('success');
 $phone = '';
 $fieldErrors = [];
 $pdo = null;
-try {
-    initializeFinancialTables();
-    $pdo = getDb();
-} catch (Throwable $exception) {
-    error_log('Login storage unavailable: ' . $exception->getMessage());
-    $error = 'سامانه ورود موقتاً در دسترس نیست. کمی بعد دوباره تلاش کنید.';
+// اتصال تنبل به ذخیره‌سازی: نمایش فرم (GET) نیازی به DB ندارد؛ فقط هنگام POST
+// وصل شو تا ناوبری بین تب‌های ورود/ثبت‌نام سبک بماند. پیام‌ها و منطق ورود بدون تغییر است.
+if (isPostRequest()) {
+    try {
+        initializeFinancialTables();
+        $pdo = getDb();
+    } catch (Throwable $exception) {
+        error_log('Login storage unavailable: ' . $exception->getMessage());
+        $error = 'سامانه ورود موقتاً در دسترس نیست. کمی بعد دوباره تلاش کنید.';
+    }
 }
 
 if (isPostRequest()) {

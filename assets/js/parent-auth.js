@@ -78,7 +78,16 @@
             if (invalid.length) { event.preventDefault(); invalid[0].focus(); return; }
             inputs.filter(input => input.matches('[data-phone]')).forEach(input => { input.value = normalizePhone(input.value); });
             form.setAttribute('aria-busy', 'true');
-            form.querySelectorAll('button[type="submit"]').forEach(button => { button.disabled = true; });
+            form.querySelectorAll('button[type="submit"]').forEach(button => {
+                button.disabled = true;
+                const label = button.querySelector('[data-submit-label]');
+                const loadingText = button.getAttribute('data-loading-text');
+                if (label && loadingText && !button.dataset.origLabel) {
+                    button.dataset.origLabel = label.textContent;
+                    label.textContent = loadingText;
+                }
+            });
+            document.documentElement.classList.add('is-navigating');
         });
     });
     document.querySelectorAll('[data-resend]').forEach(button => {
@@ -95,11 +104,58 @@
         }
     });
     window.addEventListener('pageshow', () => {
+        document.documentElement.classList.remove('is-navigating');
+        document.querySelectorAll('a.is-pending').forEach(a => a.classList.remove('is-pending'));
         document.querySelectorAll('[data-auth-form]').forEach(form => {
             form.removeAttribute('aria-busy');
-            form.querySelectorAll('button[type="submit"]:not([data-resend])').forEach(button => { button.disabled = false; });
+            form.querySelectorAll('button[type="submit"]:not([data-resend])').forEach(button => {
+                button.disabled = false;
+                const label = button.querySelector('[data-submit-label]');
+                if (label && button.dataset.origLabel) {
+                    label.textContent = button.dataset.origLabel;
+                    delete button.dataset.origLabel;
+                }
+            });
         });
     });
+    // Prefetch مقصد هنگام اعلام قصد کاربر (هاور/فوکوس/تاچ) — فقط هم‌مبدأ و GET، بدون تغییر رفتار کلیک.
+    const prefetched = new Set();
+    const prefetchUrl = url => {
+        if (!url || prefetched.has(url)) return;
+        let parsed = null;
+        try { parsed = new URL(url, window.location.href); } catch (e) { return; }
+        if (parsed.origin !== window.location.origin) return;
+        if (parsed.pathname.indexOf('logout') !== -1) return;
+        prefetched.add(url);
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = parsed.href;
+        link.setAttribute('as', 'document');
+        document.head.appendChild(link);
+    };
+    document.querySelectorAll('.entry-tabs a[href], .entry-switch a[href], .entry-staff a[href], .entry-home[href], .entry-forgot[href], .entry-recipient a[href]').forEach(a => {
+        const go = () => prefetchUrl(a.href);
+        a.addEventListener('mouseenter', go, { passive: true });
+        a.addEventListener('focus', go);
+        a.addEventListener('touchstart', go, { passive: true });
+        a.addEventListener('click', () => {
+            document.documentElement.classList.add('is-navigating');
+            a.classList.add('is-pending');
+        }, { passive: true });
+    });
+    // فوکوس آغازین فقط دسکتاپ و فقط وقتی خطایی برای اصلاح وجود ندارد.
+    try {
+        const hasError = document.querySelector('[aria-invalid="true"], [data-server-error]');
+        const finePointer = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+        if (!hasError && finePointer && document.activeElement === document.body) {
+            const first = document.querySelector('[data-auth-form] input:not([type="hidden"])');
+            if (first) {
+                window.requestAnimationFrame(() => {
+                    try { first.focus({ preventScroll: true }); } catch (e) { first.focus(); }
+                });
+            }
+        }
+    } catch (e) { /* فوکوس تزئینی است؛ خطا را نادیده بگیر */ }
     const error = document.querySelector('[aria-invalid="true"], [data-server-error]');
     if (error) error.focus();
 })();

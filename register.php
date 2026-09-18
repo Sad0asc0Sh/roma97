@@ -59,13 +59,19 @@ if (isPostRequest()) {
     }
 }
 $pdo = null;
-try {
-    // All runtime DDL must run BEFORE starting the OTP/account transaction.
-    initializeFinancialTables();
-    $pdo = getDb();
-} catch (Throwable $exception) {
-    error_log('Registration storage unavailable: ' . $exception->getMessage());
-    $errors[] = 'ثبت‌نام موقتاً در دسترس نیست. لطفاً بعداً دوباره تلاش کنید.';
+// اتصال تنبل به ذخیره‌سازی: فرم خالی ثبت‌نام (GET بدون شماره معتبر) نیازی به DB ندارد.
+// فقط برای POST یا صفحه تأیید (که استعلام cooldown لازم دارد) وصل شو.
+$needsRegistrationStorage = isPostRequest()
+    || ($step === 'verify' && isValidIranianMobile($verifyPhone));
+if ($needsRegistrationStorage) {
+    try {
+        // All runtime DDL must run BEFORE starting the OTP/account transaction.
+        initializeFinancialTables();
+        $pdo = getDb();
+    } catch (Throwable $exception) {
+        error_log('Registration storage unavailable: ' . $exception->getMessage());
+        $errors[] = 'ثبت‌نام موقتاً در دسترس نیست. لطفاً بعداً دوباره تلاش کنید.';
+    }
 }
 
 if (isPostRequest() && $errors === [] && $pdo instanceof PDO) {

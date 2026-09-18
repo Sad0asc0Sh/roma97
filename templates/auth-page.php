@@ -19,6 +19,11 @@ $description = $isRegister ? 'حساب والدین را بسازید و همر�
 if ($isVerify) { $description = 'کد ۵ رقمی پیامک‌شده را وارد کنید. اعتبار هر کد ۳ دقیقه است.'; }
 $endpoint = $isRegister ? 'register.php' : ($isForgot ? 'forgot-password.php' : ($isReset ? 'reset-password.php' : 'login.php'));
 $formAction = url($endpoint . ($isVerify ? '?step=verify&phone=' . urlencode($displayPhone) : ''));
+// متن حالت لودینگ دکمه — فقط برای بازخورد دیداری است و منطق اعتبارسنجی/ارسال را تغییر نمی‌دهد.
+if ($mode === 'login') { $loadingText = 'در حال ورود…'; }
+elseif ($isVerify) { $loadingText = $isRegister ? 'در حال تأیید…' : 'در حال ذخیرهٔ رمز جدید…'; }
+elseif ($isReset) { $loadingText = 'در حال ذخیرهٔ رمز جدید…'; }
+else { $loadingText = 'در حال ارسال کد…'; }
 $name = siteName();
 $logo = siteLogo();
 $renderField = static function (string $id, string $label, string $type, string $value = '', string $hint = '', string $autocomplete = '') use ($fieldErrors): void {
@@ -65,8 +70,31 @@ $renderField = static function (string $id, string $label, string $type, string 
     <link rel="stylesheet" href="<?= e(asset('assets/css/fonts.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset('assets/css/parent-auth.css')) ?>">
     <script src="<?= e(asset('assets/js/parent-auth.js')) ?>" defer></script>
+    <?php // Prefetch سبکِ صفحات احراز هویت هنگام هاور/فوکوس؛ ناوبری بعدی را سریع‌تر نشان می‌دهد. ?>
+    <script type="speculationrules">
+    {
+      "prefetch": [
+        {"where": {"and": [{"href_matches": "/*login*"}, {"not": {"href_matches": "/*logout*"}}]}, "eagerness": "moderate"},
+        {"where": {"href_matches": "/*register*"}, "eagerness": "moderate"},
+        {"where": {"href_matches": "/*forgot-password*"}, "eagerness": "moderate"}
+      ]
+    }
+    </script>
+    <?php // بازخورد فوری ناوبری: بدون تغییر منطق، فقط نوار پیشرفت و حالت انتظار را فعال می‌کند. ?>
+    <style>
+    .entry-progress{position:fixed;top:0;right:0;left:0;height:3px;z-index:60;pointer-events:none;opacity:0;transition:opacity .2s ease}
+    .entry-progress span{display:block;height:100%;width:35%;background:#3d8b63;border-radius:3px}
+    html.is-navigating .entry-progress{opacity:1}
+    html.is-navigating .entry-progress span{animation:entry-progress-slide 1.1s ease-in-out infinite}
+    @keyframes entry-progress-slide{0%{transform:translateX(120%)}50%{transform:translateX(0)}100%{transform:translateX(-120%)}}
+    html.is-navigating body{cursor:progress}
+    </style>
+    <script>
+    (function(){var d=document.documentElement;function nav(a){if(!a)return false;if(a.target==='_blank'||a.hasAttribute('download'))return false;var h=a.getAttribute('href');if(!h||h.charAt(0)==='#'||h.indexOf('mailto:')===0||h.indexOf('tel:')===0||h.indexOf('javascript:')===0)return false;if(a.getAttribute('aria-current')==='page')return false;d.classList.add('is-navigating');a.classList.add('is-pending');return true;}document.addEventListener('click',function(e){if(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||(e.button!==undefined&&e.button!==0))return;var t=e.target;var a=t&&t.closest?t.closest('a[href]'):null;if(a)nav(a);},true);document.addEventListener('submit',function(e){var f=e.target;if(f&&f.hasAttribute&&f.hasAttribute('data-auth-form'))d.classList.add('is-navigating');},true);window.addEventListener('pageshow',function(){d.classList.remove('is-navigating');var p=document.querySelectorAll('a.is-pending');for(var i=0;i<p.length;i++)p[i].classList.remove('is-pending');});})();
+    </script>
 </head>
 <body class="parent-auth">
+<div class="entry-progress" aria-hidden="true"><span></span></div>
 <a href="#entry-main" class="entry-skip">رفتن به فرم</a>
 <header class="entry-topbar">
     <a class="entry-logo" href="<?= e(url('index.php')) ?>">
@@ -125,7 +153,7 @@ $renderField = static function (string $id, string $label, string $type, string 
                     <?php else: ?><a class="entry-forgot" href="<?= e(url('forgot-password.php')) ?>">رمز عبور را فراموش کرده‌اید؟</a><?php endif; ?>
                 <?php endif; ?>
                 <?php if ($isRegister && !$isVerify): ?><p class="entry-note">پس از تأیید موبایل، حساب شما با بررسی مدیریت فعال می‌شود. این فرم برای ساخت حساب والدین است.</p><?php endif; ?>
-                <button type="submit" class="entry-submit"><span data-submit-label><?= $isRegister ? ($isVerify ? 'تأیید و تکمیل ثبت‌نام' : 'دریافت کد تأیید') : ($isForgot ? ($isVerify ? 'ذخیرهٔ رمز جدید' : 'دریافت کد بازیابی') : ($isReset ? 'ذخیرهٔ رمز جدید' : 'ورود به حساب والدین')) ?></span><span class="entry-spinner" aria-hidden="true"></span></button>
+                <button type="submit" class="entry-submit" data-loading-text="<?= e($loadingText) ?>"><span data-submit-label><?= $isRegister ? ($isVerify ? 'تأیید و تکمیل ثبت‌نام' : 'دریافت کد تأیید') : ($isForgot ? ($isVerify ? 'ذخیرهٔ رمز جدید' : 'دریافت کد بازیابی') : ($isReset ? 'ذخیرهٔ رمز جدید' : 'ورود به حساب والدین')) ?></span><span class="entry-spinner" aria-hidden="true"></span></button>
             </form>
             <?php endif; ?>
             <?php if ($isVerify): ?>
