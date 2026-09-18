@@ -148,7 +148,7 @@ if ($row === null) {
 
 $fullName = trim((string) $row['first_name'] . ' ' . (string) $row['last_name']);
 $preferredName = trim((string) ($row['preferred_name'] ?? ''));
-$initial = strtoupper(substr((string) ($row['first_name'] ?? ''), 0, 1));
+$initial = userInitial((string) ($row['first_name'] ?? ''));
 $status = (string) ($row['status'] ?? 'pending');
 $enrollClass = parentChildEnrollmentClass($status);
 $allergiesText = trim((string) ($row['allergies'] ?? ''));

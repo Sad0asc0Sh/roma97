@@ -361,7 +361,7 @@ require_once __DIR__ . '/header.php';
             <img class="profile-avatar" src="<?= e(url($parent['avatar'])) ?>" alt="<?= e($displayName) ?>">
         <?php else: ?>
             <div class="profile-avatar profile-avatar-placeholder">
-                <?= e(strtoupper(substr($infoOld['first_name'], 0, 1))) ?>
+                <?= e(userInitial($infoOld['first_name'])) ?>
             </div>
         <?php endif; ?>
     </div>
@@ -439,7 +439,7 @@ require_once __DIR__ . '/header.php';
                 <img class="profile-avatar-large" src="<?= e(url($parent['avatar'])) ?>" alt="<?= e($displayName) ?>">
             <?php else: ?>
                 <div class="profile-avatar-large profile-avatar-placeholder">
-                    <?= e(strtoupper(substr($infoOld['first_name'], 0, 1))) ?>
+                    <?= e(userInitial($infoOld['first_name'])) ?>
                 </div>
             <?php endif; ?>
         </div>

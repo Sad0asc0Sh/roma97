@@ -199,6 +199,9 @@ function initConfirmDialogs() {
   dialogOverlay.addEventListener('click', (e) => {
     if (e.target === dialogOverlay) closeConfirmModal();
   });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeConfirmModal();
+  });
 
   proceedBtn.addEventListener('click', () => {
     if (activeConfirmForm) {

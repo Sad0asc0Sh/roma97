@@ -530,7 +530,7 @@ require_once __DIR__ . '/header.php';
         <p class="muted">هیچ معلمی یافت نشد<?= $filterStatus ? ' با وضعیت «' . e($filterStatus) . '"' : '' ?>.</p>
     <?php else: ?>
         <!-- Desktop table -->
-        <div class="admin-table-wrap">
+        <div class="admin-table-wrap teacher-desktop-table">
             <table class="admin-table">
                 <thead>
                     <tr>
@@ -548,7 +548,7 @@ require_once __DIR__ . '/header.php';
                 <?php foreach ($teachers as $t): ?>
                     <?php
                     $fullName = trim($t['first_name'] . ' ' . $t['last_name']);
-                    $initial  = strtoupper(substr((string) $t['first_name'], 0, 1));
+                    $initial  = userInitial((string) $t['first_name']);
                     $tStatus  = (string) $t['status'];
                     $badgeClass = match ($tStatus) {
                         'active'   => 'badge-active',
@@ -648,7 +648,7 @@ require_once __DIR__ . '/header.php';
             <?php foreach ($teachers as $t): ?>
                 <?php
                 $fullName   = trim($t['first_name'] . ' ' . $t['last_name']);
-                $initial    = strtoupper(substr((string) $t['first_name'], 0, 1));
+                $initial    = userInitial((string) $t['first_name']);
                 $tStatus    = (string) $t['status'];
                 $badgeClass = match ($tStatus) {
                     'active'   => 'badge-active',

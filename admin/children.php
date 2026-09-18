@@ -164,7 +164,7 @@ $filterHref = static fn (string $value): string => url(
                 <?php
                 $cid = parseAdminChildListId($child['id'] ?? 0);
                 $fullName = trim((string) $child['first_name'] . ' ' . (string) $child['last_name']);
-                $initial = strtoupper(substr((string) ($child['first_name'] ?? ''), 0, 1));
+                $initial = userInitial((string) ($child['first_name'] ?? ''));
                 $hasAllergies = trim((string) ($child['allergies'] ?? '')) !== '';
                 $parentName = trim((string) ($child['parent_first_name'] ?? '') . ' ' . (string) ($child['parent_last_name'] ?? ''));
                 $cs = (string) ($child['status'] ?? 'pending');

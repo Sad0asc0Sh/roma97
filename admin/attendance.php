@@ -441,7 +441,7 @@ require_once __DIR__ . '/header.php';
                                         $cid = (int) $child['id'];
                                         $fullName = trim((string) $child['first_name'] . ' ' . (string) $child['last_name']);
                                         $parentName = trim((string) $child['parent_first_name'] . ' ' . (string) $child['parent_last_name']);
-                                        $initial = strtoupper(substr((string) ($child['first_name'] ?? ''), 0, 1));
+                                        $initial = userInitial((string) ($child['first_name'] ?? ''));
                                         $notesVal = (string) ($child['attendance_notes'] ?? '');
                                         ?>
                                         <tr>
@@ -499,7 +499,7 @@ require_once __DIR__ . '/header.php';
                             $cid = (int) $child['id'];
                             $fullName = trim((string) $child['first_name'] . ' ' . (string) $child['last_name']);
                             $parentName = trim((string) $child['parent_first_name'] . ' ' . (string) $child['parent_last_name']);
-                            $initial = strtoupper(substr((string) ($child['first_name'] ?? ''), 0, 1));
+                            $initial = userInitial((string) ($child['first_name'] ?? ''));
                             $notesVal = (string) ($child['attendance_notes'] ?? '');
                             ?>
                             <article class="attendance-card">

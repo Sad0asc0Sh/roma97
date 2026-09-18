@@ -1026,3 +1026,28 @@ function activeChildrenTuitionBreakdown(PDO $pdo, string $monthYear): array
 
     return $result;
 }
+
+/**
+ * Safe single-character initial for avatars (UTF-8 / Persian / Latin aware).
+ * Always returns a valid single character without breaking UTF-8 bytes,
+ * and gracefully falls back if mbstring extension is not loaded.
+ */
+function userInitial(string $name, string $fallback = '؟'): string
+{
+    $name = trim($name);
+    if ($name === '') {
+        return $fallback;
+    }
+
+    if (function_exists('mb_substr')) {
+        $char = mb_substr($name, 0, 1, 'UTF-8');
+        return function_exists('mb_strtoupper') ? mb_strtoupper($char, 'UTF-8') : strtoupper($char);
+    }
+
+    if (preg_match('/^./u', $name, $match)) {
+        return strtoupper($match[0]);
+    }
+
+    return strtoupper(substr($name, 0, 1));
+}
+

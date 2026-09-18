@@ -55,6 +55,7 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/fonts.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/app-shell.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/admin.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(asset('assets/css/admin-responsive.css')); ?>">
     <script src="<?php echo e(asset('assets/js/app-shell.js')); ?>" defer></script>
     <script>
     window.toggleMobileSidebar = function(evtOrState) {

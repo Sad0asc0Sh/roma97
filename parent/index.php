@@ -147,7 +147,7 @@ require_once __DIR__ . '/header.php';
             <img class="parent-avatar-large" src="<?= e(url($avatar)) ?>" alt="<?= e($firstName) ?>">
         <?php else: ?>
             <div class="parent-avatar-large parent-avatar-placeholder">
-                <?= e(strtoupper(substr($firstName, 0, 1))) ?>
+                <?= e(userInitial($firstName)) ?>
          </div>
         <?php endif; ?>
         <div class="parent-welcome-text">
@@ -255,7 +255,7 @@ require_once __DIR__ . '/header.php';
                 $fullName = trim((string) $child['first_name'] . ' ' . (string) $child['last_name']);
                 $preferredName = trim((string) ($child['preferred_name'] ?? ''));
                 $displayName = $preferredName !== '' ? $preferredName : (string) $child['first_name'];
-                $initial = strtoupper(substr((string) ($child['first_name'] ?? ''), 0, 1));
+                $initial = userInitial((string) ($child['first_name'] ?? ''));
                 $hasAllergies = trim((string) ($child['allergies'] ?? '')) !== '';
                 $gender = (string) ($child['gender'] ?? '');
                 $genderIconSvg = '<svg class="icon icon-sm" aria-hidden="true" style="vertical-align:middle;margin-inline-end:4px;width:16px;height:16px;"><use href="' . e(asset('assets/img/icons.svg#icon-user')) . '"/></svg>';

@@ -413,6 +413,13 @@ require_once __DIR__ . '/header.php';
             </div>
         </div>
     </div>
+    <script>
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            window.location.href = <?= json_encode(url('admin/messages.php')) ?>;
+        }
+    });
+    </script>
 <?php endif; ?>
 
 <?php require_once __DIR__ . '/footer.php'; ?>

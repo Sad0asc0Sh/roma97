@@ -67,7 +67,7 @@ require_once __DIR__ . '/header.php';
             <?php
             $fullName = trim((string) $child['first_name'] . ' ' . (string) $child['last_name']);
             $preferredName = trim((string) ($child['preferred_name'] ?? ''));
-            $initial = strtoupper(substr((string) ($child['first_name'] ?? ''), 0, 1));
+            $initial = userInitial((string) ($child['first_name'] ?? ''));
             $hasAllergies = trim((string) ($child['allergies'] ?? '')) !== '';
             $cs = (string) ($child['status'] ?? 'pending');
             $enrollClass = parentChildEnrollmentClass($cs);

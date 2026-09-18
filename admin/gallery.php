@@ -1167,7 +1167,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-        closeImageModal();
+        const modal = document.getElementById('galleryModal');
+        if (modal && modal.style.display !== 'none') {
+            closeImageModal();
+        }
     }
 });
 </script>

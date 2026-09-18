@@ -118,7 +118,7 @@ $detailRedirect = url('admin/child-detail.php?id=' . $childId);
 
 $fullName = trim((string) $row['first_name'] . ' ' . (string) $row['last_name']);
 $parentName = trim((string) $row['parent_first_name'] . ' ' . (string) $row['parent_last_name']);
-$initial = strtoupper(substr((string) ($row['first_name'] ?? ''), 0, 1));
+$initial = userInitial((string) ($row['first_name'] ?? ''));
 $status = (string) ($row['status'] ?? 'pending');
 $allergiesText = trim((string) ($row['allergies'] ?? ''));
 $badgeClass = match ($status) {
