@@ -76,10 +76,11 @@ function asset(string $path = ''): string
 {
     $url = url($path);
     $localFile = __DIR__ . '/../' . ltrim($path, '/');
+    $version = defined('APP_BUILD') ? (string) APP_BUILD : '1.0';
     if (is_file($localFile)) {
-        $version = filemtime($localFile);
-        $url .= (str_contains($url, '?') ? '&' : '?') . 'v=' . $version;
+        $version .= '.' . filemtime($localFile);
     }
+    $url .= (str_contains($url, '?') ? '&' : '?') . 'v=' . $version;
     return $url;
 }
 

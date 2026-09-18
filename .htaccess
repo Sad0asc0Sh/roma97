@@ -83,12 +83,12 @@ Options -Indexes
     ExpiresByType image/svg+xml "access plus 1 month"
     ExpiresByType image/x-icon "access plus 1 year"
     
-    # CSS and JavaScript
-    ExpiresByType text/css "access plus 1 month"
-    ExpiresByType text/javascript "access plus 1 month"
-    ExpiresByType application/javascript "access plus 1 month"
-    ExpiresByType application/x-javascript "access plus 1 month"
-    
+    # CSS and JavaScript (Short cache with revalidation to ensure instant mobile updates)
+    ExpiresByType text/css "access plus 1 day"
+    ExpiresByType text/javascript "access plus 1 day"
+    ExpiresByType application/javascript "access plus 1 day"
+    ExpiresByType application/x-javascript "access plus 1 day"
+
     # Fonts
     ExpiresByType font/ttf "access plus 1 year"
     ExpiresByType font/otf "access plus 1 year"
@@ -100,10 +100,17 @@ Options -Indexes
 
 # Set Cache-Control headers
 <IfModule mod_headers.c>
-    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|css|js|woff|woff2|ttf|otf)$">
+    # Images (1 month cache)
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|ico)$">
         Header set Cache-Control "public, max-age=2592000"
     </FilesMatch>
-    
+
+    # CSS and JavaScript (Enable immediate revalidation for instant mobile deployments)
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "public, max-age=86400, must-revalidate"
+    </FilesMatch>
+
+    # Web Fonts (Immutable 1 year cache)
     <FilesMatch "\.(woff|woff2|ttf|otf|eot)$">
         Header set Cache-Control "public, max-age=31536000, immutable"
     </FilesMatch>

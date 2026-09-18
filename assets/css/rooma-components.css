@@ -1039,6 +1039,7 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
    enough for the headline, CTA and dots to breathe. */
 @media (max-width: 767px) {
     .hero__inner {
+        min-height: min(52vh, 420px);
         min-height: min(52svh, 420px);
         padding-block: 1.5rem 2.25rem;
     }
@@ -1052,6 +1053,7 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
 /* Small phones: trim further so the hero stays a fraction of the screen */
 @media (max-width: 380px) {
     .hero__inner {
+        min-height: min(48vh, 380px);
         min-height: min(48svh, 380px);
         padding-block: 1.25rem 2rem;
     }

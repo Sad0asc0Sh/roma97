@@ -45,14 +45,17 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#3D8B63" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#101713" media="(prefers-color-scheme: dark)">
     <script>(function(){var t=localStorage.getItem('roma_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
     <title><?php echo $pageTitleValue; ?></title>
     <link rel="preload" href="<?php echo e(url('assets/fonts/Vazirmatn-Regular.woff2')); ?>" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="<?php echo e(url('assets/css/fonts.css')); ?>">
-    <link rel="stylesheet" href="<?php echo e(url('assets/css/app-shell.css?v=' . (string) @filemtime(__DIR__ . '/../assets/css/app-shell.css'))); ?>">
-    <link rel="stylesheet" href="<?php echo e(url('assets/css/admin.css?v=' . (string) @filemtime(__DIR__ . '/../assets/css/admin.css'))); ?>">
-    <script src="<?php echo e(url('assets/js/app-shell.js')); ?>" defer></script>
+    <link rel="stylesheet" href="<?php echo e(asset('assets/css/fonts.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(asset('assets/css/app-shell.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(asset('assets/css/admin.css')); ?>">
+    <script src="<?php echo e(asset('assets/js/app-shell.js')); ?>" defer></script>
     <script>
     window.toggleMobileSidebar = function(evtOrState) {
         if (evtOrState && evtOrState.stopPropagation) {

@@ -16,6 +16,6 @@ if (!defined('ROOMA_APP')) {
   </div>
 
     <?php require_once __DIR__ . '/../templates/app/dialogs.php'; ?>
-    <script src="<?php echo e(url('assets/js/script.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('assets/js/script.js')); ?>" defer></script>
 </body>
 </html>

@@ -5,6 +5,7 @@
    ================================================================ */
 
 :root {
+  color-scheme: light;
   /* Brand Tokens - Clean concrete values preventing circular dependency */
   --app-primary: #3D8B63;
   --app-primary-dark: #2E6B4C;
@@ -91,6 +92,7 @@
 }
 
 [data-theme="dark"] {
+  color-scheme: dark;
   --app-bg: #101713;
   --app-surface: #182019;
   --app-border: #26312B;
@@ -1076,5 +1078,12 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   }
   .app-drawer {
     max-width: 100%;
+    width: 100%;
+  }
+  .app-drawer-body {
+    padding: 16px 14px;
+  }
+  .app-drawer-header {
+    padding: 14px 16px;
   }
 }

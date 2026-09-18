@@ -52,6 +52,7 @@ $topbarText    = siteTopbarText();
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
     <?php // Apply the stored theme before first paint so there is no flash of the wrong theme.
           // The same pass marks the document as script-capable ('js-head'). rooma.js only adds
           // 'js-enabled' after it is parsed (defer), which is too late for anything that must

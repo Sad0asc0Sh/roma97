@@ -45,6 +45,7 @@
 
 /* ── DESIGN TOKENS (Compatibility Layer - Mapped to Brand --app-*) ──── */
 :root {
+    color-scheme: light;
     --adm-primary: var(--app-primary, #3D8B63);
     --adm-primary-light: var(--app-primary-light, #6AAF8A);
     --adm-primary-dark: var(--app-primary-dark, #2E6B4C);
@@ -130,6 +131,7 @@
 
 /* ── DARK MODE OVERRIDES FOR ADMIN ────────────────────────── */
 [data-theme="dark"] {
+    color-scheme: dark;
     --adm-bg: var(--app-bg);
     --adm-surface: var(--app-surface);
     --adm-surface-hover: var(--app-slate-100);
@@ -875,21 +877,30 @@ code{font-size:0.8rem;background:var(--adm-primary-50);padding:2px 8px;border-ra
     font-weight: 700;
     box-shadow: 0 2px 6px rgba(0,0,0,0.06);
 }
+[data-theme="dark"] .news-banner-plus-icon {
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: #86EFAC !important;
+}
 .news-dropzone-box {
-    border: 2px dashed var(--adm-border);
+    border: 2px dashed var(--adm-border, #CBD5E1);
     border-radius: 16px;
-    background: var(--adm-bg);
+    background: var(--adm-bg, #FAFBFA);
     padding: 24px 16px;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 .news-dropzone-box:hover {
-    border-color: var(--adm-primary);
+    border-color: var(--adm-primary, #3D8B63);
+    background: rgba(61, 139, 99, 0.05);
 }
-.news-dropzone-box:hover {
-    border-color: #4EAB87;
-    background: rgba(78, 171, 135, 0.05);
+[data-theme="dark"] .news-dropzone-box {
+    background: #141C16 !important;
+    border-color: #27362B !important;
+}
+[data-theme="dark"] .news-dropzone-box:hover {
+    border-color: #6AAF8A !important;
+    background: rgba(61, 139, 99, 0.1) !important;
 }
 .news-dropzone-input {
     display: none;
@@ -900,12 +911,32 @@ code{font-size:0.8rem;background:var(--adm-primary-50);padding:2px 8px;border-ra
 .news-dropzone-filename {
     font-size: 0.9rem;
     font-weight: 600;
-    color: var(--adm-text-secondary);
+    color: var(--adm-text, #1E293B);
     margin-bottom: 4px;
+}
+[data-theme="dark"] .news-dropzone-filename {
+    color: #E7ECE9 !important;
 }
 .news-dropzone-hint {
     font-size: 0.8rem;
-    color: var(--adm-text-muted);
+    color: var(--adm-text-muted, #64748B);
+}
+[data-theme="dark"] .news-dropzone-hint {
+    color: #93A39B !important;
+}
+
+.slide-preview-box {
+    margin-top: 10px;
+    align-items: center;
+    gap: 12px;
+    background: var(--adm-bg, #FAFBFA);
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--adm-border, #CBD5E1);
+}
+[data-theme="dark"] .slide-preview-box {
+    background: #141C16 !important;
+    border-color: #27362B !important;
 }
 
 /* ================================================================
