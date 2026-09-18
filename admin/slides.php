@@ -596,10 +596,6 @@ require_once __DIR__ . '/header.php';
                 </div>
             </div>
 
-            <div class="admin-hint-box">
-                <strong>راهنمای ابعاد بنر:</strong> دسکتاپ ۱۹۲۰×۶۰۰ (نسبت ۱۶:۵) — الزامی. تصویر موبایل: اختیاری، برای جلوگیری از کراپ بیش‌ازحد روی گوشی پیشنهاد می‌شود، نسبت حدود ۴:۳ (مثلاً ۱۰۰۰×۷۵۰). اگر آپلود نشود، همان تصویر دسکتاپ به‌صورت خودکار روی موبایل هم استفاده می‌شود.
-            </div>
-
             <div class="form-group">
                 <label for="title" class="form-label">عنوان اسلاید <span style="color:#EF4444;">*</span></label>
                 <input type="text" id="title" name="title" class="form-control"
@@ -692,8 +688,9 @@ require_once __DIR__ . '/header.php';
             <div class="form-group" style="margin-top:1.25rem;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                     <label for="image_mobile" class="form-label" style="margin-bottom:0;display:inline-flex;align-items:center;gap:6px;">
-                        <span>تصویر اختصاصی موبایل <span style="font-size:0.8rem;font-weight:400;color:var(--adm-text-muted);">(اختیاری)</span></span>
+                        <span>تصویر بنر موبایل</span>
                         <button type="button" class="slide-prompt-btn" onclick="togglePromptBox('mobile-prompt-box', event)" title="مشخصات استاندارد تصویر">?</button>
+                        <span style="font-size:0.8rem;font-weight:400;color:var(--adm-text-muted);">(اختیاری)</span>
                     </label>
                     <span style="font-size:0.78rem;color:var(--adm-text-muted);">۱۰۰۰×۷۵۰ px — نسبت ۴:۳</span>
                 </div>
