@@ -486,9 +486,23 @@ section.dashboard > h1,
 }
 
 @media (max-width: 400px) {
-    /* Very narrow phones: keep only essentials */
+    /* Very narrow phones: keep the theme toggle reachable.
+       Compact the chrome (tighter gaps, shorter breadcrumb) instead of hiding it. */
+    .app-topbar {
+        padding: 0 8px;
+        gap: 6px;
+    }
+    .app-topbar-right,
+    .app-topbar-left {
+        gap: 6px;
+        min-width: 0;
+    }
     .app-topbar .theme-toggle-btn {
-        display: none;
+        display: inline-flex;
+        flex-shrink: 0;
+    }
+    .app-topbar .app-breadcrumb {
+        max-width: 30vw;
     }
 }
 
