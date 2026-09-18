@@ -50,8 +50,8 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
     <title><?php echo $pageTitleValue; ?></title>
     <link rel="preload" href="<?php echo e(url('assets/fonts/Vazirmatn-Regular.woff2')); ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?php echo e(url('assets/css/fonts.css')); ?>">
-    <link rel="stylesheet" href="<?php echo e(url('assets/css/app-shell.css')); ?>">
-    <link rel="stylesheet" href="<?php echo e(url('assets/css/admin.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(url('assets/css/app-shell.css?v=' . (string) @filemtime(__DIR__ . '/../assets/css/app-shell.css'))); ?>">
+    <link rel="stylesheet" href="<?php echo e(url('assets/css/admin.css?v=' . (string) @filemtime(__DIR__ . '/../assets/css/admin.css'))); ?>">
     <script src="<?php echo e(url('assets/js/app-shell.js')); ?>" defer></script>
     <script>
     window.toggleMobileSidebar = function(evtOrState) {

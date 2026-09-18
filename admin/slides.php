@@ -596,154 +596,146 @@ require_once __DIR__ . '/header.php';
                 </div>
             </div>
 
-            <div class="slide-form-grid">
-                <div class="form-group" style="margin-bottom:0;">
-                    <label for="title" class="form-label">عنوان اسلاید <span style="color:#EF4444;">*</span></label>
-                    <input type="text" id="title" name="title" class="form-control"
-                        maxlength="255"
-                        placeholder="عنوان اصلی اسلاید..."
-                        value="<?= e($editSlide['title'] ?? '') ?>"
-                        required>
-                </div>
-                <div class="form-group" style="margin-bottom:0;">
-                    <label for="sort_order" class="form-label">ترتیب نمایش <span style="color:#EF4444;">*</span></label>
-                    <input type="number" id="sort_order" name="sort_order" class="form-control"
-                        min="0" step="1"
-                        value="<?= e((string) ($editSlide['sort_order'] ?? '0')) ?>"
-                        required>
-                </div>
+            <div class="form-group">
+                <label for="title" class="form-label">عنوان اسلاید <span style="color:#EF4444;">*</span></label>
+                <input type="text" id="title" name="title" class="form-control"
+                    maxlength="255"
+                    placeholder="عنوان اسلاید را وارد کنید..."
+                    value="<?= e($editSlide['title'] ?? '') ?>"
+                    required>
             </div>
 
-            <div class="form-group" style="margin-top:14px;">
+            <div class="form-group">
                 <label for="subtitle" class="form-label">زیرعنوان <span style="color:var(--adm-text-muted);font-weight:400">(اختیاری)</span></label>
                 <input type="text" id="subtitle" name="subtitle" class="form-control"
                     maxlength="500"
-                    placeholder="توضیح مختصر زیر عنوان بنر..."
+                    placeholder="متن توضیحی زیر عنوان بنر..."
                     value="<?= e($editSlide['subtitle'] ?? '') ?>">
             </div>
 
-            <!-- Desktop Banner Studio Canvas -->
-            <div class="form-group" style="margin-top:16px;">
-                <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
-                    <span style="display:inline-flex;align-items:center;gap:6px;">
-                        <span>تصویر بنر دسکتاپ <?= $editSlide ? '<span style="color:var(--adm-text-muted);font-weight:400">(اختیاری)</span>' : '<span style="color:#EF4444;">*</span>' ?></span>
-                        <button type="button" class="slide-prompt-btn" onclick="togglePromptBox('desktop-prompt-box')" title="مشخصات تصویر">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        </button>
-                    </span>
-                    <span style="font-size:0.78rem;font-weight:500;color:var(--adm-text-muted);">۱۹۲۰×۶۰۰ px — تا ۵۰ مگابایت</span>
-                </label>
+            <div class="form-group">
+                <label for="sort_order" class="form-label">ترتیب نمایش <span style="color:#EF4444;">*</span></label>
+                <input type="number" id="sort_order" name="sort_order" class="form-control"
+                    style="max-width:140px;"
+                    min="0" step="1"
+                    value="<?= e((string) ($editSlide['sort_order'] ?? '0')) ?>"
+                    required>
+            </div>
 
-                <div id="desktop-prompt-box" class="slide-prompt-popover" style="display:none;">
-                    <div class="slide-prompt-popover-top">
-                        <span class="slide-prompt-popover-tag">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                            مشخصات تصویر بنر دسکتاپ
-                        </span>
-                        <div style="display:flex;align-items:center;gap:6px;">
-                            <button type="button" class="slide-copy-btn" onclick="copyPromptText('desktop-prompt-text', this)">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                                <span>کپی</span>
-                            </button>
-                            <button type="button" class="slide-prompt-close" onclick="togglePromptBox('desktop-prompt-box')">&times;</button>
-                        </div>
-                    </div>
-                    <div class="slide-prompt-text" id="desktop-prompt-text">Wide panoramic website hero banner, 16:5 aspect ratio (1920x600). A bright, joyful, and modern Scandinavian-style daycare and preschool classroom with soft natural sunlight streaming through large floor-to-ceiling windows. Happy toddler children (ages 2 to 6) engaged in cheerful Montessori wooden educational activities, colorful learning toys, cozy soft reading nook, warm natural wood textures, lush indoor green plants. Clean commercial interior photography, soft depth of field, wide panoramic negative space in the center for clear text readability, 8k resolution, cinematic soft lighting.</div>
+            <!-- Desktop Banner Upload Section -->
+            <div class="form-group" style="margin-top:1.25rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <label for="image" class="form-label" style="margin-bottom:0;display:inline-flex;align-items:center;gap:6px;">
+                        <span>تصویر بنر دسکتاپ <?= $editSlide ? '<span style="color:var(--adm-text-muted);font-weight:400">(اختیاری)</span>' : '<span style="color:#EF4444;">*</span>' ?></span>
+                        <button type="button" onclick="togglePromptBox('desktop-prompt-box', event)" title="مشخصات استاندارد تصویر" style="width:18px;height:18px;border-radius:50%;border:1px solid #CBD5E1;background:#F1F5F9;color:#475569;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:1;vertical-align:middle;margin-inline-start:4px;">?</button>
+                    </label>
+                    <span style="font-size:0.78rem;color:var(--adm-text-muted);">۱۹۲۰×۶۰۰ px — تا ۵۰ مگابایت</span>
                 </div>
 
-                <div id="desktopCanvas" class="slide-canvas-wrap slide-canvas-desktop" onclick="handleCanvasClick('desktop')">
-                    <input type="file" id="image" name="image" style="display:none;"
+                <div id="desktop-prompt-box" style="display:none;background:#1E293B;border-radius:12px;padding:12px 14px;margin-bottom:12px;color:#F8FAFC;box-shadow:0 8px 24px rgba(0,0,0,0.15);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <span style="font-size:0.8rem;font-weight:700;color:#38BDF8;">مشخصات تصویر بنر دسکتاپ</span>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <button type="button" onclick="copyPromptText('desktop-prompt-text', this)" style="background:#3D8B63;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.75rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                <span>کپی</span>
+                            </button>
+                            <button type="button" onclick="togglePromptBox('desktop-prompt-box', event)" style="background:none;border:none;color:#94A3B8;font-size:16px;cursor:pointer;padding:0 4px;line-height:1;">&times;</button>
+                        </div>
+                    </div>
+                    <div id="desktop-prompt-text" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.78rem;line-height:1.6;color:#E2E8F0;background:#0F172A;padding:10px 12px;border-radius:8px;direction:ltr;text-align:left;max-height:110px;overflow-y:auto;word-break:break-word;user-select:all;">Wide panoramic website hero banner, 16:5 aspect ratio (1920x600). A bright, joyful, and modern Scandinavian-style daycare and preschool classroom with soft natural sunlight streaming through large floor-to-ceiling windows. Happy toddler children (ages 2 to 6) engaged in cheerful Montessori wooden educational activities, colorful learning toys, cozy soft reading nook, warm natural wood textures, lush indoor green plants. Clean commercial interior photography, soft depth of field, wide panoramic negative space in the center for clear text readability, 8k resolution, cinematic soft lighting.</div>
+                </div>
+
+                <?php if ($editSlide): ?>
+                    <div style="margin-bottom:10px;">
+                        <div style="font-size:0.8rem;color:var(--adm-text-muted);margin-bottom:4px;">تصویر دسکتاپ فعلی:</div>
+                        <img src="<?= e(url($editSlide['image'])) ?>" alt="<?= e($editSlide['title']) ?>" style="max-height:120px;width:100%;object-fit:cover;border-radius:12px;border:1px solid var(--adm-border);">
+                    </div>
+                <?php endif; ?>
+
+                <div class="news-dropzone-box" id="dropzone-desktop" onclick="document.getElementById('image').click()" style="border: 2px dashed #CBD5E1; border-radius: 16px; background: var(--adm-bg, #F8FAFC); padding: 24px 16px; text-align: center; cursor: pointer; transition: all 0.2s;">
+                    <input type="file" id="image" name="image" class="news-dropzone-input" style="display:none;"
                         accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                         <?= $editSlide ? '' : 'required' ?>>
 
-                    <div id="desktopEmpty" class="slide-canvas-empty" style="<?= $editSlide ? 'display:none;' : '' ?>">
-                        <div class="slide-canvas-icon">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                                <circle cx="8.5" cy="8.5" r="1.5"/>
-                                <polyline points="21 15 16 10 5 21"/>
-                            </svg>
-                        </div>
-                        <div class="slide-canvas-text">انتخاب یا رهاسازی بنر دسکتاپ</div>
-                        <div class="slide-canvas-meta">نسبت ۱۶:۵ • ۱۹۲۰×۶۰۰ پیکسل • حداکثر ۵۰ مگابایت</div>
+                    <div class="news-dropzone-icon" style="display:flex;justify-content:center;margin-bottom:8px;">
+                        <svg width="60" height="45" viewBox="0 0 100 75" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:.75;">
+                            <path d="M25 60 C12 60 5 49 10 37 C13 27 25 25 30 27 C34 15 50 11 62 19 C70 13 84 17 86 29 C94 31 98 43 90 55 C86 60 78 60 75 60 Z" fill="currentColor" opacity="0.25"/>
+                            <path d="M62 56 L62 44 M56 49 L62 44 L68 49" stroke="var(--adm-primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            <circle cx="62" cy="42" r="6" fill="var(--adm-primary)"/>
+                            <rect x="30" y="30" width="26" height="18" rx="3" stroke="var(--adm-primary)" stroke-width="2.5" fill="none"/>
+                        </svg>
                     </div>
 
-                    <div id="desktopFilled" class="slide-canvas-filled" style="<?= $editSlide ? '' : 'display:none;' ?>">
-                        <img id="desktopImg" src="<?= $editSlide ? e(url($editSlide['image'])) : '' ?>" alt="پیش‌نمایش بنر" class="slide-canvas-img">
-                        <span class="slide-canvas-badge">۱۹۲۰ × ۶۰۰ px</span>
-                        <div class="slide-canvas-overlay">
-                            <button type="button" class="slide-canvas-action-btn change" onclick="event.stopPropagation(); triggerFileInput('image')">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-                                <span>تغییر تصویر</span>
-                            </button>
-                            <button type="button" class="slide-canvas-action-btn remove" onclick="event.stopPropagation(); resetDesktopCanvas()">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                                <span>حذف</span>
-                            </button>
-                        </div>
+                    <div id="desktop-filename" class="news-dropzone-filename" style="font-size:0.9rem;font-weight:600;margin-bottom:4px;">فایلی انتخاب نشده — برای انتخاب یا رهاسازی کلیک کنید</div>
+                    <div class="news-dropzone-hint" style="font-size:0.8rem;color:var(--adm-text-muted);">فرمت‌های مجاز: <strong>JPG, PNG, WebP</strong> — حداکثر حجم: <strong>۵۰ مگابایت</strong></div>
+                </div>
+
+                <div id="desktop-preview-box" style="display:none;margin-top:10px;align-items:center;gap:12px;background:var(--adm-bg);padding:8px 12px;border-radius:12px;border:1px solid var(--adm-border);">
+                    <img id="desktop-preview-img" src="" alt="پیش‌نمایش" style="width:72px;height:45px;object-fit:cover;border-radius:8px;border:1px solid var(--adm-border);">
+                    <div style="flex:1;min-width:0;">
+                        <div id="desktop-preview-name" style="font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--adm-text);"></div>
+                        <div id="desktop-preview-meta" style="font-size:0.75rem;color:var(--adm-text-muted);"></div>
                     </div>
+                    <button type="button" class="btn btn-xs btn-reject" onclick="clearDesktopFile(event)" style="padding:4px 8px;font-size:0.75rem;">حذف</button>
                 </div>
             </div>
 
-            <!-- Mobile Banner Studio Canvas -->
-            <div class="form-group" style="margin-top:16px;">
-                <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
-                    <span style="display:inline-flex;align-items:center;gap:6px;">
+            <!-- Mobile Banner Upload Section -->
+            <div class="form-group" style="margin-top:1.25rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <label for="image_mobile" class="form-label" style="margin-bottom:0;display:inline-flex;align-items:center;gap:6px;">
                         <span>تصویر اختصاصی موبایل <span style="font-size:0.8rem;font-weight:400;color:var(--adm-text-muted);">(اختیاری)</span></span>
-                        <button type="button" class="slide-prompt-btn" onclick="togglePromptBox('mobile-prompt-box')" title="مشخصات تصویر">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        </button>
-                    </span>
-                    <span style="font-size:0.78rem;font-weight:500;color:var(--adm-text-muted);">۱۰۰۰×۷۵۰ px — نسبت ۴:۳</span>
-                </label>
-
-                <div id="mobile-prompt-box" class="slide-prompt-popover" style="display:none;">
-                    <div class="slide-prompt-popover-top">
-                        <span class="slide-prompt-popover-tag">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                            مشخصات تصویر بنر موبایل
-                        </span>
-                        <div style="display:flex;align-items:center;gap:6px;">
-                            <button type="button" class="slide-copy-btn" onclick="copyPromptText('mobile-prompt-text', this)">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                                <span>کپی</span>
-                            </button>
-                            <button type="button" class="slide-prompt-close" onclick="togglePromptBox('mobile-prompt-box')">&times;</button>
-                        </div>
-                    </div>
-                    <div class="slide-prompt-text" id="mobile-prompt-text">Compact 4:3 aspect ratio (1000x750) mobile hero banner. Close-up, warm, and joyful portrait of smiling toddler children playing with colorful wooden educational building blocks in a bright, modern nursery classroom. Natural soft sunlight, vibrant pastel colors, clean minimalist background, professional studio childcare photography, crisp focus, 8k resolution, authentic happy expressions.</div>
+                        <button type="button" onclick="togglePromptBox('mobile-prompt-box', event)" title="مشخصات استاندارد تصویر" style="width:18px;height:18px;border-radius:50%;border:1px solid #CBD5E1;background:#F1F5F9;color:#475569;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;line-height:1;vertical-align:middle;margin-inline-start:4px;">?</button>
+                    </label>
+                    <span style="font-size:0.78rem;color:var(--adm-text-muted);">۱۰۰۰×۷۵۰ px — نسبت ۴:۳</span>
                 </div>
 
-                <div id="mobileCanvas" class="slide-canvas-wrap slide-canvas-mobile" onclick="handleCanvasClick('mobile')">
-                    <input type="file" id="image_mobile" name="image_mobile" style="display:none;"
+                <div id="mobile-prompt-box" style="display:none;background:#1E293B;border-radius:12px;padding:12px 14px;margin-bottom:12px;color:#F8FAFC;box-shadow:0 8px 24px rgba(0,0,0,0.15);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <span style="font-size:0.8rem;font-weight:700;color:#38BDF8;">مشخصات تصویر بنر موبایل</span>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <button type="button" onclick="copyPromptText('mobile-prompt-text', this)" style="background:#3D8B63;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.75rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                <span>کپی</span>
+                            </button>
+                            <button type="button" onclick="togglePromptBox('mobile-prompt-box', event)" style="background:none;border:none;color:#94A3B8;font-size:16px;cursor:pointer;padding:0 4px;line-height:1;">&times;</button>
+                        </div>
+                    </div>
+                    <div id="mobile-prompt-text" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.78rem;line-height:1.6;color:#E2E8F0;background:#0F172A;padding:10px 12px;border-radius:8px;direction:ltr;text-align:left;max-height:110px;overflow-y:auto;word-break:break-word;user-select:all;">Compact 4:3 aspect ratio (1000x750) mobile hero banner. Close-up, warm, and joyful portrait of smiling toddler children playing with colorful wooden educational building blocks in a bright, modern nursery classroom. Natural soft sunlight, vibrant pastel colors, clean minimalist background, professional studio childcare photography, crisp focus, 8k resolution, authentic happy expressions.</div>
+                </div>
+
+                <?php if ($editSlide && !empty($editSlide['image_mobile'])): ?>
+                    <div style="margin-bottom:10px;">
+                        <div style="font-size:0.8rem;color:var(--adm-text-muted);margin-bottom:4px;">تصویر موبایل فعلی:</div>
+                        <img src="<?= e(url($editSlide['image_mobile'])) ?>" alt="موبایل" style="max-height:100px;width:130px;object-fit:cover;border-radius:12px;border:1px solid var(--adm-border);">
+                    </div>
+                <?php endif; ?>
+
+                <div class="news-dropzone-box" id="dropzone-mobile" onclick="document.getElementById('image_mobile').click()" style="border: 2px dashed #CBD5E1; border-radius: 16px; background: var(--adm-bg, #F8FAFC); padding: 24px 16px; text-align: center; cursor: pointer; transition: all 0.2s;">
+                    <input type="file" id="image_mobile" name="image_mobile" class="news-dropzone-input" style="display:none;"
                         accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
 
-                    <?php $hasMobileImg = $editSlide && !empty($editSlide['image_mobile']); ?>
-                    <div id="mobileEmpty" class="slide-canvas-empty" style="<?= $hasMobileImg ? 'display:none;' : '' ?>">
-                        <div class="slide-canvas-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-                                <line x1="12" y1="18" x2="12.01" y2="18"/>
-                            </svg>
-                        </div>
-                        <div class="slide-canvas-text" style="font-size:0.84rem;">تصویر موبایل (اختیاری)</div>
-                        <div class="slide-canvas-meta" style="font-size:0.7rem;">نسبت ۴:۳ • ۱۰۰۰×۷۵۰ px</div>
+                    <div class="news-dropzone-icon" style="display:flex;justify-content:center;margin-bottom:8px;">
+                        <svg width="60" height="45" viewBox="0 0 100 75" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:.75;">
+                            <path d="M25 60 C12 60 5 49 10 37 C13 27 25 25 30 27 C34 15 50 11 62 19 C70 13 84 17 86 29 C94 31 98 43 90 55 C86 60 78 60 75 60 Z" fill="currentColor" opacity="0.25"/>
+                            <path d="M62 56 L62 44 M56 49 L62 44 L68 49" stroke="var(--adm-primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            <circle cx="62" cy="42" r="6" fill="var(--adm-primary)"/>
+                            <rect x="30" y="30" width="26" height="18" rx="3" stroke="var(--adm-primary)" stroke-width="2.5" fill="none"/>
+                        </svg>
                     </div>
 
-                    <div id="mobileFilled" class="slide-canvas-filled" style="<?= $hasMobileImg ? '' : 'display:none;' ?>">
-                        <img id="mobileImg" src="<?= $hasMobileImg ? e(url((string)$editSlide['image_mobile'])) : '' ?>" alt="پیش‌نمایش موبایل" class="slide-canvas-img">
-                        <span class="slide-canvas-badge">۱۰۰۰ × ۷۵۰ px</span>
-                        <div class="slide-canvas-overlay">
-                            <button type="button" class="slide-canvas-action-btn change" onclick="event.stopPropagation(); triggerFileInput('image_mobile')">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-                                <span>تغییر</span>
-                            </button>
-                            <button type="button" class="slide-canvas-action-btn remove" onclick="event.stopPropagation(); resetMobileCanvas()">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                                <span>حذف</span>
-                            </button>
-                        </div>
+                    <div id="mobile-filename" class="news-dropzone-filename" style="font-size:0.9rem;font-weight:600;margin-bottom:4px;">اختیاری — برای انتخاب یا رهاسازی کلیک کنید</div>
+                    <div class="news-dropzone-hint" style="font-size:0.8rem;color:var(--adm-text-muted);">فرمت‌های مجاز: <strong>JPG, PNG, WebP</strong> — حداکثر حجم: <strong>۵۰ مگابایت</strong></div>
+                </div>
+
+                <div id="mobile-preview-box" style="display:none;margin-top:10px;align-items:center;gap:12px;background:var(--adm-bg);padding:8px 12px;border-radius:12px;border:1px solid var(--adm-border);">
+                    <img id="mobile-preview-img" src="" alt="پیش‌نمایش موبایل" style="width:45px;height:45px;object-fit:cover;border-radius:8px;border:1px solid var(--adm-border);">
+                    <div style="flex:1;min-width:0;">
+                        <div id="mobile-preview-name" style="font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--adm-text);"></div>
+                        <div id="mobile-preview-meta" style="font-size:0.75rem;color:var(--adm-text-muted);"></div>
                     </div>
+                    <button type="button" class="btn btn-xs btn-reject" onclick="clearMobileFile(event)" style="padding:4px 8px;font-size:0.75rem;">حذف</button>
                 </div>
             </div>
 
@@ -927,88 +919,80 @@ function formatPersianFileSize(bytes) {
     return toPersianDigits(val) + ' ' + sizes[i];
 }
 
-function handleCanvasClick(prefix) {
-    const inputId = prefix === 'desktop' ? 'image' : 'image_mobile';
-    const input = document.getElementById(inputId);
-    if (input) input.click();
-}
-
-function triggerFileInput(id) {
-    const input = document.getElementById(id);
-    if (input) input.click();
-}
-
-function resetDesktopCanvas() {
+function clearDesktopFile(e) {
+    if (e) e.stopPropagation();
     const input = document.getElementById('image');
     if (input) input.value = '';
-    const emptyBox = document.getElementById('desktopEmpty');
-    const filledBox = document.getElementById('desktopFilled');
-    const img = document.getElementById('desktopImg');
-    if (emptyBox) emptyBox.style.display = 'flex';
-    if (filledBox) filledBox.style.display = 'none';
-    if (img) img.src = '';
+    const previewBox = document.getElementById('desktop-preview-box');
+    const filenameEl = document.getElementById('desktop-filename');
+    if (previewBox) previewBox.style.display = 'none';
+    if (filenameEl) filenameEl.textContent = 'فایلی انتخاب نشده — برای انتخاب یا رهاسازی کلیک کنید';
 }
 
-function resetMobileCanvas() {
+function clearMobileFile(e) {
+    if (e) e.stopPropagation();
     const input = document.getElementById('image_mobile');
     if (input) input.value = '';
-    const emptyBox = document.getElementById('mobileEmpty');
-    const filledBox = document.getElementById('mobileFilled');
-    const img = document.getElementById('mobileImg');
-    if (emptyBox) emptyBox.style.display = 'flex';
-    if (filledBox) filledBox.style.display = 'none';
-    if (img) img.src = '';
+    const previewBox = document.getElementById('mobile-preview-box');
+    const filenameEl = document.getElementById('mobile-filename');
+    if (previewBox) previewBox.style.display = 'none';
+    if (filenameEl) filenameEl.textContent = 'اختیاری — برای انتخاب یا رهاسازی کلیک کنید';
 }
 
 function initSlideUploadUI() {
-    setupSlideCanvas('desktop', 'image');
-    setupSlideCanvas('mobile', 'image_mobile');
+    setupNewsDropzone('desktop', 'image');
+    setupNewsDropzone('mobile', 'image_mobile');
     setupSlideFormSubmit();
 }
 
-function setupSlideCanvas(prefix, inputId) {
-    const canvas = document.getElementById(prefix + 'Canvas');
+function setupNewsDropzone(prefix, inputId) {
+    const dropzone = document.getElementById('dropzone-' + prefix);
     const input = document.getElementById(inputId);
-    if (!canvas || !input) return;
+    if (!dropzone || !input) return;
 
     ['dragenter', 'dragover'].forEach(name => {
-        canvas.addEventListener(name, (e) => {
+        dropzone.addEventListener(name, (e) => {
             e.preventDefault();
             e.stopPropagation();
-            canvas.classList.add('is-dragover');
+            dropzone.style.borderColor = '#3D8B63';
+            dropzone.style.background = 'rgba(61, 139, 99, 0.06)';
         });
     });
 
     ['dragleave', 'dragend'].forEach(name => {
-        canvas.addEventListener(name, (e) => {
+        dropzone.addEventListener(name, (e) => {
             e.preventDefault();
             e.stopPropagation();
-            canvas.classList.remove('is-dragover');
+            dropzone.style.borderColor = '#CBD5E1';
+            dropzone.style.background = '';
         });
     });
 
-    canvas.addEventListener('drop', (e) => {
+    dropzone.addEventListener('drop', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        canvas.classList.remove('is-dragover');
+        dropzone.style.borderColor = '#CBD5E1';
+        dropzone.style.background = '';
 
         if (e.dataTransfer && e.dataTransfer.files.length > 0) {
-            handleCanvasFile(e.dataTransfer.files[0], prefix, input);
+            handleSlideFile(e.dataTransfer.files[0], prefix, input);
         }
     });
 
     input.addEventListener('change', () => {
         if (input.files && input.files.length > 0) {
-            handleCanvasFile(input.files[0], prefix, input);
+            handleSlideFile(input.files[0], prefix, input);
         }
     });
 }
 
-function handleCanvasFile(file, prefix, input) {
+function handleSlideFile(file, prefix, input) {
     const maxBytes = 50 * 1024 * 1024; // 50MB
-    const emptyBox = document.getElementById(prefix + 'Empty');
-    const filledBox = document.getElementById(prefix + 'Filled');
-    const img = document.getElementById(prefix + 'Img');
+    const filenameEl = document.getElementById(prefix + '-filename');
+    const previewBox = document.getElementById(prefix + '-preview-box');
+    const previewImg = document.getElementById(prefix + '-preview-img');
+    const previewName = document.getElementById(prefix + '-preview-name');
+    const previewMeta = document.getElementById(prefix + '-preview-meta');
 
     if (!file) return;
 
@@ -1031,10 +1015,23 @@ function handleCanvasFile(file, prefix, input) {
         } catch (e) {}
     }
 
-    if (img && emptyBox && filledBox) {
-        img.src = URL.createObjectURL(file);
-        emptyBox.style.display = 'none';
-        filledBox.style.display = 'block';
+    if (filenameEl) filenameEl.textContent = file.name;
+
+    if (previewBox && previewImg && previewName) {
+        const objUrl = URL.createObjectURL(file);
+        previewImg.src = objUrl;
+        previewName.textContent = file.name;
+        if (previewMeta) previewMeta.textContent = formatPersianFileSize(file.size);
+
+        const img = new Image();
+        img.onload = function() {
+            if (previewMeta) {
+                previewMeta.textContent = `${formatPersianFileSize(file.size)} — ${toPersianDigits(img.naturalWidth)}×${toPersianDigits(img.naturalHeight)} px`;
+            }
+        };
+        img.src = objUrl;
+
+        previewBox.style.display = 'flex';
     }
 }
 
