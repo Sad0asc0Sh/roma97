@@ -1276,4 +1276,97 @@ a.app-btn-primary:hover {
     to { transform: rotate(360deg); }
 }
 
+/* ── SLIDE PROMPT HELPER BUTTON & POPOVER ───────────────────── */
+.slide-prompt-btn {
+    background: transparent;
+    border: 1px solid var(--adm-border, #CBD5E1);
+    color: var(--adm-text-muted, #64748B);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    padding: 0;
+    line-height: 1;
+}
+.slide-prompt-btn:hover {
+    color: #4EAB87;
+    border-color: #4EAB87;
+    background: rgba(78, 171, 135, 0.12);
+    transform: scale(1.1);
+}
+.slide-prompt-popover {
+    background: var(--adm-surface, #FFFFFF);
+    border: 1px solid var(--adm-border, #E2E8F0);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    animation: promptFadeIn 0.2s ease-out;
+}
+@keyframes promptFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+[data-theme="dark"] .slide-prompt-popover {
+    background: #1C261F;
+    border-color: #2D3A31;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+.slide-prompt-popover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.slide-prompt-popover-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--adm-text, #1E293B);
+}
+.slide-prompt-close {
+    background: none;
+    border: none;
+    font-size: 1.15rem;
+    line-height: 1;
+    color: var(--adm-text-muted);
+    cursor: pointer;
+    padding: 0 4px;
+}
+.slide-prompt-close:hover {
+    color: var(--adm-text);
+}
+.slide-prompt-content {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    background: var(--adm-bg, #F8FAFC);
+    border: 1px solid var(--adm-border, #E2E8F0);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--adm-text-secondary, #334155);
+    user-select: all;
+    max-height: 120px;
+    overflow-y: auto;
+    word-break: break-word;
+}
+[data-theme="dark"] .slide-prompt-content {
+    background: #141A16;
+    border-color: #253328;
+    color: #D1D9D4;
+}
+.slide-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+
 

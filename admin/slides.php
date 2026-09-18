@@ -625,9 +625,30 @@ require_once __DIR__ . '/header.php';
             <!-- Desktop Banner Dropzone -->
             <div class="form-group" style="margin-top:1.25rem;">
                 <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
-                    <span>تصویر بنر دسکتاپ <?= $editSlide ? '<span style="color:var(--adm-text-muted);font-weight:400">(اختیاری)</span>' : '<span style="color:#EF4444;">*</span>' ?></span>
+                    <span style="display:inline-flex;align-items:center;gap:6px;">
+                        <span>تصویر بنر دسکتاپ <?= $editSlide ? '<span style="color:var(--adm-text-muted);font-weight:400">(اختیاری)</span>' : '<span style="color:#EF4444;">*</span>' ?></span>
+                        <button type="button" class="slide-prompt-btn" onclick="togglePromptBox('desktop-prompt-box')" title="مشخصات استاندارد تصویر">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                        </button>
+                    </span>
                     <span style="font-size:0.78rem;font-weight:500;color:var(--adm-text-muted);">۱۹۲۰×۶۰۰ px — تا ۵۰ مگابایت</span>
                 </label>
+
+                <div id="desktop-prompt-box" class="slide-prompt-popover" style="display:none;">
+                    <div class="slide-prompt-popover-header">
+                        <span class="slide-prompt-popover-title">مشخصات تصویر بنر دسکتاپ</span>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <button type="button" class="btn btn-xs btn-primary slide-copy-btn" onclick="copyPromptText('desktop-prompt-text', this)">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                <span>کپی متن</span>
+                            </button>
+                            <button type="button" class="slide-prompt-close" onclick="togglePromptBox('desktop-prompt-box')">&times;</button>
+                        </div>
+                    </div>
+                    <div class="slide-prompt-content" id="desktop-prompt-text" dir="ltr">Wide panoramic website hero banner, 16:5 aspect ratio (1920x600). A bright, joyful, and modern Scandinavian-style daycare and preschool classroom with soft natural sunlight streaming through large floor-to-ceiling windows. Happy toddler children (ages 2 to 6) engaged in cheerful Montessori wooden educational activities, colorful learning toys, cozy soft reading nook, warm natural wood textures, lush indoor green plants. Clean commercial interior photography, soft depth of field, wide panoramic negative space in the center for clear text readability, 8k resolution, cinematic soft lighting.</div>
+                </div>
 
                 <?php if ($editSlide): ?>
                     <div class="admin-image-preview-wrap" style="margin-bottom:10px;">
@@ -666,9 +687,30 @@ require_once __DIR__ . '/header.php';
             <!-- Mobile Banner Dropzone -->
             <div class="form-group" style="margin-top:1.25rem;">
                 <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
-                    <span>تصویر اختصاصی موبایل <span style="font-size:0.8rem;font-weight:400;color:var(--adm-text-muted);">(اختیاری)</span></span>
+                    <span style="display:inline-flex;align-items:center;gap:6px;">
+                        <span>تصویر اختصاصی موبایل <span style="font-size:0.8rem;font-weight:400;color:var(--adm-text-muted);">(اختیاری)</span></span>
+                        <button type="button" class="slide-prompt-btn" onclick="togglePromptBox('mobile-prompt-box')" title="مشخصات استاندارد تصویر">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                        </button>
+                    </span>
                     <span style="font-size:0.78rem;font-weight:500;color:var(--adm-text-muted);">۱۰۰۰×۷۵۰ px — نسبت ۴:۳</span>
                 </label>
+
+                <div id="mobile-prompt-box" class="slide-prompt-popover" style="display:none;">
+                    <div class="slide-prompt-popover-header">
+                        <span class="slide-prompt-popover-title">مشخصات تصویر بنر موبایل</span>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <button type="button" class="btn btn-xs btn-primary slide-copy-btn" onclick="copyPromptText('mobile-prompt-text', this)">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                <span>کپی متن</span>
+                            </button>
+                            <button type="button" class="slide-prompt-close" onclick="togglePromptBox('mobile-prompt-box')">&times;</button>
+                        </div>
+                    </div>
+                    <div class="slide-prompt-content" id="mobile-prompt-text" dir="ltr">Compact 4:3 aspect ratio (1000x750) mobile hero banner. Close-up, warm, and joyful portrait of smiling toddler children playing with colorful wooden educational building blocks in a bright, modern nursery classroom. Natural soft sunlight, vibrant pastel colors, clean minimalist background, professional studio childcare photography, crisp focus, 8k resolution, authentic happy expressions.</div>
+                </div>
 
                 <?php if ($editSlide && !empty($editSlide['image_mobile'])): ?>
                     <div class="admin-image-preview-wrap" style="margin-bottom:10px;">
@@ -825,6 +867,48 @@ function openSlideDrawer() {
         openDrawer(<?= $editSlide ? json_encode('ویرایش اسلاید «' . $editSlide['title'] . '»') : json_encode('افزودن اسلاید جدید') ?>, tmpl.innerHTML);
         initSlideUploadUI();
     }
+}
+
+function togglePromptBox(boxId) {
+    const box = document.getElementById(boxId);
+    if (!box) return;
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+}
+
+function copyPromptText(textId, btn) {
+    const el = document.getElementById(textId);
+    if (!el) return;
+    const text = el.textContent || el.innerText;
+
+    const onDone = () => {
+        const span = btn.querySelector('span');
+        const prev = span ? span.textContent : 'کپی متن';
+        if (span) span.textContent = 'کپی شد ✓';
+        if (typeof showToast === 'function') {
+            showToast('مشخصات تصویر کپی شد.', 'success');
+        }
+        setTimeout(() => {
+            if (span) span.textContent = prev;
+        }, 2000);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(onDone).catch(() => {
+            fallbackCopy(text, onDone);
+        });
+    } else {
+        fallbackCopy(text, onDone);
+    }
+}
+
+function fallbackCopy(text, onDone) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    onDone();
 }
 
 function toPersianDigits(str) {
