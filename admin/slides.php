@@ -466,7 +466,15 @@ if (isPostRequest()) {
         if ($action === 'update_sort') {
             $sortOrders = $_POST['sort_order'] ?? [];
 
+            $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+                || (isset($_POST['ajax']) && (string)$_POST['ajax'] === '1');
+
             if (!is_array($sortOrders)) {
+                if ($isAjax) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode(['success' => false, 'error' => 'مقادیر ترتیب نمایش نامعتبر است.']);
+                    exit;
+                }
                 setFlash('error', 'مقادیر ترتیب نمایش نامعتبر است.');
                 redirect(url('admin/slides.php'));
             }
@@ -480,6 +488,11 @@ if (isPostRequest()) {
 
                 if ($slideId === 0 || $sortOrder === null) {
                     $pdo->rollBack();
+                    if ($isAjax) {
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode(['success' => false, 'error' => 'مقادیر ترتیب نمایش باید اعداد صحیح از ۰ باشند.']);
+                        exit;
+                    }
                     setFlash('error', 'مقادیر ترتیب نمایش باید اعداد صحیح از ۰ باشند.');
                     redirect(url('admin/slides.php'));
                 }
@@ -492,6 +505,13 @@ if (isPostRequest()) {
 
             $pdo->commit();
             recordAudit('slide.reorder', 'slide');
+
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => true, 'message' => 'ترتیب نمایش اسلایدها با موفقیت به‌روزرسانی شد.']);
+                exit;
+            }
+
             setFlash('success', 'ترتیب نمایش اسلایدها با موفقیت بهروزرسانی شد.');
             redirect(url('admin/slides.php'));
         }
@@ -534,9 +554,14 @@ $pageTitle = 'مدیریت اسلایدها | ' . siteName();
 require_once __DIR__ . '/header.php';
 ?>
 
-<section class="dashboard">
+<div class="admin-content">
     <div class="app-toolbar">
-        <h1 class="m-0 font-bold" style="font-size:1.5rem;color:var(--adm-text);">مدیریت اسلایدها</h1>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <h1 class="m-0 font-bold" style="font-size:1.5rem;color:var(--adm-text);">مدیریت اسلایدها</h1>
+            <span style="background:var(--adm-bg);padding:4px 12px;border-radius:20px;border:1px solid var(--adm-border);font-size:0.8rem;font-weight:600;color:var(--adm-text-secondary);">
+                <?= persianNumber((string) countSlides($pdo)) ?> اسلاید
+            </span>
+        </div>
         <div class="app-toolbar-actions">
             <button type="button" class="app-btn app-btn-primary" onclick="openSlideDrawer()">
                 + افزودن اسلاید جدید
@@ -555,43 +580,27 @@ require_once __DIR__ . '/header.php';
     <?php endif; ?>
 
     <template id="slideFormTemplate">
-        <div class="slide-guide-card">
-            <div class="slide-guide-header">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                <span>راهنما و مشخصات بارگذاری بنر اسلایدر</span>
-            </div>
-            <div class="slide-guide-grid">
-                <div class="slide-guide-item">
-                    <span class="slide-guide-label">سقف حجم مجاز:</span>
-                    <span class="slide-guide-val highlight">۵۰ مگابایت (همراه با بهینه‌سازی خودکار)</span>
-                </div>
-                <div class="slide-guide-item">
-                    <span class="slide-guide-label">ابعاد دسکتاپ:</span>
-                    <span class="slide-guide-val">۱۹۲۰×۶۰۰ پیکسل (نسبت عریض ۱۶:۵)</span>
-                </div>
-                <div class="slide-guide-item">
-                    <span class="slide-guide-label">تصویر موبایل (اختیاری):</span>
-                    <span class="slide-guide-val">۱۰۰۰×۷۵۰ پیکسل (نسبت ۴:۳)</span>
-                </div>
-                <div class="slide-guide-item">
-                    <span class="slide-guide-label">فرمت‌های مجاز:</span>
-                    <span class="slide-guide-val">WebP, JPG, PNG, GIF</span>
-                </div>
-            </div>
-        </div>
-
-        <form id="slideUploadForm" method="post" action="<?= e(url('admin/slides.php')) ?>" enctype="multipart/form-data" novalidate>
+        <form id="slideUploadForm" method="post" action="<?= e(url('admin/slides.php')) ?>" enctype="multipart/form-data" novalidate style="padding: 6px 0 0;">
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="save_slide">
             <?php if ($editSlide): ?>
                 <input type="hidden" name="slide_id" value="<?= e((string) $editSlide['id']) ?>">
             <?php endif; ?>
 
+            <div class="news-banner-header" style="margin-bottom:18px;">
+                <div class="news-banner-title">
+                    <span><?= $editSlide ? 'ویرایش اسلاید' : 'افزودن اسلاید جدید' ?></span>
+                    <div class="news-banner-plus-icon">
+                        <?= $editSlide ? '✎' : '+' ?>
+                    </div>
+                </div>
+            </div>
+
             <div class="form-group">
-                <label for="title" class="form-label">عنوان اسلاید <span class="req">*</span></label>
+                <label for="title" class="form-label">عنوان اسلاید <span style="color:#EF4444;">*</span></label>
                 <input type="text" id="title" name="title" class="form-control"
                     maxlength="255"
-                    placeholder="عنوان اسلاید را وارد کنید..."
+                    placeholder="عنوان اصلی اسلاید..."
                     value="<?= e($editSlide['title'] ?? '') ?>"
                     required>
             </div>
@@ -600,157 +609,102 @@ require_once __DIR__ . '/header.php';
                 <label for="subtitle" class="form-label">زیرعنوان <span style="color:var(--adm-text-muted);font-weight:400">(اختیاری)</span></label>
                 <input type="text" id="subtitle" name="subtitle" class="form-control"
                     maxlength="500"
-                    placeholder="متن توضیحی زیر عنوان بنر"
+                    placeholder="توضیح مختصر زیر عنوان بنر"
                     value="<?= e($editSlide['subtitle'] ?? '') ?>">
             </div>
 
             <div class="form-group">
-                <label for="sort_order" class="form-label">ترتیب نمایش <span class="req">*</span></label>
+                <label for="sort_order" class="form-label">ترتیب نمایش <span style="color:#EF4444;">*</span></label>
                 <input type="number" id="sort_order" name="sort_order" class="form-control"
-                    style="max-width:150px;"
+                    style="max-width:140px;"
                     min="0" step="1"
                     value="<?= e((string) ($editSlide['sort_order'] ?? '0')) ?>"
                     required>
             </div>
 
-            <!-- DESKTOP SLIDE UPLOAD ZONE -->
-            <div class="form-group">
-                <label class="form-label">
-                    تصویر بنر دسکتاپ <?= $editSlide ? '<span style="color:var(--adm-text-muted);font-weight:400">(اختیاری - برای تغییر)</span>' : '<span class="req">* (الزامی)</span>' ?>
+            <!-- Desktop Banner Dropzone -->
+            <div class="form-group" style="margin-top:1.25rem;">
+                <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span>تصویر بنر دسکتاپ <?= $editSlide ? '<span style="color:var(--adm-text-muted);font-weight:400">(اختیاری)</span>' : '<span style="color:#EF4444;">*</span>' ?></span>
+                    <span style="font-size:0.78rem;font-weight:500;color:var(--adm-text-muted);">۱۹۲۰×۶۰۰ px — تا ۵۰ مگابایت</span>
                 </label>
 
                 <?php if ($editSlide): ?>
-                    <div id="desktopCurrentPreview" class="slide-preview-card" style="margin-bottom:12px;">
-                        <div class="slide-preview-header">
-                            <span class="slide-preview-name">تصویر دسکتاپ فعال فعلی</span>
-                            <span class="slide-stat-chip success">فعال در سایت</span>
-                        </div>
-                        <div class="slide-preview-img-box">
-                            <img src="<?= e(url($editSlide['image'])) ?>" alt="<?= e($editSlide['title']) ?>" class="slide-preview-img">
-                        </div>
-                        <small style="color:var(--adm-text-muted);font-size:0.8rem;">در صورت تمایل به تغییر، از کادر زیر تصویر جدید تا سقف ۵۰ مگابایت بارگذاری کنید.</small>
+                    <div class="admin-image-preview-wrap" style="margin-bottom:10px;">
+                        <img src="<?= e(url($editSlide['image'])) ?>" alt="<?= e($editSlide['title']) ?>" class="admin-image-preview" style="max-height:120px;width:100%;object-fit:cover;border-radius:12px;border:1px solid var(--adm-border);">
                     </div>
                 <?php endif; ?>
 
-                <div id="desktopDropzone" class="slide-dropzone" tabindex="0" role="button" aria-label="انتخاب تصویر دسکتاپ">
-                    <input type="file" id="image" name="image" class="slide-file-input" style="display:none;"
-                        accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
+                <div class="news-dropzone-box" id="dropzone-desktop">
+                    <input type="file" id="image" name="image" class="news-dropzone-input"
+                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                         <?= $editSlide ? '' : 'required' ?>>
 
-                    <div class="slide-dropzone-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                            <polyline points="17 8 12 3 7 8"/>
-                            <line x1="12" y1="3" x2="12" y2="15"/>
+                    <div class="news-dropzone-icon" style="display:flex;justify-content:center;">
+                        <svg width="60" height="45" viewBox="0 0 100 75" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:.75;">
+                            <path d="M25 60 C12 60 5 49 10 37 C13 27 25 25 30 27 C34 15 50 11 62 19 C70 13 84 17 86 29 C94 31 98 43 90 55 C86 60 78 60 75 60 Z" fill="currentColor" opacity="0.25"/>
+                            <path d="M62 56 L62 44 M56 49 L62 44 L68 49" stroke="var(--adm-primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            <circle cx="62" cy="42" r="6" fill="var(--adm-primary)"/>
+                            <rect x="30" y="30" width="26" height="18" rx="3" stroke="var(--adm-primary)" stroke-width="2.5" fill="none"/>
                         </svg>
                     </div>
-                    <div class="slide-dropzone-title">تصویر بنر دسکتاپ را به اینجا بکشید یا کلیک کنید</div>
-                    <div class="slide-dropzone-sub">تصویر اصلی با کیفیت بالا برای نمایش در رایانه و لپ‌تاپ</div>
-                    <div class="slide-dropzone-badges">
-                        <span class="slide-badge primary">حداکثر ۵۰ مگابایت</span>
-                        <span class="slide-badge">پیشنهادی: ۱۹۲۰×۶۰۰ px</span>
-                        <span class="slide-badge">WebP, JPG, PNG</span>
-                    </div>
+
+                    <div id="desktop-filename" class="news-dropzone-filename">فایلی انتخاب نشده — برای انتخاب کلیک کنید یا فایل را درگ کنید</div>
+                    <div class="news-dropzone-hint">فرمت‌های مجاز: <strong>JPG, PNG, WebP</strong> — حداکثر حجم: <strong>۵۰ مگابایت</strong></div>
                 </div>
 
-                <!-- Live Preview Card for Desktop (hidden by default) -->
-                <div id="desktopLivePreview" class="slide-preview-card" style="display:none;margin-top:10px;">
-                    <div class="slide-preview-header">
-                        <div style="display:flex;align-items:center;gap:6px;">
-                            <span class="slide-stat-chip success">تصویر انتخاب‌شده</span>
-                            <span id="desktopFileName" class="slide-preview-name"></span>
-                        </div>
+                <div id="desktop-preview-thumb-box" style="display:none;margin-top:10px;align-items:center;gap:12px;background:var(--adm-bg);padding:8px 12px;border-radius:12px;border:1px solid var(--adm-border);">
+                    <img id="desktop-thumb" src="" alt="پیش‌نمایش" style="width:72px;height:45px;object-fit:cover;border-radius:8px;border:1px solid var(--adm-border);">
+                    <div style="flex:1;min-width:0;">
+                        <div id="desktop-thumb-name" style="font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--adm-text);"></div>
+                        <div id="desktop-thumb-meta" style="font-size:0.75rem;color:var(--adm-text-muted);"></div>
                     </div>
-                    <div class="slide-preview-img-box">
-                        <img id="desktopPreviewImg" src="" alt="پیش‌نمایش دسکتاپ" class="slide-preview-img">
-                    </div>
-                    <div class="slide-preview-meta">
-                        <div class="slide-preview-stats">
-                            <span class="slide-stat-chip">حجم فایل: <strong id="desktopFileSize">-</strong></span>
-                            <span class="slide-stat-chip">ابعاد: <strong id="desktopFileDimensions">-</strong></span>
-                            <span id="desktopRatioChip" class="slide-stat-chip"></span>
-                        </div>
-                        <div id="desktopOptBanner" class="slide-opt-banner" style="display:none;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                            <span id="desktopOptText">بهینه‌سازی هوشمند خودکار آماده اجراست.</span>
-                        </div>
-                    </div>
-                    <div class="slide-preview-actions">
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="triggerFileInput('image')">تغییر تصویر</button>
-                        <button type="button" class="btn btn-sm btn-reject" onclick="clearSelectedFile('image', 'desktop')">حذف انتخاب</button>
-                    </div>
+                    <button type="button" class="btn btn-xs btn-reject" onclick="clearSelectedSlideFile('desktop', 'image')" style="padding:4px 8px;font-size:0.75rem;">حذف</button>
                 </div>
             </div>
 
-            <!-- MOBILE SLIDE UPLOAD ZONE -->
-            <div class="form-group" style="margin-top:1.5rem;">
-                <label class="form-label">
-                    تصویر اختصاصی موبایل <span style="color:var(--adm-text-muted);font-weight:400">(اختیاری - برای نمایش بهینه در گوشی)</span>
+            <!-- Mobile Banner Dropzone -->
+            <div class="form-group" style="margin-top:1.25rem;">
+                <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span>تصویر اختصاصی موبایل <span style="font-size:0.8rem;font-weight:400;color:var(--adm-text-muted);">(اختیاری)</span></span>
+                    <span style="font-size:0.78rem;font-weight:500;color:var(--adm-text-muted);">۱۰۰۰×۷۵۰ px — نسبت ۴:۳</span>
                 </label>
 
                 <?php if ($editSlide && !empty($editSlide['image_mobile'])): ?>
-                    <div id="mobileCurrentPreview" class="slide-preview-card" style="margin-bottom:12px;">
-                        <div class="slide-preview-header">
-                            <span class="slide-preview-name">تصویر موبایل فعلی</span>
-                            <span class="slide-stat-chip success">فعال روی گوشی</span>
-                        </div>
-                        <div class="slide-preview-img-box">
-                            <img src="<?= e(url($editSlide['image_mobile'])) ?>" alt="موبایل - <?= e($editSlide['title']) ?>" class="slide-preview-img mobile">
-                        </div>
-                        <small style="color:var(--adm-text-muted);font-size:0.8rem;">در صورت تمایل به تغییر، از کادر زیر تصویر جدید تا سقف ۵۰ مگابایت بارگذاری کنید.</small>
+                    <div class="admin-image-preview-wrap" style="margin-bottom:10px;">
+                        <img src="<?= e(url($editSlide['image_mobile'])) ?>" alt="موبایل - <?= e($editSlide['title']) ?>" class="admin-image-preview" style="max-height:100px;width:120px;object-fit:cover;border-radius:12px;border:1px solid var(--adm-border);">
                     </div>
                 <?php endif; ?>
 
-                <div id="mobileDropzone" class="slide-dropzone" tabindex="0" role="button" aria-label="انتخاب تصویر موبایل">
-                    <input type="file" id="image_mobile" name="image_mobile" class="slide-file-input" style="display:none;"
-                        accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif">
+                <div class="news-dropzone-box" id="dropzone-mobile">
+                    <input type="file" id="image_mobile" name="image_mobile" class="news-dropzone-input"
+                        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
 
-                    <div class="slide-dropzone-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-                            <line x1="12" y1="18" x2="12.01" y2="18"/>
+                    <div class="news-dropzone-icon" style="display:flex;justify-content:center;">
+                        <svg width="60" height="45" viewBox="0 0 100 75" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:.75;">
+                            <path d="M25 60 C12 60 5 49 10 37 C13 27 25 25 30 27 C34 15 50 11 62 19 C70 13 84 17 86 29 C94 31 98 43 90 55 C86 60 78 60 75 60 Z" fill="currentColor" opacity="0.25"/>
+                            <path d="M62 56 L62 44 M56 49 L62 44 L68 49" stroke="var(--adm-primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            <circle cx="62" cy="42" r="6" fill="var(--adm-primary)"/>
+                            <rect x="30" y="30" width="26" height="18" rx="3" stroke="var(--adm-primary)" stroke-width="2.5" fill="none"/>
                         </svg>
                     </div>
-                    <div class="slide-dropzone-title">تصویر موبایل را به اینجا بکشید یا کلیک کنید</div>
-                    <div class="slide-dropzone-sub">جلوگیری از برش تصویر در صفحات باریک گوشی‌های هوشمند (اختیاری)</div>
-                    <div class="slide-dropzone-badges">
-                        <span class="slide-badge primary">حداکثر ۵۰ مگابایت</span>
-                        <span class="slide-badge">پیشنهادی: ۱۰۰۰×۷۵۰ px (۴:۳)</span>
-                        <span class="slide-badge">WebP, JPG, PNG</span>
-                    </div>
+
+                    <div id="mobile-filename" class="news-dropzone-filename">اختیاری — برای انتخاب کلیک کنید یا فایل را درگ کنید</div>
+                    <div class="news-dropzone-hint">فرمت‌های مجاز: <strong>JPG, PNG, WebP</strong> — حداکثر حجم: <strong>۵۰ مگابایت</strong></div>
                 </div>
 
-                <!-- Live Preview Card for Mobile (hidden by default) -->
-                <div id="mobileLivePreview" class="slide-preview-card" style="display:none;margin-top:10px;">
-                    <div class="slide-preview-header">
-                        <div style="display:flex;align-items:center;gap:6px;">
-                            <span class="slide-stat-chip success">تصویر موبایل انتخاب‌شده</span>
-                            <span id="mobileFileName" class="slide-preview-name"></span>
-                        </div>
+                <div id="mobile-preview-thumb-box" style="display:none;margin-top:10px;align-items:center;gap:12px;background:var(--adm-bg);padding:8px 12px;border-radius:12px;border:1px solid var(--adm-border);">
+                    <img id="mobile-thumb" src="" alt="پیش‌نمایش موبایل" style="width:45px;height:45px;object-fit:cover;border-radius:8px;border:1px solid var(--adm-border);">
+                    <div style="flex:1;min-width:0;">
+                        <div id="mobile-thumb-name" style="font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--adm-text);"></div>
+                        <div id="mobile-thumb-meta" style="font-size:0.75rem;color:var(--adm-text-muted);"></div>
                     </div>
-                    <div class="slide-preview-img-box">
-                        <img id="mobilePreviewImg" src="" alt="پیش‌نمایش موبایل" class="slide-preview-img mobile">
-                    </div>
-                    <div class="slide-preview-meta">
-                        <div class="slide-preview-stats">
-                            <span class="slide-stat-chip">حجم فایل: <strong id="mobileFileSize">-</strong></span>
-                            <span class="slide-stat-chip">ابعاد: <strong id="mobileFileDimensions">-</strong></span>
-                            <span id="mobileRatioChip" class="slide-stat-chip"></span>
-                        </div>
-                        <div id="mobileOptBanner" class="slide-opt-banner" style="display:none;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                            <span id="mobileOptText">بهینه‌سازی هوشمند خودکار آماده اجراست.</span>
-                        </div>
-                    </div>
-                    <div class="slide-preview-actions">
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="triggerFileInput('image_mobile')">تغییر تصویر</button>
-                        <button type="button" class="btn btn-sm btn-reject" onclick="clearSelectedFile('image_mobile', 'mobile')">حذف انتخاب</button>
-                    </div>
+                    <button type="button" class="btn btn-xs btn-reject" onclick="clearSelectedSlideFile('mobile', 'image_mobile')" style="padding:4px 8px;font-size:0.75rem;">حذف</button>
                 </div>
             </div>
 
-            <div class="form-actions" style="margin-top:2rem;">
-                <button type="submit" id="slideSubmitBtn" class="app-btn app-btn-primary btn btn-primary" style="width:100%">
+            <div class="form-actions" style="margin-top:24px;">
+                <button type="submit" id="slideSubmitBtn" class="btn btn-primary btn-block" style="width:100%; border:none; padding:14px; font-size:1rem; font-weight:700; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:8px;">
                     <span id="slideSubmitBtnText"><?= $editSlide ? 'به‌روزرسانی اسلاید' : 'افزودن اسلاید' ?></span>
                 </button>
             </div>
@@ -768,51 +722,75 @@ require_once __DIR__ . '/header.php';
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                 </div>
                 <h3>هنوز اسلایدی اضافه نشده</h3>
-                <p>از فرم بالا اولین اسلاید خود را اضافه کنید.</p>
+                <p>از دکمه بالای صفحه اولین اسلاید خود را اضافه کنید.</p>
             </div>
         <?php else: ?>
-            <form method="post" action="<?= e(url('admin/slides.php')) ?>">
+            <form id="slideReorderForm" method="post" action="<?= e(url('admin/slides.php')) ?>">
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <input type="hidden" name="action" value="update_sort">
 
                 <div class="admin-table-wrap">
-                    <table class="admin-table">
+                    <table class="admin-table" id="slidesSortTable">
                         <thead>
                             <tr>
-                                <th>تصویر</th>
-                                <th>عنوان</th>
-                                <th>ترتیب نمایش</th>
-                                <th>عملیات</th>
+                                <th style="width:50px;text-align:center;">ترتیب</th>
+                                <th style="width:120px;">تصویر بنر</th>
+                                <th>عنوان و زیرعنوان</th>
+                                <th style="width:100px;text-align:center;">اولویت</th>
+                                <th style="width:130px;text-align:center;">عملیات</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="slidesSortTbody">
                             <?php foreach ($slides as $slide): ?>
-                                <tr>
+                                <tr class="slide-row" data-id="<?= e((string) $slide['id']) ?>" draggable="true">
+                                    <td style="text-align:center;">
+                                        <span class="slide-drag-grip" title="برای جابجایی بکشید">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                                <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+                                                <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                                                <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+                                            </svg>
+                                        </span>
+                                    </td>
                                     <td>
-                                        <div style="display:flex;align-items:center;gap:8px;">
-                                            <img src="<?= e(url($slide['image'])) ?>" alt="<?= e($slide['title']) ?>" class="admin-slide-thumb" title="تصویر دسکتاپ">
+                                        <div class="slide-thumb-container">
+                                            <img src="<?= e(url($slide['image'])) ?>" alt="<?= e($slide['title']) ?>" class="slide-table-thumb" title="تصویر دسکتاپ">
                                             <?php if (!empty($slide['image_mobile'])): ?>
-                                                <img src="<?= e(url($slide['image_mobile'])) ?>" alt="تصویر موبایل" class="admin-slide-thumb" style="width:36px;height:36px;border:2px solid #3D8B63;border-radius:6px;object-fit:cover;" title="دارای تصویر اختصاصی موبایل">
+                                                <span class="slide-mobile-badge" title="دارای نسخه اختصاصی موبایل">
+                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                                                </span>
                                             <?php endif; ?>
                                         </div>
                                     </td>
-                                    <td style="font-weight:600;"><?= e($slide['title']) ?></td>
                                     <td>
+                                        <div style="font-weight:700;color:var(--adm-text);font-size:0.95rem;margin-bottom:3px;">
+                                            <?= e($slide['title']) ?>
+                                        </div>
+                                        <?php if (!empty($slide['subtitle'])): ?>
+                                            <div style="font-size:0.8rem;color:var(--adm-text-muted);line-height:1.4;">
+                                                <?= e($slide['subtitle']) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="text-align:center;">
                                         <input type="number"
                                             name="sort_order[<?= e($slide['id']) ?>]"
                                             min="0" step="1"
                                             value="<?= e($slide['sort_order']) ?>"
-                                            class="admin-sort-input"
+                                            class="admin-sort-input slide-sort-num"
+                                            style="width:70px;text-align:center;display:inline-block;"
                                             required>
                                     </td>
-                                    <td>
-                                        <a href="<?= e(url('admin/slides.php?edit=' . $slide['id'])) ?>" class="btn btn-sm btn-secondary">ویرایش</a>
-                                        <form method="post" action="<?= e(url('admin/slides.php')) ?>" class="inline-form" data-confirm="آیا از حذف اسلاید «<?= e($slide['title']) ?>» اطمینان دارید؟ این عملیات قابل بازگشت نیست.">
-                                            <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                                            <input type="hidden" name="action" value="delete_slide">
-                                            <input type="hidden" name="slide_id" value="<?= e((string) $slide['id']) ?>">
-                                            <button type="submit" class="btn btn-sm btn-reject">حذف</button>
-                                        </form>
+                                    <td style="text-align:center;">
+                                        <div style="display:inline-flex;gap:6px;align-items:center;">
+                                            <a href="<?= e(url('admin/slides.php?edit=' . $slide['id'])) ?>" class="btn btn-sm btn-secondary">ویرایش</a>
+                                            <form method="post" action="<?= e(url('admin/slides.php')) ?>" class="inline-form" data-confirm="آیا از حذف اسلاید «<?= e($slide['title']) ?>» اطمینان دارید؟ این عملیات قابل بازگشت نیست.">
+                                                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                                                <input type="hidden" name="action" value="delete_slide">
+                                                <input type="hidden" name="slide_id" value="<?= e((string) $slide['id']) ?>">
+                                                <button type="submit" class="btn btn-sm btn-reject">حذف</button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -820,8 +798,14 @@ require_once __DIR__ . '/header.php';
                     </table>
                 </div>
 
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary btn-sm">بهروزرسانی ترتیب نمایش</button>
+                <div class="form-actions" style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                    <button type="submit" id="saveSortBtn" class="btn btn-primary btn-sm">
+                        به‌روزرسانی ترتیب نمایش
+                    </button>
+                    <span class="slide-reorder-notice">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                        می‌توانید ردیف‌ها را با گرفتن آیکون ⠿ به بالا و پایین بکشید (Drag &amp; Drop).
+                    </span>
                 </div>
             </form>
             <?php if ($pagination['total'] > $pagination['perPage']): ?>
@@ -832,7 +816,7 @@ require_once __DIR__ . '/header.php';
             <?php endif; ?>
         <?php endif; ?>
     </div>
-</section>
+</div>
 
 <script>
 function openSlideDrawer() {
@@ -857,121 +841,98 @@ function formatPersianFileSize(bytes) {
     return toPersianDigits(val) + ' ' + sizes[i];
 }
 
-function triggerFileInput(id) {
-    const input = document.getElementById(id);
-    if (input) input.click();
-}
-
-function clearSelectedFile(inputId, prefix) {
+function clearSelectedSlideFile(prefix, inputId) {
     const input = document.getElementById(inputId);
-    if (input) {
-        input.value = '';
-    }
-    const previewCard = document.getElementById(prefix + 'LivePreview');
-    const dropzone = document.getElementById(prefix + 'Dropzone');
-    if (previewCard) previewCard.style.display = 'none';
-    if (dropzone) {
-        dropzone.style.display = '';
-        delete dropzone._optimizedBlob;
-        delete dropzone._optimizedFileName;
+    if (input) input.value = '';
+
+    const thumbBox = document.getElementById(prefix + '-preview-thumb-box');
+    const filenameEl = document.getElementById(prefix + '-filename');
+    if (thumbBox) thumbBox.style.display = 'none';
+    if (filenameEl) {
+        filenameEl.textContent = prefix === 'desktop'
+            ? 'فایلی انتخاب نشده — برای انتخاب کلیک کنید یا فایل را درگ کنید'
+            : 'اختیاری — برای انتخاب کلیک کنید یا فایل را درگ کنید';
     }
 }
 
 function initSlideUploadUI() {
-    setupSlideDropzone('desktop', 'image', false);
-    setupSlideDropzone('mobile', 'image_mobile', true);
+    setupNewsDropzone('desktop', 'image', false);
+    setupNewsDropzone('mobile', 'image_mobile', true);
     setupSlideFormSubmit();
 }
 
-function setupSlideDropzone(prefix, inputId, isMobile) {
-    const dropzone = document.getElementById(prefix + 'Dropzone');
+function setupNewsDropzone(prefix, inputId, isMobile) {
+    const dropzone = document.getElementById('dropzone-' + prefix);
     const input = document.getElementById(inputId);
-    const previewCard = document.getElementById(prefix + 'LivePreview');
-    if (!dropzone || !input || !previewCard) return;
+    if (!dropzone || !input) return;
 
-    // Click to open file chooser
-    dropzone.addEventListener('click', () => input.click());
-    dropzone.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
+    // Click on dropzone triggers hidden file input
+    dropzone.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'INPUT') {
             input.click();
         }
     });
 
-    // Drag and Drop listeners
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropzone.addEventListener(eventName, (e) => {
+    // Drag & Drop events
+    ['dragenter', 'dragover'].forEach(name => {
+        dropzone.addEventListener(name, (e) => {
             e.preventDefault();
             e.stopPropagation();
-            dropzone.classList.add('is-dragover');
+            dropzone.style.borderColor = '#4EAB87';
+            dropzone.style.background = 'rgba(78, 171, 135, 0.08)';
         });
     });
 
-    ['dragleave', 'dragend'].forEach(eventName => {
-        dropzone.addEventListener(eventName, (e) => {
+    ['dragleave', 'dragend'].forEach(name => {
+        dropzone.addEventListener(name, (e) => {
             e.preventDefault();
             e.stopPropagation();
-            dropzone.classList.remove('is-dragover');
+            dropzone.style.borderColor = '';
+            dropzone.style.background = '';
         });
     });
 
     dropzone.addEventListener('drop', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        dropzone.classList.remove('is-dragover');
+        dropzone.style.borderColor = '';
+        dropzone.style.background = '';
+
         if (e.dataTransfer && e.dataTransfer.files.length > 0) {
-            handleFileSelection(e.dataTransfer.files[0], prefix, input, isMobile);
+            handleSlideFile(e.dataTransfer.files[0], prefix, input);
         }
     });
 
     input.addEventListener('change', () => {
         if (input.files && input.files.length > 0) {
-            handleFileSelection(input.files[0], prefix, input, isMobile);
+            handleSlideFile(input.files[0], prefix, input);
         }
     });
 }
 
-function handleFileSelection(file, prefix, input, isMobile) {
+function handleSlideFile(file, prefix, input) {
     const maxBytes = 50 * 1024 * 1024; // 50MB
-    const dropzone = document.getElementById(prefix + 'Dropzone');
-    const previewCard = document.getElementById(prefix + 'LivePreview');
-    const previewImg = document.getElementById(prefix + 'PreviewImg');
-    const nameEl = document.getElementById(prefix + 'FileName');
-    const sizeEl = document.getElementById(prefix + 'FileSize');
-    const dimEl = document.getElementById(prefix + 'FileDimensions');
-    const ratioEl = document.getElementById(prefix + 'RatioChip');
-    const optBanner = document.getElementById(prefix + 'OptBanner');
-    const optText = document.getElementById(prefix + 'OptText');
+    const filenameEl = document.getElementById(prefix + '-filename');
+    const thumbBox = document.getElementById(prefix + '-preview-thumb-box');
+    const thumbImg = document.getElementById(prefix + '-thumb');
+    const thumbName = document.getElementById(prefix + '-thumb-name');
+    const thumbMeta = document.getElementById(prefix + '-thumb-meta');
 
     if (!file) return;
 
-    // Validate mime type & extension
-    const validExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-    const ext = file.name.split('.').pop().toLowerCase();
-    const isImageMime = file.type.startsWith('image/');
-    if (!isImageMime && !validExts.includes(ext)) {
-        if (typeof showToast === 'function') {
-            showToast('فرمت فایل مجاز نیست. لطفاً تصویر JPG، PNG، WebP یا GIF انتخاب کنید.', 'danger');
-        } else {
-            alert('فرمت فایل مجاز نیست. لطفاً تصویر JPG، PNG، WebP یا GIF انتخاب کنید.');
-        }
-        input.value = '';
-        return;
-    }
-
-    // Validate size limit (50MB)
+    // Validate size (50MB)
     if (file.size > maxBytes) {
-        const mbSize = (file.size / (1024 * 1024)).toFixed(1);
+        const mb = (file.size / (1024 * 1024)).toFixed(1);
         if (typeof showToast === 'function') {
-            showToast(`حجم فایل (${toPersianDigits(mbSize)} مگابایت) بیشتر از سقف مجاز ۵۰ مگابایت است.`, 'danger');
+            showToast(`حجم فایل (${toPersianDigits(mb)} مگابایت) بیشتر از ۵۰ مگابایت است.`, 'danger');
         } else {
-            alert(`حجم فایل (${toPersianDigits(mbSize)} مگابایت) بیشتر از سقف مجاز ۵۰ مگابایت است.`);
+            alert(`حجم فایل (${toPersianDigits(mb)} مگابایت) بیشتر از ۵۰ مگابایت است.`);
         }
         input.value = '';
         return;
     }
 
-    // Sync input files if set via drag & drop
+    // Sync input if dropped
     if (window.DataTransfer && (!input.files || input.files[0] !== file)) {
         try {
             const dt = new DataTransfer();
@@ -980,89 +941,23 @@ function handleFileSelection(file, prefix, input, isMobile) {
         } catch (e) {}
     }
 
-    const objectUrl = URL.createObjectURL(file);
-    previewImg.src = objectUrl;
-    nameEl.textContent = file.name;
-    sizeEl.textContent = formatPersianFileSize(file.size);
-    dimEl.textContent = 'در حال بررسی ابعاد...';
+    if (filenameEl) filenameEl.textContent = file.name;
 
-    // Show preview card, hide dropzone
-    dropzone.style.display = 'none';
-    previewCard.style.display = 'flex';
+    // Show preview thumbnail
+    if (thumbBox && thumbImg && thumbName && thumbMeta) {
+        const objUrl = URL.createObjectURL(file);
+        thumbImg.src = objUrl;
+        thumbName.textContent = file.name;
+        thumbMeta.textContent = formatPersianFileSize(file.size);
 
-    // Read natural dimensions
-    const imgObj = new Image();
-    imgObj.onload = function() {
-        const w = imgObj.naturalWidth;
-        const h = imgObj.naturalHeight;
-        dimEl.textContent = `${toPersianDigits(w)} × ${toPersianDigits(h)} پیکسل`;
+        const img = new Image();
+        img.onload = function() {
+            thumbMeta.textContent = `${formatPersianFileSize(file.size)} — ${toPersianDigits(img.naturalWidth)}×${toPersianDigits(img.naturalHeight)} px`;
+        };
+        img.src = objUrl;
 
-        // Aspect ratio analysis
-        const ratio = w / (h || 1);
-        if (!isMobile) {
-            if (ratio >= 2.4) {
-                ratioEl.textContent = 'نسبت عریض ایده‌آل (۱۶:۵)';
-                ratioEl.className = 'slide-stat-chip success';
-            } else if (ratio >= 1.6) {
-                ratioEl.textContent = 'نسبت مناسب';
-                ratioEl.className = 'slide-stat-chip';
-            } else {
-                ratioEl.textContent = 'نسبت عمودی یا مربعی (پیشنهاد: تصویر عریض)';
-                ratioEl.className = 'slide-stat-chip';
-            }
-        } else {
-            if (ratio <= 1.5 && ratio >= 0.7) {
-                ratioEl.textContent = 'نسبت مناسب موبایل (~۴:۳)';
-                ratioEl.className = 'slide-stat-chip success';
-            } else {
-                ratioEl.textContent = `نسبت: ${toPersianDigits(ratio.toFixed(2))}`;
-                ratioEl.className = 'slide-stat-chip';
-            }
-        }
-
-        // Smart client-side pre-optimization for large files
-        const maxWidth = isMobile ? 1200 : 2560;
-        const shouldOptimize = file.size > 2 * 1024 * 1024 || w > maxWidth;
-
-        if (shouldOptimize && window.HTMLCanvasElement) {
-            try {
-                let targetW = w;
-                let targetH = h;
-                if (w > maxWidth) {
-                    const scale = maxWidth / w;
-                    targetW = Math.round(w * scale);
-                    targetH = Math.round(h * scale);
-                }
-
-                const canvas = document.createElement('canvas');
-                canvas.width = targetW;
-                canvas.height = targetH;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(imgObj, 0, 0, targetW, targetH);
-
-                const mimeType = 'image/webp';
-                canvas.toBlob((blob) => {
-                    if (blob && blob.size < file.size) {
-                        dropzone._optimizedBlob = blob;
-                        dropzone._optimizedFileName = file.name.replace(/\.[^.]+$/, '') + '.webp';
-
-                        const savings = Math.max(1, Math.round((1 - (blob.size / file.size)) * 100));
-                        optText.textContent = `بهینه‌سازی هوشمند: حجم اصلی ${formatPersianFileSize(file.size)} به ${formatPersianFileSize(blob.size)} فشرده می‌شود (${toPersianDigits(savings)}٪ صرفه‌جویی در ترافیک)`;
-                        optBanner.style.display = 'flex';
-                    } else {
-                        optBanner.style.display = 'none';
-                        delete dropzone._optimizedBlob;
-                    }
-                }, mimeType, 0.90);
-            } catch (err) {
-                optBanner.style.display = 'none';
-            }
-        } else {
-            optBanner.style.display = 'none';
-            delete dropzone._optimizedBlob;
-        }
-    };
-    imgObj.src = objectUrl;
+        thumbBox.style.display = 'flex';
+    }
 }
 
 function setupSlideFormSubmit() {
@@ -1089,36 +984,107 @@ function setupSlideFormSubmit() {
             return;
         }
 
-        // Apply pre-optimized blobs if DataTransfer is supported
-        if (window.DataTransfer) {
-            ['desktop', 'mobile'].forEach((prefix) => {
-                const dropzone = document.getElementById(prefix + 'Dropzone');
-                const inputId = prefix === 'desktop' ? 'image' : 'image_mobile';
-                const input = document.getElementById(inputId);
-                if (dropzone && dropzone._optimizedBlob && input && input.files && input.files.length > 0) {
-                    try {
-                        const optFile = new File([dropzone._optimizedBlob], dropzone._optimizedFileName || 'slide.webp', {
-                            type: dropzone._optimizedBlob.type,
-                            lastModified: Date.now()
-                        });
-                        const dt = new DataTransfer();
-                        dt.items.add(optFile);
-                        input.files = dt.files;
-                    } catch (err) {}
-                }
-            });
-        }
-
-        // Show spinner and disable button
         submitBtn.disabled = true;
-        btnText.innerHTML = '<span class="slide-spinner"></span> در حال ذخیره‌سازی و بهینه‌سازی اسلاید...';
+        btnText.innerHTML = '<span class="slide-spinner"></span> در حال ذخیره‌سازی...';
     });
 }
 
-<?php if ($editSlide): ?>
+// ── TABLE DRAG & DROP REORDERING ────────────────────────────
+function initTableDragAndDrop() {
+    const tbody = document.getElementById('slidesSortTbody');
+    if (!tbody) return;
+
+    let draggedRow = null;
+
+    tbody.querySelectorAll('.slide-row').forEach(row => {
+        row.addEventListener('dragstart', (e) => {
+            draggedRow = row;
+            row.classList.add('is-dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', row.dataset.id);
+        });
+
+        row.addEventListener('dragend', () => {
+            row.classList.remove('is-dragging');
+            tbody.querySelectorAll('.slide-row').forEach(r => {
+                r.classList.remove('drag-over-top', 'drag-over-bottom');
+            });
+            draggedRow = null;
+        });
+
+        row.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (!draggedRow || draggedRow === row) return;
+
+            const rect = row.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+
+            if (e.clientY < midpoint) {
+                row.classList.add('drag-over-top');
+                row.classList.remove('drag-over-bottom');
+            } else {
+                row.classList.add('drag-over-bottom');
+                row.classList.remove('drag-over-top');
+            }
+        });
+
+        row.addEventListener('dragleave', () => {
+            row.classList.remove('drag-over-top', 'drag-over-bottom');
+        });
+
+        row.addEventListener('drop', (e) => {
+            e.preventDefault();
+            row.classList.remove('drag-over-top', 'drag-over-bottom');
+            if (!draggedRow || draggedRow === row) return;
+
+            const rect = row.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+
+            if (e.clientY < midpoint) {
+                tbody.insertBefore(draggedRow, row);
+            } else {
+                tbody.insertBefore(draggedRow, row.nextSibling);
+            }
+
+            // Recalculate sequential sort orders in inputs
+            const form = document.getElementById('slideReorderForm');
+            const formData = new FormData();
+            formData.append('action', 'update_sort');
+            formData.append('csrf_token', form.querySelector('input[name="csrf_token"]').value);
+            formData.append('ajax', '1');
+
+            tbody.querySelectorAll('.slide-row').forEach((r, idx) => {
+                const sortInput = r.querySelector('.slide-sort-num');
+                if (sortInput) sortInput.value = idx;
+                formData.append(`sort_order[${r.dataset.id}]`, idx);
+            });
+
+            // Save order via AJAX
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.success) {
+                    if (typeof showToast === 'function') showToast(data.message || 'ترتیب اسلایدها با موفقیت ذخیره شد.', 'success');
+                } else if (data && data.error) {
+                    if (typeof showToast === 'function') showToast(data.error, 'danger');
+                }
+            })
+            .catch(() => {
+                // If AJAX fails, user can still click save button
+            });
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    openSlideDrawer();
+    initTableDragAndDrop();
+    <?php if ($editSlide): ?>
+        openSlideDrawer();
+    <?php endif; ?>
 });
-<?php endif; ?>
 </script>
 <?php require_once __DIR__ . '/footer.php'; ?>
