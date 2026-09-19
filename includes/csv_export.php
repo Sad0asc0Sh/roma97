@@ -6,6 +6,21 @@ if (!defined('ROOMA_APP')) {
 }
 
 /**
+ * Neutralize spreadsheet formula injection: cells starting with = + - @ or tab/CR
+ * get a leading apostrophe so Excel/LibreOffice treat them as text.
+ */
+function escapeCsvCell(mixed $value): mixed
+{
+    if (!is_string($value)) {
+        return $value;
+    }
+    if ($value !== '' && (strpbrk($value[0], '=+-@') !== false || str_starts_with($value, "\t"))) {
+        return "'" . $value;
+    }
+    return $value;
+}
+
+/**
  * Stream a CSV file download with UTF-8 BOM so Excel opens Persian text correctly.
  *
  * @param string                  $filename Output filename (e.g. 'tuition-export-1405-05.csv').
@@ -40,11 +55,11 @@ function streamCsvDownload(string $filename, array $headers, iterable $rows): ne
     fwrite($output, "\xEF\xBB\xBF");
 
     // Write headers
-    fputcsv($output, $headers);
+    fputcsv($output, array_map('escapeCsvCell', $headers));
 
     // Write rows streamingly
     foreach ($rows as $row) {
-        fputcsv($output, $row);
+        fputcsv($output, array_map('escapeCsvCell', $row));
     }
 
     fclose($output);

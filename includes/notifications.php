@@ -643,6 +643,48 @@ function notifyParent(int $parentId, string $eventKey, array $options = []): arr
             return $out;
         }
 
+        // ── Pre-flight gates BEFORE claiming: a failed pre-flight must stay
+        // retryable. Claiming first would burn the dedup key on a permanent
+        // failure (bad phone, disabled gateway) and the notification would
+        // never go out even after the problem is fixed.
+        if (!empty($options['skip_sms'])) {
+            $out['reason'] = 'ارسال پیامک برای این اعلان درخواست نشده بود.';
+        } else {
+            if ($prefColumn !== null && (int) ($parent[$prefColumn] ?? 1) !== 1) {
+                $out['sms'] = 'opted_out';
+                $out['reason'] = 'والد دریافت پیامک این دسته را غیرفعال کرده است.';
+
+                return $out;
+            }
+
+            $phone = (string) ($parent['phone'] ?? '');
+            if (!isValidIranianMobile($phone)) {
+                $out['sms'] = 'no_phone';
+                $out['reason'] = 'شماره موبایل معتبری برای این والد ثبت نشده است.';
+
+                return $out;
+            }
+
+            $settings = getSmsSettings($pdo);
+            $bodyId = (int) ($settings[$event['pattern_key']] ?? 0);
+
+            if (($settings['sms_enabled'] ?? '0') !== '1') {
+                $out['sms'] = 'gateway_disabled';
+                $out['reason'] = 'ارسال پیامک در تنظیمات سیستم غیرفعال است.';
+
+                return $out;
+            }
+
+            if ($bodyId <= 0) {
+                $out['sms'] = 'pattern_missing';
+                $out['reason'] = 'شناسه الگوی پیامک این رویداد تنظیم نشده است.';
+
+                return $out;
+            }
+
+            $out['reason'] = 'ارسال پیامک برای این اعلان درخواست نشده بود.';
+        }
+
         // ── De-duplication gate (covers portal + SMS together) ──────────────
         $dedupKey = (string) ($options['dedup_key'] ?? '');
         $channels = [];
@@ -699,41 +741,9 @@ function notifyParent(int $parentId, string $eventKey, array $options = []): arr
         }
 
         // ── Channel 2: patterned SMS ────────────────────────────────────────
+        // Pre-flight gates (opt-out, phone validity, gateway, pattern) already
+        // ran before the dedup claim above.
         if (!empty($options['skip_sms'])) {
-            $out['reason'] = 'ارسال پیامک برای این اعلان درخواست نشده بود.';
-
-            return $out;
-        }
-
-        if ($prefColumn !== null && (int) ($parent[$prefColumn] ?? 1) !== 1) {
-            $out['sms'] = 'opted_out';
-            $out['reason'] = 'والد دریافت پیامک این دسته را غیرفعال کرده است.';
-
-            return $out;
-        }
-
-        $phone = (string) ($parent['phone'] ?? '');
-        if (!isValidIranianMobile($phone)) {
-            $out['sms'] = 'no_phone';
-            $out['reason'] = 'شماره موبایل معتبری برای این والد ثبت نشده است.';
-
-            return $out;
-        }
-
-        $settings = getSmsSettings($pdo);
-        $bodyId = (int) ($settings[$event['pattern_key']] ?? 0);
-
-        if (($settings['sms_enabled'] ?? '0') !== '1') {
-            $out['sms'] = 'gateway_disabled';
-            $out['reason'] = 'ارسال پیامک در تنظیمات سیستم غیرفعال است.';
-
-            return $out;
-        }
-
-        if ($bodyId <= 0) {
-            $out['sms'] = 'pattern_missing';
-            $out['reason'] = 'شناسه الگوی پیامک این رویداد تنظیم نشده است.';
-
             return $out;
         }
 

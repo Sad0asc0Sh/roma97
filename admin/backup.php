@@ -11,6 +11,8 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/audit.php';
 
 requireLogin();
+// The dump includes settings.sms_api_key and password hashes; not for accountant/manager eyes.
+requireAdminRole(['owner']);
 
 if (isPostRequest() && isset($_POST['action']) && $_POST['action'] === 'download_backup') {
     $csrfToken = (string) ($_POST['csrf_token'] ?? '');

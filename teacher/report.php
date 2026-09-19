@@ -114,6 +114,15 @@ SQL;
                     $childActivities = trim((string) ($activities[$childId] ?? ''));
                     $childNotes      = trim((string) ($notes[$childId] ?? ''));
 
+                    // Skip untouched children that have no prior report: a save of an
+                    // all-default form must not notify every parent that "a report
+                    // was written" for a child with nothing in it. Children WITH a
+                    // prior report always go through so deliberate clearing is saved.
+                    if (!isset($previousReports[$childId])
+                        && $mood === 'normal' && $childActivities === '' && $childNotes === '') {
+                        continue;
+                    }
+
                     $uStmt->execute([
                         ':tid'        => $teacherId,
                         ':cid'        => $classroomId,

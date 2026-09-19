@@ -17,6 +17,8 @@ if (isPostRequest()) {
     $pid=filter_var($_POST['parent_id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
     $pid=is_int($pid)?$pid:0;
     if (!validateCsrfToken($csrf)){setFlash('error','درخواست نامعتبر.');redirect(url('admin/parents.php'));}
+    // Reset links hand over a live account; only the two most trusted roles may mint them.
+    if ($action === 'generate_reset_link'){requireAdminRole(['owner','manager']);}
     try {
         initializeFinancialTables();
         $pdo=getDb();

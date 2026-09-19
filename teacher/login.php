@@ -211,7 +211,7 @@ $siteNameValue = e(siteName());
             </div>
 
             <div class="auth-footer auth-anim-6">
-                <p>&copy; <?= e(date('Y')) ?> <?= $siteNameValue ?>. تمامی حقوق محفوظ است</p>
+                <p>&copy; <?= e(shamsiDate(time(), 'Y')) ?> <?= $siteNameValue ?>. تمامی حقوق محفوظ است</p>
             </div>
         </div>
     </main>

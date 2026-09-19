@@ -9,11 +9,17 @@ $siteNameValue = siteName();
 
     <footer class="parent-footer">
         <div class="parent-footer-container">
-            <p>&copy; <?php echo e(persianNumber(date('Y'))); ?> <?php echo e($siteNameValue); ?> &mdash; تمامی حقوق محفوظ است</p>
+            <p>&copy; <?php echo e($footerJyFa); ?> <?php echo e($siteNameValue); ?> &mdash; تمامی حقوق محفوظ است</p>
         </div>
     </footer>
 
-    <?php require_once __DIR__ . '/../templates/app/dialogs.php'; ?>
+    <?php
+if (!defined('ROOMA_APP')) {
+    die('Access denied.');
+}
+[$footerJy] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
+$footerJyFa = persianNumber((string) $footerJy);
+require_once __DIR__ . '/../templates/app/dialogs.php'; ?>
 
     
 <!-- Mobile Bottom Navigation - Parent Portal -->

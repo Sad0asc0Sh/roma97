@@ -238,9 +238,12 @@ SQL
                         continue; // Not in this teacher's classroom — ignore silently.
                     }
 
-                    $status = (string) ($fields['status'] ?? 'present');
+                    // A child with no explicit status on the form (e.g. added to the
+                    // class after the page loaded) is skipped entirely rather than
+                    // silently recorded as present with an SMS to their parent.
+                    $status = (string) ($fields['status'] ?? '');
                     if (!in_array($status, $allowedStatuses, true)) {
-                        $status = 'present';
+                        continue;
                     }
 
                     $notes = trim((string) ($fields['notes'] ?? ''));
@@ -255,8 +258,11 @@ SQL
 
                     // A present/late child with no recorded arrival time gets one
                     // automatically when the register is filled in on the same day —
-                    // that is the whole point of recording at the door.
-                    if ($checkIn === null && in_array($status, ['present', 'late'], true) && $postDate === $today) {
+                    // but only on the FIRST save for that child/date. Re-saving later
+                    // (e.g. an evening correction) must not backfill a bogus arrival
+                    // time or overwrite a time the teacher deliberately cleared.
+                    if ($checkIn === null && in_array($status, ['present', 'late'], true) && $postDate === $today
+                        && !array_key_exists($childId, $previousStatuses)) {
                         $checkIn = date('H:i:00');
                     }
 

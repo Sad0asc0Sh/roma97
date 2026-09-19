@@ -179,6 +179,7 @@ require_once __DIR__ . '/header.php';
                                     <span class="unread-dot" title="خوانده نشده"></span>
                                 <?php endif; ?>
                             <?php else: ?>
+                                <a href="?view=<?= e((string) $msg['id']) ?>" class="btn btn-secondary btn-sm">مشاهده</a>
                                 <span class="badge badge-success">ارسال شد</span>
                             <?php endif; ?>
                      </div>

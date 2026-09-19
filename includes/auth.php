@@ -129,9 +129,31 @@ const BRUTE_FORCE_LOCKOUT_SECONDS = 900; // 15 minutes
  */
 function initializeLoginThrottleTable(): void
 {
-    // Schema is created at install time via setup.php / schema.sql
     static $initialized = false;
+    if ($initialized) {
+        return;
+    }
     $initialized = true;
+
+    // Normally schema.sql / setup.php creates this at install time. If it is
+    // missing (upgraded install, partial setup), brute-force protection would
+    // otherwise silently fail open — so create it here as a safety net.
+    try {
+        getDb()->exec(
+            "CREATE TABLE IF NOT EXISTS login_throttle (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                context VARCHAR(32) NOT NULL DEFAULT 'login',
+                key_type VARCHAR(16) NOT NULL,
+                key_value VARCHAR(191) NOT NULL,
+                attempts INT UNSIGNED NOT NULL DEFAULT 0,
+                locked_until DATETIME NULL,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_throttle_key (context, key_type, key_value)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    } catch (Throwable $e) {
+        error_log('initializeLoginThrottleTable failed: ' . $e->getMessage());
+    }
 }
 
 /**
@@ -291,7 +313,28 @@ function requireLogin(): void
         redirect(url('admin/login.php'));
     }
 
-    $role = currentAdminRole();
+    // Re-fetch the role from the DB on every request: a long-lived session must
+    // not keep privileges that were revoked mid-session (e.g. an owner demoted
+    // to receptionist). If the lookup fails or the account is gone, keep the
+    // session role so an infrastructure blip doesn't lock staff out.
+    $sessionRole = currentAdminRole();
+    $role = $sessionRole;
+    try {
+        $stmt = getDb()->prepare('SELECT role FROM admins WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => (int) ($_SESSION['admin_id'] ?? 0)]);
+        $row = $stmt->fetch();
+        if ($row === false) {
+            destroyAdminSession();
+            setFlash('error', 'حساب شما دیگر فعال نیست. لطفاً دوباره وارد شوید.');
+            redirect(url('admin/login.php'));
+        }
+        $role = (string) ($row['role'] ?? $sessionRole);
+        if ($role !== $sessionRole) {
+            $_SESSION['admin_role'] = $role;
+        }
+    } catch (Throwable $e) {
+        error_log('requireLogin role refresh failed: ' . $e->getMessage());
+    }
 
     // Unknown roles fail closed: destroy the session and bounce to the login
     // page. Redirecting to admin/index.php instead would loop forever, because

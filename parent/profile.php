@@ -492,7 +492,7 @@ if (isPostRequest()) {
         setFlash('success', 'تصویر پروفایل حذف شد.');
         redirect(url('parent/profile.php'));
     } else {
-        $errors[] = 'Invalid request. Please try again.';
+        $errors[] = 'درخواست نامعتبر است. لطفاً دوباره تلاش کنید.';
     }
 }
 
@@ -531,7 +531,7 @@ require_once __DIR__ . '/header.php';
             <img class="profile-avatar" src="<?= e(url($parent['avatar'])) ?>" alt="<?= e($displayName) ?>">
         <?php else: ?>
             <div class="profile-avatar profile-avatar-placeholder">
-                <?= e(strtoupper(substr($infoOld['first_name'], 0, 1))) ?>
+                <?= e(mb_substr(trim($infoOld['first_name'] ?: 'و'), 0, 1, 'UTF-8')) ?>
             </div>
         <?php endif; ?>
     </div>
@@ -640,7 +640,7 @@ require_once __DIR__ . '/header.php';
                 <img class="profile-avatar-large" src="<?= e(url($parent['avatar'])) ?>" alt="<?= e($displayName) ?>">
             <?php else: ?>
                 <div class="profile-avatar-large profile-avatar-placeholder">
-                    <?= e(strtoupper(substr($infoOld['first_name'], 0, 1))) ?>
+                    <?= e(mb_substr(trim($infoOld['first_name'] ?: 'و'), 0, 1, 'UTF-8')) ?>
                 </div>
             <?php endif; ?>
         </div>

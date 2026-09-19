@@ -107,7 +107,7 @@ $footerNav   = roomaPublicNav($currentPage, $currentSlug);
         </div>
 
         <div class="site-footer__bottom">
-            <p>&copy; <?php echo e(persianNumber(date('Y'))); ?> <?php echo e($siteNameValue); ?> — تمامی حقوق محفوظ است</p>
+            <p>&copy; <?php echo e(shamsiDate(time(), 'Y')); ?> <?php echo e($siteNameValue); ?> — تمامی حقوق محفوظ است</p>
             <p>طراحی و توسعه با <span class="site-footer__credit-name">SadraSh</span></p>
         </div>
     </div>

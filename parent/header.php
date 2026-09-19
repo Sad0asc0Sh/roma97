@@ -20,7 +20,7 @@ $unreadCount = 0;
 if (isset($_SESSION['parent_id'])) {
     try {
         $pdo = getDb();
-        $unreadStmt = $pdo->prepare('SELECT COUNT(*) FROM messages WHERE (parent_id IS NULL OR parent_id = ?) AND is_read = 0');
+        $unreadStmt = $pdo->prepare("SELECT COUNT(*) FROM messages WHERE (parent_id IS NULL OR parent_id = ?) AND is_read = 0 AND sender_type <> 'parent'");
         $unreadStmt->execute([$_SESSION['parent_id']]);
         $unreadCount = (int) $unreadStmt->fetchColumn();
     } catch (Throwable $e) {

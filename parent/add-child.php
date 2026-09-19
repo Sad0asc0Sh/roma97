@@ -54,6 +54,12 @@ function validChildDateOfBirth(string $value): ?string
         return null;
     }
 
+    // Daycare age range is roughly 0–6 years; anything older than 15 is a typo
+    // (e.g. 1300/01/01 entered instead of 1400/01/01) and would show absurd ages.
+    if ($date < $today->modify('-15 years')) {
+        return null;
+    }
+
     return $value;
 }
 

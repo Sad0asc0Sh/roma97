@@ -66,12 +66,9 @@ SQL
         $chStmt->execute([':cid' => $classroomId, ':today' => $today]);
         $children = $chStmt->fetchAll();
 
-        // Today's daily report
-        $rStmt = $pdo->prepare(
-            'SELECT id, mood, activities, notes FROM daily_reports WHERE classroom_id = :cid AND report_date = :today LIMIT 1'
-        );
-        $rStmt->execute([':cid' => $classroomId, ':today' => $today]);
-        $report = $rStmt->fetch() ?: null;
+        // Daily reports are per-child; showing one arbitrary child's report as
+        // "the class report" was misleading. The dashboard instead surfaces
+        // how many of today's reports are already written (see task board).
 
         // ── Today's task board ──────────────────────────────────────────────
         // A teacher's two daily duties are the attendance register and the
@@ -243,39 +240,21 @@ function attendanceBadge(?string $status): string
         <!-- Daily Report Widget -->
         <div class="teacher-section">
             <h2 class="teacher-section-title">📋 گزارش روزانه امروز</h2>
-            <?php if ($report !== null): ?>
+            <?php
+            $totalChildren = count($children);
+            $notReported = $totalChildren - $reportedChildren;
+            ?>
+            <?php if ($reportedChildren >= $totalChildren && $totalChildren > 0): ?>
                 <div class="daily-report-card">
                     <div class="daily-report-item">
-                        <strong>حال و هوا:</strong>
-                        <?php
-                        $moodEmoji = match ($report['mood']) {
-                            'happy'       => '😊 شاد',
-                            'normal'      => '😐 عادی',
-                            'mixed'       => '😅 ترکیبی',
-                            'challenging' => '😓 چالش‌برانگیز',
-                            default       => e($report['mood']),
-                        };
-                        echo $moodEmoji;
-                        ?>
+                        <strong>✅ گزارش روزانه همه <?= e(persianNumber((string) $totalChildren)) ?> کودک امروز ثبت شده است.</strong>
                     </div>
-                    <?php if (!empty($report['activities'])): ?>
-                    <div class="daily-report-item">
-                        <strong>فعالیت‌ها:</strong>
-                        <p><?= nl2br(e((string) $report['activities'])) ?></p>
-                    </div>
-                    <?php endif; ?>
-                    <?php if (!empty($report['notes'])): ?>
-                    <div class="daily-report-item">
-                        <strong>یادداشت:</strong>
-                        <p><?= nl2br(e((string) $report['notes'])) ?></p>
-                    </div>
-                    <?php endif; ?>
-                    <a href="<?= e(url('teacher/report.php')) ?>" class="btn btn-primary btn-sm">ویرایش گزارش</a>
+                    <a href="<?= e(url('teacher/report.php')) ?>" class="btn btn-secondary btn-sm">مشاهده / ویرایش گزارش‌ها</a>
                 </div>
             <?php else: ?>
                 <div class="daily-report-empty">
-                    <p>گزارش روزانه‌ای برای امروز ثبت نشده است.</p>
-                    <a href="<?= e(url('teacher/report.php')) ?>" class="btn btn-primary">ایجاد گزارش امروز</a>
+                    <p>گزارش روزانه برای <?= e(persianNumber((string) $notReported)) ?> کودک از <?= e(persianNumber((string) $totalChildren)) ?> کودک کلاس هنوز ثبت نشده است.</p>
+                    <a href="<?= e(url('teacher/report.php')) ?>" class="btn btn-primary">ثبت گزارش‌های باقی‌مانده</a>
                 </div>
             <?php endif; ?>
         </div>

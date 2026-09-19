@@ -84,6 +84,11 @@ if (isPostRequest()) {
 
     // ── Status change (approve/activate/deactivate) ──────────────────────────
     if (in_array($postAction, ['approve', 'activate', 'deactivate', 'delete', 'login_as', 'generate_reset_link'], true)) {
+        // Impersonation and reset links hand over a live account; only the two
+        // most trusted roles may mint them.
+        if (in_array($postAction, ['login_as', 'generate_reset_link'], true)) {
+            requireAdminRole(['owner', 'manager']);
+        }
         $teacherId = filter_var($_POST['teacher_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $teacherId = is_int($teacherId) ? $teacherId : 0;
 

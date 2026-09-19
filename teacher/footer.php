@@ -5,13 +5,15 @@ if (!defined('ROOMA_APP')) {
     die('Access denied.');
 }
 $siteNameValue = siteName();
+[$footerJy] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
+$footerJyFa = persianNumber((string) $footerJy);
 ?>
         </div>
     </main>
 
     <footer class="teacher-footer">
         <div class="teacher-footer-content">
-            <p>&copy; <?php echo e(persianNumber(date('Y'))); ?> <?php echo e($siteNameValue); ?> &mdash; پنل معلم</p>
+            <p>&copy; <?php echo e($footerJyFa); ?> <?php echo e($siteNameValue); ?> &mdash; پنل معلم</p>
         </div>
     </footer>
 
