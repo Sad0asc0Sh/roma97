@@ -308,7 +308,7 @@ function initializeFinancialTables(): void
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 phone VARCHAR(15) NOT NULL,
                 code VARCHAR(10) NOT NULL,
-                action_type ENUM('register', 'login', 'reset_password') NOT NULL DEFAULT 'register',
+                action_type ENUM('register', 'login', 'reset_password', 'phone_change') NOT NULL DEFAULT 'register',
                 payload_json TEXT NULL,
                 attempts INT DEFAULT 0,
                 expires_at DATETIME NOT NULL,
@@ -318,6 +318,21 @@ function initializeFinancialTables(): void
                 INDEX idx_svc_phone_action (phone, action_type, is_used)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
+
+        // Widen action_type for existing installs so phone-change OTPs are accepted.
+        try {
+            $svcColType = $pdo->query("
+                SELECT COLUMN_TYPE FROM information_schema.COLUMNS
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'sms_verification_codes'
+                  AND column_name = 'action_type'
+            ")->fetchColumn();
+            if (is_string($svcColType) && strpos($svcColType, "'phone_change'") === false) {
+                $pdo->exec("ALTER TABLE sms_verification_codes
+                    MODIFY COLUMN action_type ENUM('register','login','reset_password','phone_change')
+                    NOT NULL DEFAULT 'register'");
+            }
+        } catch (Throwable) {}
 
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS sms_logs (
@@ -344,19 +359,29 @@ function initializeFinancialTables(): void
             $pdo->exec("ALTER TABLE sms_logs ADD COLUMN pattern_body_id INT NULL AFTER recipient_phone");
         }
 
-        // Idempotently make parents.email nullable and add unique index on parents.phone
+        // Idempotently make parents.email nullable and enforce a UNIQUE index on
+        // parents.phone: the phone number is the login identifier, so duplicates
+        // make login resolve to an arbitrary account and break SMS recovery.
         try {
             $pdo->exec("ALTER TABLE parents MODIFY COLUMN email VARCHAR(150) NULL DEFAULT NULL");
         } catch (Throwable) {}
 
         $checkPhoneIdx = $pdo->query("
             SELECT COUNT(*) FROM information_schema.STATISTICS
-            WHERE table_schema = DATABASE() AND table_name = 'parents' AND index_name = 'idx_parent_phone'
+            WHERE table_schema = DATABASE() AND table_name = 'parents'
+              AND index_name = 'idx_parent_phone' AND non_unique = 0
         ")->fetchColumn();
         if ((int) $checkPhoneIdx === 0) {
+            // Drop any legacy non-unique index under the same name first.
             try {
-                $pdo->exec("ALTER TABLE parents ADD INDEX idx_parent_phone (phone)");
+                $pdo->exec("ALTER TABLE parents DROP INDEX idx_parent_phone");
             } catch (Throwable) {}
+            try {
+                $pdo->exec("ALTER TABLE parents ADD UNIQUE INDEX idx_parent_phone (phone)");
+            } catch (Throwable) {
+                // Likely pre-existing duplicate phones; the application-level
+                // check in parent/profile.php still rejects new duplicates.
+            }
         }
 
         // Idempotently add SMS preferences to parents table if missing

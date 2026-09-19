@@ -410,6 +410,18 @@ function smsQueueProcess(PDO $pdo, int $limit = 25, ?int $timeBudget = null, ?in
     $startedAt = microtime(true);
 
     try {
+        // Reaper: a worker that dies between claiming a row ('sending') and
+        // marking it would otherwise leave the message invisible forever —
+        // the pending SELECT never sees 'sending' rows. Return stale claims to
+        // the queue after a grace period so no message is silently lost.
+        // The conditional claim below (UPDATE ... WHERE status='pending')
+        // keeps this race-safe across overlapping workers.
+        $reaped = $pdo->prepare(
+            "UPDATE sms_queue SET status = 'pending', last_error = 'reaped: worker did not finish'
+             WHERE status = 'sending' AND updated_at < DATE_SUB(NOW(), INTERVAL 15 MINUTE)"
+        );
+        $reaped->execute();
+
         $sql = "SELECT id, recipient_phone, pattern_body_id, args_json, event_type, parent_id, attempts
                 FROM sms_queue
                 WHERE status = 'pending'";

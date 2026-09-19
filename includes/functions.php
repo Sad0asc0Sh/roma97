@@ -758,11 +758,45 @@ function jalaliMonthToGregorianRange(string $monthYear): array
 }
 
 /**
+ * Is the given Jalali year a leap (kabiseh) year? Uses the standard 33-year cycle.
+ */
+function isJalaliLeapYear(int $jy): bool
+{
+    return in_array($jy % 33, [1, 5, 9, 13, 17, 22, 26, 30], true);
+}
+
+/**
+ * Number of days in a Jalali month (1-12). Esfand is 29 days, 30 in leap years.
+ */
+function jalaliMonthLength(int $jy, int $jm): int
+{
+    if ($jm >= 1 && $jm <= 6) {
+        return 31;
+    }
+    if ($jm >= 7 && $jm <= 11) {
+        return 30;
+    }
+
+    return isJalaliLeapYear($jy) ? 30 : 29; // Esfand
+}
+
+/**
  * Parse a Jalali date string (e.g. "1405/05/16" or "1405-05-16") to Gregorian "YYYY-MM-DD".
+ *
+ * Accepts Persian/Arabic-Indic digits (the format every date input in the app
+ * produces) and rejects impossible days such as 1404/12/30 instead of silently
+ * rolling them into the next year.
  */
 function parseJalaliDate(string $jDate): ?string
 {
-    $jDate = trim($jDate);
+    // Normalize Persian/Arabic-Indic digits to ASCII before parsing: both the
+    // PHP-prefilled defaults and the JS datepicker emit Persian digits.
+    $jDate = strtr(trim($jDate), [
+        '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+        '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+        '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+        '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+    ]);
     if (!preg_match('/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/', $jDate, $m)) {
         return null;
     }
@@ -771,12 +805,17 @@ function parseJalaliDate(string $jDate): ?string
     $jm = (int) $m[2];
     $jd = (int) $m[3];
 
-    if ($jm < 1 || $jm > 12 || $jd < 1 || $jd > 31) {
+    if ($jm < 1 || $jm > 12 || $jd < 1) {
         return null;
     }
 
     if ($jy > 1700) {
-        return sprintf('%04d-%02d-%02d', $jy, $jm, $jd);
+        // Gregorian passthrough: validate the real calendar date.
+        return checkdate($jm, $jd, $jy) ? sprintf('%04d-%02d-%02d', $jy, $jm, $jd) : null;
+    }
+
+    if ($jd > jalaliMonthLength($jy, $jm)) {
+        return null;
     }
 
     [$gy, $gm, $gd] = jalaliToGregorian($jy, $jm, $jd);

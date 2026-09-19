@@ -20,8 +20,13 @@ CREATE TABLE IF NOT EXISTS parents (
     id INT AUTO_INCREMENT PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
-    email VARCHAR(150) UNIQUE NOT NULL,
-    phone VARCHAR(20) DEFAULT NULL,
+    email VARCHAR(150) UNIQUE NULL DEFAULT NULL,
+    phone VARCHAR(20) UNIQUE DEFAULT NULL,
+    phone_verified TINYINT(1) NOT NULL DEFAULT 0,
+    sms_pref_daily_report TINYINT(1) NOT NULL DEFAULT 1,
+    sms_pref_attendance TINYINT(1) NOT NULL DEFAULT 1,
+    sms_pref_tuition TINYINT(1) NOT NULL DEFAULT 1,
+    sms_pref_announcements TINYINT(1) NOT NULL DEFAULT 1,
     avatar VARCHAR(255) DEFAULT NULL,
     password VARCHAR(255) NOT NULL,
     status ENUM('pending','active','suspended') DEFAULT 'pending',
@@ -369,6 +374,37 @@ CREATE TABLE IF NOT EXISTS notification_log (
     UNIQUE KEY unique_notification_dedup (dedup_key),
     INDEX idx_notification_event (event_key, created_at),
     INDEX idx_notification_parent (parent_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- SMS one-time verification codes (registration, login, password reset, phone change).
+CREATE TABLE IF NOT EXISTS sms_verification_codes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    phone VARCHAR(15) NOT NULL,
+    code VARCHAR(10) NOT NULL,
+    action_type ENUM('register', 'login', 'reset_password', 'phone_change') NOT NULL DEFAULT 'register',
+    payload_json TEXT NULL,
+    attempts INT DEFAULT 0,
+    expires_at DATETIME NOT NULL,
+    is_used TINYINT(1) DEFAULT 0,
+    ip_address VARCHAR(45) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_svc_phone_action (phone, action_type, is_used)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- SMS delivery log (pattern API sends).
+CREATE TABLE IF NOT EXISTS sms_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    recipient_phone VARCHAR(20) NOT NULL,
+    pattern_body_id INT NULL,
+    args_json TEXT NULL,
+    rec_id VARCHAR(100) NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'sent',
+    message_type VARCHAR(50) NOT NULL DEFAULT 'pattern',
+    error_message TEXT NULL,
+    parent_id INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_sms_phone (recipient_phone),
+    INDEX idx_sms_parent (parent_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ─── Audit / Operations ────────────────────────────────────────────────────

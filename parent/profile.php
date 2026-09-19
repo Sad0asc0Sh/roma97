@@ -9,6 +9,8 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
+require_once __DIR__ . '/../includes/sms.php';
+require_once __DIR__ . '/../includes/auth_flow.php';
 
 requireParentLogin();
 
@@ -22,12 +24,6 @@ function isValidProfileName(string $name): bool
     return $name !== ''
         && profileStringLength($name) <= 100
         && preg_match("/^[\p{L}\p{Z}\s'\-]+$/u", $name) === 1;
-}
-
-function isValidProfilePhone(string $phone): bool
-{
-    return $phone === ''
-        || (profileStringLength($phone) <= 15 && preg_match('/\A[0-9+\-\s]{7,15}\z/', $phone) === 1);
 }
 
 function isStrongProfilePassword(string $password): bool
@@ -61,6 +57,88 @@ function profileEmailExists(PDO $pdo, string $email, int $parentId): bool
     ]);
 
     return (bool) $statement->fetch();
+}
+
+function profilePhoneExists(PDO $pdo, string $phone, int $parentId): bool
+{
+    $statement = $pdo->prepare(
+        'SELECT id FROM parents WHERE phone = :phone AND id <> :id LIMIT 1'
+    );
+    $statement->execute([
+        ':phone' => $phone,
+        ':id' => $parentId,
+    ]);
+
+    return (bool) $statement->fetch();
+}
+
+/**
+ * Return the staged phone-change request for this parent, or null when it is
+ * missing, expired, or belongs to someone else.
+ */
+function getPendingPhoneChange(int $parentId): ?array
+{
+    $pending = $_SESSION['phone_change_pending'] ?? null;
+
+    if (
+        !is_array($pending)
+        || (int) ($pending['parent_id'] ?? 0) !== $parentId
+        || !is_string($pending['new_phone'] ?? null)
+        || $pending['new_phone'] === ''
+        || !is_string($pending['challenge'] ?? null)
+        || (int) ($pending['expires_at'] ?? 0) <= time()
+    ) {
+        unset($_SESSION['phone_change_pending']);
+
+        return null;
+    }
+
+    return $pending;
+}
+
+/**
+ * Apply the staged profile update. A non-null $phone also marks it verified
+ * (it was proven via SMS OTP) and records the phone-change audit event.
+ */
+function applyParentProfileUpdate(
+    PDO $pdo,
+    int $parentId,
+    string $firstName,
+    string $lastName,
+    string $email,
+    ?string $phone
+): void {
+    if ($phone === null) {
+        $statement = $pdo->prepare(
+            'UPDATE parents SET first_name = :first_name, last_name = :last_name, email = :email WHERE id = :id'
+        );
+        $statement->execute([
+            ':first_name' => $firstName,
+            ':last_name'  => $lastName,
+            ':email'      => $email === '' ? null : $email,
+            ':id'         => $parentId,
+        ]);
+        recordAudit('parent.update_profile', 'parent', $parentId);
+    } else {
+        $statement = $pdo->prepare(
+            'UPDATE parents SET first_name = :first_name, last_name = :last_name, email = :email,
+                phone = :phone, phone_verified = 1 WHERE id = :id'
+        );
+        $statement->execute([
+            ':first_name' => $firstName,
+            ':last_name'  => $lastName,
+            ':email'      => $email === '' ? null : $email,
+            ':phone'      => $phone,
+            ':id'         => $parentId,
+        ]);
+        recordAudit('parent.update_profile', 'parent', $parentId);
+        recordAudit('parent.phone_change', 'parent', $parentId);
+    }
+
+    $_SESSION['parent_name'] = trim($firstName . ' ' . $lastName);
+    $_SESSION['parent_first_name'] = $firstName;
+    setFlash('success', 'پروفایل به‌روزرسانی شد.');
+    redirect(url('parent/profile.php'));
 }
 
 function deleteAvatarFile(?string $relativePath): void
@@ -216,28 +294,119 @@ if (isPostRequest()) {
             }
         }
 
-        if ($infoOld['phone'] === '' || !isValidProfilePhone($infoOld['phone'])) {
+        // The phone number is the login identifier: it must stay unique, and a
+        // change only takes effect after an SMS OTP to the NEW number is verified.
+        $phoneRaw = $infoOld['phone'];
+        $newPhone = normalizeIranianPhone($phoneRaw);
+        $currentPhone = normalizeIranianPhone((string) ($parent['phone'] ?? ''));
+        $phoneChanged = $phoneRaw !== '' && $newPhone !== $currentPhone;
+
+        if ($phoneRaw === '') {
             $errors[] = 'لطفاً شماره تلفن معتبر وارد کنید.';
+        } elseif ($phoneChanged) {
+            if (!isValidIranianMobile($newPhone)) {
+                $errors[] = 'لطفاً شماره موبایل معتبر وارد کنید (مثال: 09123456789).';
+            } elseif (profilePhoneExists($pdo, $newPhone, $parentId)) {
+                $errors[] = 'این شماره موبایل قبلاً توسط حساب دیگری استفاده شده است.';
+            }
         }
 
         if ($errors === []) {
-            $statement = $pdo->prepare(
-                'UPDATE parents SET first_name = :first_name, last_name = :last_name, email = :email, phone = :phone WHERE id = :id'
-            );
-            $statement->execute([
-                ':first_name' => $infoOld['first_name'],
-                ':last_name'  => $infoOld['last_name'],
-                ':email'      => $infoOld['email'] === '' ? null : $infoOld['email'],
-                ':phone'      => $infoOld['phone'],
-                ':id'         => $parentId,
+            if (!$phoneChanged) {
+                applyParentProfileUpdate(
+                    $pdo,
+                    $parentId,
+                    $infoOld['first_name'],
+                    $infoOld['last_name'],
+                    $infoOld['email'],
+                    null
+                );
+            }
+
+            // Stage the whole update and require OTP verification on the new number.
+            $staged = [
+                'parent_id' => $parentId,
+                'new_phone' => $newPhone,
+                'first_name' => $infoOld['first_name'],
+                'last_name' => $infoOld['last_name'],
+                'email' => $infoOld['email'],
+                'expires_at' => time() + 600,
+                'challenge' => bin2hex(random_bytes(32)),
+            ];
+            $otp = generateAndSendSmsOtp($newPhone, 'phone_change', [
+                'parent_id' => $parentId,
+                'challenge' => $staged['challenge'],
             ]);
 
-            $_SESSION['parent_name'] = trim($infoOld['first_name'] . ' ' . $infoOld['last_name']);
-            $_SESSION['parent_first_name'] = $infoOld['first_name'];
-            recordAudit('parent.update_profile', 'parent', $parentId);
-            setFlash('success', 'پروفایل به‌روزرسانی شد.');
-            redirect(url('parent/profile.php'));
+            if (!$otp['success']) {
+                $errors[] = $otp['message'];
+            } else {
+                $_SESSION['phone_change_pending'] = $staged;
+                setFlash('success', 'کد تأیید ۵ رقمی به شماره موبایل جدید شما ارسال شد. پس از وارد کردن کد، تغییرات اعمال می‌شود.');
+                redirect(url('parent/profile.php#phone-verify'));
+            }
         }
+    } elseif ($action === 'verify_phone_change') {
+        $pending = getPendingPhoneChange($parentId);
+
+        if ($pending === null) {
+            $errors[] = 'درخواست تأیید منقضی شده است. لطفاً دوباره تلاش کنید.';
+        } elseif (!checkBruteForce('parent_phone_change', (string) $parentId)) {
+            $errors[] = 'تعداد دفعات تلاش بیش از حد مجاز است. لطفاً ۱۵ دقیقه دیگر تلاش کنید.';
+        } else {
+            $code = (string) ($_POST['otp_code'] ?? '');
+            $result = verifySmsOtp($pending['new_phone'], $code, 'phone_change', $pending['challenge']);
+
+            if (!$result['valid']) {
+                recordFailedAttempt('parent_phone_change', (string) $parentId);
+                $errors[] = $result['message'];
+            } elseif (profilePhoneExists($pdo, $pending['new_phone'], $parentId)) {
+                // Re-checked right before applying; the UNIQUE index is the final guard.
+                unset($_SESSION['phone_change_pending']);
+                $errors[] = 'این شماره موبایل قبلاً توسط حساب دیگری استفاده شده است.';
+            } else {
+                unset($_SESSION['phone_change_pending']);
+
+                try {
+                    applyParentProfileUpdate(
+                        $pdo,
+                        $parentId,
+                        $pending['first_name'],
+                        $pending['last_name'],
+                        $pending['email'],
+                        $pending['new_phone']
+                    );
+                } catch (PDOException $exception) {
+                    error_log('Phone change failed for parent ' . $parentId . ': ' . $exception->getMessage());
+                    $errors[] = 'تغییر شماره موبایل انجام نشد. لطفاً دوباره تلاش کنید.';
+                }
+            }
+        }
+    } elseif ($action === 'resend_phone_otp') {
+        $pending = getPendingPhoneChange($parentId);
+
+        if ($pending === null) {
+            $errors[] = 'درخواست تأیید منقضی شده است. لطفاً دوباره تلاش کنید.';
+        } elseif (!checkBruteForce('parent_phone_change_resend', (string) $parentId)) {
+            $errors[] = 'تعداد دفعات تلاش بیش از حد مجاز است. لطفاً ۱۵ دقیقه دیگر تلاش کنید.';
+        } else {
+            $otp = generateAndSendSmsOtp($pending['new_phone'], 'phone_change', [
+                'parent_id' => $parentId,
+                'challenge' => $pending['challenge'],
+            ]);
+
+            if (!$otp['success']) {
+                $errors[] = $otp['message'];
+            } else {
+                $_SESSION['phone_change_pending']['expires_at'] = time() + 600;
+                setFlash('success', 'کد تأیید جدید به شماره موبایل جدید شما ارسال شد.');
+                redirect(url('parent/profile.php#phone-verify'));
+            }
+        }
+    } elseif ($action === 'cancel_phone_change') {
+        unset($_SESSION['phone_change_pending']);
+        setFlash('success', 'تغییر شماره موبایل لغو شد.');
+        redirect(url('parent/profile.php'));
     } elseif ($action === 'change_password') {
         $currentPassword = (string) ($_POST['current_password'] ?? '');
         $newPassword = (string) ($_POST['new_password'] ?? '');
@@ -328,6 +497,7 @@ if (isPostRequest()) {
 }
 
 $displayName = trim($infoOld['first_name'] . ' ' . $infoOld['last_name']);
+$pendingPhoneChange = getPendingPhoneChange($parentId);
 $status = (string) ($parent['status'] ?? 'pending');
 $statusLabel = match ($status) {
     'pending' => 'در انتظار تأیید',
@@ -361,7 +531,7 @@ require_once __DIR__ . '/header.php';
             <img class="profile-avatar" src="<?= e(url($parent['avatar'])) ?>" alt="<?= e($displayName) ?>">
         <?php else: ?>
             <div class="profile-avatar profile-avatar-placeholder">
-                <?= e(userInitial($infoOld['first_name'])) ?>
+                <?= e(strtoupper(substr($infoOld['first_name'], 0, 1))) ?>
             </div>
         <?php endif; ?>
     </div>
@@ -373,6 +543,37 @@ require_once __DIR__ . '/header.php';
 </div>
 
 <div class="profile-forms-grid">
+    <?php if ($pendingPhoneChange !== null): ?>
+    <!-- Phone change verification -->
+    <div class="profile-card" id="phone-verify" style="grid-column: 1 / -1;border:2px solid var(--primary);">
+        <h2>📲 تأیید شماره موبایل جدید</h2>
+        <p style="line-height:1.9;">
+            کد تأیید ۵ رقمی به شماره <strong dir="ltr"><?= e($pendingPhoneChange['new_phone']) ?></strong> ارسال شد.
+            پس از وارد کردن کد، تغییر شماره موبایل و سایر ویرایش‌ها اعمال می‌شود. (مهلت: ۱۰ دقیقه)
+        </p>
+        <form method="post" action="<?= e(url('parent/profile.php#phone-verify')) ?>" novalidate>
+            <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+            <input type="hidden" name="action" value="verify_phone_change">
+            <div class="form-group">
+                <label for="otp_code">کد تأیید</label>
+                <input type="text" id="otp_code" name="otp_code" inputmode="numeric" maxlength="5" dir="ltr" required autocomplete="one-time-code" placeholder="۱۲۳۴۵">
+            </div>
+            <button class="btn btn-primary" type="submit">تأیید و اعمال تغییرات</button>
+        </form>
+        <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+            <form method="post" action="<?= e(url('parent/profile.php#phone-verify')) ?>">
+                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                <input type="hidden" name="action" value="resend_phone_otp">
+                <button class="btn btn-outline" type="submit">ارسال مجدد کد</button>
+            </form>
+            <form method="post" action="<?= e(url('parent/profile.php')) ?>">
+                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                <input type="hidden" name="action" value="cancel_phone_change">
+                <button class="btn btn-outline" type="submit">لغو تغییر شماره</button>
+            </form>
+        </div>
+    </div>
+    <?php endif; ?>
     <!-- Personal Info -->
     <div class="profile-card">
         <h2>اطلاعات شخصی</h2>
@@ -439,7 +640,7 @@ require_once __DIR__ . '/header.php';
                 <img class="profile-avatar-large" src="<?= e(url($parent['avatar'])) ?>" alt="<?= e($displayName) ?>">
             <?php else: ?>
                 <div class="profile-avatar-large profile-avatar-placeholder">
-                    <?= e(userInitial($infoOld['first_name'])) ?>
+                    <?= e(strtoupper(substr($infoOld['first_name'], 0, 1))) ?>
                 </div>
             <?php endif; ?>
         </div>
