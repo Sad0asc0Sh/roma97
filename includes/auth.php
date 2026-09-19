@@ -291,19 +291,80 @@ function requireLogin(): void
         redirect(url('admin/login.php'));
     }
 
+    $role = currentAdminRole();
+
+    // Unknown roles fail closed: destroy the session and bounce to the login
+    // page. Redirecting to admin/index.php instead would loop forever, because
+    // every page — including index — denies an unknown role (see
+    // isPageAllowedForRole()).
+    if (!isKnownAdminRole($role)) {
+        if (function_exists('recordAudit')) {
+            recordAudit('auth.unknown_role', 'admin', (int) ($_SESSION['admin_id'] ?? 0) ?: null, ['role' => $role]);
+        }
+        destroyAdminSession();
+        setFlash('error', 'نقش کاربری شما معتبر نیست. لطفاً دوباره وارد شوید.');
+        redirect(url('admin/login.php'));
+    }
+
     // Use SCRIPT_NAME rather than PHP_SELF to prevent PATH_INFO permission bypasses
     // (e.g. /admin/backup.php/index.php would have PHP_SELF basename of index.php).
     $scriptName = (string) ($_SERVER['SCRIPT_NAME'] ?? '');
     $currentPage = 'admin/' . basename($scriptName !== '' ? $scriptName : ($_SERVER['PHP_SELF'] ?? ''));
-    if (!isPageAllowedForRole($currentPage, currentAdminRole())) {
+    if (!isPageAllowedForRole($currentPage, $role)) {
         setFlash('error', 'شما دسترسی به این بخش را ندارید.');
         redirect(url('admin/index.php'));
     }
 }
 
+/**
+ * Resolve the current admin's role from the session.
+ *
+ * Defaults to '' (unknown) rather than 'owner': a roleless session must never
+ * inherit top privileges — requireLogin() fails it closed instead.
+ */
 function currentAdminRole(): string
 {
-    return (string) ($_SESSION['admin_role'] ?? 'owner');
+    return (string) ($_SESSION['admin_role'] ?? '');
+}
+
+/**
+ * Whether $role is one of the roles defined in the permissions matrix.
+ * Comparison is exact and case-sensitive.
+ */
+function isKnownAdminRole(string $role): bool
+{
+    require_once __DIR__ . '/permissions.php';
+
+    return array_key_exists($role, adminPermissionsMatrix());
+}
+
+/**
+ * Fully destroy the admin session (same pattern as admin/logout.php) and start
+ * a fresh one so flash messages keep working afterwards.
+ */
+function destroyAdminSession(): void
+{
+    $_SESSION = [];
+
+    if (ini_get('session.use_cookies')) {
+        $params = session_get_cookie_params();
+        setcookie(
+            session_name(),
+            '',
+            [
+                'expires' => time() - 42000,
+                'path' => $params['path'] ?? '/',
+                'domain' => $params['domain'] ?? '',
+                'secure' => (bool) ($params['secure'] ?? false),
+                'httponly' => (bool) ($params['httponly'] ?? true),
+                'samesite' => $params['samesite'] ?? 'Lax',
+            ]
+        );
+    }
+
+    session_destroy();
+    session_start();
+    session_regenerate_id(true);
 }
 
 function requireAdminRole(array $allowedRoles): void
@@ -315,11 +376,20 @@ function requireAdminRole(array $allowedRoles): void
     }
 }
 
+/**
+ * Fail-closed page authorization.
+ *
+ * A role missing from the permissions matrix resolves to an EMPTY page list
+ * (deny-all). Previously this fell back to the owner's page list, silently
+ * granting top privileges to any unexpected role value (legacy DB rows,
+ * typos). Unknown roles are additionally forced through a clean logout in
+ * requireLogin() so they can never linger in a half-authorized session.
+ */
 function isPageAllowedForRole(string $pagePath, string $role): bool
 {
     require_once __DIR__ . '/permissions.php';
     $matrix = adminPermissionsMatrix();
-    $allowedPages = $matrix[$role] ?? $matrix['owner'];
+    $allowedPages = $matrix[$role] ?? [];
 
     return in_array($pagePath, $allowedPages, true);
 }

@@ -64,7 +64,7 @@ if ($lockedOut) {
                 $_SESSION['admin_logged_in'] = true;
                 $_SESSION['admin_id'] = (int) $admin['id'];
                 $_SESSION['admin_username'] = $admin['username'];
-                $_SESSION['admin_role'] = (string) ($admin['role'] ?? 'owner');
+                $_SESSION['admin_role'] = (string) ($admin['role'] ?? '');
                 recordAudit('auth.login', 'admin', (int) $admin['id']);
                 rotateCsrfToken();
                 redirect(url('admin/index.php'));
