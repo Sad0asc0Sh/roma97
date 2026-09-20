@@ -207,25 +207,30 @@ require_once __DIR__ . '/header.php';
     $tuitionCredit  = $tuitionBalance < -tuitionSettleTolerance();
     ?>
     <section class="parent-section">
-        <div class="card" style="padding:16px 18px;border-inline-start:5px solid <?= $tuitionSettled ? '#2e8540' : '#c8860d' ?>;">
-            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <?php
+        $tuitionState = $tuitionCredit ? 'credit' : ($tuitionSettled ? 'settled' : 'due');
+        ?>
+        <div class="tuition-banner tuition-banner--<?= e($tuitionState) ?>">
+            <div class="d-flex justify-content-between align-items-center" style="flex-wrap:wrap;gap:10px">
                 <div>
-                    <h3 style="margin:0 0 4px;font-size:1rem;">شهریه ماه <?= e(formatShamsiMonthYear($currentMonthYear)) ?></h3>
-                    <p style="margin:0;font-size:0.85rem;color:var(--muted);line-height:1.8;">
+                    <h3 class="tuition-banner-title">شهریه ماه <?= e(formatShamsiMonthYear($currentMonthYear)) ?></h3>
+                    <p class="tuition-banner-text">
                         <?php if ($tuitionCredit): ?>
                             این ماه تسویه شده و <?= e(persianNumber(number_format(abs($tuitionBalance)))) ?> تومان اعتبار دارید. سپاس از شما! 💚
                         <?php elseif ($tuitionSettled): ?>
                             این ماه به‌طور کامل تسویه شده است. سپاس از همراهی شما! 💚
                         <?php else: ?>
                             مانده قابل پرداخت:
-                            <strong style="color:#c62828;"><?= e(persianNumber(number_format($tuitionBalance))) ?> تومان</strong>
+                            <strong class="tuition-due-amount"><?= e(persianNumber(number_format($tuitionBalance))) ?> تومان</strong>
                             از مجموع <?= e(persianNumber(number_format($tuitionExpected))) ?> تومان
                         <?php endif; ?>
                     </p>
                 </div>
-                <a href="<?= e(url('parent/payments.php')) ?>" class="btn <?= $tuitionSettled ? 'btn-secondary' : 'btn-primary' ?> btn-sm">
-                    مشاهده جزئیات
-                </a>
+                <div class="tuition-banner-actions">
+                    <a href="<?= e(url('parent/payments.php')) ?>" class="btn <?= $tuitionSettled ? 'btn-secondary' : 'btn-primary' ?> btn-sm">
+                        مشاهده جزئیات
+                    </a>
+                </div>
             </div>
         </div>
     </section>

@@ -34,12 +34,12 @@ require_once __DIR__ . '/../templates/app/dialogs.php'; ?>
         <svg class="bottom-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg>
         <span class="bottom-nav-label">فرزندان</span>
     </a>
-    <a href="<?php echo e(url('parent/messages.php')); ?>" class="bottom-nav-item <?php echo $currentPage === 'messages.php' ? 'active' : ''; ?>" style="position:relative">
+    <a href="<?php echo e(url('parent/messages.php')); ?>" class="bottom-nav-item <?php echo $currentPage === 'messages.php' ? 'active' : ''; ?>">
         <span class="bottom-nav-indicator"></span>
         <svg class="bottom-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
         <span class="bottom-nav-label">پیام‌ها</span>
         <?php if (isset($unreadCount) && $unreadCount > 0): ?>
-        <span style="position:absolute;top:4px;right:4px;background:var(--danger,#C85A5A);color:#fff;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px;line-height:1.4"><?php echo e(persianNumber((string)$unreadCount)); ?></span>
+        <span class="bottom-nav-badge"><?php echo e(persianNumber((string)$unreadCount)); ?></span>
         <?php endif; ?>
     </a>
     <a href="<?php echo e(url('parent/attendance.php')); ?>" class="bottom-nav-item <?php echo $currentPage === 'attendance.php' ? 'active' : ''; ?>">
