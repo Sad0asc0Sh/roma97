@@ -27,9 +27,19 @@
 .admin-settings-grid {
     display: grid;
     gap: var(--space-lg, 24px);
+    /* Mobile-first: single column stack */
+    grid-template-columns: 1fr;
+    align-items: start;
 }
 .admin-settings-grid .admin-section {
     margin-bottom: 0;
+    /* Prevent grid blowout from long unbreakable content (URLs, codes) */
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+/* Full-width sections (e.g. SMS gateway) span all columns */
+.admin-settings-grid .admin-section--full {
+    grid-column: 1 / -1;
 }
 
 .badge-secondary {
@@ -776,5 +786,175 @@ section.dashboard > h1,
     .admin-child-actions,
     .teacher-actions-cell {
         display: none !important;
+    }
+}
+
+/* ── N. MOBILE SHELL ──────────────────────────────────────────
+   On mobile/tablet (<=991px) the sidebar is off-canvas, so the main
+   content must always span the full viewport width. This reinforces
+   the reset in admin.css with higher cascade priority (this file
+   loads last) to guard against any specificity/cascade quirk. */
+@media (max-width: 991px) {
+    body.admin-layout .admin-main,
+    .admin-main {
+        margin: 0 !important;
+        margin-inline-start: 0 !important;
+        margin-inline-end: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+/* ── O. SETTINGS PAGE ─────────────────────────────────────────
+   Professional responsive for admin/settings.php across all sizes:
+   360px phones → tablets → desktops → 27" monitors.
+
+   O.1  Grid: 1 column on phones/tablets, 2 columns on desktop.
+   O.2  SMS pattern fields grid (replaces inline minmax fix).
+   O.3  SMS test form (replaces inline flex styles).
+   O.4  SMS logs table on small screens.
+   O.5  Card density & titles on phones.
+   O.6  Full-width action buttons on small phones.
+   O.7  Map preview responsive height. */
+
+/* O.1 — Two-column settings layout from desktop up.
+   Card 1 (general) is wider; cards 2-3 (password/user) are narrower.
+   The SMS card spans full width via .admin-section--full. */
+@media (min-width: 992px) {
+    .admin-settings-grid {
+        grid-template-columns: 1.15fr 0.85fr;
+    }
+}
+@media (min-width: 1400px) {
+    .admin-settings-grid {
+        grid-template-columns: 1.2fr 0.8fr;
+        column-gap: 28px;
+    }
+}
+/* Ultra-wide: keep line length readable */
+@media (min-width: 1800px) {
+    .admin-settings-grid {
+        max-width: 1760px;
+    }
+}
+
+/* O.2 — SMS pattern ID fields: auto-fit grid that never overflows.
+   min(100%, 260px) guarantees a single fitting column on 320px phones
+   instead of the 280px minimum that caused horizontal overflow. */
+.sms-pattern-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: var(--space-md, 16px);
+    margin-bottom: var(--space-lg, 24px);
+}
+
+/* O.3 — SMS live-test form: flexible row on desktop, stacked on phones. */
+.sms-test-form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+.sms-test-form .sms-test-field {
+    flex: 1 1 140px;
+    min-width: 0;
+}
+.sms-test-form .sms-test-field--phone {
+    flex: 1 1 180px;
+}
+.sms-test-form .sms-test-field--id {
+    flex: 0 1 120px;
+}
+@media (max-width: 560px) {
+    .sms-test-form .sms-test-field {
+        flex: 1 1 100%;
+    }
+    .sms-test-form .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* O.4 — SMS logs table: compact, horizontally scrollable on phones. */
+.sms-logs-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    border: 1px solid var(--adm-border-light);
+    border-radius: var(--adm-radius-md);
+}
+.sms-logs-wrap .table {
+    margin-bottom: 0;
+    min-width: 720px; /* 8 columns stay readable while scrolling */
+}
+@media (max-width: 767px) {
+    .sms-logs-wrap .table th,
+    .sms-logs-wrap .table td {
+        padding: 10px 8px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+    }
+}
+
+/* O.5 — Phone density: tighter cards, wrapping titles. */
+@media (max-width: 767px) {
+    .admin-settings-grid {
+        gap: 16px;
+    }
+    .admin-settings-grid .admin-section {
+        padding: 18px;
+    }
+    .admin-section-title {
+        font-size: 0.95rem;
+        line-height: 1.7;
+        overflow-wrap: break-word;
+    }
+    .admin-section-header {
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+    }
+}
+@media (max-width: 480px) {
+    .admin-settings-grid .admin-section {
+        padding: 16px 14px;
+        border-radius: var(--adm-radius-md);
+    }
+    .admin-settings-grid .form-group {
+        margin-bottom: 16px;
+    }
+}
+
+/* O.6 — Full-width primary actions on small phones (thumb reach). */
+@media (max-width: 480px) {
+    .admin-settings-grid .form-actions .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 16px;
+        font-size: 0.9rem;
+    }
+}
+
+/* O.7 — Map preview scales with viewport. */
+.settings-map-preview {
+    width: 100%;
+    height: 180px;
+    border-radius: var(--radius-md, 10px);
+    overflow: hidden;
+    border: 1px solid var(--border, var(--adm-border));
+}
+.settings-map-preview iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+}
+@media (max-width: 480px) {
+    .settings-map-preview {
+        height: 160px;
+    }
+}
+@media (min-width: 1200px) {
+    .settings-map-preview {
+        height: 220px;
     }
 }
