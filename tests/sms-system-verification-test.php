@@ -51,6 +51,10 @@ $settingsWithSingleKey = [
     'sms_api_key_otp' => '',
 ];
 
+assertTest(melipayamakCleanKey('https://console.melipayamak.com/api/send/shared/f95527ef2fa7498dbad9a0d09f2bbad2') === 'f95527ef2fa7498dbad9a0d09f2bbad2', 'Full URL stripped to token');
+assertTest(melipayamakCleanKey('https://console.melipayamak.com/api/send/otp/f95527ef2fa7498dbad9a0d09f2bbad2/') === 'f95527ef2fa7498dbad9a0d09f2bbad2', 'URL with trailing slash stripped to token');
+assertTest(melipayamakCleanKey('  f95527ef2fa7498dbad9a0d09f2bbad2  ') === 'f95527ef2fa7498dbad9a0d09f2bbad2', 'Whitespace stripped from token');
+
 assertTest(melipayamakConsoleKey($settingsWithSingleKey, 'shared') === 'my-single-secret-key', 'Single API key resolved for shared pattern');
 assertTest(melipayamakConsoleKey($settingsWithSingleKey, 'otp') === 'my-single-secret-key', 'Single API key resolved as default for OTP');
 

@@ -154,6 +154,18 @@ if (isPostRequest()) {
                     setFlash('error', '❌ خطا در اتصال به ملی‌پیامک: ' . $connRes['message']);
                 }
             }
+        } elseif ($action === 'test_otp_fast') {
+            $testPhone = trim((string) ($_POST['test_phone'] ?? ''));
+            if (!isValidIranianMobile($testPhone)) {
+                setFlash('error', 'شماره موبایل گیرنده تست نامعتبر است.');
+            } else {
+                $res = sendMeliPayamakOtp($testPhone, 'test_otp');
+                if ($res['success']) {
+                    setFlash('success', "⚡ کد تایید یکبارمصرف (OTP) از طریق مسیر پرسرعت ارسال شد (کد ارسالی: {$res['code']}). معمولاً ظرف چند ثانیه دریافت می‌شود.");
+                } else {
+                    setFlash('error', "خطا در ارسال سریع OTP: " . $res['status']);
+                }
+            }
         } elseif ($action === 'send_test') {
             $testPhone = trim((string) ($_POST['test_phone'] ?? ''));
             $eventKey  = trim((string) ($_POST['test_event'] ?? ''));
@@ -649,7 +661,10 @@ require_once __DIR__ . '/header.php';
                 <input type="text" id="test_arg_3" name="test_arg_3" class="form-control" placeholder="اختیاری">
             </div>
 
-            <button type="submit" class="btn btn-primary">🚀 ارسال تست</button>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <button type="submit" class="btn btn-primary">🚀 ارسال تست با الگو</button>
+                <button type="submit" name="action" value="test_otp_fast" class="btn" style="background:#e67e22;color:#fff;border:1px solid #d35400;" title="ارسال کد از طریق خط مستقیم اختصاصی در ۲ تا ۵ ثانیه">⚡ تست سریع OTP</button>
+            </div>
         </form>
     </div>
 

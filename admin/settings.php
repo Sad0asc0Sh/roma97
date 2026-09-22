@@ -315,15 +315,15 @@ if (isPostRequest()) {
 
     if ($action === 'update_sms_settings') {
         $smsEnabled = isset($_POST['sms_enabled']) ? '1' : '0';
-        $smsApiKey  = trim((string) ($_POST['sms_api_key'] ?? ''));
-        $smsKeyShared = trim((string) ($_POST['sms_api_key_shared'] ?? ''));
+        $smsApiKey  = melipayamakCleanKey(trim((string) ($_POST['sms_api_key'] ?? '')));
+        $smsKeyShared = melipayamakCleanKey(trim((string) ($_POST['sms_api_key_shared'] ?? '')));
         // If master API key is provided, sync to shared key for full backward compatibility
         if ($smsApiKey !== '' && $smsKeyShared === '') {
             $smsKeyShared = $smsApiKey;
         } elseif ($smsKeyShared !== '' && $smsApiKey === '') {
             $smsApiKey = $smsKeyShared;
         }
-        $smsKeyOtp    = trim((string) ($_POST['sms_api_key_otp'] ?? ''));
+        $smsKeyOtp    = melipayamakCleanKey(trim((string) ($_POST['sms_api_key_otp'] ?? '')));
         $smsDetailed = isset($_POST['sms_detailed_report_enabled']) ? '1' : '0';
         $bodyOtp    = trim((string) ($_POST['sms_pattern_otp'] ?? ''));
         $bodyWel    = trim((string) ($_POST['sms_pattern_welcome'] ?? ''));
@@ -424,6 +424,28 @@ if (isPostRequest()) {
             setFlash('success', $msg);
         } else {
             setFlash('error', "خطا در ارسال پیامک تست: " . $res['status']);
+        }
+        redirect(url('admin/settings.php#sms-section'));
+    }
+
+    if ($action === 'test_otp_fast') {
+        $testPhone = trim((string) ($_POST['test_phone'] ?? ''));
+        if (!isValidIranianMobile($testPhone)) {
+            setFlash('error', 'شماره موبایل گیرنده تست نامعتبر است (مثال: 09123456789).');
+            redirect(url('admin/settings.php#sms-section'));
+        }
+
+        $res = sendMeliPayamakOtp($testPhone, 'test_otp');
+        if ($res['success']) {
+            $codeStr = $res['code'] ?? '';
+            $msg = "⚡ پیامک کد تایید سریع (Flash OTP) با موفقیت ارسال شد! کد ارسالی: {$codeStr}. این پیامک از خط مستقیم پرسرعت ارسال شده و معمولاً ظرف چند ثانیه دریافت می‌شود.";
+            $currentSettings = getSmsSettings($pdo);
+            if (($currentSettings['sms_enabled'] ?? '0') !== '1') {
+                $msg .= " (توجه: ارسال پیامک سیستمی هنوز خاموش است؛ برای فعال‌سازی کامل، تیک «فعال‌سازی ارسال پیامک‌های سیستمی» را بزنید و ذخیره کنید).";
+            }
+            setFlash('success', $msg);
+        } else {
+            setFlash('error', "خطا در ارسال سریع OTP: " . $res['status']);
         }
         redirect(url('admin/settings.php#sms-section'));
     }
@@ -1033,16 +1055,39 @@ require_once __DIR__ . '/header.php';
                         <input type="text" id="test_arg4_input" name="test_arg4" class="form-control" placeholder="اختیاری">
                     </div>
 
-                    <button type="submit" class="btn btn-primary" style="padding:10px 18px;font-size:0.88rem;cursor:pointer;border-radius:var(--radius-sm);">
-                        🚀 ارسال پیامک تست
-                    </button>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button type="submit" class="btn btn-primary" style="padding:10px 18px;font-size:0.88rem;cursor:pointer;border-radius:var(--radius-sm);">
+                            🚀 ارسال تست با الگو
+                        </button>
+                        <button type="submit" name="action" value="test_otp_fast" class="btn" style="padding:10px 18px;font-size:0.88rem;cursor:pointer;border-radius:var(--radius-sm);background:#e67e22;color:#fff;border:1px solid #d35400;" title="ارسال کد از طریق خط مستقیم اختصاصی در ۲ تا ۵ ثانیه">
+                            ⚡ تست ارسال فوق‌سریع کد تایید (Flash OTP)
+                        </button>
+                    </div>
                 </form>
             </div>
 
             <script>
+            var smsApiKeyInput = document.getElementById('sms_api_key');
+            if (smsApiKeyInput) {
+                function sanitizeApiKeyField() {
+                    var v = smsApiKeyInput.value.trim();
+                    if (v.indexOf('/') !== -1) {
+                        var parts = v.replace(/\/+$/, '').split('/');
+                        smsApiKeyInput.value = parts[parts.length - 1].trim();
+                    }
+                }
+                smsApiKeyInput.addEventListener('blur', sanitizeApiKeyField);
+                smsApiKeyInput.addEventListener('change', sanitizeApiKeyField);
+            }
+
             function checkMelipayamakLive() {
                 var keyInput = document.getElementById('sms_api_key');
                 var keyVal = keyInput ? keyInput.value.trim() : '';
+                if (keyVal.indexOf('/') !== -1) {
+                    var parts = keyVal.replace(/\/+$/, '').split('/');
+                    keyVal = parts[parts.length - 1].trim();
+                    if (keyInput) keyInput.value = keyVal;
+                }
                 document.getElementById('sms_check_api_key_hidden').value = keyVal;
                 document.getElementById('sms_check_conn_form').submit();
             }

@@ -112,11 +112,19 @@ function smsDetailedReportEnabled(?PDO $pdo = null): bool
 }
 
 /**
- * Normalize a Console API path key (strip copy-paste whitespace).
+ * Normalize a Console API path key:
+ * - Strips whitespace and invisible characters.
+ * - Automatically extracts the pure token if the user accidentally pasted
+ *   the entire endpoint URL (e.g. https://console.melipayamak.com/api/send/shared/xxx).
  */
 function melipayamakCleanKey(string $key): string
 {
-    return preg_replace('/\s+/', '', trim($key)) ?? '';
+    $key = trim($key);
+    if (str_contains($key, '/')) {
+        $parts = explode('/', rtrim($key, '/'));
+        $key = (string) end($parts);
+    }
+    return preg_replace('/\s+/', '', $key) ?? '';
 }
 
 /**
@@ -651,32 +659,9 @@ function generateAndSendSmsOtp(
         ]);
     };
 
-    // PRIMARY PATH (Standard MeliPayamak Shared Pattern with 5-digit OTP):
-    // Uses the user's single master API key and the approved OTP pattern (sms_pattern_otp).
-    if ($gatewayEnabled && $otpBodyId > 0 && $sharedKey !== '') {
-        $code = (string) random_int(10000, 99999);
-        $storeCode($code);
-
-        $smsResult = sendMeliPayamakPattern($normalized, $otpBodyId, [$code], 'otp');
-        if (!$smsResult['success']) {
-            return [
-                'success' => false,
-                'message' => 'ارسال پیامک با مشکل مواجه شد: ' . $smsResult['status'],
-                'code_debug' => $isDevMode ? $code : null,
-            ];
-        }
-
-        return [
-            'success' => true,
-            'message' => 'کد تایید ۵ رقمی به شماره موبایل شما ارسال شد.',
-            'code_debug' => $isDevMode ? $code : null,
-        ];
-    }
-
-    // SECONDARY PATH (Dedicated native Console OTP API):
-    // Only used when a dedicated OTP key is explicitly configured.
-    $dedicatedOtpKey = melipayamakCleanKey((string) ($settings['sms_api_key_otp'] ?? ''));
-    if ($gatewayEnabled && $dedicatedOtpKey !== '') {
+    // FASTEST ROUTE (MeliPayamak Native Flash OTP - Delivers in 2 to 5 seconds):
+    // Dedicated priority flash line that bypasses regular queue delays.
+    if ($gatewayEnabled && $otpKey !== '') {
         $smsResult = sendMeliPayamakOtp($normalized, 'otp');
         if ($smsResult['success'] && $smsResult['code'] !== '') {
             $storeCode((string) $smsResult['code']);
@@ -687,11 +672,27 @@ function generateAndSendSmsOtp(
                 'code_debug' => $isDevMode ? (string) $smsResult['code'] : null,
             ];
         }
+    }
+
+    // RELIABLE FALLBACK ROUTE (Shared pattern with 5-digit local code):
+    // Used if native OTP endpoint is unavailable, but an approved OTP pattern is configured.
+    if ($gatewayEnabled && $otpBodyId > 0 && $sharedKey !== '') {
+        $code = (string) random_int(10000, 99999);
+        $storeCode($code);
+
+        $smsResult = sendMeliPayamakPattern($normalized, $otpBodyId, [$code], 'otp');
+        if ($smsResult['success']) {
+            return [
+                'success' => true,
+                'message' => 'کد تایید ۵ رقمی به شماره موبایل شما ارسال شد.',
+                'code_debug' => $isDevMode ? $code : null,
+            ];
+        }
 
         return [
             'success' => false,
             'message' => 'ارسال پیامک با مشکل مواجه شد: ' . $smsResult['status'],
-            'code_debug' => null,
+            'code_debug' => $isDevMode ? $code : null,
         ];
     }
 
