@@ -37,6 +37,8 @@ function getSettings(PDO $pdo): array
         'default_tuition_amount' => '0',
         'sms_enabled' => '0',
         'sms_api_key' => '',
+        'sms_api_key_shared' => '',
+        'sms_api_key_otp' => '',
         'sms_detailed_report_enabled' => '0',
         'sms_pattern_otp' => '',
         'sms_pattern_welcome' => '',
@@ -314,6 +316,8 @@ if (isPostRequest()) {
     if ($action === 'update_sms_settings') {
         $smsEnabled = isset($_POST['sms_enabled']) ? '1' : '0';
         $smsApiKey  = trim((string) ($_POST['sms_api_key'] ?? ''));
+        $smsKeyShared = trim((string) ($_POST['sms_api_key_shared'] ?? ''));
+        $smsKeyOtp    = trim((string) ($_POST['sms_api_key_otp'] ?? ''));
         $smsDetailed = isset($_POST['sms_detailed_report_enabled']) ? '1' : '0';
         $bodyOtp    = trim((string) ($_POST['sms_pattern_otp'] ?? ''));
         $bodyWel    = trim((string) ($_POST['sms_pattern_welcome'] ?? ''));
@@ -338,6 +342,8 @@ if (isPostRequest()) {
 
         saveSetting($pdo, 'sms_enabled', $smsEnabled);
         saveSetting($pdo, 'sms_api_key', $smsApiKey);
+        saveSetting($pdo, 'sms_api_key_shared', $smsKeyShared);
+        saveSetting($pdo, 'sms_api_key_otp', $smsKeyOtp);
         saveSetting($pdo, 'sms_detailed_report_enabled', $smsDetailed);
         saveSetting($pdo, 'sms_pattern_otp', $bodyOtp);
         saveSetting($pdo, 'sms_pattern_welcome', $bodyWel);
@@ -779,11 +785,34 @@ require_once __DIR__ . '/header.php';
                     </div>
 
                     <div class="form-group" style="margin-bottom:12px;">
-                        <label for="sms_api_key" class="form-label">کلید وب‌سرویس ملی‌پیامک (SMS API Key) <span class="req">*</span></label>
+                        <label for="sms_api_key_shared" class="form-label">کلید خدماتی — ارسال از خط خدماتی (الگو/پترن) <span class="req">*</span></label>
+                        <input type="text" id="sms_api_key_shared" name="sms_api_key_shared" class="form-control" dir="ltr"
+                            placeholder="کپی از کنسول → ارسال از خط خدماتی"
+                            value="<?= e($settings['sms_api_key_shared'] ?? ($settings['sms_api_key'] ?? '')) ?>">
+                        <small style="color:var(--muted);font-size:0.85rem;">
+                            از کنسول ملی‌پیامک ← بخش «ارسال از خط خدماتی» ← <b>کلید خدماتی</b>.
+                            این کلید فقط برای <code>POST /api/send/shared/&#123;key&#125;</code> با بدنه <code>&#123;"bodyId","to","args"&#125;</code> است.
+                        </small>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label for="sms_api_key_otp" class="form-label">کلید یکبارمصرف — رمز یکبار مصرف (OTP)</label>
+                        <input type="text" id="sms_api_key_otp" name="sms_api_key_otp" class="form-control" dir="ltr"
+                            placeholder="کپی از کنسول → ارسال پیامک رمز یکبار مصرف"
+                            value="<?= e($settings['sms_api_key_otp'] ?? '') ?>">
+                        <small style="color:var(--muted);font-size:0.85rem;">
+                            از کنسول ← «ارسال پیامک رمز یکبار مصرف» ← <b>کلید یکبارمصرف</b> (جدا از کلید خدماتی!).
+                            فقط بدنه <code>&#123;"to":"09…"&#125;</code> — کد را خود ملی‌پیامک می‌سازد.
+                            اگر خالی باشد، OTP از الگوی خدماتی ارسال می‌شود.
+                        </small>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label for="sms_api_key" class="form-label">کلید قدیمی/مشترک (اختیاری — fallback)</label>
                         <input type="text" id="sms_api_key" name="sms_api_key" class="form-control" dir="ltr"
-                            placeholder="مثال: f95527ef2fa7498dbad9a0d09f2bbad2"
+                            placeholder="فقط اگر هر دو کلید بالا یکی است"
                             value="<?= e($settings['sms_api_key'] ?? '') ?>">
-                        <small style="color:var(--muted);font-size:0.85rem;">کلید وب‌سرویس اختصاصی کنسول ملی‌پیامک شما (از منوی وب‌سرویس در پنل ملی‌پیامک دریافت کنید).</small>
+                        <small style="color:var(--muted);font-size:0.85rem;">اگر خالی بودن کلیدهای بالا، این مقدار برای هر دو endpoint استفاده می‌شود. کلید خدماتی و یکبارمصرف معمولاً <b>متفاوت</b> هستند.</small>
                     </div>
 
                     <div class="form-group" style="margin-bottom:0;">
@@ -806,8 +835,8 @@ require_once __DIR__ . '/header.php';
                             ۱. کد تایید ورود و ثبت‌نام (OTP)
                         </label>
                         <input type="number" id="sms_pattern_otp" name="sms_pattern_otp" class="form-control" dir="ltr"
-                            placeholder="مثال: 524" value="<?= e($settings['sms_pattern_otp'] ?? '') ?>">
-                        <small style="color:var(--muted);font-size:0.8rem;">متغیر: <code>{0}=کد تایید ۵ رقمی</code><br>نمونه: کد ورود شما به خانه پرمهر مهدکودک روما: {0}</small>
+                            placeholder="کد متن تاییدشده (نه 524 نمونه)" value="<?= e($settings['sms_pattern_otp'] ?? '') ?>">
+                        <small style="color:var(--muted);font-size:0.8rem;">فقط برای مسیر پترن/خدماتی. <b>کد متن واقعی</b> از «ابزار ویژه ← وبسرویس خدماتی» (وضعیت: تایید شده). عدد 524 در مستندات فقط نمونه است.<br>متغیر: <code>{0}=کد تایید</code> (دقیقاً یک متغیر)<br>اگر «کلید یکبارمصرف» تنظیم باشد، OTP با API بومی می‌رود و این فیلد لازم نیست.</small>
                     </div>
 
                     <div class="form-group">
@@ -923,7 +952,7 @@ require_once __DIR__ . '/header.php';
 
                     <div class="sms-test-field sms-test-field--id">
                         <label class="form-label" style="font-size:0.82rem;">شناسه الگو (bodyId)</label>
-                        <input type="number" name="test_body_id" class="form-control" dir="ltr" placeholder="524" value="<?= e($settings['sms_pattern_otp'] ?: $settings['sms_pattern_welcome'] ?: '') ?>" required>
+                        <input type="number" name="test_body_id" class="form-control" dir="ltr" placeholder="کد متن واقعی (نه 524)" value="<?= e($settings['sms_pattern_otp'] ?: $settings['sms_pattern_welcome'] ?: '') ?>" required>
                     </div>
 
                     <div class="sms-test-field">

@@ -205,7 +205,9 @@ function smsGatewayStatus(?PDO $pdo = null): array
     $settings = getSmsSettings($pdo);
 
     $enabled    = ($settings['sms_enabled'] ?? '0') === '1';
-    $apiKeySet  = trim((string) ($settings['sms_api_key'] ?? '')) !== '';
+    $sharedKey  = melipayamakConsoleKey($settings, 'shared');
+    $otpKey     = melipayamakConsoleKey($settings, 'otp');
+    $apiKeySet  = $sharedKey !== '' || $otpKey !== '';
 
     $patterns = [];
     $configured = [];
@@ -229,12 +231,14 @@ function smsGatewayStatus(?PDO $pdo = null): array
         $warnings[] = 'ارسال پیامک در تنظیمات سیستم غیرفعال است؛ اعلان‌ها فقط در پورتال ثبت می‌شوند.';
     }
 
-    if (!$apiKeySet) {
-        $critical[] = 'کلید وب‌سرویس ملی‌پیامک وارد نشده است.';
+    if ($sharedKey === '') {
+        $critical[] = 'کلید خدماتی کنسول ملی‌پیامک (ارسال از خط خدماتی) وارد نشده است.';
     }
 
-    if ((int) ($patterns['sms_pattern_otp'] ?? 0) <= 0) {
-        $critical[] = 'الگوی کد تایید (OTP) تنظیم نشده است؛ ثبت‌نام و بازیابی رمز والدین کار نخواهد کرد.';
+    if ($otpKey === '' && (int) ($patterns['sms_pattern_otp'] ?? 0) <= 0) {
+        $critical[] = 'برای کد تایید، «کلید یکبارمصرف» کنسول یا الگوی OTP (کد متن خدماتی) لازم است.';
+    } elseif ($otpKey === '' && (int) ($patterns['sms_pattern_otp'] ?? 0) > 0 && $sharedKey === '') {
+        $critical[] = 'الگوی OTP تنظیم شده ولی کلید خدماتی برای ارسال پترن موجود نیست.';
     }
 
     if ($missing !== []) {
@@ -271,7 +275,7 @@ function isNotificationEventDeliverable(string $eventKey, ?PDO $pdo = null): boo
     $settings = getSmsSettings($pdo);
 
     return ($settings['sms_enabled'] ?? '0') === '1'
-        && trim((string) ($settings['sms_api_key'] ?? '')) !== ''
+        && melipayamakConsoleKey($settings, 'shared') !== ''
         && (int) ($settings[$event['pattern_key']] ?? 0) > 0;
 }
 
