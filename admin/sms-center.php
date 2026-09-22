@@ -167,7 +167,11 @@ if (isPostRequest()) {
                     $res = sendMeliPayamakPattern($testPhone, $bodyId, $args, 'test_' . $eventKey);
 
                     if ($res['success']) {
-                        setFlash('success', 'پیامک تست ارسال شد. کد پیگیری: ' . persianNumber((string) ($res['recId'] ?? '-')));
+                        $msg = 'پیامک تست ارسال شد. کد پیگیری: ' . persianNumber((string) ($res['recId'] ?? '-'));
+                        if (($settings['sms_enabled'] ?? '0') !== '1') {
+                            $msg .= ' (توجه: ارسال پیامک سیستمی هنوز خاموش است؛ پس از اطمینان، آن را در صفحه تنظیمات فعال کنید).';
+                        }
+                        setFlash('success', $msg);
                     } else {
                         setFlash('error', 'ارسال پیامک تست ناموفق بود: ' . $res['status']);
                     }

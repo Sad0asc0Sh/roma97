@@ -375,7 +375,12 @@ if (isPostRequest()) {
         $res = sendMeliPayamakPattern($testPhone, $testBodyId, array_values($args), 'test');
 
         if ($res['success']) {
-            setFlash('success', "پیامک تست با موفقیت ارسال شد. کد پیگیری: " . ($res['recId'] ?? '-'));
+            $msg = "پیامک تست با موفقیت ارسال شد. کد پیگیری: " . ($res['recId'] ?? '-');
+            $currentSettings = getSmsSettings($pdo);
+            if (($currentSettings['sms_enabled'] ?? '0') !== '1') {
+                $msg .= " (توجه: ارسال پیامک سیستمی در مهد هنوز خاموش است؛ برای فعال‌سازی کامل، تیک «فعال‌سازی ارسال پیامک‌های سیستمی» را در فرم بالا بزنید و دکمه ذخیره را کلیک کنید).";
+            }
+            setFlash('success', $msg);
         } else {
             setFlash('error', "خطا در ارسال پیامک تست: " . $res['status']);
         }
@@ -899,6 +904,15 @@ require_once __DIR__ . '/header.php';
             <div style="background:var(--adm-primary-50, rgba(46,133,64,0.06));border:1px solid var(--adm-border);padding:18px;border-radius:var(--radius-md);margin-bottom:var(--space-xl);">
                 <h3 style="font-size:1rem;color:var(--adm-primary,#3D8B63);margin-bottom:8px;">🧪 تست زنده ارسال پیامک خدماتی با الگو</h3>
                 <p style="font-size:0.85rem;color:var(--adm-text-muted);margin-bottom:12px;">برای اطمینان از صحت کلید API و شناسه الگو، یک پیامک تستی به شماره دلخواه ارسال کنید.</p>
+                <?php if (empty($settings['sms_api_key'])): ?>
+                    <div style="background:rgba(198,40,40,0.08);border:1px solid rgba(198,40,40,0.25);color:var(--adm-danger, #c62828);padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:0.84rem;line-height:1.7;">
+                        ⚠️ <strong>کلید وب‌سرویس ثبت نشده است:</strong> لطفاً ابتدا در کادر بالا «کلید وب‌سرویس ملی‌پیامک» را وارد کرده و دکمه <strong>«💾 ذخیره تنظیمات پیامک»</strong> را بزنید، سپس پیامک تست بفرستید.
+                    </div>
+                <?php elseif (($settings['sms_enabled'] ?? '0') !== '1'): ?>
+                    <div style="background:rgba(200,134,13,0.08);border:1px solid rgba(200,134,13,0.25);color:var(--adm-warning, #c8860d);padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:0.84rem;line-height:1.7;">
+                        ℹ️ <strong>ارسال پیامک‌های سیستمی غیرفعال است:</strong> شما می‌توانید تست ارسال را انجام دهید تا از صحت الگو و وب‌سرویس مطمئن شوید؛ اما برای فعال شدن ارسال خودکار پیامک‌ها به والدین و پرسنل، تیک <strong>«فعال‌سازی ارسال پیامک‌های سیستمی»</strong> را در فرم بالا بزنید و ذخیره کنید.
+                    </div>
+                <?php endif; ?>
                 <form method="post" action="<?= e(url('admin/settings.php#sms-section')) ?>" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
                     <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                     <input type="hidden" name="action" value="test_sms">
@@ -910,7 +924,7 @@ require_once __DIR__ . '/header.php';
 
                     <div style="width:120px;">
                         <label class="form-label" style="font-size:0.82rem;">شناسه الگو (bodyId)</label>
-                        <input type="number" name="test_body_id" class="form-control" dir="ltr" placeholder="524" required>
+                        <input type="number" name="test_body_id" class="form-control" dir="ltr" placeholder="524" value="<?= e($settings['sms_pattern_otp'] ?: $settings['sms_pattern_welcome'] ?: '') ?>" required>
                     </div>
 
                     <div style="flex:1;min-width:140px;">

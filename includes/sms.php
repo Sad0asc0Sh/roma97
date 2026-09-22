@@ -113,7 +113,8 @@ function sendMeliPayamakPattern(
     int $bodyId,
     array $args = [],
     string $eventType = 'general',
-    ?int $parentId = null
+    ?int $parentId = null,
+    bool $bypassEnabledCheck = false
 ): array {
     $normalizedPhone = normalizeIranianPhone($to);
 
@@ -133,7 +134,9 @@ function sendMeliPayamakPattern(
         return ['success' => false, 'recId' => null, 'status' => 'ارسال پیامک موقتاً در دسترس نیست.'];
     }
 
-    if (($settings['sms_enabled'] ?? '0') !== '1') {
+    $isTest = $bypassEnabledCheck || str_starts_with($eventType, 'test');
+
+    if (!$isTest && ($settings['sms_enabled'] ?? '0') !== '1') {
         // SMS is disabled in admin settings; record log and return gracefully
         logSmsDelivery($pdo, $normalizedPhone, $bodyId, $args, null, 'ارسال پیامک در تنظیمات سیستم غیرفعال است.', false, $eventType, $parentId);
         return ['success' => false, 'recId' => null, 'status' => 'ارسال پیامک در سیستم غیرفعال است.'];
@@ -141,8 +144,9 @@ function sendMeliPayamakPattern(
 
     $apiKey = trim((string) ($settings['sms_api_key'] ?? ''));
     if ($apiKey === '') {
-        logSmsDelivery($pdo, $normalizedPhone, $bodyId, $args, null, 'کلید وب‌سرویس ملی‌پیامک تنظیم نشده است.', false, $eventType, $parentId);
-        return ['success' => false, 'recId' => null, 'status' => 'کلید وب‌سرویس ملی‌پیامک تنظیم نشده است.'];
+        $keyMsg = 'کلید وب‌سرویس ملی‌پیامک تنظیم نشده است. لطفاً ابتدا در فرم بالا کلید وب‌سرویس را وارد کرده و دکمه «ذخیره تنظیمات پیامک» را بزنید.';
+        logSmsDelivery($pdo, $normalizedPhone, $bodyId, $args, null, $keyMsg, false, $eventType, $parentId);
+        return ['success' => false, 'recId' => null, 'status' => $keyMsg];
     }
 
     $url = "https://console.melipayamak.com/api/send/shared/{$apiKey}";
