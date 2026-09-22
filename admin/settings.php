@@ -588,9 +588,8 @@ require_once __DIR__ . '/header.php';
                     <?php if (($settings['map_link'] ?? '') !== ''): ?>
                         <div style="margin-top:var(--space-sm);">
                             <?php if ($previewEmbed !== null): ?>
-                                <div style="width:100%;height:180px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border);">
+                                <div class="settings-map-preview">
                                     <iframe title="پیش‌نمایش نقشه" src="<?= e($previewEmbed) ?>"
-                                        width="100%" height="100%" style="border:0;"
                                         loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
                                 </div>
                             <?php else: ?>
@@ -754,7 +753,7 @@ require_once __DIR__ . '/header.php';
         <?php endif; ?>
 
         <!-- SMS Gateway Section -->
-        <div class="admin-section" id="sms-section" style="grid-column: 1 / -1;">
+        <div class="admin-section admin-section--full" id="sms-section">
             <div class="admin-section-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
                 <h2 class="admin-section-title">📱 تنظیمات پنل پیامک ملی‌پیامک (خط خدماتی اشتراکی / الگو)</h2>
                 <span class="badge <?= ($settings['sms_enabled'] ?? '0') === '1' ? 'badge-success' : 'badge-secondary' ?>" style="font-size:0.85rem;padding:4px 10px;border-radius:20px;">
@@ -801,7 +800,7 @@ require_once __DIR__ . '/header.php';
                     📋 شناسه‌های الگوهای متنی تایید شده در ملی‌پیامک (با لحن گرم و کودک‌محور)
                 </h3>
 
-                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:var(--space-md);margin-bottom:var(--space-lg);">
+                <div class="sms-pattern-grid">
                     <div class="form-group">
                         <label for="sms_pattern_otp" class="form-label">
                             ۱. کد تایید ورود و ثبت‌نام (OTP)
@@ -913,26 +912,26 @@ require_once __DIR__ . '/header.php';
                         ℹ️ <strong>ارسال پیامک‌های سیستمی غیرفعال است:</strong> شما می‌توانید تست ارسال را انجام دهید تا از صحت الگو و وب‌سرویس مطمئن شوید؛ اما برای فعال شدن ارسال خودکار پیامک‌ها به والدین و پرسنل، تیک <strong>«فعال‌سازی ارسال پیامک‌های سیستمی»</strong> را در فرم بالا بزنید و ذخیره کنید.
                     </div>
                 <?php endif; ?>
-                <form method="post" action="<?= e(url('admin/settings.php#sms-section')) ?>" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+                <form method="post" action="<?= e(url('admin/settings.php#sms-section')) ?>" class="sms-test-form">
                     <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                     <input type="hidden" name="action" value="test_sms">
 
-                    <div style="flex:1;min-width:180px;">
+                    <div class="sms-test-field sms-test-field--phone">
                         <label class="form-label" style="font-size:0.82rem;">شماره گیرنده تست</label>
                         <input type="text" name="test_phone" class="form-control" dir="ltr" placeholder="09123456789" required>
                     </div>
 
-                    <div style="width:120px;">
+                    <div class="sms-test-field sms-test-field--id">
                         <label class="form-label" style="font-size:0.82rem;">شناسه الگو (bodyId)</label>
                         <input type="number" name="test_body_id" class="form-control" dir="ltr" placeholder="524" value="<?= e($settings['sms_pattern_otp'] ?: $settings['sms_pattern_welcome'] ?: '') ?>" required>
                     </div>
 
-                    <div style="flex:1;min-width:140px;">
+                    <div class="sms-test-field">
                         <label class="form-label" style="font-size:0.82rem;">متغیر اول ({0})</label>
                         <input type="text" name="test_arg1" class="form-control" placeholder="12345">
                     </div>
 
-                    <div style="flex:1;min-width:140px;">
+                    <div class="sms-test-field">
                         <label class="form-label" style="font-size:0.82rem;">متغیر دوم ({1})</label>
                         <input type="text" name="test_arg2" class="form-control" placeholder="روما">
                     </div>
@@ -948,7 +947,7 @@ require_once __DIR__ . '/header.php';
                 📜 آخرین پیامک‌های ارسالی سیستم (لاگ وضعیت)
             </h3>
             <?php if (!empty($recentSmsLogs)): ?>
-                <div class="table-responsive" style="overflow-x:auto;">
+                <div class="sms-logs-wrap">
                     <table class="table" style="width:100%;font-size:0.85rem;">
                         <thead>
                             <tr>

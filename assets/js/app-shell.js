@@ -13,6 +13,24 @@ document.addEventListener('DOMContentLoaded', () => {
   initShamsiDatePicker();
 });
 
+/* ── BFCACHE SAFEGUARD ───────────────────────────────────────
+   When a page is restored from bfcache (Back/Forward navigation),
+   slide-in panels (mobile sidebar, drawer) may be stuck open from the
+   previous visit. Force them closed unless there's a legitimate reason
+   (e.g. ?edit= auto-open on list pages). */
+window.addEventListener('pageshow', (e) => {
+  if (!e.persisted) return;
+  try {
+    if (typeof window.toggleMobileSidebar === 'function') {
+      window.toggleMobileSidebar(false);
+    }
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('edit') && typeof window.closeDrawer === 'function') {
+      window.closeDrawer();
+    }
+  } catch (err) {}
+});
+
 /* ── SIDEBAR TOGGLE & COLLAPSE ─────────────────────────────── */
 function initSidebarToggle() {
   const sidebar = document.getElementById('adminSidebar');
