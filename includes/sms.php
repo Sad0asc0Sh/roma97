@@ -143,13 +143,20 @@ function sendMeliPayamakPattern(
     }
 
     $apiKey = trim((string) ($settings['sms_api_key'] ?? ''));
+    // Path tokens must not contain whitespace/newlines from copy-paste.
+    $apiKey = preg_replace('/\s+/', '', $apiKey) ?? '';
     if ($apiKey === '') {
         $keyMsg = 'کلید وب‌سرویس ملی‌پیامک تنظیم نشده است. لطفاً ابتدا در فرم بالا کلید وب‌سرویس را وارد کرده و دکمه «ذخیره تنظیمات پیامک» را بزنید.';
         logSmsDelivery($pdo, $normalizedPhone, $bodyId, $args, null, $keyMsg, false, $eventType, $parentId);
         return ['success' => false, 'recId' => null, 'status' => $keyMsg];
     }
 
-    $url = "https://console.melipayamak.com/api/send/shared/{$apiKey}";
+    // MeliPayamak Console shared-pattern API (verified live):
+    //   POST https://console.melipayamak.com/api/send/shared/{consoleApiKey}
+    //   Content-Type: application/json
+    //   Body (SendSharedDTO): {"bodyId":int,"to":"09...","args":["..."]}
+    //   Errors: {"status":"..."} often with HTTP 400. Wrong verb → HTTP 405 (Allow: GET, HEAD, POST).
+    $url = 'https://console.melipayamak.com/api/send/shared/' . rawurlencode($apiKey);
     $payload = [
         'bodyId' => $bodyId,
         'to'     => $normalizedPhone,
@@ -160,19 +167,19 @@ function sendMeliPayamakPattern(
 
     try {
         $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+        curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $payloadJson);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
         curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type: application/json; charset=utf-8',
-            'Content-Length: ' . strlen((string) $payloadJson),
+            'Accept: application/json',
         ]);
 
         $responseRaw = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
         curl_close($ch);
 
@@ -183,18 +190,55 @@ function sendMeliPayamakPattern(
         }
 
         $resData = json_decode((string) $responseRaw, true);
-        $recId = isset($resData['recId']) ? (int) $resData['recId'] : null;
-        $status = (string) ($resData['status'] ?? '');
+        if (!is_array($resData)) {
+            $resData = [];
+        }
 
-        // In MeliPayamak shared pattern API, a successful delivery returns a numeric recId > 0
-        $isSuccess = ($httpCode >= 200 && $httpCode < 300) && ($recId !== null && $recId > 0);
+        $recId = null;
+        foreach (['recId', 'recid', 'RecId', 'value', 'Value', 'id'] as $recKey) {
+            if (isset($resData[$recKey]) && $resData[$recKey] !== '' && $resData[$recKey] !== null) {
+                $recId = (int) $resData[$recKey];
+                break;
+            }
+        }
 
-        logSmsDelivery($pdo, $normalizedPhone, $bodyId, $args, $recId, $status !== '' ? $status : ($isSuccess ? 'ارسال شد' : "HTTP {$httpCode}"), $isSuccess, $eventType, $parentId);
+        $status = (string) ($resData['status']
+            ?? $resData['message']
+            ?? $resData['StrRetStatus']
+            ?? '');
+
+        // Console success: HTTP 2xx and a positive tracking id.
+        // Classic REST: Value is a long recId, or RetStatus=1.
+        $retStatus = isset($resData['RetStatus']) ? (int) $resData['RetStatus'] : null;
+        $isSuccess = ($httpCode >= 200 && $httpCode < 300)
+            && (($recId !== null && $recId > 0) || $retStatus === 1);
+
+        $logStatus = $status;
+        if ($logStatus === '') {
+            $logStatus = $isSuccess
+                ? 'ارسال شد'
+                : sprintf('HTTP %d %s', $httpCode, mb_substr((string) $responseRaw, 0, 300, 'UTF-8'));
+        } elseif (!$isSuccess) {
+            $logStatus = sprintf('HTTP %d | %s | %s', $httpCode, $status, mb_substr((string) $responseRaw, 0, 300, 'UTF-8'));
+        }
+
+        logSmsDelivery($pdo, $normalizedPhone, $bodyId, $args, $recId, $logStatus, $isSuccess, $eventType, $parentId);
+
+        $userStatus = $status;
+        if ($userStatus === '') {
+            $userStatus = match (true) {
+                $httpCode === 405 => 'HTTP 405: متد درخواست پذیرفته نیست (باید POST باشد).',
+                $httpCode === 415 => 'HTTP 415: نوع محتوای درخواست پذیرفته نیست (باید JSON باشد).',
+                $httpCode === 401, $httpCode === 403 => 'HTTP ' . $httpCode . ': کلید کنسول پذیرفته نشد.',
+                $isSuccess => 'پیامک با موفقیت ارسال شد.',
+                default => sprintf('خطا در وب‌سرویس پیامک (HTTP %d).', $httpCode),
+            };
+        }
 
         return [
             'success' => $isSuccess,
             'recId'   => $recId,
-            'status'  => $status !== '' ? $status : ($isSuccess ? 'پیامک با موفقیت ارسال شد.' : 'خطا در وب‌سرویس پیامک'),
+            'status'  => $userStatus,
         ];
     } catch (Throwable $e) {
         error_log('sendMeliPayamakPattern exception: ' . $e->getMessage());
