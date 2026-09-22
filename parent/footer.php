@@ -3,6 +3,8 @@ if (!defined('ROOMA_APP')) {
     die('Access denied.');
 }
 $siteNameValue = siteName();
+[$footerJy] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
+$footerJyFa = persianNumber((string) $footerJy);
 ?>
       </div>
    </main>
@@ -13,15 +15,64 @@ $siteNameValue = siteName();
         </div>
     </footer>
 
-    <?php
-if (!defined('ROOMA_APP')) {
-    die('Access denied.');
-}
-[$footerJy] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
-$footerJyFa = persianNumber((string) $footerJy);
-require_once __DIR__ . '/../templates/app/dialogs.php'; ?>
+    <?php require_once __DIR__ . '/../templates/app/dialogs.php'; ?>
 
-    
+    <?php /* ── PWA install banner (dismissible, re-appears after 7 days) ── */ ?>
+    <div class="pwa-banner" id="pwaInstallBanner" role="dialog" aria-live="polite" aria-label="نصب اپلیکیشن والدین">
+        <span class="pwa-banner-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        </span>
+        <div class="pwa-banner-text">
+            <strong>اپ والدین <?php echo e($siteNameValue); ?> را نصب کنید</strong>
+            <span>دسترسی سریع‌تر، بدون نیاز به مرورگر — گزارش روزانه همیشه یک لمس فاصله دارد.</span>
+        </div>
+        <div class="pwa-banner-actions">
+            <button type="button" class="pwa-banner-install" data-pwa-install>نصب</button>
+            <button type="button" class="pwa-banner-guide" data-pwa-guide>راهنما</button>
+            <button type="button" class="pwa-banner-dismiss" data-pwa-dismiss aria-label="بستن">✕</button>
+        </div>
+    </div>
+
+    <?php /* ── PWA install guide modal (Android / iOS / Desktop) ── */ ?>
+    <div class="pwa-modal" id="pwaGuideModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="pwaGuideTitle">
+        <div class="pwa-modal-backdrop" data-pwa-close></div>
+        <div class="pwa-modal-card">
+            <div class="pwa-modal-head">
+                <div>
+                    <h3 id="pwaGuideTitle">نصب اپ والدین <?php echo e($siteNameValue); ?></h3>
+                    <p>روش نصب متناسب با دستگاه شما:</p>
+                </div>
+                <button type="button" class="pwa-modal-close" data-pwa-close aria-label="بستن راهنما">✕</button>
+            </div>
+            <div class="pwa-tabs" role="tablist" aria-label="انتخاب دستگاه">
+                <button type="button" class="pwa-tab" data-pwa-tab="android" role="tab">اندروید</button>
+                <button type="button" class="pwa-tab" data-pwa-tab="ios" role="tab">آیفون</button>
+                <button type="button" class="pwa-tab" data-pwa-tab="desktop" role="tab">کامپیوتر</button>
+            </div>
+            <div class="pwa-panes">
+                <ol class="pwa-steps" data-pwa-pane="android">
+                    <li>دکمه <strong>«نصب»</strong> بالای همین صفحه را بزنید و <strong>Install</strong> را تأیید کنید.</li>
+                    <li>اگر دکمه نصب ندیدید: منوی <strong>⋮</strong> مرورگر کروم ← <strong>Install app / نصب برنامه</strong>.</li>
+                    <li>آیکون «روما» به صفحه اصلی گوشی اضافه می‌شود و مثل یک اپ مستقل باز می‌شود.</li>
+                </ol>
+                <ol class="pwa-steps" data-pwa-pane="ios" hidden>
+                    <li>این صفحه را در مرورگر <strong>Safari</strong> باز کنید.</li>
+                    <li>دکمه <strong>اشتراک‌گذاری</strong> (مربع با فلش رو به بالا) را بزنید.</li>
+                    <li>گزینه <strong>Add to Home Screen / افزودن به صفحه اصلی</strong> را انتخاب و <strong>Add</strong> را بزنید.</li>
+                </ol>
+                <ol class="pwa-steps" data-pwa-pane="desktop" hidden>
+                    <li>در نوار آدرس مرورگر (کروم/Edge) روی آیکون <strong>نصب (Install)</strong> کلیک کنید.</li>
+                    <li>یا منوی مرورگر ← <strong>Install / نصب برنامه</strong>.</li>
+                    <li>اپ در منوی استارت/داک شما قرار می‌گیرد و در پنجره مستقل اجرا می‌شود.</li>
+                </ol>
+            </div>
+            <div class="pwa-modal-foot">
+                <button type="button" class="btn btn-primary btn-sm" data-pwa-install>نصب خودکار</button>
+                <button type="button" class="btn btn-outline btn-sm" data-pwa-close>باشه، فهمیدم</button>
+            </div>
+        </div>
+    </div>
+
 <!-- Mobile Bottom Navigation - Parent Portal -->
 <nav class="mobile-bottom-nav parent-bottom-nav" aria-label="منوی ناوبری موبایل والدین">
     <a href="<?php echo e(url('parent/index.php')); ?>" class="bottom-nav-item <?php echo $currentPage === 'index.php' ? 'active' : ''; ?>">

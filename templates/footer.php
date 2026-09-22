@@ -122,5 +122,6 @@ $footerNav   = roomaPublicNav($currentPage, $currentSlug);
 </button>
 
     <script src="<?php echo e(asset('assets/js/rooma.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('assets/js/pwa-install.js')); ?>" defer></script>
 </body>
 </html>

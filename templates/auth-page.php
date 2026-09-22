@@ -66,10 +66,16 @@ $renderField = static function (string $id, string $label, string $type, string 
     <meta name="robots" content="noindex, nofollow">
     <title><?= e($pageTitle ?? $heading . ' | ' . $name) ?></title>
     <link rel="icon" href="<?= e(url('assets/img/favicon.svg')) ?>" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="<?= e(url('assets/icons/icon-180.png')) ?>">
+    <link rel="manifest" href="<?= e(url('manifest.webmanifest')) ?>">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="preload" href="<?= e(url('assets/fonts/Vazirmatn-Regular.woff2')) ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?= e(asset('assets/css/fonts.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset('assets/css/parent-auth.css')) ?>">
+    <script>window.ROMA_SW_URL = <?= json_encode(url('sw.js'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;</script>
     <script src="<?= e(asset('assets/js/parent-auth.js')) ?>" defer></script>
+    <script src="<?= e(asset('assets/js/pwa-install.js')) ?>" defer></script>
     <?php // Prefetch سبکِ صفحات احراز هویت هنگام هاور/فوکوس؛ ناوبری بعدی را سریع‌تر نشان می‌دهد. ?>
     <script type="speculationrules">
     {

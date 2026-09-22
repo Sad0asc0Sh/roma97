@@ -2611,7 +2611,9 @@
   .mobile-bottom-nav,
   .parent-back-link,
   .btn,
-  .pp-btn {
+  .pp-btn,
+  .pwa-banner,
+  .pwa-modal {
     display: none !important;
   }
 
@@ -2629,3 +2631,641 @@
     break-inside: avoid;
   }
 }
+
+/* ===========================================================
+   Unified parent header (single sticky bar — no hamburger)
+   Top row: brand + actions · Bottom row: section nav (desktop).
+   On mobile the bottom-nav owns navigation; header stays clean.
+   =========================================================== */
+
+.skip-link {
+  position: absolute;
+  top: -60px;
+  right: 16px;
+  z-index: 1200;
+  background: var(--pp-primary-deep);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.875rem;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 12px;
+}
+
+.parent-header--unified .parent-header-container {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.parent-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+}
+
+/* Brand */
+.parent-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.parent-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: linear-gradient(140deg, var(--pp-primary), var(--pp-primary-hover));
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 3px 12px var(--pp-primary-glow);
+}
+
+.parent-brand-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid var(--pp-primary-tint);
+}
+
+.parent-brand-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.parent-brand-name {
+  font-family: var(--pp-font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--pp-text);
+  white-space: nowrap;
+}
+
+.parent-brand-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--pp-primary);
+  background: var(--pp-primary-tint);
+  padding: 2px 10px;
+  border-radius: var(--pp-radius-full);
+  white-space: nowrap;
+}
+
+/* Actions row */
+.parent-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.parent-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 1px solid var(--pp-border-light);
+  background: var(--pp-surface);
+  color: var(--pp-text-secondary);
+  cursor: pointer;
+  font-family: var(--pp-font);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background var(--pp-transition), color var(--pp-transition), border-color var(--pp-transition), transform var(--pp-transition);
+  position: relative;
+}
+
+.parent-action-btn:hover {
+  background: var(--pp-primary-tint);
+  color: var(--pp-primary);
+  border-color: var(--pp-primary-glow);
+}
+
+.parent-action-btn:active {
+  transform: scale(0.96);
+}
+
+.parent-action-btn:focus-visible {
+  outline: 3px solid var(--pp-primary-glow);
+  outline-offset: 2px;
+}
+
+.parent-install-btn {
+  background: var(--pp-primary);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 3px 12px var(--pp-primary-glow);
+}
+
+.parent-install-btn:hover {
+  background: var(--pp-primary-hover);
+  color: #fff;
+  border-color: transparent;
+}
+
+.parent-install-btn.is-installed {
+  background: var(--pp-primary-tint);
+  color: var(--pp-primary);
+  box-shadow: none;
+  pointer-events: none;
+}
+
+/* Theme toggle shows moon in light, sun in dark */
+.parent-action-btn .icon-sun { display: none; }
+[data-theme="dark"] .parent-action-btn .icon-sun { display: inline; }
+[data-theme="dark"] .parent-action-btn .icon-moon { display: none; }
+
+.parent-bell-btn { padding: 0; width: 38px; }
+
+.parent-bell-dot {
+  position: absolute;
+  top: -7px;
+  inset-inline-start: -7px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--pp-radius-full);
+  background: var(--pp-sun);
+  color: #3A2A05;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  border: 2px solid var(--pp-surface);
+}
+
+/* User dropdown */
+.parent-user-menu { position: relative; }
+
+.parent-user-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 6px;
+  border-radius: var(--pp-radius-full);
+  border: 1px solid var(--pp-border-light);
+  background: var(--pp-surface-soft);
+  cursor: pointer;
+  font-family: var(--pp-font);
+  transition: border-color var(--pp-transition), background var(--pp-transition);
+}
+
+.parent-user-trigger:hover {
+  border-color: var(--pp-border-strong);
+  background: var(--pp-primary-tint);
+}
+
+.parent-avatar {
+  background: var(--pp-primary-deep) !important;
+  color: #F2FAF5 !important;
+  font-family: var(--pp-font-display);
+  width: 30px !important;
+  height: 30px !important;
+  font-size: 12px !important;
+}
+
+.parent-user-name {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--pp-text);
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.parent-dropdown {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  width: 220px;
+  background: var(--pp-surface);
+  border: 1px solid var(--pp-border-light);
+  border-radius: var(--pp-radius-md);
+  box-shadow: var(--pp-shadow-lg);
+  padding: 6px;
+  display: none;
+  z-index: 500;
+}
+
+.parent-dropdown.show { display: block; }
+
+.parent-dropdown-head {
+  padding: 10px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.parent-dropdown-head strong {
+  font-size: 0.875rem;
+  color: var(--pp-text);
+}
+
+.parent-dropdown-head span {
+  font-size: 0.75rem;
+  color: var(--pp-text-muted);
+}
+
+.parent-dropdown-divider {
+  height: 1px;
+  background: var(--pp-border-light);
+  margin: 4px 0;
+}
+
+.parent-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  border-radius: var(--pp-radius-sm);
+  color: var(--pp-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: var(--pp-font);
+  cursor: pointer;
+  text-decoration: none;
+  text-align: right;
+  box-sizing: border-box;
+  transition: background var(--pp-transition);
+}
+
+.parent-dropdown-item:hover { background: var(--pp-primary-tint); }
+
+.parent-dropdown-item.danger { color: var(--pp-danger); }
+.parent-dropdown-item.danger:hover { background: var(--pp-danger-bg); }
+
+/* Section nav = second row of the same header */
+.parent-header--unified .parent-nav {
+  border-top: 1px solid var(--pp-border-light);
+  margin-top: 10px;
+  padding-top: 10px;
+  width: 100%;
+}
+
+/* ===========================================================
+   PWA — install card (dashboard), banner + guide modal
+   =========================================================== */
+
+.pwa-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background:
+    radial-gradient(rgba(255, 255, 255, 0.13) 1.3px, transparent 1.3px) 0 0 / 24px 24px,
+    linear-gradient(150deg, var(--pp-primary-deep) 0%, #1E5C41 60%, #256B4C 100%);
+  border-radius: var(--pp-radius);
+  padding: 22px 24px;
+  margin-bottom: 24px;
+  color: #fff;
+  box-shadow: 0 14px 40px rgba(20, 56, 42, 0.28);
+  position: relative;
+  overflow: hidden;
+}
+
+.pwa-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  flex-shrink: 0;
+}
+
+.pwa-card-body { flex: 1; min-width: 0; }
+
+.pwa-card-body h3 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-family: var(--pp-font-display);
+  color: #fff;
+}
+
+.pwa-card-body p {
+  margin: 0;
+  font-size: 0.875rem;
+  opacity: 0.88;
+  line-height: 1.9;
+}
+
+.pwa-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.pwa-card-install {
+  background: #fff;
+  color: var(--pp-primary-deep);
+  border: none;
+  border-radius: var(--pp-radius-sm);
+  padding: 10px 22px;
+  font-family: var(--pp-font);
+  font-size: 0.875rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform var(--pp-transition), box-shadow var(--pp-transition);
+}
+
+.pwa-card-install:hover { transform: translateY(-1px); }
+
+.pwa-card-guide {
+  background: transparent;
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--pp-radius-sm);
+  padding: 9px 18px;
+  font-family: var(--pp-font);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pwa-card-guide:hover { background: rgba(255, 255, 255, 0.12); }
+
+.pwa-card-hide {
+  position: absolute;
+  top: 10px;
+  inset-inline-end: 12px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 4px 8px;
+}
+
+.pwa-card-hide:hover { color: #fff; }
+.pwa-card.is-quiet { box-shadow: var(--pp-shadow-sm); }
+
+/* Floating banner above the mobile bottom-nav */
+.pwa-banner {
+  position: fixed;
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  right: 12px;
+  left: 12px;
+  max-width: 560px;
+  margin: 0 auto;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--pp-surface);
+  border: 1px solid var(--pp-border-light);
+  border-radius: var(--pp-radius-md);
+  box-shadow: var(--pp-shadow-lg);
+  padding: 14px 16px;
+  transform: translateY(24px);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s, visibility 0.3s;
+}
+
+.pwa-banner.show {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (min-width: 769px) {
+  .pwa-banner { bottom: 20px; inset-inline-end: 20px; inset-inline-start: auto; right: auto; left: 20px; }
+  [dir="rtl"] .pwa-banner { right: 20px; left: auto; }
+}
+
+.pwa-banner-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: var(--pp-primary-tint);
+  color: var(--pp-primary);
+  flex-shrink: 0;
+}
+
+.pwa-banner-text { flex: 1; min-width: 0; }
+.pwa-banner-text strong { display: block; font-size: 0.875rem; color: var(--pp-text); }
+.pwa-banner-text span { font-size: 0.75rem; color: var(--pp-text-secondary); line-height: 1.9; }
+
+.pwa-banner-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+.pwa-banner-install {
+  background: var(--pp-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--pp-radius-sm);
+  padding: 8px 18px;
+  font-family: var(--pp-font);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pwa-banner-install:hover { background: var(--pp-primary-hover); }
+
+.pwa-banner-guide {
+  background: none;
+  border: 1px solid var(--pp-border-strong);
+  color: var(--pp-primary);
+  border-radius: var(--pp-radius-sm);
+  padding: 7px 14px;
+  font-family: var(--pp-font);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pwa-banner-dismiss {
+  background: none;
+  border: none;
+  color: var(--pp-text-muted);
+  cursor: pointer;
+  padding: 6px;
+  font-size: 0.8125rem;
+}
+
+/* Guide modal */
+.pwa-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.pwa-modal.open { display: flex; }
+
+.pwa-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(18, 30, 24, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.pwa-modal-card {
+  position: relative;
+  background: var(--pp-surface);
+  border-radius: var(--pp-radius);
+  box-shadow: var(--pp-shadow-xl);
+  width: 100%;
+  max-width: 520px;
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: 24px;
+  border: 1px solid var(--pp-border-light);
+}
+
+.pwa-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.pwa-modal-head h3 {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--pp-text);
+}
+
+.pwa-modal-head p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--pp-text-secondary);
+}
+
+.pwa-modal-close {
+  background: var(--pp-surface-soft);
+  border: 1px solid var(--pp-border-light);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--pp-text-muted);
+  flex-shrink: 0;
+}
+
+.pwa-modal-close:hover { color: var(--pp-danger); border-color: var(--pp-danger-bg); }
+
+.pwa-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  background: var(--pp-surface-soft);
+  padding: 4px;
+  border-radius: var(--pp-radius-sm);
+  border: 1px solid var(--pp-border-light);
+}
+
+.pwa-tab {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 9px 6px;
+  border-radius: var(--pp-radius-xs);
+  font-family: var(--pp-font);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--pp-text-secondary);
+  cursor: pointer;
+}
+
+.pwa-tab.active {
+  background: var(--pp-surface);
+  color: var(--pp-primary);
+  box-shadow: var(--pp-shadow-sm);
+}
+
+.pwa-steps {
+  margin: 0 0 8px;
+  padding-inline-start: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: var(--pp-text-secondary);
+  line-height: 2;
+}
+
+.pwa-steps strong { color: var(--pp-text); }
+
+.pwa-modal-foot {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--pp-border-light);
+}
+
+.pwa-modal-foot .btn { flex: 1; }
+
+/* ── Unified header responsive ─────────────────────────── */
+@media (max-width: 991px) {
+  /* Bottom-nav owns navigation here: the header nav never shows,
+     so there is no hamburger vs. nav conflict anymore. */
+  .parent-header--unified .parent-nav,
+  .parent-header--unified .parent-nav.is-open {
+    display: none !important;
+  }
+
+  .parent-header--unified .parent-header-container {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .parent-header-top { min-height: 48px; }
+  .parent-brand-name { font-size: 0.95rem; }
+  .parent-user-name { display: none; }
+  .parent-user-trigger { padding: 4px; }
+  .parent-install-btn span { display: none; }
+  .parent-install-btn { width: 38px; padding: 0; }
+}
+
+@media (max-width: 480px) {
+  .parent-brand-badge { display: none; }
+  .pwa-card { flex-direction: column; text-align: center; }
+  .pwa-card-actions { width: 100%; }
+  .pwa-card-install, .pwa-card-guide { flex: 1; }
+  .pwa-banner { flex-wrap: wrap; }
+  .pwa-banner-text { flex: 1 1 100%; }
+}
+

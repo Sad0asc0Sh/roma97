@@ -76,7 +76,13 @@ $topbarText    = siteTopbarText();
 
     <link rel="icon" href="<?php echo e(asset('favicon.ico')); ?>" sizes="32x32">
     <link rel="icon" href="<?php echo e(asset('assets/img/favicon.svg')); ?>" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="<?php echo e(asset('assets/img/favicon.svg')); ?>">
+    <link rel="apple-touch-icon" href="<?php echo e(url('assets/icons/icon-180.png')); ?>">
+    <link rel="manifest" href="<?php echo e(url('manifest.webmanifest')); ?>">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="<?php echo e($siteNameValue); ?>">
+    <script>window.ROMA_SW_URL = <?php echo json_encode(url('sw.js'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;</script>
 
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/rooma-core.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/rooma-components.css')); ?>">

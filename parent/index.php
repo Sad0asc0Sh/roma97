@@ -165,6 +165,22 @@ require_once __DIR__ . '/header.php';
   </div>
 </section>
 
+<!-- PWA install card — install the parent app straight from the website -->
+<section class="pwa-card" id="pwaDashboardCard" aria-label="نصب اپلیکیشن والدین">
+    <span class="pwa-card-icon" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+    </span>
+    <div class="pwa-card-body">
+        <h3>اپ والدین روما را نصب کنید</h3>
+        <p>بدون نیاز به کافه‌بازار؛ مستقیم از همین وب‌سایت روی گوشی یا کامپیوتر نصب می‌شود و گزارش روزانه فرزندتان همیشه یک لمس فاصله دارد.</p>
+    </div>
+    <div class="pwa-card-actions">
+        <button type="button" class="pwa-card-install" data-pwa-install>نصب اپ</button>
+        <button type="button" class="pwa-card-guide" data-pwa-guide>راهنمای نصب</button>
+    </div>
+    <button type="button" class="pwa-card-hide" data-pwa-card-hide aria-label="پنهان کردن">✕</button>
+</section>
+
 <!-- Today's Status Summary Strip (Quick 2-second glance for busy parents) -->
 <?php if ($children !== []): ?>
 <section class="today-summary-strip">
