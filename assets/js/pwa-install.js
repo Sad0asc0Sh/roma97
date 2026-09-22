@@ -143,13 +143,13 @@
   });
 
   /* ── Banner ─────────────────────────────────────────────── */
-  function bannerDismissedRecently() {
-    try {
-      var raw = localStorage.getItem(DISMISS_KEY);
-      if (!raw) return false;
-      // Re-show after 7 days so parents who skipped get another chance.
-      return (Date.now() - parseInt(raw, 10)) < 7 * 24 * 3600 * 1000;
-    } catch (e) { return false; }
+  /* Dismissal is permanent: once the parent closes the install prompt,
+     it never appears again — neither the banner nor the dashboard card.
+     Install stays reachable via the header «نصب اپ» button and the
+     user-menu guide entry. */
+  function isDismissed() {
+    try { return localStorage.getItem(DISMISS_KEY) !== null; }
+    catch (e) { return false; }
   }
 
   function hideBanner() {
@@ -164,7 +164,7 @@
     try {
       if (localStorage.getItem(INSTALLED_KEY) === '1') return;
     } catch (e) {}
-    if (bannerDismissedRecently()) return;
+    if (isDismissed()) return;
     // Show when: native prompt is ready, OR iOS (manual steps), OR a guide
     // entry point exists on touch devices. Desktop Chrome without prompt yet
     // stays quiet to avoid nagging.
@@ -218,13 +218,12 @@
   function initInstallCard() {
     var card = $('#pwaDashboardCard');
     if (!card) return;
-    if (isStandalone()) { card.hidden = true; return; }
+    // Dismissed once = gone forever from the dashboard (frees the space).
+    var gone = isStandalone() || isDismissed();
     try {
-      if (localStorage.getItem(INSTALLED_KEY) === '1' || bannerDismissedRecently()) {
-        // Keep the card (it is useful documentation) but collapse the flashy state.
-        card.classList.add('is-quiet');
-      }
+      gone = gone || localStorage.getItem(INSTALLED_KEY) === '1';
     } catch (e) {}
+    if (gone) { card.hidden = true; return; }
     var hide = card.querySelector('[data-pwa-card-hide]');
     if (hide) {
       hide.addEventListener('click', function () {

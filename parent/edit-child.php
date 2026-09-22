@@ -407,7 +407,7 @@ require_once __DIR__ . '/header.php';
 
                 <div class="form-group">
                     <label for="date_of_birth">تاریخ تولد</label>
-                    <input type="text" id="date_of_birth" name="date_of_birth" class="shamsi-datepicker" value="<?= e($old['date_of_birth']) ?>" placeholder="۱۳۹۹/۰۵/۱۸" required>
+                    <input type="text" id="date_of_birth" name="date_of_birth" class="shamsi-datepicker" data-datepicker="birth" data-year-past="15" value="<?= e($old['date_of_birth']) ?>" placeholder="۱۳۹۹/۰۵/۱۸" required>
                 </div>
             </div>
 

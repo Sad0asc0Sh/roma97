@@ -3030,6 +3030,8 @@
 
 .pwa-card-hide:hover { color: #fff; }
 .pwa-card.is-quiet { box-shadow: var(--pp-shadow-sm); }
+/* Author display:flex would otherwise override the hidden attribute */
+.pwa-card[hidden] { display: none !important; }
 
 /* Floating banner above the mobile bottom-nav */
 .pwa-banner {

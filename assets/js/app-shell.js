@@ -430,20 +430,80 @@ function initShamsiDatePicker() {
     });
   });
 
+  function isJalaliLeapYear(jy) {
+    // Jalali leap years in 33-year cycle: 1, 5, 9, 13, 17, 22, 26, 30
+    const breaks = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
+    let bl = breaks.length;
+    let gy = jy + 621;
+    let leapJ = -14;
+    let jp = breaks[0];
+    let jump = 0;
+    for (let i = 1; i < bl; i++) {
+      const jm = breaks[i];
+      jump = jm - jp;
+      if (jy < jm) break;
+      leapJ += Math.floor(jump / 33) * 8 + Math.floor((jump % 33) / 4);
+      jp = jm;
+    }
+    let n = jy - jp;
+    leapJ += Math.floor(n / 33) * 8 + Math.floor(((n % 33) + 3) / 4);
+    if ((jump % 33) === 4 && (jump - n) === 4) leapJ++;
+    const leapG = Math.floor(gy / 4) - Math.floor((Math.floor(gy / 100) + 1) * 3 / 4) - 150;
+    return ((leapJ - leapG) % 4) === 0 || (((leapJ - leapG) % 33) === 0);
+  }
+
+  function getPickerConfig(input) {
+    const today = new Date();
+    const [tJy] = gregorianToJalali(today.getFullYear(), today.getMonth() + 1, today.getDate());
+    const isBirth = (
+      (input.id && input.id === 'date_of_birth') ||
+      (input.name && input.name === 'date_of_birth') ||
+      input.hasAttribute('data-birth') ||
+      input.dataset.datepicker === 'birth'
+    );
+    // Explicit overrides: data-year-min / data-year-max / data-year-past / data-year-future
+    let yearMin = parseInt(toEn(input.dataset.yearMin || ''), 10);
+    let yearMax = parseInt(toEn(input.dataset.yearMax || ''), 10);
+    const past = parseInt(toEn(input.dataset.yearPast || input.dataset.yearRangePast || ''), 10);
+    const future = parseInt(toEn(input.dataset.yearFuture || ''), 10);
+    if (!Number.isFinite(yearMin)) {
+      yearMin = Number.isFinite(past) ? (tJy - past) : (isBirth ? (tJy - 15) : (tJy - 100));
+    }
+    if (!Number.isFinite(yearMax)) {
+      yearMax = Number.isFinite(future) ? (tJy + future) : (isBirth ? tJy : (tJy + 20));
+    }
+    if (yearMin > yearMax) {
+      const tmp = yearMin;
+      yearMin = yearMax;
+      yearMax = tmp;
+    }
+    return { tJy, isBirth, yearMin, yearMax };
+  }
+
   function renderPicker(input) {
     closeActivePicker();
 
     const today = new Date();
     const [tJy, tJm, tJd] = gregorianToJalali(today.getFullYear(), today.getMonth() + 1, today.getDate());
+    const cfg = getPickerConfig(input);
 
     let curJy = tJy;
     let curJm = tJm;
+    let viewMode = 'days'; // 'days' | 'years'
+    let yearPage = 0;
 
     let val = toEn(input.value.trim());
     let m = val.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
     if (m) {
-      curJy = parseInt(m[1], 10);
-      curJm = parseInt(m[2], 10);
+      const parsedY = parseInt(m[1], 10);
+      const parsedM = parseInt(m[2], 10);
+      if (Number.isFinite(parsedY)) curJy = Math.min(Math.max(parsedY, cfg.yearMin), cfg.yearMax);
+      if (parsedM >= 1 && parsedM <= 12) curJm = parsedM;
+    } else if (cfg.isBirth && !input.value.trim()) {
+      // For birthdate: open a few years back so parent doesn't start from today
+      // and doesn't need 100+ clicks to reach a 3-10 year old child.
+      curJy = Math.max(cfg.yearMin, tJy - 4);
+      curJm = tJm;
     }
 
     const container = document.createElement('div');
@@ -453,21 +513,59 @@ function initShamsiDatePicker() {
     container.style.top = `${rect.bottom + window.scrollY}px`;
     container.style.left = `${rect.left + window.scrollX}px`;
 
+    function clampYearMonth() {
+      if (curJy < cfg.yearMin) { curJy = cfg.yearMin; }
+      if (curJy > cfg.yearMax) { curJy = cfg.yearMax; }
+      if (curJm < 1) curJm = 1;
+      if (curJm > 12) curJm = 12;
+    }
+
+    function buildYearOptions(selected) {
+      let html = '';
+      for (let y = cfg.yearMax; y >= cfg.yearMin; y--) {
+        html += `<option value="${y}"${y === selected ? ' selected' : ''}>${toFa(y)}</option>`;
+      }
+      return html;
+    }
+
+    function buildMonthOptions(selected) {
+      let html = '';
+      for (let i = 1; i <= 12; i++) {
+        html += `<option value="${i}"${i === selected ? ' selected' : ''}>${monthNames[i - 1]}</option>`;
+      }
+      return html;
+    }
+
     function updateCalendar() {
-      const daysInMonth = curJm <= 6 ? 31 : (curJm <= 11 ? 30 : 29);
+      clampYearMonth();
+      if (viewMode === 'years') {
+        renderYearView();
+        return;
+      }
+
+      let daysInMonth = curJm <= 6 ? 31 : (curJm <= 11 ? 30 : 29);
+      if (curJm === 12 && isJalaliLeapYear(curJy)) daysInMonth = 30;
       const [gY, gM, gD] = jalaliToGregorian(curJy, curJm, 1);
       const firstDayOfWeek = (new Date(gY, gM - 1, gD).getDay() + 1) % 7;
 
       container.innerHTML = `
         <div class="sdp-header">
-          <button type="button" class="sdp-nav-btn sdp-prev">&gt;</button>
-          <div class="sdp-title">${monthNames[curJm - 1]} ${toFa(curJy)}</div>
-          <button type="button" class="sdp-nav-btn sdp-next">&lt;</button>
+          <button type="button" class="sdp-nav-btn sdp-prev" title="ماه قبل">&gt;</button>
+          <div class="sdp-selects">
+            <select class="sdp-select sdp-month-select" aria-label="انتخاب ماه">${buildMonthOptions(curJm)}</select>
+            <button type="button" class="sdp-title sdp-year-btn" title="کلیک کنید تا لیست سال‌ها باز شود">${toFa(curJy)} ▾</button>
+            <select class="sdp-select sdp-year-select" aria-label="انتخاب سال">${buildYearOptions(curJy)}</select>
+          </div>
+          <button type="button" class="sdp-nav-btn sdp-next" title="ماه بعد">&lt;</button>
         </div>
+        ${cfg.isBirth ? `<div class="sdp-hint">از ${toFa(cfg.yearMin)} تا ${toFa(cfg.yearMax)} — برای انتخاب سریع سال، روی سال کلیک کنید</div>` : ''}
         <div class="sdp-weekdays">
           <div>ش</div><div>۱ش</div><div>۲ش</div><div>۳ش</div><div>۴ش</div><div>۵ش</div><div>ج</div>
         </div>
         <div class="sdp-days"></div>
+        <div class="sdp-footer">
+          <button type="button" class="sdp-today-btn">امروز (${toFa(tJy)}/${toFa(String(tJm).padStart(2, '0'))}/${toFa(String(tJd).padStart(2, '0'))})</button>
+        </div>
       `;
 
       const daysGrid = container.querySelector('.sdp-days');
@@ -475,6 +573,7 @@ function initShamsiDatePicker() {
         const emptyBtn = document.createElement('button');
         emptyBtn.type = 'button';
         emptyBtn.className = 'sdp-day-btn empty';
+        emptyBtn.tabIndex = -1;
         daysGrid.appendChild(emptyBtn);
       }
 
@@ -509,6 +608,7 @@ function initShamsiDatePicker() {
           curJm = 12;
           curJy--;
         }
+        clampYearMonth();
         updateCalendar();
       });
 
@@ -519,6 +619,99 @@ function initShamsiDatePicker() {
           curJm = 1;
           curJy++;
         }
+        clampYearMonth();
+        updateCalendar();
+      });
+
+      const monthSelect = container.querySelector('.sdp-month-select');
+      const yearSelect = container.querySelector('.sdp-year-select');
+      monthSelect.addEventListener('click', (e) => e.stopPropagation());
+      yearSelect.addEventListener('click', (e) => e.stopPropagation());
+      monthSelect.addEventListener('change', (e) => {
+        e.stopPropagation();
+        curJm = parseInt(monthSelect.value, 10) || curJm;
+        updateCalendar();
+      });
+      yearSelect.addEventListener('change', (e) => {
+        e.stopPropagation();
+        curJy = parseInt(yearSelect.value, 10) || curJy;
+        clampYearMonth();
+        updateCalendar();
+      });
+
+      // Clicking the year title opens the year-grid (covers the "up to 10 years" request
+      // with one tap instead of 120 month steps).
+      container.querySelector('.sdp-year-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        viewMode = 'years';
+        yearPage = Math.floor((cfg.yearMax - curJy) / 12);
+        updateCalendar();
+      });
+
+      const todayBtn = container.querySelector('.sdp-today-btn');
+      if (todayBtn) {
+        todayBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (cfg.isBirth) {
+            // For birth fields "today" is invalid; jump to max allowed instead.
+            curJy = cfg.yearMax;
+            curJm = tJm;
+          } else {
+            curJy = tJy;
+            curJm = tJm;
+          }
+          updateCalendar();
+        });
+      }
+    }
+
+    function renderYearView() {
+      const totalYears = cfg.yearMax - cfg.yearMin + 1;
+      const totalPages = Math.max(1, Math.ceil(totalYears / 12));
+      if (yearPage < 0) yearPage = 0;
+      if (yearPage >= totalPages) yearPage = totalPages - 1;
+      // Page 0 = newest years (yearMax downwards)
+      const startY = cfg.yearMax - yearPage * 12;
+      const endY = Math.max(cfg.yearMin, startY - 11);
+
+      let yearsHtml = '';
+      for (let y = startY; y >= endY; y--) {
+        const active = y === curJy ? ' selected' : '';
+        yearsHtml += `<button type="button" class="sdp-year-cell${active}" data-year="${y}">${toFa(y)}</button>`;
+      }
+
+      container.innerHTML = `
+        <div class="sdp-header">
+          <button type="button" class="sdp-nav-btn sdp-year-prev" title="سال‌های جدیدتر">›</button>
+          <div class="sdp-title">انتخاب سال<div class="sdp-subtitle">${toFa(endY)} تا ${toFa(startY)}</div></div>
+          <button type="button" class="sdp-nav-btn sdp-year-next" title="سال‌های قدیمی‌تر">‹</button>
+        </div>
+        <div class="sdp-years-grid">${yearsHtml}</div>
+        <div class="sdp-footer">
+          <button type="button" class="sdp-back-btn">بازگشت به تقویم</button>
+        </div>
+      `;
+
+      container.querySelectorAll('.sdp-year-cell').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          curJy = parseInt(btn.dataset.year, 10) || curJy;
+          viewMode = 'days';
+          updateCalendar();
+        });
+      });
+
+      container.querySelector('.sdp-year-prev').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (yearPage > 0) { yearPage--; renderYearView(); }
+      });
+      container.querySelector('.sdp-year-next').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (yearPage < totalPages - 1) { yearPage++; renderYearView(); }
+      });
+      container.querySelector('.sdp-back-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        viewMode = 'days';
         updateCalendar();
       });
     }

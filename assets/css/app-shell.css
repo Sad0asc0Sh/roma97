@@ -964,6 +964,156 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
 .sdp-title {
   font-weight: 700;
   font-size: 14px;
+  text-align: center;
+}
+
+.sdp-selects {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  justify-content: center;
+}
+
+.sdp-select {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--app-text, #1b2622);
+  background: var(--app-slate-100, #eef1ef);
+  border: 1px solid var(--app-border, #d7dcd9);
+  border-radius: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  max-width: 110px;
+}
+
+[data-theme="dark"] .sdp-select {
+  background: #212B24;
+  border-color: var(--app-border-strong, #324038);
+  color: var(--app-text, #f0f4f2);
+}
+
+.sdp-select:focus {
+  outline: 2px solid var(--app-primary, #3d8b63);
+  outline-offset: 1px;
+}
+
+.sdp-year-btn {
+  background: var(--app-slate-100, #eef1ef);
+  border: 1px solid var(--app-border, #d7dcd9);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  color: var(--app-primary, #2E7D5B);
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .sdp-year-btn {
+  background: #212B24;
+  border-color: var(--app-border-strong, #324038);
+  color: #8fd0ab;
+}
+
+.sdp-year-btn:hover {
+  background: var(--app-primary, #3d8b63);
+  border-color: var(--app-primary, #3d8b63);
+  color: #fff;
+}
+
+.sdp-hint {
+  font-size: 11px;
+  text-align: center;
+  color: var(--app-text-muted, #5c6b64);
+  background: var(--app-slate-100, #f1f4f2);
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin-bottom: 10px;
+}
+
+[data-theme="dark"] .sdp-hint {
+  background: #212B24;
+  color: #b9c6bf;
+}
+
+.sdp-subtitle {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--app-text-muted, #5c6b64);
+  margin-top: 2px;
+}
+
+.sdp-years-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sdp-year-cell {
+  font-family: inherit;
+  border: 1px solid var(--app-border, #d7dcd9);
+  background: var(--app-slate-100, #f1f4f2);
+  border-radius: 10px;
+  padding: 12px 4px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--app-text, #1b2622);
+}
+
+[data-theme="dark"] .sdp-year-cell {
+  background: #212B24;
+  border-color: var(--app-border-strong, #324038);
+  color: var(--app-text, #f0f4f2);
+}
+
+.sdp-year-cell:hover {
+  border-color: var(--app-primary, #3d8b63);
+  background: rgba(61, 139, 99, 0.12);
+}
+
+.sdp-year-cell.selected {
+  background: var(--app-primary, #3d8b63) !important;
+  border-color: var(--app-primary, #3d8b63) !important;
+  color: #fff !important;
+}
+
+.sdp-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--app-border, #e3e8e5);
+}
+
+.sdp-today-btn,
+.sdp-back-btn {
+  font-family: inherit;
+  background: none;
+  border: 1px solid var(--app-border, #d7dcd9);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--app-primary, #2E7D5B);
+}
+
+[data-theme="dark"] .sdp-today-btn,
+[data-theme="dark"] .sdp-back-btn {
+  border-color: var(--app-border-strong, #324038);
+  color: #8fd0ab;
+}
+
+.sdp-today-btn:hover,
+.sdp-back-btn:hover {
+  background: var(--app-primary, #3d8b63);
+  border-color: var(--app-primary, #3d8b63);
+  color: #fff;
 }
 
 .sdp-weekdays {

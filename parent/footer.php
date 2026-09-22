@@ -17,7 +17,7 @@ $footerJyFa = persianNumber((string) $footerJy);
 
     <?php require_once __DIR__ . '/../templates/app/dialogs.php'; ?>
 
-    <?php /* ── PWA install banner (dismissible, re-appears after 7 days) ── */ ?>
+    <?php /* ── PWA install banner (shown once; closing it hides it forever) ── */ ?>
     <div class="pwa-banner" id="pwaInstallBanner" role="dialog" aria-live="polite" aria-label="نصب اپلیکیشن والدین">
         <span class="pwa-banner-icon" aria-hidden="true">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
