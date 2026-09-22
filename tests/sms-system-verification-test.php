@@ -117,7 +117,7 @@ $status = [
 assertTest($status['apiKeySet'] === true, 'Single key marks gateway as having API key set');
 
 echo "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
-echo "5. Testing MeliPayamak Connection Verifier\n";
+echo "5. Testing MeliPayamak Connection Verifier & Main Panel\n";
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
 
 $emptyKeyRes = checkMelipayamakConnection('');
@@ -125,6 +125,17 @@ assertTest($emptyKeyRes['success'] === false, 'Empty API key fails immediately w
 
 $testKeyRes = checkMelipayamakConnection('invalid-dummy-key');
 assertTest(is_array($testKeyRes) && isset($testKeyRes['success'], $testKeyRes['message']), 'Connection check returns standard result structure');
+
+assertTest(isPayamakPanelActive(['sms_provider' => 'melipayamak_main']) === true, 'Explicit melipayamak_main provider active');
+assertTest(isPayamakPanelActive(['sms_provider' => 'melipayamak_console']) === false, 'Explicit melipayamak_console provider active');
+assertTest(isPayamakPanelActive(['sms_provider' => '', 'sms_username' => 'testuser', 'sms_api_key' => '']) === true, 'Auto-detect main panel from username');
+
+assertTest(str_contains(explainPayamakPanelStatus(0, '', ''), 'نادرست است'), 'Status 0 explains invalid credentials');
+assertTest(str_contains(explainPayamakPanelStatus(14, '', ''), 'شناسه الگو'), 'Status 14 explains missing bodyId');
+assertTest(str_contains(explainPayamakPanelStatus(35, '', ''), 'متغیرها'), 'Status 35 explains argument mismatch');
+
+$mainEmptyCreds = checkPayamakPanelCredit('', '');
+assertTest($mainEmptyCreds['success'] === false, 'Main panel fails gracefully with empty credentials');
 
 echo "\n════════════════════════════════════════════════════\n";
 echo "TEST SUMMARY: {$passed} passed, {$failed} failed\n";

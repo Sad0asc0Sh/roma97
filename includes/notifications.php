@@ -204,10 +204,12 @@ function smsGatewayStatus(?PDO $pdo = null): array
 {
     $settings = getSmsSettings($pdo);
 
-    $enabled    = ($settings['sms_enabled'] ?? '0') === '1';
-    $apiKey     = melipayamakConsoleKey($settings, 'shared');
-    $otpKey     = melipayamakCleanKey((string) ($settings['sms_api_key_otp'] ?? ''));
-    $apiKeySet  = $apiKey !== '';
+    $enabled      = ($settings['sms_enabled'] ?? '0') === '1';
+    $isMain       = isPayamakPanelActive($settings);
+    $hasMainCreds = !empty(trim((string) ($settings['sms_username'] ?? ''))) && !empty(trim((string) ($settings['sms_password'] ?? '')));
+    $apiKey       = melipayamakConsoleKey($settings, 'shared');
+    $otpKey       = melipayamakCleanKey((string) ($settings['sms_api_key_otp'] ?? ''));
+    $apiKeySet    = $isMain ? $hasMainCreds : ($apiKey !== '');
 
     $patterns = [];
     $configured = [];
@@ -232,11 +234,13 @@ function smsGatewayStatus(?PDO $pdo = null): array
     }
 
     if (!$apiKeySet) {
-        $critical[] = 'کلید وب‌سرویس ملی‌پیامک وارد نشده است. لطفاً کلید کنسول خود را در بخش تنظیمات وارد کنید.';
+        $critical[] = $isMain
+            ? 'نام کاربری یا رمز عبور پنل اصلی ملی‌پیامک (login.melipayamak.com) وارد نشده است.'
+            : 'کلید وب‌سرویس کنسول ملی‌پیامک وارد نشده است.';
     }
 
-    // OTP readiness check: either pattern bodyId is set, or dedicated OTP key is configured
-    if ((int) ($patterns['sms_pattern_otp'] ?? 0) <= 0 && $otpKey === '') {
+    // OTP readiness check: either pattern bodyId is set, or dedicated OTP key is configured (on console)
+    if ((int) ($patterns['sms_pattern_otp'] ?? 0) <= 0 && ($isMain || $otpKey === '')) {
         $critical[] = 'الگوی پیامک کد تایید (OTP) تنظیم نشده است؛ ثبت‌نام و بازیابی رمز عبور بدون آن انجام نمی‌شود.';
     }
 
@@ -272,9 +276,12 @@ function isNotificationEventDeliverable(string $eventKey, ?PDO $pdo = null): boo
     }
 
     $settings = getSmsSettings($pdo);
+    $hasCreds = isPayamakPanelActive($settings)
+        ? (!empty(trim((string) ($settings['sms_username'] ?? ''))) && !empty(trim((string) ($settings['sms_password'] ?? ''))))
+        : (melipayamakConsoleKey($settings, 'shared') !== '');
 
     return ($settings['sms_enabled'] ?? '0') === '1'
-        && melipayamakConsoleKey($settings, 'shared') !== ''
+        && $hasCreds
         && (int) ($settings[$event['pattern_key']] ?? 0) > 0;
 }
 

@@ -72,6 +72,10 @@ function getSmsSettings(?PDO $pdo = null): array
         'sms_pattern_payment_receipt'     => '', // Receipt sent when a tuition payment is recorded
         'sms_pattern_announcement'        => '',
         'sms_pattern_child_status'        => '', // Enrolment status changes (approved / graduated / withdrawn)
+        'sms_otp_type'                    => 'pattern', // 'pattern' = custom Roma template, 'fast' = native console OTP
+        'sms_provider'                    => 'melipayamak_main', // 'melipayamak_main' (login.melipayamak.com) or 'melipayamak_console'
+        'sms_username'                    => '', // Main panel username (login.melipayamak.com)
+        'sms_password'                    => '', // Main panel password (login.melipayamak.com)
     ];
 
     try {
@@ -285,60 +289,248 @@ function melipayamakConsoleGet(string $url): array
 }
 
 /**
- * Checks connection to MeliPayamak Console API and fetches account credit / status.
+ * Determines whether MeliPayamak Main Panel (login.melipayamak.com) is active.
+ */
+function isPayamakPanelActive(?array $settings = null): bool
+{
+    if ($settings === null) {
+        $settings = getSmsSettings();
+    }
+    $provider = (string) ($settings['sms_provider'] ?? '');
+    if ($provider === 'melipayamak_main') {
+        return true;
+    }
+    if ($provider === 'melipayamak_console') {
+        return false;
+    }
+    return !empty(trim((string) ($settings['sms_username'] ?? ''))) && empty(trim((string) ($settings['sms_api_key'] ?? '')));
+}
+
+/**
+ * Human-readable Payamak-Panel (login.melipayamak.com) error messages.
+ */
+function explainPayamakPanelStatus(int $retStatus, string $strRetStatus, string $value): string
+{
+    return match ($retStatus) {
+        0  => 'نام کاربری یا رمز عبور پنل اصلی (login.melipayamak.com) نادرست است.',
+        1  => 'پیامک با موفقیت ارسال شد.',
+        2  => 'اعتبار حساب برای ارسال پیامک کافی نیست.',
+        6  => 'سامانه در حال بروزرسانی است؛ لطفاً دقایقی دیگر تلاش کنید.',
+        7  => 'متن پیامک خالی است یا طول آن مجاز نیست.',
+        11 => 'شماره موبایل گیرنده نامعتبر است.',
+        14 => 'شناسه الگو (کد متن) در پنل اصلی یافت نشد یا هنوز تایید نشده است.',
+        15 => 'شارژ / اعتبار پنل پیامک کافی نیست.',
+        35 => 'تعداد یا ساختار متغیرها با الگوی تاییدشده در login.melipayamak.com مطابقت ندارد.',
+        default => ($strRetStatus !== '' && $strRetStatus !== 'InternalError')
+            ? $strRetStatus
+            : sprintf('خطا در وب‌سرویس پنل اصلی ملی‌پیامک (کد %d)', $retStatus),
+    };
+}
+
+/**
+ * Verifies credentials and fetches balance from MeliPayamak Main Panel (login.melipayamak.com).
  *
- * @param string $apiKey
  * @return array{success: bool, credit: string|null, message: string}
  */
-function checkMelipayamakConnection(string $apiKey): array
+function checkPayamakPanelCredit(string $username, string $password): array
 {
-    $cleanKey = melipayamakCleanKey($apiKey);
-    if ($cleanKey === '') {
-        return ['success' => false, 'credit' => null, 'message' => 'کلید وب‌سرویس ملی‌پیامک وارد نشده است.'];
+    $username = trim($username);
+    $password = trim($password);
+
+    if ($username === '' || $password === '') {
+        return ['success' => false, 'credit' => null, 'message' => 'نام کاربری و رمز عبور پنل اصلی ملی‌پیامک (login.melipayamak.com) را وارد کنید.'];
     }
 
-    $url = 'https://console.melipayamak.com/api/receive/credit/' . rawurlencode($cleanKey);
-    $res = melipayamakConsoleGet($url);
+    $url = 'https://rest.payamak-panel.com/api/SendSMS/GetCredit';
+    $res = melipayamakConsolePost($url, [
+        'username' => $username,
+        'password' => $password,
+    ]);
 
     if ($res['error'] !== '' && $res['http'] === 0) {
         return ['success' => false, 'credit' => null, 'message' => 'خطای اتصال به سرور ملی‌پیامک: ' . $res['error']];
     }
 
-    if ($res['http'] >= 200 && $res['http'] < 300) {
-        $body = $res['body'];
-        $raw = trim($res['raw']);
-        $creditVal = null;
-        if (is_numeric($raw)) {
-            $creditVal = $raw;
-        } elseif (isset($body['amount'])) {
-            $creditVal = (string) $body['amount'];
-        } elseif (isset($body['credit'])) {
-            $creditVal = (string) $body['credit'];
-        } elseif (isset($body['value'])) {
-            $creditVal = (string) $body['value'];
-        } else {
-            $creditVal = $raw;
-        }
+    $resData = $res['body'];
+    $retStatus = isset($resData['RetStatus']) ? (int) $resData['RetStatus'] : null;
+    $val = trim((string) ($resData['Value'] ?? ''));
 
-        $formatted = is_numeric($creditVal) ? number_format((float) $creditVal) . ' ریال' : $creditVal;
-
+    if ($retStatus === 1 && $val !== '') {
+        $formatted = is_numeric($val) ? number_format((float) $val) . ' ریال' : $val;
         return [
             'success' => true,
-            'credit'  => $creditVal,
-            'message' => "اتصال به پنل با موفقیت برقرار شد. میزان اعتبار حساب شما: {$formatted}",
+            'credit'  => $val,
+            'message' => "اتصال به پنل اصلی (login.melipayamak.com) برقرار شد. موجودی حساب شما: {$formatted}",
         ];
     }
 
-    $status = (string) ($res['body']['status'] ?? $res['body']['message'] ?? '');
-    if ($status === '') {
-        $status = $res['http'] === 400 ? 'کلید کنسول معتبر نیست.' : sprintf('خطا در وب‌سرویس پیامک (HTTP %d)', $res['http']);
-    }
-
+    $status = explainPayamakPanelStatus($retStatus ?? -1, (string) ($resData['StrRetStatus'] ?? ''), $val);
     return [
         'success' => false,
         'credit'  => null,
         'message' => $status,
     ];
+}
+
+/**
+ * Sends a patterned SMS via MeliPayamak Main Panel (login.melipayamak.com / payamak-panel.com REST API).
+ *
+ * @param string $username MeliPayamak main panel username
+ * @param string $password MeliPayamak main panel password
+ * @param string $to Recipient phone number (e.g. 09123456789)
+ * @param int $bodyId Template / Pattern ID approved in login.melipayamak.com
+ * @param array<int, string> $args Dynamic variables to fill in template ({0}, {1}, …)
+ * @param string $eventType Context tag (otp, daily_report, attendance, etc.)
+ * @param int|null $parentId Optional linked parent id for audit log
+ * @return array{success: bool, recId: int|null, status: string}
+ */
+function sendPayamakPanelPattern(
+    string $username,
+    string $password,
+    string $to,
+    int $bodyId,
+    array $args = [],
+    string $eventType = 'general',
+    ?int $parentId = null
+): array {
+    $normalizedPhone = normalizeIranianPhone($to);
+    if (!isValidIranianMobile($normalizedPhone)) {
+        return ['success' => false, 'recId' => null, 'status' => 'شماره موبایل گیرنده نامعتبر است.'];
+    }
+
+    if ($bodyId <= 0) {
+        return ['success' => false, 'recId' => null, 'status' => 'شناسه الگوی پیامک (bodyId) تنظیم نشده است.'];
+    }
+
+    if ($username === '' || $password === '') {
+        return ['success' => false, 'recId' => null, 'status' => 'نام کاربری یا رمز عبور پنل اصلی ملی‌پیامک تنظیم نشده است.'];
+    }
+
+    $pdo = getDb();
+
+    // Prepare text payload: single string if 1 variable, array if multiple
+    $cleanArgs = array_values(array_map('strval', $args));
+    $textPayload = count($cleanArgs) === 1 ? $cleanArgs[0] : (count($cleanArgs) === 0 ? '' : $cleanArgs);
+
+    $url = 'https://rest.payamak-panel.com/api/SendSMS/BaseServiceNumber';
+    $payload = [
+        'username' => $username,
+        'password' => $password,
+        'to'       => $normalizedPhone,
+        'text'     => $textPayload,
+        'bodyId'   => $bodyId,
+    ];
+
+    try {
+        $http = melipayamakConsolePost($url, $payload);
+
+        if ($http['error'] !== '' && $http['http'] === 0) {
+            $errorMsg = 'خطای اتصال به سرور پنل اصلی ملی‌پیامک: ' . $http['error'];
+            logSmsDelivery($pdo, $normalizedPhone, $bodyId, $args, null, $errorMsg, false, $eventType, $parentId);
+            return ['success' => false, 'recId' => null, 'status' => $errorMsg];
+        }
+
+        $resData = $http['body'];
+        $retStatus = isset($resData['RetStatus']) ? (int) $resData['RetStatus'] : null;
+        $strRetStatus = (string) ($resData['StrRetStatus'] ?? '');
+        $val = trim((string) ($resData['Value'] ?? ''));
+
+        // If Value is a numeric ID > 1000 or RetStatus == 1, it's successful delivery
+        $isSuccess = ($retStatus === 1) || (is_numeric($val) && (float)$val > 1000);
+        $recId = is_numeric($val) && (float)$val > 1000 ? (int) $val : null;
+
+        $statusMsg = $isSuccess
+            ? 'پیامک با موفقیت از پنل اصلی ارسال شد.'
+            : explainPayamakPanelStatus($retStatus ?? -1, $strRetStatus, $val);
+
+        logSmsDelivery($pdo, $normalizedPhone, $bodyId, $args, $recId, $statusMsg, $isSuccess, $eventType, $parentId);
+
+        return [
+            'success' => $isSuccess,
+            'recId'   => $recId,
+            'status'  => $statusMsg,
+        ];
+    } catch (Throwable $e) {
+        error_log('sendPayamakPanelPattern exception: ' . $e->getMessage());
+        logSmsDelivery($pdo, $normalizedPhone, $bodyId, $args, null, $e->getMessage(), false, $eventType, $parentId);
+        return ['success' => false, 'recId' => null, 'status' => $e->getMessage()];
+    }
+}
+
+/**
+ * Checks connection to MeliPayamak (Console API or Main Panel) and fetches account credit / status.
+ *
+ * @param string|null $apiKey Optional Console API key
+ * @param string|null $username Optional Main Panel username
+ * @param string|null $password Optional Main Panel password
+ * @return array{success: bool, credit: string|null, message: string}
+ */
+function checkMelipayamakConnection(?string $apiKey = null, ?string $username = null, ?string $password = null): array
+{
+    // If username is provided, test Main Panel (login.melipayamak.com)
+    if ($username !== null) {
+        return checkPayamakPanelCredit($username, $password ?? '');
+    }
+
+    // If apiKey is explicitly passed
+    if ($apiKey !== null) {
+        $cleanKey = melipayamakCleanKey($apiKey);
+        if ($cleanKey === '') {
+            return ['success' => false, 'credit' => null, 'message' => 'کلید وب‌سرویس ملی‌پیامک وارد نشده است.'];
+        }
+
+        $url = 'https://console.melipayamak.com/api/receive/credit/' . rawurlencode($cleanKey);
+        $res = melipayamakConsoleGet($url);
+
+        if ($res['error'] !== '' && $res['http'] === 0) {
+            return ['success' => false, 'credit' => null, 'message' => 'خطای اتصال به سرور ملی‌پیامک: ' . $res['error']];
+        }
+
+        if ($res['http'] >= 200 && $res['http'] < 300) {
+            $body = $res['body'];
+            $raw = trim($res['raw']);
+            $creditVal = null;
+            if (is_numeric($raw)) {
+                $creditVal = $raw;
+            } elseif (isset($body['amount'])) {
+                $creditVal = (string) $body['amount'];
+            } elseif (isset($body['credit'])) {
+                $creditVal = (string) $body['credit'];
+            } elseif (isset($body['value'])) {
+                $creditVal = (string) $body['value'];
+            } else {
+                $creditVal = $raw;
+            }
+
+            $formatted = is_numeric($creditVal) ? number_format((float) $creditVal) . ' ریال' : $creditVal;
+
+            return [
+                'success' => true,
+                'credit'  => $creditVal,
+                'message' => "اتصال به کنسول ملی‌پیامک برقرار شد. میزان اعتبار حساب شما: {$formatted}",
+            ];
+        }
+
+        $status = (string) ($res['body']['status'] ?? $res['body']['message'] ?? '');
+        if ($status === '') {
+            $status = $res['http'] === 400 ? 'کلید کنسول معتبر نیست.' : sprintf('خطا در وب‌سرویس پیامک (HTTP %d)', $res['http']);
+        }
+
+        return [
+            'success' => false,
+            'credit'  => null,
+            'message' => $status,
+        ];
+    }
+
+    // Default: read from settings
+    $settings = getSmsSettings();
+    if (isPayamakPanelActive($settings)) {
+        return checkPayamakPanelCredit((string) ($settings['sms_username'] ?? ''), (string) ($settings['sms_password'] ?? ''));
+    }
+
+    $key = melipayamakConsoleKey($settings, 'shared');
+    return checkMelipayamakConnection($key);
 }
 
 /**
@@ -410,6 +602,20 @@ function sendMeliPayamakPattern(
         return ['success' => false, 'recId' => null, 'status' => 'ارسال پیامک در سیستم غیرفعال است.'];
     }
 
+    // ROUTE 1: MeliPayamak Main Panel (login.melipayamak.com / payamak-panel.com)
+    if (isPayamakPanelActive($settings)) {
+        $username = trim((string) ($settings['sms_username'] ?? ''));
+        $password = trim((string) ($settings['sms_password'] ?? ''));
+        if ($username === '' || $password === '') {
+            $keyMsg = 'نام کاربری یا رمز عبور پنل اصلی ملی‌پیامک (login.melipayamak.com) تنظیم نشده است.';
+            logSmsDelivery($pdo, $normalizedPhone, $bodyId, $args, null, $keyMsg, false, $eventType, $parentId);
+            return ['success' => false, 'recId' => null, 'status' => $keyMsg];
+        }
+
+        return sendPayamakPanelPattern($username, $password, $normalizedPhone, $bodyId, $args, $eventType, $parentId);
+    }
+
+    // ROUTE 2: MeliPayamak Console (console.melipayamak.com)
     $apiKey = melipayamakConsoleKey($settings, 'shared');
     if ($apiKey === '') {
         $keyMsg = 'کلید وب‌سرویس ملی‌پیامک تنظیم نشده است. لطفاً کلید کنسول خود را در بخش تنظیمات وارد کنید.';
@@ -659,9 +865,15 @@ function generateAndSendSmsOtp(
         ]);
     };
 
-    // FASTEST ROUTE (MeliPayamak Native Flash OTP - Delivers in 2 to 5 seconds):
-    // Dedicated priority flash line that bypasses regular queue delays.
-    if ($gatewayEnabled && $otpKey !== '') {
+    $otpType = (string) ($settings['sms_otp_type'] ?? 'pattern');
+
+    // Check credentials depending on active gateway system
+    $hasCredentials = isPayamakPanelActive($settings)
+        ? (!empty(trim((string) ($settings['sms_username'] ?? ''))) && !empty(trim((string) ($settings['sms_password'] ?? ''))))
+        : ($sharedKey !== '');
+
+    // ROUTE A: Native Flash OTP API (Console only - delivers in 2-5 seconds, uses MeliPayamak domain-registered text)
+    if (!isPayamakPanelActive($settings) && $otpType === 'fast' && $gatewayEnabled && $otpKey !== '') {
         $smsResult = sendMeliPayamakOtp($normalized, 'otp');
         if ($smsResult['success'] && $smsResult['code'] !== '') {
             $storeCode((string) $smsResult['code']);
@@ -674,9 +886,9 @@ function generateAndSendSmsOtp(
         }
     }
 
-    // RELIABLE FALLBACK ROUTE (Shared pattern with 5-digit local code):
-    // Used if native OTP endpoint is unavailable, but an approved OTP pattern is configured.
-    if ($gatewayEnabled && $otpBodyId > 0 && $sharedKey !== '') {
+    // ROUTE B: Approved Pattern Route (Dedicated Roma text without third-party domains)
+    // Works with BOTH Main Panel (login.melipayamak.com) and Console (console.melipayamak.com).
+    if ($gatewayEnabled && $otpBodyId > 0 && $hasCredentials) {
         $code = (string) random_int(10000, 99999);
         $storeCode($code);
 
@@ -694,6 +906,20 @@ function generateAndSendSmsOtp(
             'message' => 'ارسال پیامک با مشکل مواجه شد: ' . $smsResult['status'],
             'code_debug' => $isDevMode ? $code : null,
         ];
+    }
+
+    // Fallback to Flash OTP if on Console and pattern is missing but key is set:
+    if (!isPayamakPanelActive($settings) && $gatewayEnabled && $otpKey !== '') {
+        $smsResult = sendMeliPayamakOtp($normalized, 'otp');
+        if ($smsResult['success'] && $smsResult['code'] !== '') {
+            $storeCode((string) $smsResult['code']);
+            $digits = (int) strlen((string) $smsResult['code']);
+            return [
+                'success' => true,
+                'message' => "کد تایید {$digits} رقمی به شماره موبایل شما ارسال شد.",
+                'code_debug' => $isDevMode ? (string) $smsResult['code'] : null,
+            ];
+        }
     }
 
     if ($isDevMode) {

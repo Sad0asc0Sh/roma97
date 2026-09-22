@@ -50,6 +50,10 @@ function getSettings(PDO $pdo): array
         'sms_pattern_payment_receipt' => '',
         'sms_pattern_child_status' => '',
         'sms_inline_budget_seconds' => '8',
+        'sms_otp_type' => 'pattern',
+        'sms_provider' => 'melipayamak_main',
+        'sms_username' => '',
+        'sms_password' => '',
     ];
 
     $keys = array_keys($settings);
@@ -315,6 +319,15 @@ if (isPostRequest()) {
 
     if ($action === 'update_sms_settings') {
         $smsEnabled = isset($_POST['sms_enabled']) ? '1' : '0';
+        $smsProvider = in_array($_POST['sms_provider'] ?? '', ['melipayamak_main', 'melipayamak_console'], true) ? (string) $_POST['sms_provider'] : 'melipayamak_main';
+        $smsUsername = trim((string) ($_POST['sms_username'] ?? ''));
+        $smsPassword = (string) ($_POST['sms_password'] ?? '');
+        if ($smsPassword === '' && $smsProvider === 'melipayamak_main') {
+            $existingPass = getSetting('sms_password', '');
+            if ($existingPass !== '') {
+                $smsPassword = $existingPass;
+            }
+        }
         $smsApiKey  = melipayamakCleanKey(trim((string) ($_POST['sms_api_key'] ?? '')));
         $smsKeyShared = melipayamakCleanKey(trim((string) ($_POST['sms_api_key_shared'] ?? '')));
         // If master API key is provided, sync to shared key for full backward compatibility
@@ -346,7 +359,12 @@ if (isPostRequest()) {
             $inlineBudget = 25;
         }
 
+        $smsOtpType = in_array($_POST['sms_otp_type'] ?? '', ['pattern', 'fast'], true) ? (string) $_POST['sms_otp_type'] : 'pattern';
+
         saveSetting($pdo, 'sms_enabled', $smsEnabled);
+        saveSetting($pdo, 'sms_provider', $smsProvider);
+        saveSetting($pdo, 'sms_username', $smsUsername);
+        saveSetting($pdo, 'sms_password', $smsPassword);
         saveSetting($pdo, 'sms_api_key', $smsApiKey);
         saveSetting($pdo, 'sms_api_key_shared', $smsKeyShared);
         saveSetting($pdo, 'sms_api_key_otp', $smsKeyOtp);
@@ -361,6 +379,7 @@ if (isPostRequest()) {
         saveSetting($pdo, 'sms_pattern_payment_receipt', $bodyPay);
         saveSetting($pdo, 'sms_pattern_child_status', $bodyStat);
         saveSetting($pdo, 'sms_inline_budget_seconds', (string) $inlineBudget);
+        saveSetting($pdo, 'sms_otp_type', $smsOtpType);
 
         recordAudit('sms_settings.update', 'settings', null);
         setFlash('success', 'تنظیمات پنل پیامک با موفقیت ذخیره شد.');
@@ -368,21 +387,35 @@ if (isPostRequest()) {
     }
 
     if ($action === 'check_sms_connection') {
-        $keyToCheck = trim((string) ($_POST['check_api_key'] ?? ''));
+        $providerToCheck = trim((string) ($_POST['check_provider'] ?? ''));
+        $usernameToCheck = trim((string) ($_POST['check_username'] ?? ''));
+        $passwordToCheck = (string) ($_POST['check_password'] ?? '');
+        $keyToCheck      = melipayamakCleanKey(trim((string) ($_POST['check_api_key'] ?? '')));
+
+        $currentSettings = getSmsSettings($pdo);
+        if ($providerToCheck === '') {
+            $providerToCheck = (string) ($currentSettings['sms_provider'] ?? 'melipayamak_main');
+        }
+        if ($usernameToCheck === '') {
+            $usernameToCheck = (string) ($currentSettings['sms_username'] ?? '');
+        }
+        if ($passwordToCheck === '') {
+            $passwordToCheck = (string) ($currentSettings['sms_password'] ?? '');
+        }
         if ($keyToCheck === '') {
-            $currentSettings = getSmsSettings($pdo);
             $keyToCheck = melipayamakConsoleKey($currentSettings, 'shared');
         }
 
-        if ($keyToCheck === '') {
-            setFlash('error', 'کلید وب‌سرویس ملی‌پیامک وارد نشده است. لطفاً ابتدا کلید را وارد کنید.');
+        if ($providerToCheck === 'melipayamak_main') {
+            $connRes = checkPayamakPanelCredit($usernameToCheck, $passwordToCheck);
         } else {
             $connRes = checkMelipayamakConnection($keyToCheck);
-            if ($connRes['success']) {
-                setFlash('success', '✅ ' . $connRes['message']);
-            } else {
-                setFlash('error', '❌ خطا در اتصال به ملی‌پیامک: ' . $connRes['message']);
-            }
+        }
+
+        if ($connRes['success']) {
+            setFlash('success', '✅ ' . $connRes['message']);
+        } else {
+            setFlash('error', '❌ خطا در اتصال به ملی‌پیامک: ' . $connRes['message']);
         }
         redirect(url('admin/settings.php#sms-section'));
     }
@@ -841,30 +874,72 @@ require_once __DIR__ . '/header.php';
                         <small style="color:var(--muted);font-size:0.85rem;">در صورت غیرفعال بودن، پیام‌ها فقط به صورت نوتیفیکیشن درون پورتال ذخیره می‌شوند.</small>
                     </div>
 
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <label for="sms_api_key" class="form-label" style="font-weight:700;font-size:0.95rem;">
-                            🔑 کلید وب‌سرویس ملی‌پیامک (Console API Key) <span class="req">*</span>
-                        </label>
-                        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                            <input type="text" id="sms_api_key" name="sms_api_key" class="form-control" dir="ltr" style="flex:1;min-width:280px;font-family:monospace;font-size:0.95rem;"
-                                placeholder="کپی از کنسول ملی‌پیامک (مثال: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)"
-                                value="<?= e($settings['sms_api_key'] ?? ($settings['sms_api_key_shared'] ?? '')) ?>">
+                    <!-- Provider Choice -->
+                    <div class="form-group" style="margin-bottom:16px;">
+                        <label class="form-label" style="font-weight:700;font-size:0.95rem;">نوع سامانه و پنل ملی‌پیامک:</label>
+                        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:6px;">
+                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.88rem;">
+                                <input type="radio" name="sms_provider" value="melipayamak_main" onchange="toggleProviderFields(this.value);"
+                                    <?= ($settings['sms_provider'] ?? 'melipayamak_main') === 'melipayamak_main' ? 'checked' : '' ?>>
+                                <span>🌐 <b>پنل اصلی ملی‌پیامک (login.melipayamak.com)</b> — ورود با نام کاربری و رمز</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.88rem;">
+                                <input type="radio" name="sms_provider" value="melipayamak_console" onchange="toggleProviderFields(this.value);"
+                                    <?= ($settings['sms_provider'] ?? 'melipayamak_main') === 'melipayamak_console' ? 'checked' : '' ?>>
+                                <span>⚡ <b>کنسول ملی‌پیامک (console.melipayamak.com)</b> — ورود با کلید API</span>
+                            </label>
                         </div>
-                        <small style="color:var(--muted);font-size:0.84rem;margin-top:6px;display:block;line-height:1.7;">
-                            تنها با وارد کردن <b>همین یک کلید</b> از پنل کنسول ملی‌پیامک (منوی وب‌سرویس / خط خدماتی اشتراکی)، تمام پیامک‌های الگو و کدهای تایید (OTP) مهد به صورت آنی ارسال می‌شوند.
+                    </div>
+
+                    <!-- FIELDS FOR MAIN PANEL (login.melipayamak.com) -->
+                    <div id="provider_main_fields" style="display:<?= ($settings['sms_provider'] ?? 'melipayamak_main') === 'melipayamak_main' ? 'block' : 'none' ?>;margin-bottom:16px;background:rgba(46,133,64,0.05);border:1px solid var(--adm-border);border-radius:6px;padding:14px;">
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+                            <div class="form-group" style="margin:0;">
+                                <label for="sms_username" class="form-label" style="font-weight:600;font-size:0.88rem;">
+                                    👤 نام کاربری پنل اصلی (login.melipayamak.com) <span class="req">*</span>
+                                </label>
+                                <input type="text" id="sms_username" name="sms_username" class="form-control" dir="ltr"
+                                    placeholder="شماره موبایل یا یوزرنیم پنل"
+                                    value="<?= e($settings['sms_username'] ?? '') ?>">
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label for="sms_password" class="form-label" style="font-weight:600;font-size:0.88rem;">
+                                    🔒 کلمه عبور پنل اصلی <span class="req">*</span>
+                                </label>
+                                <input type="password" id="sms_password" name="sms_password" class="form-control" dir="ltr"
+                                    placeholder="<?= !empty($settings['sms_password']) ? '•••••••• (رمز قبلاً ذخیره شده)' : 'رمز عبور ورود به پنل' ?>"
+                                    autocomplete="current-password">
+                            </div>
+                        </div>
+                        <small style="color:var(--muted);font-size:0.82rem;margin-top:8px;display:block;line-height:1.7;">
+                            همان نام کاربری و رمزی که با آن وارد سایت <b>login.melipayamak.com</b> می‌شوید. تمام الگوهای تاییدشده شما در وب‌سرویس خدماتی پنل اصلی بدون درج هیچ نام سایت متفرقه‌ای ارسال خواهند شد.
                         </small>
                     </div>
 
-                    <details style="margin-bottom:14px;background:rgba(0,0,0,0.02);border:1px dashed var(--border);border-radius:6px;padding:10px 14px;">
-                        <summary style="cursor:pointer;font-size:0.83rem;color:var(--muted);font-weight:600;">⚙️ تنظیمات پیشرفته (اختیاری — ویژه سرویس اختصاصی یکبارمصرف)</summary>
-                        <div style="margin-top:10px;">
-                            <label for="sms_api_key_otp" class="form-label" style="font-size:0.82rem;">کلید اختصاصی یکبارمصرف (فقط در صورت خرید سرویس اختصاصی OTP کنسول)</label>
-                            <input type="text" id="sms_api_key_otp" name="sms_api_key_otp" class="form-control" dir="ltr"
-                                placeholder="در حالت عادی خالی بگذارید — کلید اصلی بالا استفاده می‌شود"
-                                value="<?= e($settings['sms_api_key_otp'] ?? '') ?>">
-                            <small style="color:var(--muted);font-size:0.78rem;">اگر خالی باشد، کد تایید از طریق الگوی شماره ۱ و کلید اصلی بالا ارسال خواهد شد.</small>
+                    <!-- FIELDS FOR CONSOLE (console.melipayamak.com) -->
+                    <div id="provider_console_fields" style="display:<?= ($settings['sms_provider'] ?? 'melipayamak_main') === 'melipayamak_console' ? 'block' : 'none' ?>;margin-bottom:16px;">
+                        <div class="form-group" style="margin-bottom:12px;">
+                            <label for="sms_api_key" class="form-label" style="font-weight:700;font-size:0.92rem;">
+                                🔑 کلید وب‌سرویس کنسول (Console API Key) <span class="req">*</span>
+                            </label>
+                            <input type="text" id="sms_api_key" name="sms_api_key" class="form-control" dir="ltr" style="font-family:monospace;"
+                                placeholder="کپی از کنسول ملی‌پیامک (مثال: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)"
+                                value="<?= e($settings['sms_api_key'] ?? ($settings['sms_api_key_shared'] ?? '')) ?>">
+                            <small style="color:var(--muted);font-size:0.82rem;margin-top:5px;display:block;">
+                                کلید وب‌سرویس دریافتی از <b>console.melipayamak.com</b> (بخش کلیدهای وب‌سرویس).
+                            </small>
                         </div>
-                    </details>
+
+                        <details style="margin-bottom:10px;background:rgba(0,0,0,0.02);border:1px dashed var(--border);border-radius:6px;padding:8px 12px;">
+                            <summary style="cursor:pointer;font-size:0.82rem;color:var(--muted);font-weight:600;">⚙️ تنظیمات پیشرفته کنسول (کلید اختصاصی یکبارمصرف)</summary>
+                            <div style="margin-top:8px;">
+                                <label for="sms_api_key_otp" class="form-label" style="font-size:0.8rem;">کلید اختصاصی یکبارمصرف کنسول</label>
+                                <input type="text" id="sms_api_key_otp" name="sms_api_key_otp" class="form-control" dir="ltr"
+                                    placeholder="اختیاری"
+                                    value="<?= e($settings['sms_api_key_otp'] ?? '') ?>">
+                            </div>
+                        </details>
+                    </div>
 
                     <div class="form-group" style="margin-bottom:0;">
                         <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:bold;">
@@ -881,13 +956,28 @@ require_once __DIR__ . '/header.php';
                 </h3>
 
                 <div class="sms-pattern-grid">
-                    <div class="form-group">
-                        <label for="sms_pattern_otp" class="form-label">
+                    <div class="form-group" style="grid-column: 1 / -1; background: var(--adm-primary-50, rgba(46,133,64,0.05)); border: 1px solid var(--adm-border); border-radius: var(--radius-sm, 6px); padding: 14px;">
+                        <label for="sms_pattern_otp" class="form-label" style="font-weight:700; font-size: 0.95rem;">
                             ۱. کد تایید ورود و ثبت‌نام (OTP)
                         </label>
-                        <input type="number" id="sms_pattern_otp" name="sms_pattern_otp" class="form-control" dir="ltr"
-                            placeholder="کد متن تاییدشده (نه 524 نمونه)" value="<?= e($settings['sms_pattern_otp'] ?? '') ?>">
-                        <small style="color:var(--muted);font-size:0.8rem;">فقط برای مسیر پترن/خدماتی. <b>کد متن واقعی</b> از «ابزار ویژه ← وبسرویس خدماتی» (وضعیت: تایید شده). عدد 524 در مستندات فقط نمونه است.<br>متغیر: <code>{0}=کد تایید</code> (دقیقاً یک متغیر)<br>اگر «کلید یکبارمصرف» تنظیم باشد، OTP با API بومی می‌رود و این فیلد لازم نیست.</small>
+                        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                            <input type="number" id="sms_pattern_otp" name="sms_pattern_otp" class="form-control" dir="ltr" style="max-width:200px;"
+                                placeholder="کد متن تاییدشده" value="<?= e($settings['sms_pattern_otp'] ?? '') ?>">
+                            <small style="color:var(--muted);font-size:0.8rem;">کد متن تاییدشده از «ابزار ویژه ← وبسرویس خدماتی» (متغیر: <code>{0}=کد تایید</code>)</small>
+                        </div>
+                        <div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--adm-border);">
+                            <label class="form-label" style="font-weight:600;font-size:0.82rem;margin-bottom:6px;">روش ارسال پیامک کد تایید به والدین:</label>
+                            <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.82rem;">
+                                    <input type="radio" name="sms_otp_type" value="pattern" <?= ($settings['sms_otp_type'] ?? 'pattern') === 'pattern' ? 'checked' : '' ?>>
+                                    <span>🎨 <b>الگوی اختصاصی مهدکودک روما</b> (با نام و لحن دلخواه مهدکودک و بدون درج نام یا لینک سایت‌های دیگر — با کد متن بالا)</span>
+                                </label>
+                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.82rem;">
+                                    <input type="radio" name="sms_otp_type" value="fast" <?= ($settings['sms_otp_type'] ?? 'pattern') === 'fast' ? 'checked' : '' ?>>
+                                    <span>⚡ <b>سرویس فوق‌سریع ملی‌پیامک (Flash OTP)</b> (ارسال در کمتر از ۵ ثانیه — با متن پیش‌فرض پنل ملی‌پیامک شما)</span>
+                                </label>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -985,19 +1075,25 @@ require_once __DIR__ . '/header.php';
             <form method="post" action="<?= e(url('admin/settings.php#sms-section')) ?>" id="sms_check_conn_form" style="display:none;">
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <input type="hidden" name="action" value="check_sms_connection">
+                <input type="hidden" name="check_provider" id="sms_check_provider_hidden" value="">
+                <input type="hidden" name="check_username" id="sms_check_username_hidden" value="">
+                <input type="hidden" name="check_password" id="sms_check_password_hidden" value="">
                 <input type="hidden" name="check_api_key" id="sms_check_api_key_hidden" value="">
             </form>
 
             <!-- Test SMS Form -->
             <div style="background:var(--adm-primary-50, rgba(46,133,64,0.06));border:1px solid var(--adm-border);padding:18px;border-radius:var(--radius-md);margin-bottom:var(--space-xl);">
                 <h3 style="font-size:1rem;color:var(--adm-primary,#3D8B63);margin-bottom:8px;">🧪 تست زنده ارسال پیامک خدماتی با الگو</h3>
-                <p style="font-size:0.85rem;color:var(--adm-text-muted);margin-bottom:12px;">برای اطمینان از صحت کلید API و شناسه الگو، یک پیامک تستی به شماره دلخواه ارسال کنید.</p>
+                <p style="font-size:0.85rem;color:var(--adm-text-muted);margin-bottom:12px;">برای اطمینان از صحت وب‌سرویس و شناسه الگو، یک پیامک تستی به شماره دلخواه ارسال کنید.</p>
                 <?php
-                $hasAnyKey = !empty(trim((string)($settings['sms_api_key'] ?? ($settings['sms_api_key_shared'] ?? ''))));
+                $isMainMode = ($settings['sms_provider'] ?? 'melipayamak_main') === 'melipayamak_main';
+                $hasMainCreds = !empty(trim((string)($settings['sms_username'] ?? '')));
+                $hasConsoleCreds = !empty(trim((string)($settings['sms_api_key'] ?? ($settings['sms_api_key_shared'] ?? ''))));
+                $hasAnyCreds = $isMainMode ? $hasMainCreds : $hasConsoleCreds;
                 ?>
-                <?php if (!$hasAnyKey): ?>
+                <?php if (!$hasAnyCreds): ?>
                     <div style="background:rgba(198,40,40,0.08);border:1px solid rgba(198,40,40,0.25);color:var(--adm-danger, #c62828);padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:0.84rem;line-height:1.7;">
-                        ⚠️ <strong>کلید وب‌سرویس ثبت نشده است:</strong> لطفاً ابتدا در کادر بالا «کلید وب‌سرویس ملی‌پیامک» را وارد کرده و دکمه <strong>«💾 ذخیره تنظیمات پیامک»</strong> را بزنید، سپس پیامک تست بفرستید.
+                        ⚠️ <strong>اطلاعات ورود به سامانه ثبت نشده است:</strong> لطفاً ابتدا در کادر بالا <?= $isMainMode ? '«نام کاربری و کلمه عبور پنل اصلی (login.melipayamak.com)»' : '«کلید وب‌سرویس»' ?> را وارد کرده و دکمه <strong>«💾 ذخیره تنظیمات پیامک»</strong> را بزنید، سپس پیامک تست بفرستید.
                     </div>
                 <?php elseif (($settings['sms_enabled'] ?? '0') !== '1'): ?>
                     <div style="background:rgba(200,134,13,0.08);border:1px solid rgba(200,134,13,0.25);color:var(--adm-warning, #c8860d);padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:0.84rem;line-height:1.7;">
@@ -1067,6 +1163,18 @@ require_once __DIR__ . '/header.php';
             </div>
 
             <script>
+            function toggleProviderFields(provider) {
+                var mainBox = document.getElementById('provider_main_fields');
+                var consoleBox = document.getElementById('provider_console_fields');
+                if (provider === 'melipayamak_main') {
+                    if (mainBox) mainBox.style.display = 'block';
+                    if (consoleBox) consoleBox.style.display = 'none';
+                } else {
+                    if (mainBox) mainBox.style.display = 'none';
+                    if (consoleBox) consoleBox.style.display = 'block';
+                }
+            }
+
             var smsApiKeyInput = document.getElementById('sms_api_key');
             if (smsApiKeyInput) {
                 function sanitizeApiKeyField() {
@@ -1081,14 +1189,25 @@ require_once __DIR__ . '/header.php';
             }
 
             function checkMelipayamakLive() {
-                var keyInput = document.getElementById('sms_api_key');
-                var keyVal = keyInput ? keyInput.value.trim() : '';
-                if (keyVal.indexOf('/') !== -1) {
-                    var parts = keyVal.replace(/\/+$/, '').split('/');
-                    keyVal = parts[parts.length - 1].trim();
-                    if (keyInput) keyInput.value = keyVal;
+                var checkedRadio = document.querySelector('input[name="sms_provider"]:checked');
+                var provider = checkedRadio ? checkedRadio.value : 'melipayamak_main';
+                document.getElementById('sms_check_provider_hidden').value = provider;
+
+                if (provider === 'melipayamak_main') {
+                    var u = document.getElementById('sms_username');
+                    var p = document.getElementById('sms_password');
+                    document.getElementById('sms_check_username_hidden').value = u ? u.value.trim() : '';
+                    document.getElementById('sms_check_password_hidden').value = p ? p.value : '';
+                } else {
+                    var keyInput = document.getElementById('sms_api_key');
+                    var keyVal = keyInput ? keyInput.value.trim() : '';
+                    if (keyVal.indexOf('/') !== -1) {
+                        var parts = keyVal.replace(/\/+$/, '').split('/');
+                        keyVal = parts[parts.length - 1].trim();
+                        if (keyInput) keyInput.value = keyVal;
+                    }
+                    document.getElementById('sms_check_api_key_hidden').value = keyVal;
                 }
-                document.getElementById('sms_check_api_key_hidden').value = keyVal;
                 document.getElementById('sms_check_conn_form').submit();
             }
 
