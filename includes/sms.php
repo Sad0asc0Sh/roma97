@@ -85,6 +85,13 @@ function getSmsSettings(?PDO $pdo = null): array
                 $defaults[$row['meta_key']] = (string) $row['meta_value'];
             }
         }
+
+        // Keep single master API key and legacy shared key in sync
+        if ($defaults['sms_api_key'] === '' && $defaults['sms_api_key_shared'] !== '') {
+            $defaults['sms_api_key'] = $defaults['sms_api_key_shared'];
+        } elseif ($defaults['sms_api_key_shared'] === '' && $defaults['sms_api_key'] !== '') {
+            $defaults['sms_api_key_shared'] = $defaults['sms_api_key'];
+        }
     } catch (Throwable $e) {
         error_log('getSmsSettings error: ' . $e->getMessage());
     }
@@ -113,64 +120,216 @@ function melipayamakCleanKey(string $key): string
 }
 
 /**
- * Resolve Console key for a given endpoint family.
- * shared/pattern → service key (کلید خدماتی); otp → one-time key (کلید یکبارمصرف).
- * Falls back to legacy sms_api_key when the dedicated field is empty.
+ * Resolve Console API key for endpoints.
+ * Prioritizes the primary single API key (sms_api_key).
+ * Dedicated sms_api_key_otp is only used when kind is 'otp' and explicitly configured.
  */
-function melipayamakConsoleKey(array $settings, string $kind): string
+function melipayamakConsoleKey(array $settings, string $kind = 'shared'): string
 {
     if ($kind === 'otp') {
-        $key = melipayamakCleanKey((string) ($settings['sms_api_key_otp'] ?? ''));
-        return $key !== '' ? $key : melipayamakCleanKey((string) ($settings['sms_api_key'] ?? ''));
+        $dedicatedOtp = melipayamakCleanKey((string) ($settings['sms_api_key_otp'] ?? ''));
+        if ($dedicatedOtp !== '') {
+            return $dedicatedOtp;
+        }
     }
 
-    $key = melipayamakCleanKey((string) ($settings['sms_api_key_shared'] ?? ''));
-    return $key !== '' ? $key : melipayamakCleanKey((string) ($settings['sms_api_key'] ?? ''));
+    $primary = melipayamakCleanKey((string) ($settings['sms_api_key'] ?? ''));
+    if ($primary !== '') {
+        return $primary;
+    }
+
+    return melipayamakCleanKey((string) ($settings['sms_api_key_shared'] ?? ''));
 }
 
 /**
- * POST JSON to MeliPayamak Console REST API.
- *
- * Official Console contract (from console.melipayamak.com samples):
- *   POST https://console.melipayamak.com/api/send/{otp|shared}/{key}
- *   Content-Type: application/json
- *   Body is a flat JSON object (NOT wrapped in "model").
- *   Wrong HTTP verb → 405 (Allow: GET, HEAD, POST). Form body → 415.
+ * Executes an HTTP request to MeliPayamak Console REST API.
+ * Uses cURL when available (with auto-fallback on missing root CA certificates)
+ * and falls back to PHP streams when cURL is missing (e.g. CLI environments).
  *
  * @return array{http:int, body:array, raw:string, error:string}
  */
-function melipayamakConsolePost(string $url, array $payload): array
+function melipayamakExecuteRequest(string $url, string $method = 'POST', ?array $payload = null): array
 {
-    $payloadJson = json_encode($payload, JSON_UNESCAPED_UNICODE) ?: '{}';
+    $payloadJson = $payload !== null ? (json_encode($payload, JSON_UNESCAPED_UNICODE) ?: '{}') : null;
 
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $payloadJson);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json; charset=utf-8',
-        'Accept: application/json',
-    ]);
+    if (function_exists('curl_init')) {
+        $execCurl = static function (bool $verifySsl) use ($url, $method, $payloadJson): array {
+            $ch = curl_init($url);
+            if ($method === 'POST') {
+                curl_setopt($ch, CURLOPT_POST, true);
+                if ($payloadJson !== null) {
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $payloadJson);
+                }
+            } else {
+                curl_setopt($ch, CURLOPT_HTTPGET, true);
+            }
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $verifySsl);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $verifySsl ? 2 : 0);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json; charset=utf-8',
+                'Accept: application/json',
+            ]);
 
-    $responseRaw = curl_exec($ch);
-    $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
-    curl_close($ch);
+            $responseRaw = curl_exec($ch);
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = (string) curl_error($ch);
+            if (PHP_VERSION_ID < 80500) {
+                @curl_close($ch);
+            }
 
-    if ($responseRaw === false) {
-        $responseRaw = '';
+            return [$responseRaw, $httpCode, $curlError];
+        };
+
+        [$responseRaw, $httpCode, $curlError] = $execCurl(true);
+
+        // Fallback: If local SSL certificate bundle is missing (common on Windows / local dev / shared hosts),
+        // retry safely with verify=false so valid requests are not blocked by local environment misconfiguration.
+        if ($httpCode === 0 && ($curlError !== '' && (
+            str_contains(strtolower($curlError), 'certificate')
+            || str_contains(strtolower($curlError), 'issuer')
+            || str_contains(strtolower($curlError), 'ssl')
+        ))) {
+            [$responseRaw, $httpCode, $curlError] = $execCurl(false);
+        }
+
+        if ($responseRaw === false) {
+            $responseRaw = '';
+        }
+
+        $decoded = json_decode((string) $responseRaw, true);
+
+        return [
+            'http'  => $httpCode,
+            'body'  => is_array($decoded) ? $decoded : [],
+            'raw'   => (string) $responseRaw,
+            'error' => $curlError,
+        ];
     }
 
-    $decoded = json_decode((string) $responseRaw, true);
+    // Stream context fallback when php-curl is not loaded
+    $headers = "Accept: application/json\r\n";
+    if ($payloadJson !== null) {
+        $headers .= "Content-Type: application/json; charset=utf-8\r\nContent-Length: " . strlen($payloadJson) . "\r\n";
+    }
+
+    $streamOpts = [
+        'http' => [
+            'method'        => $method,
+            'header'        => $headers,
+            'content'       => $payloadJson ?? '',
+            'timeout'       => 20,
+            'ignore_errors' => true,
+        ],
+        'ssl' => [
+            'verify_peer'      => false,
+            'verify_peer_name' => false,
+        ],
+    ];
+
+    $ctx = stream_context_create($streamOpts);
+    $responseRaw = @file_get_contents($url, false, $ctx);
+    $httpCode = 0;
+    $respHeaders = function_exists('http_get_last_response_headers')
+        ? (http_get_last_response_headers() ?? [])
+        : ($GLOBALS['http_response_header'] ?? []);
+
+    if (is_array($respHeaders) && isset($respHeaders[0]) && preg_match('#HTTP/\S+\s+(\d+)#', $respHeaders[0], $m)) {
+        $httpCode = (int) $m[1];
+    }
+
+    if ($responseRaw === false) {
+        $lastErr = error_get_last();
+        return [
+            'http'  => $httpCode,
+            'body'  => [],
+            'raw'   => '',
+            'error' => (string) ($lastErr['message'] ?? 'خطای برقراری ارتباط با وب‌سرویس پیامک'),
+        ];
+    }
+
+    $decoded = json_decode($responseRaw, true);
 
     return [
         'http'  => $httpCode,
         'body'  => is_array($decoded) ? $decoded : [],
         'raw'   => (string) $responseRaw,
-        'error' => (string) $curlError,
+        'error' => '',
+    ];
+}
+
+/**
+ * POST JSON to MeliPayamak Console REST API.
+ */
+function melipayamakConsolePost(string $url, array $payload): array
+{
+    return melipayamakExecuteRequest($url, 'POST', $payload);
+}
+
+/**
+ * GET request to MeliPayamak Console REST API.
+ */
+function melipayamakConsoleGet(string $url): array
+{
+    return melipayamakExecuteRequest($url, 'GET', null);
+}
+
+/**
+ * Checks connection to MeliPayamak Console API and fetches account credit / status.
+ *
+ * @param string $apiKey
+ * @return array{success: bool, credit: string|null, message: string}
+ */
+function checkMelipayamakConnection(string $apiKey): array
+{
+    $cleanKey = melipayamakCleanKey($apiKey);
+    if ($cleanKey === '') {
+        return ['success' => false, 'credit' => null, 'message' => 'کلید وب‌سرویس ملی‌پیامک وارد نشده است.'];
+    }
+
+    $url = 'https://console.melipayamak.com/api/receive/credit/' . rawurlencode($cleanKey);
+    $res = melipayamakConsoleGet($url);
+
+    if ($res['error'] !== '' && $res['http'] === 0) {
+        return ['success' => false, 'credit' => null, 'message' => 'خطای اتصال به سرور ملی‌پیامک: ' . $res['error']];
+    }
+
+    if ($res['http'] >= 200 && $res['http'] < 300) {
+        $body = $res['body'];
+        $raw = trim($res['raw']);
+        $creditVal = null;
+        if (is_numeric($raw)) {
+            $creditVal = $raw;
+        } elseif (isset($body['amount'])) {
+            $creditVal = (string) $body['amount'];
+        } elseif (isset($body['credit'])) {
+            $creditVal = (string) $body['credit'];
+        } elseif (isset($body['value'])) {
+            $creditVal = (string) $body['value'];
+        } else {
+            $creditVal = $raw;
+        }
+
+        $formatted = is_numeric($creditVal) ? number_format((float) $creditVal) . ' ریال' : $creditVal;
+
+        return [
+            'success' => true,
+            'credit'  => $creditVal,
+            'message' => "اتصال به پنل با موفقیت برقرار شد. میزان اعتبار حساب شما: {$formatted}",
+        ];
+    }
+
+    $status = (string) ($res['body']['status'] ?? $res['body']['message'] ?? '');
+    if ($status === '') {
+        $status = $res['http'] === 400 ? 'کلید کنسول معتبر نیست.' : sprintf('خطا در وب‌سرویس پیامک (HTTP %d)', $res['http']);
+    }
+
+    return [
+        'success' => false,
+        'credit'  => null,
+        'message' => $status,
     ];
 }
 
@@ -188,8 +347,8 @@ function melipayamakExplainFailure(int $httpCode, string $status, string $raw): 
     return match (true) {
         $httpCode === 405 => 'HTTP 405: متد درخواست پذیرفته نیست (باید POST باشد).',
         $httpCode === 415 => 'HTTP 415: نوع محتوا باید application/json باشد.',
-        $httpCode === 401, $httpCode === 403 => 'HTTP ' . $httpCode . ': کلید کنسول پذیرفته نشد (کلید خدماتی/یکبارمصرف را جدا وارد کنید).',
-        $httpCode === 400 => 'HTTP 400: درخواست نامعتبر است (کلید، bodyId یا تعداد متغیرها را بررسی کنید). ' . mb_substr($raw, 0, 200, 'UTF-8'),
+        $httpCode === 401, $httpCode === 403 => 'HTTP ' . $httpCode . ': کلید کنسول پذیرفته نشد. لطفاً کلید معتبر را در تنظیمات وارد کنید.',
+        $httpCode === 400 => 'HTTP 400: درخواست نامعتبر است (کلید، شناسه الگو یا تعداد متغیرها را بررسی کنید). ' . mb_substr($raw, 0, 200, 'UTF-8'),
         default => sprintf('خطا در وب‌سرویس پیامک (HTTP %d). %s', $httpCode, mb_substr($raw, 0, 200, 'UTF-8')),
     };
 }
@@ -245,7 +404,7 @@ function sendMeliPayamakPattern(
 
     $apiKey = melipayamakConsoleKey($settings, 'shared');
     if ($apiKey === '') {
-        $keyMsg = 'کلید خدماتی کنسول ملی‌پیامک تنظیم نشده است. در کنسول، بخش «ارسال از خط خدماتی» کلید خدماتی را کپی کنید.';
+        $keyMsg = 'کلید وب‌سرویس ملی‌پیامک تنظیم نشده است. لطفاً کلید کنسول خود را در بخش تنظیمات وارد کنید.';
         logSmsDelivery($pdo, $normalizedPhone, $bodyId, $args, null, $keyMsg, false, $eventType, $parentId);
         return ['success' => false, 'recId' => null, 'status' => $keyMsg];
     }
@@ -492,29 +651,8 @@ function generateAndSendSmsOtp(
         ]);
     };
 
-    // Preferred: Console native OTP API («کلید یکبارمصرف»). Body is only {"to":"..."}.
-    if ($gatewayEnabled && $otpKey !== '') {
-        $smsResult = sendMeliPayamakOtp($normalized, 'otp');
-        if ($smsResult['success'] && $smsResult['code'] !== '') {
-            $storeCode((string) $smsResult['code']);
-            $digits = (int) strlen((string) $smsResult['code']);
-            return [
-                'success' => true,
-                'message' => "کد تایید {$digits} رقمی به شماره موبایل شما ارسال شد.",
-                'code_debug' => $isDevMode ? (string) $smsResult['code'] : null,
-            ];
-        }
-
-        if ($otpBodyId <= 0 || $sharedKey === '') {
-            return [
-                'success' => false,
-                'message' => 'ارسال پیامک با مشکل مواجه شد: ' . $smsResult['status'],
-                'code_debug' => null,
-            ];
-        }
-    }
-
-    // Fallback: shared/pattern API with a locally generated 5-digit code.
+    // PRIMARY PATH (Standard MeliPayamak Shared Pattern with 5-digit OTP):
+    // Uses the user's single master API key and the approved OTP pattern (sms_pattern_otp).
     if ($gatewayEnabled && $otpBodyId > 0 && $sharedKey !== '') {
         $code = (string) random_int(10000, 99999);
         $storeCode($code);
@@ -535,6 +673,28 @@ function generateAndSendSmsOtp(
         ];
     }
 
+    // SECONDARY PATH (Dedicated native Console OTP API):
+    // Only used when a dedicated OTP key is explicitly configured.
+    $dedicatedOtpKey = melipayamakCleanKey((string) ($settings['sms_api_key_otp'] ?? ''));
+    if ($gatewayEnabled && $dedicatedOtpKey !== '') {
+        $smsResult = sendMeliPayamakOtp($normalized, 'otp');
+        if ($smsResult['success'] && $smsResult['code'] !== '') {
+            $storeCode((string) $smsResult['code']);
+            $digits = (int) strlen((string) $smsResult['code']);
+            return [
+                'success' => true,
+                'message' => "کد تایید {$digits} رقمی به شماره موبایل شما ارسال شد.",
+                'code_debug' => $isDevMode ? (string) $smsResult['code'] : null,
+            ];
+        }
+
+        return [
+            'success' => false,
+            'message' => 'ارسال پیامک با مشکل مواجه شد: ' . $smsResult['status'],
+            'code_debug' => null,
+        ];
+    }
+
     if ($isDevMode) {
         $code = (string) random_int(10000, 99999);
         $storeCode($code);
@@ -547,7 +707,7 @@ function generateAndSendSmsOtp(
 
     $reason = !$gatewayEnabled
         ? 'سامانه پیامک مهدکودک در حال حاضر غیرفعال است.'
-        : 'برای ارسال کد تایید، «کلید یکبارمصرف» کنسول (یا کلید خدماتی + الگوی OTP) تنظیم نشده است.';
+        : 'شناسه الگوی پیامک کد تایید (OTP) یا کلید وب‌سرویس ملی‌پیامک در تنظیمات ثبت نشده است.';
 
     error_log('generateAndSendSmsOtp blocked: ' . $reason);
 

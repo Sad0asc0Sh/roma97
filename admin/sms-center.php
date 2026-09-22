@@ -140,6 +140,20 @@ if (isPostRequest()) {
                 . ' · ناموفق: ' . persianNumber((string) $res['failed'])
                 . ' · باقی‌مانده: ' . persianNumber((string) $res['remaining'])
             );
+        } elseif ($action === 'check_sms_connection') {
+            $currentSettings = getSmsSettings($pdo);
+            $keyToCheck = melipayamakConsoleKey($currentSettings, 'shared');
+
+            if ($keyToCheck === '') {
+                setFlash('error', 'کلید وب‌سرویس ملی‌پیامک وارد نشده است. لطفاً ابتدا در صفحه تنظیمات کلید را ذخیره کنید.');
+            } else {
+                $connRes = checkMelipayamakConnection($keyToCheck);
+                if ($connRes['success']) {
+                    setFlash('success', '✅ ' . $connRes['message']);
+                } else {
+                    setFlash('error', '❌ خطا در اتصال به ملی‌پیامک: ' . $connRes['message']);
+                }
+            }
         } elseif ($action === 'send_test') {
             $testPhone = trim((string) ($_POST['test_phone'] ?? ''));
             $eventKey  = trim((string) ($_POST['test_event'] ?? ''));
@@ -307,7 +321,14 @@ require_once __DIR__ . '/header.php';
             <h1 style="margin-bottom:4px;">📱 مرکز پیامک و اعلان‌ها</h1>
             <p class="muted" style="margin:0;">وضعیت سامانه پیامک، صف ارسال، پوشش رویدادها و گزارش کامل تحویل — همه در یک صفحه.</p>
         </div>
-        <a href="<?= e(url('admin/settings.php#sms-section')) ?>" class="btn btn-secondary">⚙️ تنظیمات و الگوها</a>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <form method="post" action="<?= e(url('admin/sms-center.php')) ?>" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                <input type="hidden" name="action" value="check_sms_connection">
+                <button type="submit" class="btn btn-secondary" style="font-size:0.85rem;">🔍 استعلام موجودی و بررسی اتصال</button>
+            </form>
+            <a href="<?= e(url('admin/settings.php#sms-section')) ?>" class="btn btn-primary" style="font-size:0.85rem;">⚙️ تنظیمات و الگوها</a>
+        </div>
     </div>
 
     <?php if ($errorMessage !== ''): ?>
@@ -608,14 +629,24 @@ require_once __DIR__ . '/header.php';
                 </select>
             </div>
 
-            <div style="flex:1;min-width:140px;">
+            <div style="flex:1;min-width:130px;">
                 <label for="test_arg_0" class="form-label" style="font-size:0.82rem;">متغیر اول ({0})</label>
-                <input type="text" id="test_arg_0" name="test_arg_0" class="form-control" placeholder="خالی = برچسب پیش‌فرض">
+                <input type="text" id="test_arg_0" name="test_arg_0" class="form-control" placeholder="خالی = پیش‌فرض">
             </div>
 
-            <div style="flex:1;min-width:140px;">
+            <div style="flex:1;min-width:130px;">
                 <label for="test_arg_1" class="form-label" style="font-size:0.82rem;">متغیر دوم ({1})</label>
                 <input type="text" id="test_arg_1" name="test_arg_1" class="form-control" placeholder="اختیاری">
+            </div>
+
+            <div style="flex:1;min-width:130px;">
+                <label for="test_arg_2" class="form-label" style="font-size:0.82rem;">متغیر سوم ({2})</label>
+                <input type="text" id="test_arg_2" name="test_arg_2" class="form-control" placeholder="اختیاری">
+            </div>
+
+            <div style="flex:1;min-width:130px;">
+                <label for="test_arg_3" class="form-label" style="font-size:0.82rem;">متغیر چهارم ({3})</label>
+                <input type="text" id="test_arg_3" name="test_arg_3" class="form-control" placeholder="اختیاری">
             </div>
 
             <button type="submit" class="btn btn-primary">🚀 ارسال تست</button>

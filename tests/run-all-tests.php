@@ -17,6 +17,7 @@ if (PHP_SAPI !== 'cli') {
 
 $suites = [
     'tests/jalali-date-test.php',
+    'tests/sms-system-verification-test.php',
     'tests/sms-queue-reaper-test.php',
     'tests/parent-phone-test.php',
     'tests/role-matrix-test.php',

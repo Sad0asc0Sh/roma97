@@ -317,6 +317,12 @@ if (isPostRequest()) {
         $smsEnabled = isset($_POST['sms_enabled']) ? '1' : '0';
         $smsApiKey  = trim((string) ($_POST['sms_api_key'] ?? ''));
         $smsKeyShared = trim((string) ($_POST['sms_api_key_shared'] ?? ''));
+        // If master API key is provided, sync to shared key for full backward compatibility
+        if ($smsApiKey !== '' && $smsKeyShared === '') {
+            $smsKeyShared = $smsApiKey;
+        } elseif ($smsKeyShared !== '' && $smsApiKey === '') {
+            $smsApiKey = $smsKeyShared;
+        }
         $smsKeyOtp    = trim((string) ($_POST['sms_api_key_otp'] ?? ''));
         $smsDetailed = isset($_POST['sms_detailed_report_enabled']) ? '1' : '0';
         $bodyOtp    = trim((string) ($_POST['sms_pattern_otp'] ?? ''));
@@ -361,11 +367,33 @@ if (isPostRequest()) {
         redirect(url('admin/settings.php#sms-section'));
     }
 
+    if ($action === 'check_sms_connection') {
+        $keyToCheck = trim((string) ($_POST['check_api_key'] ?? ''));
+        if ($keyToCheck === '') {
+            $currentSettings = getSmsSettings($pdo);
+            $keyToCheck = melipayamakConsoleKey($currentSettings, 'shared');
+        }
+
+        if ($keyToCheck === '') {
+            setFlash('error', 'کلید وب‌سرویس ملی‌پیامک وارد نشده است. لطفاً ابتدا کلید را وارد کنید.');
+        } else {
+            $connRes = checkMelipayamakConnection($keyToCheck);
+            if ($connRes['success']) {
+                setFlash('success', '✅ ' . $connRes['message']);
+            } else {
+                setFlash('error', '❌ خطا در اتصال به ملی‌پیامک: ' . $connRes['message']);
+            }
+        }
+        redirect(url('admin/settings.php#sms-section'));
+    }
+
     if ($action === 'test_sms') {
         $testPhone = trim((string) ($_POST['test_phone'] ?? ''));
         $testBodyId = (int) ($_POST['test_body_id'] ?? 0);
-        $testArg1 = trim((string) ($_POST['test_arg1'] ?? 'تست'));
-        $testArg2 = trim((string) ($_POST['test_arg2'] ?? 'مهد کودک روما'));
+        $testArg1 = trim((string) ($_POST['test_arg1'] ?? ''));
+        $testArg2 = trim((string) ($_POST['test_arg2'] ?? ''));
+        $testArg3 = trim((string) ($_POST['test_arg3'] ?? ''));
+        $testArg4 = trim((string) ($_POST['test_arg4'] ?? ''));
 
         if (!isValidIranianMobile($testPhone)) {
             setFlash('error', 'شماره موبایل گیرنده تست نامعتبر است (مثال: 09123456789).');
@@ -377,14 +405,21 @@ if (isPostRequest()) {
             redirect(url('admin/settings.php#sms-section'));
         }
 
-        $args = array_filter([$testArg1, $testArg2], fn($a) => $a !== '');
-        $res = sendMeliPayamakPattern($testPhone, $testBodyId, array_values($args), 'test');
+        $rawArgs = [$testArg1, $testArg2, $testArg3, $testArg4];
+        while (count($rawArgs) > 0 && end($rawArgs) === '') {
+            array_pop($rawArgs);
+        }
+        if ($rawArgs === []) {
+            $rawArgs = ['تست'];
+        }
+
+        $res = sendMeliPayamakPattern($testPhone, $testBodyId, $rawArgs, 'test');
 
         if ($res['success']) {
             $msg = "پیامک تست با موفقیت ارسال شد. کد پیگیری: " . ($res['recId'] ?? '-');
             $currentSettings = getSmsSettings($pdo);
             if (($currentSettings['sms_enabled'] ?? '0') !== '1') {
-                $msg .= " (توجه: ارسال پیامک سیستمی در مهد هنوز خاموش است؛ برای فعال‌سازی کامل، تیک «فعال‌سازی ارسال پیامک‌های سیستمی» را در فرم بالا بزنید و دکمه ذخیره را کلیک کنید).";
+                $msg .= " (توجه: ارسال پیامک سیستمی هنوز خاموش است؛ برای فعال‌سازی کامل، تیک «فعال‌سازی ارسال پیامک‌های سیستمی» را بزنید و ذخیره کنید).";
             }
             setFlash('success', $msg);
         } else {
@@ -784,36 +819,30 @@ require_once __DIR__ . '/header.php';
                         <small style="color:var(--muted);font-size:0.85rem;">در صورت غیرفعال بودن، پیام‌ها فقط به صورت نوتیفیکیشن درون پورتال ذخیره می‌شوند.</small>
                     </div>
 
-                    <div class="form-group" style="margin-bottom:12px;">
-                        <label for="sms_api_key_shared" class="form-label">کلید خدماتی — ارسال از خط خدماتی (الگو/پترن) <span class="req">*</span></label>
-                        <input type="text" id="sms_api_key_shared" name="sms_api_key_shared" class="form-control" dir="ltr"
-                            placeholder="کپی از کنسول → ارسال از خط خدماتی"
-                            value="<?= e($settings['sms_api_key_shared'] ?? ($settings['sms_api_key'] ?? '')) ?>">
-                        <small style="color:var(--muted);font-size:0.85rem;">
-                            از کنسول ملی‌پیامک ← بخش «ارسال از خط خدماتی» ← <b>کلید خدماتی</b>.
-                            این کلید فقط برای <code>POST /api/send/shared/&#123;key&#125;</code> با بدنه <code>&#123;"bodyId","to","args"&#125;</code> است.
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label for="sms_api_key" class="form-label" style="font-weight:700;font-size:0.95rem;">
+                            🔑 کلید وب‌سرویس ملی‌پیامک (Console API Key) <span class="req">*</span>
+                        </label>
+                        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                            <input type="text" id="sms_api_key" name="sms_api_key" class="form-control" dir="ltr" style="flex:1;min-width:280px;font-family:monospace;font-size:0.95rem;"
+                                placeholder="کپی از کنسول ملی‌پیامک (مثال: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)"
+                                value="<?= e($settings['sms_api_key'] ?? ($settings['sms_api_key_shared'] ?? '')) ?>">
+                        </div>
+                        <small style="color:var(--muted);font-size:0.84rem;margin-top:6px;display:block;line-height:1.7;">
+                            تنها با وارد کردن <b>همین یک کلید</b> از پنل کنسول ملی‌پیامک (منوی وب‌سرویس / خط خدماتی اشتراکی)، تمام پیامک‌های الگو و کدهای تایید (OTP) مهد به صورت آنی ارسال می‌شوند.
                         </small>
                     </div>
 
-                    <div class="form-group" style="margin-bottom:12px;">
-                        <label for="sms_api_key_otp" class="form-label">کلید یکبارمصرف — رمز یکبار مصرف (OTP)</label>
-                        <input type="text" id="sms_api_key_otp" name="sms_api_key_otp" class="form-control" dir="ltr"
-                            placeholder="کپی از کنسول → ارسال پیامک رمز یکبار مصرف"
-                            value="<?= e($settings['sms_api_key_otp'] ?? '') ?>">
-                        <small style="color:var(--muted);font-size:0.85rem;">
-                            از کنسول ← «ارسال پیامک رمز یکبار مصرف» ← <b>کلید یکبارمصرف</b> (جدا از کلید خدماتی!).
-                            فقط بدنه <code>&#123;"to":"09…"&#125;</code> — کد را خود ملی‌پیامک می‌سازد.
-                            اگر خالی باشد، OTP از الگوی خدماتی ارسال می‌شود.
-                        </small>
-                    </div>
-
-                    <div class="form-group" style="margin-bottom:12px;">
-                        <label for="sms_api_key" class="form-label">کلید قدیمی/مشترک (اختیاری — fallback)</label>
-                        <input type="text" id="sms_api_key" name="sms_api_key" class="form-control" dir="ltr"
-                            placeholder="فقط اگر هر دو کلید بالا یکی است"
-                            value="<?= e($settings['sms_api_key'] ?? '') ?>">
-                        <small style="color:var(--muted);font-size:0.85rem;">اگر خالی بودن کلیدهای بالا، این مقدار برای هر دو endpoint استفاده می‌شود. کلید خدماتی و یکبارمصرف معمولاً <b>متفاوت</b> هستند.</small>
-                    </div>
+                    <details style="margin-bottom:14px;background:rgba(0,0,0,0.02);border:1px dashed var(--border);border-radius:6px;padding:10px 14px;">
+                        <summary style="cursor:pointer;font-size:0.83rem;color:var(--muted);font-weight:600;">⚙️ تنظیمات پیشرفته (اختیاری — ویژه سرویس اختصاصی یکبارمصرف)</summary>
+                        <div style="margin-top:10px;">
+                            <label for="sms_api_key_otp" class="form-label" style="font-size:0.82rem;">کلید اختصاصی یکبارمصرف (فقط در صورت خرید سرویس اختصاصی OTP کنسول)</label>
+                            <input type="text" id="sms_api_key_otp" name="sms_api_key_otp" class="form-control" dir="ltr"
+                                placeholder="در حالت عادی خالی بگذارید — کلید اصلی بالا استفاده می‌شود"
+                                value="<?= e($settings['sms_api_key_otp'] ?? '') ?>">
+                            <small style="color:var(--muted);font-size:0.78rem;">اگر خالی باشد، کد تایید از طریق الگوی شماره ۱ و کلید اصلی بالا ارسال خواهد شد.</small>
+                        </div>
+                    </details>
 
                     <div class="form-group" style="margin-bottom:0;">
                         <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:bold;">
@@ -923,16 +952,28 @@ require_once __DIR__ . '/header.php';
                     </div>
                 </div>
 
-                <div class="form-actions">
+                <div class="form-actions" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                     <button type="submit" class="btn btn-primary">💾 ذخیره تنظیمات پیامک</button>
+                    <button type="button" class="btn btn-secondary" onclick="checkMelipayamakLive();" style="display:inline-flex;align-items:center;gap:6px;">
+                        🔍 بررسی اتصال و استعلام اعتبار پنل
+                    </button>
                 </div>
+            </form>
+
+            <form method="post" action="<?= e(url('admin/settings.php#sms-section')) ?>" id="sms_check_conn_form" style="display:none;">
+                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                <input type="hidden" name="action" value="check_sms_connection">
+                <input type="hidden" name="check_api_key" id="sms_check_api_key_hidden" value="">
             </form>
 
             <!-- Test SMS Form -->
             <div style="background:var(--adm-primary-50, rgba(46,133,64,0.06));border:1px solid var(--adm-border);padding:18px;border-radius:var(--radius-md);margin-bottom:var(--space-xl);">
                 <h3 style="font-size:1rem;color:var(--adm-primary,#3D8B63);margin-bottom:8px;">🧪 تست زنده ارسال پیامک خدماتی با الگو</h3>
                 <p style="font-size:0.85rem;color:var(--adm-text-muted);margin-bottom:12px;">برای اطمینان از صحت کلید API و شناسه الگو، یک پیامک تستی به شماره دلخواه ارسال کنید.</p>
-                <?php if (empty($settings['sms_api_key'])): ?>
+                <?php
+                $hasAnyKey = !empty(trim((string)($settings['sms_api_key'] ?? ($settings['sms_api_key_shared'] ?? ''))));
+                ?>
+                <?php if (!$hasAnyKey): ?>
                     <div style="background:rgba(198,40,40,0.08);border:1px solid rgba(198,40,40,0.25);color:var(--adm-danger, #c62828);padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:0.84rem;line-height:1.7;">
                         ⚠️ <strong>کلید وب‌سرویس ثبت نشده است:</strong> لطفاً ابتدا در کادر بالا «کلید وب‌سرویس ملی‌پیامک» را وارد کرده و دکمه <strong>«💾 ذخیره تنظیمات پیامک»</strong> را بزنید، سپس پیامک تست بفرستید.
                     </div>
@@ -941,6 +982,23 @@ require_once __DIR__ . '/header.php';
                         ℹ️ <strong>ارسال پیامک‌های سیستمی غیرفعال است:</strong> شما می‌توانید تست ارسال را انجام دهید تا از صحت الگو و وب‌سرویس مطمئن شوید؛ اما برای فعال شدن ارسال خودکار پیامک‌ها به والدین و پرسنل، تیک <strong>«فعال‌سازی ارسال پیامک‌های سیستمی»</strong> را در فرم بالا بزنید و ذخیره کنید.
                     </div>
                 <?php endif; ?>
+
+                <div style="margin-bottom:12px;">
+                    <label for="test_pattern_selector" class="form-label" style="font-size:0.82rem;font-weight:600;">انتخاب سریع از الگوهای مهد (برای پر شدن خودکار شناسه و نمونه متن):</label>
+                    <select id="test_pattern_selector" class="form-control" style="font-size:0.85rem;" onchange="applyTestPatternPreset(this);">
+                        <option value="">-- انتخاب رویداد جهت تست آسان --</option>
+                        <option value="otp" data-id="<?= e($settings['sms_pattern_otp'] ?? '') ?>" data-v1="12345" data-v2="" data-v3="" data-v4="" data-l1="کد تایید" data-l2="" data-l3="" data-l4="">۱. کد تایید ورود و ثبت‌نام (۱ متغیر: کد تایید)</option>
+                        <option value="welcome" data-id="<?= e($settings['sms_pattern_welcome'] ?? '') ?>" data-v1="سارا احمدی" data-v2="" data-v3="" data-v4="" data-l1="نام والد" data-l2="" data-l3="" data-l4="">۲. خوش‌آمدگویی والد (۱ متغیر: نام والد)</option>
+                        <option value="daily_brief" data-id="<?= e($settings['sms_pattern_daily_report_brief'] ?? '') ?>" data-v1="کیان" data-v2="مهد روما" data-v3="" data-v4="" data-l1="نام کودک" data-l2="نام مهد" data-l3="" data-l4="">۳. گزارش روزانه خلاصه (۲ متغیر: نام کودک، نام مهد)</option>
+                        <option value="daily_vip" data-id="<?= e($settings['sms_pattern_daily_report'] ?? '') ?>" data-v1="کیان" data-v2="۱۴۰۳/۰۸/۰۱" data-v3="بسیار شاد و با انرژی" data-v4="" data-l1="نام کودک" data-l2="تاریخ" data-l3="حال‌وهوا" data-l4="">۴. گزارش روزانه تفصیلی (۳ متغیر: نام کودک، تاریخ، احوال)</option>
+                        <option value="attendance" data-id="<?= e($settings['sms_pattern_attendance'] ?? '') ?>" data-v1="کیان" data-v2="۱۴۰۳/۰۸/۰۱" data-v3="حاضر" data-v4="" data-l1="نام کودک" data-l2="تاریخ" data-l3="وضعیت حضور" data-l4="">۵. اعلام حضور و غیاب (۳ متغیر: نام کودک، تاریخ، وضعیت)</option>
+                        <option value="tuition" data-id="<?= e($settings['sms_pattern_tuition_reminder'] ?? '') ?>" data-v1="خانم احمدی" data-v2="کیان" data-v3="آبان" data-v4="۲,۵۰۰,۰۰۰" data-l1="نام والد" data-l2="نام کودک" data-l3="ماه" data-l4="مبلغ">۶. یادآوری شهریه (۴ متغیر: والد، کودک، ماه، مبلغ)</option>
+                        <option value="announcement" data-id="<?= e($settings['sms_pattern_announcement'] ?? '') ?>" data-v1="خانم احمدی" data-v2="جشن روز جهانی کودک" data-v3="" data-v4="" data-l1="نام والد" data-l2="عنوان پیام" data-l3="" data-l4="">۷. اطلاعیه‌ها و پیام‌های مهد (۲ متغیر: نام والد، عنوان)</option>
+                        <option value="payment" data-id="<?= e($settings['sms_pattern_payment_receipt'] ?? '') ?>" data-v1="خانم احمدی" data-v2="کیان" data-v3="۲,۵۰۰,۰۰۰" data-v4="آبان" data-l1="نام والد" data-l2="نام کودک" data-l3="مبلغ" data-l4="ماه">۸. رسید پرداخت شهریه (۴ متغیر: والد، کودک، مبلغ، ماه)</option>
+                        <option value="status" data-id="<?= e($settings['sms_pattern_child_status'] ?? '') ?>" data-v1="خانم احمدی" data-v2="کیان" data-v3="تأیید ثبت‌نام" data-v4="" data-l1="نام والد" data-l2="نام کودک" data-l3="وضعیت جدید" data-l4="">۹. تغییر وضعیت پرونده کودک (۳ متغیر: والد، کودک، وضعیت)</option>
+                    </select>
+                </div>
+
                 <form method="post" action="<?= e(url('admin/settings.php#sms-section')) ?>" class="sms-test-form">
                     <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                     <input type="hidden" name="action" value="test_sms">
@@ -952,17 +1010,27 @@ require_once __DIR__ . '/header.php';
 
                     <div class="sms-test-field sms-test-field--id">
                         <label class="form-label" style="font-size:0.82rem;">شناسه الگو (bodyId)</label>
-                        <input type="number" name="test_body_id" class="form-control" dir="ltr" placeholder="کد متن واقعی (نه 524)" value="<?= e($settings['sms_pattern_otp'] ?: $settings['sms_pattern_welcome'] ?: '') ?>" required>
+                        <input type="number" id="test_body_id_input" name="test_body_id" class="form-control" dir="ltr" placeholder="کد متن واقعی" value="<?= e($settings['sms_pattern_otp'] ?: $settings['sms_pattern_welcome'] ?: '') ?>" required>
                     </div>
 
                     <div class="sms-test-field">
-                        <label class="form-label" style="font-size:0.82rem;">متغیر اول ({0})</label>
-                        <input type="text" name="test_arg1" class="form-control" placeholder="12345">
+                        <label class="form-label" id="lbl_test_arg1" style="font-size:0.82rem;">متغیر اول ({0})</label>
+                        <input type="text" id="test_arg1_input" name="test_arg1" class="form-control" placeholder="12345">
                     </div>
 
                     <div class="sms-test-field">
-                        <label class="form-label" style="font-size:0.82rem;">متغیر دوم ({1})</label>
-                        <input type="text" name="test_arg2" class="form-control" placeholder="روما">
+                        <label class="form-label" id="lbl_test_arg2" style="font-size:0.82rem;">متغیر دوم ({1})</label>
+                        <input type="text" id="test_arg2_input" name="test_arg2" class="form-control" placeholder="اختیاری">
+                    </div>
+
+                    <div class="sms-test-field">
+                        <label class="form-label" id="lbl_test_arg3" style="font-size:0.82rem;">متغیر سوم ({2})</label>
+                        <input type="text" id="test_arg3_input" name="test_arg3" class="form-control" placeholder="اختیاری">
+                    </div>
+
+                    <div class="sms-test-field">
+                        <label class="form-label" id="lbl_test_arg4" style="font-size:0.82rem;">متغیر چهارم ({3})</label>
+                        <input type="text" id="test_arg4_input" name="test_arg4" class="form-control" placeholder="اختیاری">
                     </div>
 
                     <button type="submit" class="btn btn-primary" style="padding:10px 18px;font-size:0.88rem;cursor:pointer;border-radius:var(--radius-sm);">
@@ -970,6 +1038,45 @@ require_once __DIR__ . '/header.php';
                     </button>
                 </form>
             </div>
+
+            <script>
+            function checkMelipayamakLive() {
+                var keyInput = document.getElementById('sms_api_key');
+                var keyVal = keyInput ? keyInput.value.trim() : '';
+                document.getElementById('sms_check_api_key_hidden').value = keyVal;
+                document.getElementById('sms_check_conn_form').submit();
+            }
+
+            function applyTestPatternPreset(sel) {
+                var opt = sel.options[sel.selectedIndex];
+                if (!opt || !opt.value) return;
+
+                var pId = opt.getAttribute('data-id');
+                if (pId) {
+                    document.getElementById('test_body_id_input').value = pId;
+                }
+
+                var v1 = opt.getAttribute('data-v1') || '';
+                var v2 = opt.getAttribute('data-v2') || '';
+                var v3 = opt.getAttribute('data-v3') || '';
+                var v4 = opt.getAttribute('data-v4') || '';
+
+                var l1 = opt.getAttribute('data-l1');
+                var l2 = opt.getAttribute('data-l2');
+                var l3 = opt.getAttribute('data-l3');
+                var l4 = opt.getAttribute('data-l4');
+
+                document.getElementById('test_arg1_input').value = v1;
+                document.getElementById('test_arg2_input').value = v2;
+                document.getElementById('test_arg3_input').value = v3;
+                document.getElementById('test_arg4_input').value = v4;
+
+                document.getElementById('lbl_test_arg1').innerText = l1 ? l1 + ' ({0})' : 'متغیر اول ({0})';
+                document.getElementById('lbl_test_arg2').innerText = l2 ? l2 + ' ({1})' : 'متغیر دوم ({1})';
+                document.getElementById('lbl_test_arg3').innerText = l3 ? l3 + ' ({2})' : 'متغیر سوم ({2})';
+                document.getElementById('lbl_test_arg4').innerText = l4 ? l4 + ' ({3})' : 'متغیر چهارم ({3})';
+            }
+            </script>
 
             <!-- Recent SMS Logs Table -->
             <h3 style="font-size:1.05rem;margin-bottom:var(--space-md);color:var(--adm-text);">
