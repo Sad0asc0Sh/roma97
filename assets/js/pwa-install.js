@@ -154,7 +154,20 @@
 
   function hideBanner() {
     var banner = $('#pwaInstallBanner');
-    if (banner) banner.classList.remove('show');
+    if (!banner) return;
+    banner.classList.remove('show');
+    /* Inline hiding beats any cached stylesheet (see hideCard). */
+    banner.hidden = true;
+    banner.style.display = 'none';
+  }
+
+  /* Dismissal must work even when the phone still holds an older cached
+     parent-portal.css where `.pwa-card{display:flex}` overrides the
+     `hidden` attribute. Inline display:none wins over every stylesheet. */
+  function hideCard(card) {
+    if (!card) return;
+    card.hidden = true;
+    card.style.display = 'none';
   }
 
   function maybeShowBanner() {
@@ -171,7 +184,11 @@
     var touch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     if (promptAvailable || isIOS() || (touch && isAndroid())) {
       // Small delay so it never fights the page entrance animation.
-      setTimeout(function () { banner.classList.add('show'); }, 1200);
+      setTimeout(function () {
+        banner.hidden = false;
+        banner.style.display = '';
+        banner.classList.add('show');
+      }, 1200);
     }
   }
 
@@ -223,11 +240,11 @@
     try {
       gone = gone || localStorage.getItem(INSTALLED_KEY) === '1';
     } catch (e) {}
-    if (gone) { card.hidden = true; return; }
+    if (gone) { hideCard(card); return; }
     var hide = card.querySelector('[data-pwa-card-hide]');
     if (hide) {
       hide.addEventListener('click', function () {
-        card.hidden = true;
+        hideCard(card);
         try { localStorage.setItem(DISMISS_KEY, Date.now().toString()); } catch (err) {}
       });
     }

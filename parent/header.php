@@ -53,12 +53,12 @@ $navChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php',
     <title><?php echo e($pageTitle); ?> | <?php echo e($siteNameValue); ?></title>
     <link rel="preload" href="<?php echo e(url('assets/fonts/Vazirmatn-Regular.woff2')); ?>" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="<?php echo e(url('assets/fonts/BalooBhaijaan2-arabic.woff2')); ?>" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="<?php echo e(url('assets/css/fonts.css')); ?>">
-    <link rel="stylesheet" href="<?php echo e(url('assets/css/app-shell.css')); ?>">
-    <link rel="stylesheet" href="<?php echo e(url('assets/css/style.css')); ?>">
-    <link rel="stylesheet" href="<?php echo e(url('assets/css/parent-portal.css')); ?>">
-    <script src="<?php echo e(url('assets/js/app-shell.js')); ?>" defer></script>
-    <script src="<?php echo e(url('assets/js/pwa-install.js')); ?>" defer></script>
+    <link rel="stylesheet" href="<?php echo e(asset('assets/css/fonts.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(asset('assets/css/app-shell.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(asset('assets/css/style.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(asset('assets/css/parent-portal.css')); ?>">
+    <script src="<?php echo e(asset('assets/js/app-shell.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('assets/js/pwa-install.js')); ?>" defer></script>
 </head>
 <body class="parent-portal-body">
     <a class="skip-link" href="#parentMain">پرش به محتوای اصلی</a>
