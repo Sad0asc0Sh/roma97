@@ -3260,6 +3260,8 @@
   .parent-user-trigger { padding: 4px; }
   .parent-install-btn span { display: none; }
   .parent-install-btn { width: 38px; padding: 0; }
+  .parent-website-btn span { display: none; }
+  .parent-website-btn { width: 38px; padding: 0; }
 }
 
 @media (max-width: 480px) {
