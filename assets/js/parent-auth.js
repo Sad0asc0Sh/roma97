@@ -66,6 +66,7 @@
             input.addEventListener('blur', () => { if (input.value) validate(input); });
             input.addEventListener('input', () => {
                 setError(input, '');
+                form.classList.remove('entry-shake');
                 if (input.matches('[data-new-password]')) {
                     const confirm = form.querySelector('[data-confirm-password]');
                     if (confirm?.value) validate(confirm);
@@ -75,11 +76,30 @@
         form.addEventListener('submit', event => {
             if (form.getAttribute('aria-busy') === 'true') { event.preventDefault(); return; }
             const invalid = inputs.filter(input => !validate(input));
-            if (invalid.length) { event.preventDefault(); invalid[0].focus(); return; }
+            if (invalid.length) {
+                /* اعتبارسنجی ناموفق = هیچ ناوبری رخ نمی‌دهد؛ پس هر لودینگ
+                   سرگردان (مثلاً از هندلر دیگری) را حتماً پاک کن تا نوار بالا
+                   در چرخهٔ بی‌پایان گیر نکند. */
+                event.preventDefault();
+                if (window.__romaClearNav) { try { window.__romaClearNav(); } catch (e) {} }
+                else document.documentElement.classList.remove('is-navigating');
+                /* بازخورد لمسی قوی: لرزش فرم + فوکوس روی اولین خطا */
+                form.classList.remove('entry-shake');
+                void form.offsetWidth;
+                form.classList.add('entry-shake');
+                setTimeout(() => form.classList.remove('entry-shake'), 500);
+                try { invalid[0].focus({ preventScroll: false }); } catch (e) { invalid[0].focus(); }
+                if (invalid[0].scrollIntoView) {
+                    try { invalid[0].scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+                }
+                return;
+            }
             inputs.filter(input => input.matches('[data-phone]')).forEach(input => { input.value = normalizePhone(input.value); });
+            /* فقط وقتی به اینجا رسیدیم ارسال واقعی است: حالا دکمه را قفل و لودینگ بده. */
             form.setAttribute('aria-busy', 'true');
             form.querySelectorAll('button[type="submit"]').forEach(button => {
                 button.disabled = true;
+                button.setAttribute('aria-disabled', 'true');
                 const label = button.querySelector('[data-submit-label]');
                 const loadingText = button.getAttribute('data-loading-text');
                 if (label && loadingText && !button.dataset.origLabel) {
@@ -87,29 +107,46 @@
                     label.textContent = loadingText;
                 }
             });
+            /* نوار پیشرفت بالا توسط اسکریپت داخل head مدیریت می‌شود (تک‌منبع)؛
+               اینجا فقط برای اطمینان و هم‌زمانی اضافه می‌کنیم. */
             document.documentElement.classList.add('is-navigating');
         });
     });
-    document.querySelectorAll('[data-resend]').forEach(button => {
+    const refreshResend = (button, keepUntil) => {
+        if (!button || !button.form) return;
         const timer = button.form.querySelector('[data-countdown]');
-        const until = Date.now() + Number(button.dataset.wait) * 1000;
+        if (!button._romaUntil || !keepUntil) {
+            button._romaUntil = Date.now() + Number(button.dataset.wait || 0) * 1000;
+        }
+        const until = button._romaUntil;
         const tick = () => {
             const remaining = Math.max(0, Math.ceil((until - Date.now()) / 1000));
+            /* اگر فرم در حال ارسال است قفل بماند، وگرنه فقط شمارش‌معکوس تصمیم بگیرد. */
             button.disabled = remaining > 0 || button.form.getAttribute('aria-busy') === 'true';
-            timer.textContent = remaining ? `(${remaining.toLocaleString('fa-IR')} ثانیه)` : '';
+            if (timer) timer.textContent = remaining ? `(${remaining.toLocaleString('fa-IR')} ثانیه)` : '';
             return remaining;
         };
+        button._romaTick = tick;
         if (tick()) {
-            const interval = window.setInterval(() => { if (!tick()) window.clearInterval(interval); }, 1000);
+            if (button._romaTimer) window.clearInterval(button._romaTimer);
+            button._romaTimer = window.setInterval(() => { if (!tick()) window.clearInterval(button._romaTimer); }, 1000);
         }
-    });
+    };
+    document.querySelectorAll('[data-resend]').forEach(refreshResend);
     window.addEventListener('pageshow', () => {
-        document.documentElement.classList.remove('is-navigating');
-        document.querySelectorAll('a.is-pending').forEach(a => a.classList.remove('is-pending'));
+        if (window.__romaClearNav) { try { window.__romaClearNav(); } catch (e) {} }
+        else {
+            document.documentElement.classList.remove('is-navigating');
+            document.querySelectorAll('a.is-pending').forEach(a => a.classList.remove('is-pending'));
+        }
         document.querySelectorAll('[data-auth-form]').forEach(form => {
             form.removeAttribute('aria-busy');
-            form.querySelectorAll('button[type="submit"]:not([data-resend])').forEach(button => {
-                button.disabled = false;
+            /* همهٔ دکمه‌های سابمیت (از جمله «ارسال دوباره») باید آزاد شوند؛
+               در غیر این صورت بعد از بازگشت با دکمهٔ Back مرورگر قفل می‌مانند. */
+            form.querySelectorAll('button[type="submit"]').forEach(button => {
+                /* دکمهٔ شمارش‌معکوس را منطق tick مدیریت می‌کند؛ فقط لیبل را برگردان. */
+                if (!button.hasAttribute('data-resend')) button.disabled = false;
+                button.removeAttribute('aria-disabled');
                 const label = button.querySelector('[data-submit-label]');
                 if (label && button.dataset.origLabel) {
                     label.textContent = button.dataset.origLabel;
@@ -117,6 +154,8 @@
                 }
             });
         });
+        /* شمارش‌معکوس ارسال مجدد را بعد از بازگشت تازه‌سازی کن (بدون ریست زمان). */
+        document.querySelectorAll('[data-resend]').forEach(b => refreshResend(b, true));
     });
     // Prefetch مقصد هنگام اعلام قصد کاربر (هاور/فوکوس/تاچ) — فقط هم‌مبدأ و GET، بدون تغییر رفتار کلیک.
     const prefetched = new Set();
@@ -138,10 +177,10 @@
         a.addEventListener('mouseenter', go, { passive: true });
         a.addEventListener('focus', go);
         a.addEventListener('touchstart', go, { passive: true });
-        a.addEventListener('click', () => {
-            document.documentElement.classList.add('is-navigating');
-            a.classList.add('is-pending');
-        }, { passive: true });
+        /* نوار پیشرفت (is-navigating) عمداً اینجا دستکاری نمی‌شود: تک‌منبعِ آن
+           اسکریپت داخل head است که تب فعال و لینک هم‌صفحه را نادیده می‌گیرد و
+           با تأخیر صفر preventDefault را بررسی می‌کند. دستکاری دوباره همین‌جا
+           علت اصلی لودینگ بی‌پایان روی تب فعال بود. */
     });
     // فوکوس آغازین فقط دسکتاپ و فقط وقتی خطایی برای اصلاح وجود ندارد.
     try {

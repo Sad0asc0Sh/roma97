@@ -86,7 +86,7 @@ $renderField = static function (string $id, string $label, string $type, string 
       ]
     }
     </script>
-    <?php // بازخورد فوری ناوبری: بدون تغییر منطق، فقط نوار پیشرفت و حالت انتظار را فعال می‌کند. ?>
+    <?php // بازخورد فوری ناوبری: فقط وقتی ناوبری واقعی رخ می‌دهد نوار پیشرفت را نشان بده. ?>
     <style>
     .entry-progress{position:fixed;top:0;right:0;left:0;height:3px;z-index:60;pointer-events:none;opacity:0;transition:opacity .2s ease}
     .entry-progress span{display:block;height:100%;width:35%;background:#3d8b63;border-radius:3px}
@@ -96,7 +96,74 @@ $renderField = static function (string $id, string $label, string $type, string 
     html.is-navigating body{cursor:progress}
     </style>
     <script>
-    (function(){var d=document.documentElement;function nav(a){if(!a)return false;if(a.target==='_blank'||a.hasAttribute('download'))return false;var h=a.getAttribute('href');if(!h||h.charAt(0)==='#'||h.indexOf('mailto:')===0||h.indexOf('tel:')===0||h.indexOf('javascript:')===0)return false;if(a.getAttribute('aria-current')==='page')return false;d.classList.add('is-navigating');a.classList.add('is-pending');return true;}document.addEventListener('click',function(e){if(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||(e.button!==undefined&&e.button!==0))return;var t=e.target;var a=t&&t.closest?t.closest('a[href]'):null;if(a)nav(a);},true);document.addEventListener('submit',function(e){var f=e.target;if(f&&f.hasAttribute&&f.hasAttribute('data-auth-form'))d.classList.add('is-navigating');},true);window.addEventListener('pageshow',function(){d.classList.remove('is-navigating');var p=document.querySelectorAll('a.is-pending');for(var i=0;i<p.length;i++)p[i].classList.remove('is-pending');});})();
+    /* نوار پیشرفت بالای صفحه — نسخهٔ مقاوم در برابر لودینگ بی‌پایان:
+       - کلیک/سابمیت را با تأخیر صفر بررسی می‌کند تا اگر اعتبارسنجی یا هندلر دیگری
+         جلوی ناوبری را گرفت (preventDefault)، لودینگ روشن نماند.
+       - روی تب فعال (aria-current) و لینک هم‌صفحه (همان URL) لودینگ نمی‌دهد.
+       - تایمر اطمینان: اگر ناوبری رخ نداد، حداکثر بعد از چند ثانیه پاک می‌شود. */
+    (function(){
+        var d=document.documentElement;
+        var navTimer=null;
+        function clearNav(){
+            d.classList.remove('is-navigating');
+            var p=document.querySelectorAll('a.is-pending');
+            for(var i=0;i<p.length;i++)p[i].classList.remove('is-pending');
+            if(navTimer){clearTimeout(navTimer);navTimer=null;}
+        }
+        function scheduleAutoClear(ms){
+            if(navTimer)clearTimeout(navTimer);
+            navTimer=setTimeout(clearNav,ms||8000);
+        }
+        function isSamePageUrl(href){
+            try{
+                var u=new URL(href,window.location.href);
+                var c=new URL(window.location.href);
+                return u.origin===c.origin&&u.pathname===c.pathname&&u.search===c.search;
+            }catch(e){return false;}
+        }
+        function nav(a){
+            if(!a)return false;
+            if(a.target==='_blank'||a.hasAttribute('download'))return false;
+            var h=a.getAttribute('href');
+            if(!h||h.charAt(0)==='#'||h.indexOf('mailto:')===0||h.indexOf('tel:')===0||h.indexOf('javascript:')===0)return false;
+            if(a.getAttribute('aria-current')==='page')return false;
+            try{
+                if(a.href&&isSamePageUrl(a.href))return false;
+                else if(h&&isSamePageUrl(h))return false;
+            }catch(e){}
+            d.classList.add('is-navigating');
+            a.classList.add('is-pending');
+            scheduleAutoClear(8000);
+            return true;
+        }
+        document.addEventListener('click',function(e){
+            if(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
+            if(e.button!==undefined&&e.button!==0)return;
+            var t=e.target;
+            var a=t&&t.closest?t.closest('a[href]'):null;
+            if(!a)return;
+            /* به هندلرهای دیگر (اعتبارسنجی، PWA و…) فرصت بده تا preventDefault کنند؛
+               بعد تصمیم بگیر. همین یک setTimeout ریشهٔ لودینگ بی‌پایان کلیک‌هاست. */
+            setTimeout(function(){if(e.defaultPrevented)return;nav(a);},0);
+        },false);
+        document.addEventListener('submit',function(e){
+            var f=e.target;
+            if(!f||!f.hasAttribute||!f.hasAttribute('data-auth-form'))return;
+            /* اعتبارسنجی parent-auth.js در فاز حبابی اجرا و در صورت خطا preventDefault
+               می‌کند؛ پس اینجا هم بعد از آن بررسی می‌کنیم. */
+            setTimeout(function(){
+                if(e.defaultPrevented){
+                    if(!f.hasAttribute('aria-busy'))clearNav();
+                    return;
+                }
+                d.classList.add('is-navigating');
+                scheduleAutoClear(15000);
+            },0);
+        },false);
+        window.addEventListener('pageshow',clearNav);
+        window.addEventListener('popstate',clearNav);
+        window.__romaClearNav=clearNav;
+    })();
     </script>
 </head>
 <body class="parent-auth">

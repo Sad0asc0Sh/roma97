@@ -963,7 +963,7 @@ require_once __DIR__ . '/header.php';
                         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
                             <input type="number" id="sms_pattern_otp" name="sms_pattern_otp" class="form-control" dir="ltr" style="max-width:200px;"
                                 placeholder="کد متن تاییدشده" value="<?= e($settings['sms_pattern_otp'] ?? '') ?>">
-                            <small style="color:var(--muted);font-size:0.8rem;">کد متن تاییدشده از «ابزار ویژه ← وبسرویس خدماتی» (متغیر: <code>{0}=کد تایید</code>)</small>
+                            <small style="color:var(--muted);font-size:0.8rem;line-height:1.9;">کد متن تاییدشده از «ابزار ویژه ← وبسرویس خدماتی»<br>متغیر: <code dir="ltr">{0}</code>=کد تایید ۵ رقمی (فقط همین یک متغیر)<br>متن دقیقی که باید در پنل ملی‌پیامک ثبت کنید:<br><code>کد ورود شما به خانه پرمهر مهدکودک روما: {0} با آرزوی روزی شاد برای دلبندتان</code><br>⚠️ متن خوش‌آمدگویی را در این الگو ثبت نکنید؛ در غیر این صورت کد تایید با متن اشتباه ارسال می‌شود.</small>
                         </div>
                         <div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--adm-border);">
                             <label class="form-label" style="font-weight:600;font-size:0.82rem;margin-bottom:6px;">روش ارسال پیامک کد تایید به والدین:</label>
@@ -986,7 +986,7 @@ require_once __DIR__ . '/header.php';
                         </label>
                         <input type="number" id="sms_pattern_welcome" name="sms_pattern_welcome" class="form-control" dir="ltr"
                             placeholder="مثال: 525" value="<?= e($settings['sms_pattern_welcome'] ?? '') ?>">
-                        <small style="color:var(--muted);font-size:0.8rem;">متغیر: <code>{0}=نام والد</code><br>نمونه: {0} عزیز، با عشق به جمع پرمهر مهدکودک روما خوش آمدید.</small>
+                        <small style="color:var(--muted);font-size:0.8rem;line-height:1.9;">متغیر: <code dir="ltr">{0}</code>=نام والد (نام و نام خانوادگی؛ بعد از ثبت‌نام به او نمایش داده می‌شود)<br>متن دقیقی که باید در پنل ملی‌پیامک ثبت کنید:<br><code>{0} عزیز، با عشق و افتخار به جمع پرمهر مهدکودک روما خوش آمدید.</code><br>⚠️ کد تایید در این الگو قرار نمی‌گیرد؛ این الگو فقط برای خوش‌آمدگویی است.</small>
                     </div>
 
                     <div class="form-group">
