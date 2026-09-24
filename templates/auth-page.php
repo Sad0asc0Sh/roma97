@@ -203,16 +203,17 @@ $renderField = static function (
 <body class="parent-auth">
 <div class="entry-progress" aria-hidden="true"><span></span></div>
 <a href="#entry-main" class="entry-skip">رفتن به فرم</a>
-<header class="entry-topbar">
-    <a class="entry-logo" href="<?= e(url('index.php')) ?>">
-        <?php if ($logo !== ''): ?><img src="<?= e(url($logo)) ?>" alt="<?= e($name) ?>" width="140" height="44">
-        <?php else: ?><svg width="42" height="42" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5C10 5 5 17 7 29s10 16 17 16 17-4 17-16S38 5 24 5" fill="#2F7A52"/><path d="M14 23q4-5 8 0m5 0q4-5 8 0M19 31q6 7 12 0" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg><span><?= e($name) ?></span><?php endif; ?>
-    </a>
-    <a class="entry-home" href="<?= e(url('index.php')) ?>">صفحهٔ اصلی <span aria-hidden="true">↗</span></a>
-</header>
+<div class="entry-shell">
 <div class="entry-layout">
     <main class="entry-main" id="entry-main">
         <div class="entry-card">
+            <div class="entry-brandbar">
+                <a class="entry-logo" href="<?= e(url('index.php')) ?>">
+                    <?php if ($logo !== ''): ?><img src="<?= e(url($logo)) ?>" alt="<?= e($name) ?>" width="120" height="34">
+                    <?php else: ?><svg width="32" height="32" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5C10 5 5 17 7 29s10 16 17 16 17-4 17-16S38 5 24 5" fill="#2F7A52"/><path d="M14 23q4-5 8 0m5 0q4-5 8 0M19 31q6 7 12 0" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg><span><?= e($name) ?></span><?php endif; ?>
+                </a>
+                <a class="entry-home" href="<?= e(url('index.php')) ?>"><span class="label">صفحهٔ اصلی</span> <span aria-hidden="true">↗</span></a>
+            </div>
             <?php if (!$isForgot && !$isReset): ?>
             <div class="entry-sticky">
                 <nav class="entry-tabs" aria-label="حساب والدین" data-active="<?= $isRegister ? 'register' : 'login' ?>">
@@ -221,10 +222,10 @@ $renderField = static function (
                 </nav>
                 <?php if ($isRegister): ?>
                 <ol class="entry-steps" aria-label="مراحل ثبت‌نام">
-                    <li <?= !$isVerify ? 'aria-current="step"' : 'class="is-done"' ?>><span><?= $isVerify ? '✓' : '۱' ?></span> اطلاعات والد</li>
-                    <li <?= $isVerify ? 'aria-current="step"' : '' ?>><span>۲</span> تأیید موبایل</li>
-                    <li><span>۳</span> بررسی مدیریت</li>
-                    <li><span>۴</span> ورود به پنل</li>
+                    <li <?= !$isVerify ? 'aria-current="step"' : 'class="is-done"' ?>><span><?= $isVerify ? '✓' : '۱' ?></span><em>اطلاعات والد</em></li>
+                    <li <?= $isVerify ? 'aria-current="step"' : '' ?>><span>۲</span><em>تأیید موبایل</em></li>
+                    <li><span>۳</span><em>بررسی مدیریت</em></li>
+                    <li><span>۴</span><em>ورود به پنل</em></li>
                 </ol>
                 <?php endif; ?>
             </div>
@@ -315,6 +316,7 @@ $renderField = static function (
             <span>شهریه</span>
         </div>
     </aside>
+</div>
 </div>
 </body>
 </html>
