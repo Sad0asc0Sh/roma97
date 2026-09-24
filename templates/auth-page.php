@@ -1,13 +1,19 @@
 <?php
 if (!defined('ROOMA_APP')) { exit; }
+/*
+ * قالب مشترک ورود / ثبت‌نام / بازیابی والدین (نسخهٔ ۲)
+ * فقط لایهٔ نمایش عوض شده؛ نام فیلدها، اکشن‌ها، CSRF و منطق سرور دست‌نخورده است.
+ */
 $mode = $authMode ?? 'login';
 $isRegister = $mode === 'register';
 $isForgot = $mode === 'forgot';
 $isReset = $mode === 'reset';
+$isLogin = $mode === 'login';
 $isVerify = ($isRegister || $isForgot) && ($step ?? '') === 'verify';
 $fieldErrors = $fieldErrors ?? [];
 $messages = $errors ?? [];
 if (!empty($error)) { $messages[] = $error; }
+$messages = array_values(array_unique(array_filter(array_map('strval', $messages), static fn (string $m): bool => $m !== '')));
 $success = $successMessage ?? $successFlash ?? null;
 $displayPhone = $isRegister ? ($verifyPhone ?? '') : ($phone ?? '');
 $heading = $isRegister ? ($isVerify ? 'شماره‌تان را تأیید کنید' : 'به خانوادهٔ ما بپیوندید')
@@ -19,82 +25,115 @@ $description = $isRegister ? 'حساب والدین را بسازید و همر�
 if ($isVerify) { $description = 'کد ۵ رقمی پیامک‌شده را وارد کنید. اعتبار هر کد ۳ دقیقه است.'; }
 $endpoint = $isRegister ? 'register.php' : ($isForgot ? 'forgot-password.php' : ($isReset ? 'reset-password.php' : 'login.php'));
 $formAction = url($endpoint . ($isVerify ? '?step=verify&phone=' . urlencode($displayPhone) : ''));
-// متن حالت لودینگ دکمه — فقط برای بازخورد دیداری است و منطق اعتبارسنجی/ارسال را تغییر نمی‌دهد.
-if ($mode === 'login') { $loadingText = 'در حال ورود…'; }
+// ارسال خودکار فقط وقتی فرم «فقط کد» دارد؛ در بازیابی، فیلد رمز هم هست و ارسال زودهنگام خطای بی‌جا نشان می‌داد.
+$autoSubmit = $isVerify && $isRegister;
+if ($isLogin) { $loadingText = 'در حال ورود…'; }
 elseif ($isVerify) { $loadingText = $isRegister ? 'در حال تأیید…' : 'در حال ذخیرهٔ رمز جدید…'; }
 elseif ($isReset) { $loadingText = 'در حال ذخیرهٔ رمز جدید…'; }
 else { $loadingText = 'در حال ارسال کد…'; }
+$submitLabel = $isRegister ? ($isVerify ? 'تأیید و تکمیل ثبت‌نام' : 'دریافت کد تأیید')
+    : ($isForgot ? ($isVerify ? 'ذخیرهٔ رمز جدید' : 'دریافت کد بازیابی')
+    : ($isReset ? 'ذخیرهٔ رمز جدید' : 'ورود به حساب والدین'));
+$registerStep = $isRegister ? ($isVerify ? 2 : 1) : 0;
+$stepLabels = ['اطلاعات والد', 'تأیید موبایل', 'بررسی مدیریت', 'ورود به پنل'];
+$showForm = (!$isReset || ($tokenValid ?? false)) && empty($teacherRecovery);
 $name = siteName();
 $logo = siteLogo();
 
-/** نشان SVG ساده برای آیکون فیلدها (بدون وابستگی خارجی) */
-$entryIcon = static function (string $kind): string {
+/** ارقام فارسی برای نمایش (فقط نمایش؛ مقدار ارسالی لاتین می‌ماند) */
+$fa = static fn (string $value): string => strtr($value, ['0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴', '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹']);
+$prettyPhone = preg_match('/\A0\d{10}\z/', (string) $displayPhone) === 1
+    ? substr($displayPhone, 0, 4) . ' ' . substr($displayPhone, 4, 3) . ' ' . substr($displayPhone, 7)
+    : (string) $displayPhone;
+
+/** آیکون‌های SVG سبک، بدون وابستگی خارجی */
+$authIcon = static function (string $kind, int $size = 20): string {
     $paths = [
-        'user' => '<circle cx="12" cy="8" r="3.4"/><path d="M5.5 19c1.6-3.2 4-4.8 6.5-4.8S16.9 15.8 18.5 19"/>',
-        'phone' => '<path d="M7 3.5h3l1.2 4-2 1.4a12 12 0 0 0 5.9 5.9l1.4-2 4 1.2v3A2 2 0 0 1 18.4 19C10.5 18.4 5.6 13.5 5 5.6A2 2 0 0 1 7 3.5z"/>',
-        'lock' => '<rect x="5.5" y="10.5" width="13" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>',
-        'key' => '<circle cx="8.5" cy="12" r="3.2"/><path d="M11.5 12h8l-1.5 2m1.5-2-1.5-2"/>',
-        'shield' => '<path d="M12 3.5 19 6v5.2c0 4.2-2.8 7.4-7 9.3-4.2-1.9-7-5.1-7-9.3V6l7-2.5z"/>',
-        'sms' => '<rect x="3.5" y="5.5" width="17" height="12" rx="2.5"/><path d="m5 8 7 5 7-5"/>',
+        'user' => '<circle cx="12" cy="8" r="3.4"/><path d="M5.5 19c1.6-3.2 4-4.8 6.5-4.8s4.9 1.6 6.5 4.8"/>',
+        'phone' => '<rect x="7" y="2.8" width="10" height="18.4" rx="2.6"/><path d="M10.5 17.6h3"/>',
+        'lock' => '<rect x="5.5" y="10.5" width="13" height="9.5" rx="2.4"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>',
+        'sms' => '<path d="M4.5 6.5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H10l-4 3.2v-3.2a2 2 0 0 1-1.5-2z"/><path d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01"/>',
+        'arrow' => '<path d="M19 12H5"/><path d="m11 6-6 6 6 6"/>',
+        'back' => '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
+        'check' => '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+        'close' => '<path d="M7 7l10 10M17 7 7 17"/>',
+        'alert' => '<path d="M12 7v6"/><path d="M12 16.8h.01"/>',
+        'info' => '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5"/><path d="M12 7.8h.01"/>',
+        'home' => '<path d="M4.5 11 12 4.5l7.5 6.5"/><path d="M6.5 9.5v9.5h11V9.5"/>',
+        'eye' => '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>',
+        'eye-off' => '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/><path d="m4 4 16 16"/>',
     ];
     $d = $paths[$kind] ?? $paths['user'];
-    return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $d . '</svg>';
+    return '<svg width="' . $size . '" height="' . $size . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' . $d . '</svg>';
 };
 
-$renderField = static function (
-    string $id,
-    string $label,
-    string $type,
-    string $value = '',
-    string $hint = '',
-    string $autocomplete = '',
-    string $icon = 'user',
-    bool $showStrength = false
-) use ($fieldErrors, $entryIcon): void {
+/**
+ * رندر یک فیلد فرم.
+ * $o: value, hint, autocomplete, icon, rules (bool: چک‌لیست رمز), aside (HTML ثابت و امنِ خود قالب)
+ */
+$renderField = static function (string $id, string $label, string $type, array $o = []) use ($fieldErrors, $authIcon): void {
+    $value = (string) ($o['value'] ?? '');
+    $hint = (string) ($o['hint'] ?? '');
+    $autocomplete = (string) ($o['autocomplete'] ?? '');
+    $icon = (string) ($o['icon'] ?? 'user');
+    $rules = !empty($o['rules']);
+    $aside = (string) ($o['aside'] ?? '');
     $isPassword = $type === 'password';
     $otp = $id === 'otp_code';
     $phoneField = $id === 'phone';
     $nameField = in_array($id, ['first_name', 'last_name'], true);
     $invalid = isset($fieldErrors[$id]);
-    $inputClass = $otp ? ' data-otp' : '';
+    $describedBy = ($rules ? $id . '-rules ' : '') . $id . '-hint ' . $id . '-error';
     ?>
-    <div class="entry-field">
-        <label for="<?= e($id) ?>"><?= e($label) ?></label>
-        <div class="entry-input-wrap<?= $invalid ? ' is-invalid' : '' ?>">
-            <span class="entry-field-icon" aria-hidden="true"><?= $entryIcon($otp ? 'sms' : ($phoneField ? 'phone' : ($isPassword ? 'lock' : $icon))) ?></span>
+    <div class="auth-field<?= $otp ? ' auth-field-otp' : '' ?>">
+        <div class="auth-label-row">
+            <label for="<?= e($id) ?>"><?= e($label) ?></label>
+            <?= $aside ?>
+        </div>
+        <?php if ($otp): ?>
+        <div class="auth-otp<?= $invalid ? ' is-invalid' : '' ?>" data-otp-group>
+            <input id="<?= e($id) ?>" name="<?= e($id) ?>" type="text" class="auth-otp-input" value=""
+                autocomplete="one-time-code" inputmode="numeric" maxlength="5" pattern="[0-9۰-۹٠-٩]{5}" required dir="ltr"
+                aria-describedby="<?= e($describedBy) ?>"<?= $invalid ? ' aria-invalid="true"' : '' ?> data-otp>
+            <div class="auth-otp-cells" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+        </div>
+        <?php else: ?>
+        <div class="auth-control<?= $isPassword ? ' has-reveal' : '' ?><?= $invalid ? ' is-invalid' : '' ?>">
+            <span class="auth-control-icon" aria-hidden="true"><?= $authIcon($phoneField ? 'phone' : ($isPassword ? 'lock' : $icon)) ?></span>
             <input id="<?= e($id) ?>" name="<?= e($id) ?>" type="<?= e($type) ?>" value="<?= e($value) ?>"
-                autocomplete="<?= e($autocomplete) ?>" required aria-describedby="<?= e($id) ?>-hint <?= e($id) ?>-error"
+                autocomplete="<?= e($autocomplete) ?>" required aria-describedby="<?= e($describedBy) ?>"
                 <?= $invalid ? 'aria-invalid="true"' : '' ?>
-                <?= ($phoneField || $isPassword || $otp) ? 'dir="ltr"' : '' ?>
+                <?= ($phoneField || $isPassword) ? 'dir="ltr"' : '' ?>
                 <?= $phoneField ? 'inputmode="tel" maxlength="20" placeholder="0912 345 6789" data-phone' : '' ?>
-                <?= $otp ? 'inputmode="numeric" maxlength="5" pattern="[0-9۰-۹٠-٩]{5}" placeholder="—  —  —  —  —" data-otp' : '' ?>
                 <?= $nameField ? 'data-name maxlength="100"' : '' ?>
-                <?= !$phoneField && !$isPassword && !$otp && !$nameField ? 'maxlength="100"' : '' ?>
+                <?= !$phoneField && !$isPassword && !$nameField ? 'maxlength="100"' : '' ?>
                 <?= $isPassword ? 'maxlength="4096" data-password' : '' ?>
                 <?= $isPassword && $autocomplete === 'new-password' && $id !== 'confirm_password' ? 'data-new-password' : '' ?>
                 <?= $id === 'confirm_password' ? 'data-confirm-password' : '' ?>>
-            <span class="entry-status entry-status-ok" aria-hidden="true">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 5 5L19 7"/></svg>
-            </span>
-            <span class="entry-status entry-status-err" aria-hidden="true">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
-            </span>
+            <span class="auth-state auth-state-ok" aria-hidden="true"><?= $authIcon('check', 14) ?></span>
+            <span class="auth-state auth-state-err" aria-hidden="true"><?= $authIcon('close', 14) ?></span>
             <?php if ($isPassword): ?>
-                <button class="entry-reveal" type="button" data-reveal="<?= e($id) ?>" aria-label="نمایش <?= e($label) ?>" aria-pressed="false" hidden>
-                    <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
-                    <svg class="eye-slash" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path d="m3 3 18 18"/></svg>
+                <button class="auth-reveal" type="button" data-reveal="<?= e($id) ?>" aria-label="نمایش <?= e($label) ?>" aria-pressed="false" hidden>
+                    <span class="eye-open"><?= $authIcon('eye') ?></span>
+                    <span class="eye-slash"><?= $authIcon('eye-off') ?></span>
                 </button>
             <?php endif; ?>
         </div>
-        <?php if ($isPassword): ?><span class="entry-caps" data-caps>⇪ Caps Lock روشن است</span><?php endif; ?>
-        <?php if ($showStrength && $id !== 'confirm_password'): ?>
-            <div class="entry-strength" data-strength-for="<?= e($id) ?>" data-level="0" aria-live="polite">
-                <div class="entry-strength-bar" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-                <div class="entry-strength-text" data-strength-text></div>
+        <?php endif; ?>
+        <?php if ($isPassword): ?><span class="auth-caps" data-caps>⇪ Caps Lock روشن است</span><?php endif; ?>
+        <?php if ($rules): ?>
+            <ul class="auth-rules" id="<?= e($id) ?>-rules" data-rules-for="<?= e($id) ?>" aria-label="شرایط رمز عبور">
+                <li data-rule="length">حداقل ۸ کاراکتر</li>
+                <li data-rule="letter">یک حرف انگلیسی</li>
+                <li data-rule="digit">یک عدد</li>
+            </ul>
+            <div class="auth-meter" data-meter-for="<?= e($id) ?>" data-level="0" aria-live="polite">
+                <span class="auth-meter-bar" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                <span class="auth-meter-text" data-meter-text></span>
             </div>
         <?php endif; ?>
-        <small id="<?= e($id) ?>-hint" class="entry-hint"><?= e($hint) ?></small>
-        <small id="<?= e($id) ?>-error" class="entry-field-error" aria-live="polite"><?= e($fieldErrors[$id] ?? '') ?></small>
+        <small id="<?= e($id) ?>-hint" class="auth-hint"><?= e($hint) ?></small>
+        <small id="<?= e($id) ?>-error" class="auth-error" aria-live="polite"><?= e($fieldErrors[$id] ?? '') ?></small>
     </div>
     <?php
 };
@@ -104,7 +143,8 @@ $renderField = static function (
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#F3F7EF">
+    <meta name="theme-color" content="#184b33" media="(max-width: 959px)">
+    <meta name="theme-color" content="#f6f8f1">
     <meta name="robots" content="noindex, nofollow">
     <meta name="color-scheme" content="light">
     <title><?= e($pageTitle ?? $heading . ' | ' . $name) ?></title>
@@ -129,14 +169,6 @@ $renderField = static function (
       ]
     }
     </script>
-    <style>
-    .entry-progress{position:fixed;top:0;right:0;left:0;height:3px;z-index:60;pointer-events:none;opacity:0;transition:opacity .2s ease}
-    .entry-progress span{display:block;height:100%;width:35%;background:linear-gradient(90deg,#2f7a52,#8bc4a0);border-radius:3px}
-    html.is-navigating .entry-progress{opacity:1}
-    html.is-navigating .entry-progress span{animation:entry-progress-slide 1.1s ease-in-out infinite}
-    @keyframes entry-progress-slide{0%{transform:translateX(120%)}50%{transform:translateX(0)}100%{transform:translateX(-120%)}}
-    html.is-navigating body{cursor:progress}
-    </style>
     <script>
     /* نوار پیشرفت بالای صفحه — نسخهٔ مقاوم در برابر لودینگ بی‌پایان */
     (function(){
@@ -200,123 +232,156 @@ $renderField = static function (
     })();
     </script>
 </head>
-<body class="parent-auth">
-<div class="entry-progress" aria-hidden="true"><span></span></div>
-<a href="#entry-main" class="entry-skip">رفتن به فرم</a>
-<div class="entry-shell">
-<div class="entry-layout">
-    <main class="entry-main" id="entry-main">
-        <div class="entry-card">
-            <div class="entry-brandbar">
-                <a class="entry-logo" href="<?= e(url('index.php')) ?>">
-                    <?php if ($logo !== ''): ?><img src="<?= e(url($logo)) ?>" alt="<?= e($name) ?>" width="120" height="34">
-                    <?php else: ?><svg width="32" height="32" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5C10 5 5 17 7 29s10 16 17 16 17-4 17-16S38 5 24 5" fill="#2F7A52"/><path d="M14 23q4-5 8 0m5 0q4-5 8 0M19 31q6 7 12 0" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg><span><?= e($name) ?></span><?php endif; ?>
-                </a>
-                <a class="entry-home" href="<?= e(url('index.php')) ?>"><span class="label">صفحهٔ اصلی</span> <span aria-hidden="true">↗</span></a>
-            </div>
-            <?php if (!$isForgot && !$isReset): ?>
-            <div class="entry-sticky">
-                <nav class="entry-tabs" aria-label="حساب والدین" data-active="<?= $isRegister ? 'register' : 'login' ?>">
-                    <a href="<?= e(url('login.php')) ?>" <?= !$isRegister ? 'aria-current="page"' : '' ?>>ورود به حساب</a>
-                    <a href="<?= e(url('register.php')) ?>" <?= $isRegister ? 'aria-current="page"' : '' ?>>ثبت‌نام والدین</a>
+<body class="parent-auth auth-mode-<?= e($mode) ?>">
+<div class="auth-navbar" aria-hidden="true"><span></span></div>
+<a href="#auth-main" class="auth-skip">رفتن به فرم</a>
+<div class="auth">
+    <main class="auth-main" id="auth-main">
+        <header class="auth-top">
+            <a class="auth-logo" href="<?= e(url('index.php')) ?>">
+                <?php if ($logo !== ''): ?><img src="<?= e(url($logo)) ?>" alt="<?= e($name) ?>" width="120" height="34">
+                <?php else: ?><svg width="30" height="30" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5C10 5 5 17 7 29s10 16 17 16 17-4 17-16S38 5 24 5" fill="#2A7449"/><path d="M14 23q4-5 8 0m5 0q4-5 8 0M19 31q6 7 12 0" fill="none" stroke="#F2F6E3" stroke-width="2.5" stroke-linecap="round"/></svg><span><?= e($name) ?></span><?php endif; ?>
+            </a>
+            <a class="auth-home" href="<?= e(url('index.php')) ?>"><?= $authIcon('home', 18) ?><span>صفحهٔ اصلی</span></a>
+            <p class="auth-top-line">پنجرهٔ شما به روزهای کودکتان</p>
+            <img class="auth-top-art" src="<?= e(url('assets/img/auth-garden.svg')) ?>" width="560" height="460" alt="" aria-hidden="true" decoding="async">
+        </header>
+
+        <div class="auth-sheet">
+            <?php if ($isForgot || $isReset): ?>
+                <a class="auth-back" href="<?= e(url('login.php')) ?>"><?= $authIcon('back', 18) ?><span>بازگشت به ورود</span></a>
+            <?php else: ?>
+                <nav class="auth-tabs" aria-label="حساب والدین" data-active="<?= $isRegister ? 'register' : 'login' ?>">
+                    <span class="auth-tabs-pill" aria-hidden="true"></span>
+                    <a href="<?= e(url('login.php')) ?>"<?= !$isRegister ? ' aria-current="page"' : '' ?>>ورود به حساب</a>
+                    <a href="<?= e(url('register.php')) ?>"<?= $isRegister ? ' aria-current="page"' : '' ?>>ثبت‌نام والدین</a>
                 </nav>
-                <?php if ($isRegister): ?>
-                <ol class="entry-steps" aria-label="مراحل ثبت‌نام">
-                    <li <?= !$isVerify ? 'aria-current="step"' : 'class="is-done"' ?>><span><?= $isVerify ? '✓' : '۱' ?></span><em>اطلاعات والد</em></li>
-                    <li <?= $isVerify ? 'aria-current="step"' : '' ?>><span>۲</span><em>تأیید موبایل</em></li>
-                    <li><span>۳</span><em>بررسی مدیریت</em></li>
-                    <li><span>۴</span><em>ورود به پنل</em></li>
-                </ol>
-                <?php endif; ?>
-            </div>
             <?php endif; ?>
-            <div class="entry-heading"><h1><?= e($heading) ?></h1><p><?= e($description) ?></p></div>
+
+            <?php if ($isRegister): ?>
+                <ol class="auth-steps" aria-label="مراحل ثبت‌نام">
+                    <?php foreach ($stepLabels as $stepIndex => $stepLabel): $stepNo = $stepIndex + 1; ?>
+                        <li class="<?= $stepNo < $registerStep ? 'is-done' : ($stepNo === $registerStep ? 'is-current' : 'is-next') ?>"<?= $stepNo === $registerStep ? ' aria-current="step"' : '' ?>><span><?= e($stepLabel) ?></span></li>
+                    <?php endforeach; ?>
+                </ol>
+                <p class="auth-steps-caption" aria-hidden="true">مرحلهٔ <?= e($fa((string) $registerStep)) ?> از ۴ · <strong><?= e($stepLabels[$registerStep - 1]) ?></strong></p>
+            <?php endif; ?>
+
+            <div class="auth-heading"><h1><?= e($heading) ?></h1><p><?= e($description) ?></p></div>
+
+            <div class="auth-notice auth-notice-warn" role="status" data-offline hidden>
+                <span class="auth-notice-icon" aria-hidden="true"><?= $authIcon('alert', 16) ?></span>
+                <div>اتصال اینترنت برقرار نیست. پس از وصل شدن دوباره تلاش کنید.</div>
+            </div>
             <?php if ($success): ?>
-                <div class="entry-notice entry-notice-success" role="status">
-                    <span class="entry-notice-icon" aria-hidden="true">✓</span>
+                <div class="auth-notice auth-notice-success" role="status">
+                    <span class="auth-notice-icon" aria-hidden="true"><?= $authIcon('check', 16) ?></span>
                     <div><?= e($success) ?></div>
                 </div>
             <?php endif; ?>
             <?php if ($messages): ?>
-                <div class="entry-notice entry-notice-error" role="alert" tabindex="-1" data-server-error>
-                    <span class="entry-notice-icon" aria-hidden="true">!</span>
-                    <ul><?php foreach (array_unique($messages) as $message): ?><li><?= e($message) ?></li><?php endforeach; ?></ul>
+                <div class="auth-notice auth-notice-error" role="alert" tabindex="-1" data-server-error>
+                    <span class="auth-notice-icon" aria-hidden="true"><?= $authIcon('alert', 16) ?></span>
+                    <ul><?php foreach ($messages as $message): ?><li><?= e($message) ?></li><?php endforeach; ?></ul>
                 </div>
             <?php endif; ?>
+
             <?php if ($isVerify): ?>
-                <div class="entry-recipient"><bdi><?= e(persianNumber($displayPhone)) ?></bdi><a href="<?= e(url($endpoint)) ?>"><?= $isRegister ? 'ویرایش اطلاعات' : 'تغییر شماره' ?></a></div>
+                <div class="auth-recipient">
+                    <span class="auth-recipient-icon" aria-hidden="true"><?= $authIcon('sms', 20) ?></span>
+                    <div class="auth-recipient-text"><small>کد به این شماره پیامک شد</small><bdi dir="ltr"><?= e($fa($prettyPhone)) ?></bdi></div>
+                    <a href="<?= e(url($endpoint)) ?>"><?= $isRegister ? 'ویرایش اطلاعات' : 'تغییر شماره' ?></a>
+                </div>
             <?php endif; ?>
-            <?php if ((!$isReset || ($tokenValid ?? false)) && empty($teacherRecovery)): ?>
-            <form method="post" action="<?= e($formAction) ?>" class="entry-form" data-auth-form<?= $isVerify ? ' data-auto-submit' : '' ?>>
+
+            <?php if ($showForm): ?>
+            <form method="post" action="<?= e($formAction) ?>" class="auth-form" data-auth-form<?= $autoSubmit ? ' data-auto-submit' : '' ?>>
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <?php if ($isRegister || $isForgot): ?><input type="hidden" name="action" value="<?= $isRegister ? ($isVerify ? 'verify_otp' : 'submit_form') : ($isVerify ? 'set_new_password' : 'request_otp') ?>"><?php endif; ?>
-                <?php if ($isReset): ?><input type="hidden" name="token" value="<?= e($rawToken) ?>"><?php endif; ?>
+                <?php if ($isReset): ?><input type="hidden" name="token" value="<?= e($rawToken ?? '') ?>"><?php endif; ?>
                 <?php if ($isVerify): ?>
                     <input type="hidden" name="phone" value="<?= e($displayPhone) ?>">
-                    <?php $renderField('otp_code', 'کد تأیید پیامکی', 'text', '', 'کد را می‌توانید یک‌جا جای‌گذاری کنید.', 'one-time-code', 'sms'); ?>
+                    <?php $renderField('otp_code', 'کد تأیید پیامکی', 'text', [
+                        'hint' => $autoSubmit ? 'با وارد کردن رقم آخر، کد خودکار بررسی می‌شود. می‌توانید کد را یک‌جا جای‌گذاری کنید.' : 'کد را می‌توانید یک‌جا جای‌گذاری کنید.',
+                        'autocomplete' => 'one-time-code',
+                        'icon' => 'sms',
+                    ]); ?>
                 <?php elseif ($isRegister): ?>
-                    <div class="entry-name-row">
-                        <?php $renderField('first_name', 'نام والد', 'text', $old['first_name'] ?? '', '', 'given-name', 'user'); ?>
-                        <?php $renderField('last_name', 'نام خانوادگی والد', 'text', $old['last_name'] ?? '', '', 'family-name', 'user'); ?>
+                    <div class="auth-name-row">
+                        <?php $renderField('first_name', 'نام والد', 'text', ['value' => $old['first_name'] ?? '', 'autocomplete' => 'given-name']); ?>
+                        <?php $renderField('last_name', 'نام خانوادگی', 'text', ['value' => $old['last_name'] ?? '', 'autocomplete' => 'family-name']); ?>
                     </div>
                 <?php endif; ?>
                 <?php if (!$isVerify && !$isReset): ?>
-                    <?php $renderField('phone', 'شماره موبایل', 'tel', $isRegister ? ($old['phone'] ?? '') : ($phone ?? ''), $isRegister ? 'کد تأیید را به همین شماره می‌فرستیم.' : '', $mode === 'login' ? 'username' : 'tel', 'phone'); ?>
+                    <?php $renderField('phone', 'شماره موبایل', 'tel', [
+                        'value' => $isRegister ? ($old['phone'] ?? '') : ($phone ?? ''),
+                        'hint' => $isRegister ? 'کد تأیید را به همین شماره پیامک می‌کنیم.' : '',
+                        'autocomplete' => $isLogin ? 'username' : 'tel',
+                        'icon' => 'phone',
+                    ]); ?>
                 <?php endif; ?>
-                <?php if ($mode === 'login' || ($isRegister && !$isVerify) || ($isForgot && $isVerify) || $isReset): ?>
-                    <?php $newPassword = $mode !== 'login';
-                    $renderField(
-                        $isForgot ? 'new_password' : 'password',
-                        $newPassword ? 'رمز عبور جدید' : 'رمز عبور',
-                        'password',
-                        '',
-                        $newPassword ? 'حداقل ۸ کاراکتر، شامل حرف انگلیسی و عدد؛ حداکثر ۷۲ بایت.' : '',
-                        $newPassword ? 'new-password' : 'current-password',
-                        'lock',
-                        $newPassword
-                    ); ?>
+                <?php if ($isLogin || ($isRegister && !$isVerify) || ($isForgot && $isVerify) || $isReset): ?>
+                    <?php $newPassword = !$isLogin;
+                    $renderField($isForgot ? 'new_password' : 'password', $newPassword ? 'رمز عبور جدید' : 'رمز عبور', 'password', [
+                        'autocomplete' => $newPassword ? 'new-password' : 'current-password',
+                        'icon' => 'lock',
+                        'rules' => $newPassword,
+                        'aside' => $newPassword ? '' : '<a class="auth-label-link" href="' . e(url('forgot-password.php')) . '">رمز را فراموش کرده‌اید؟</a>',
+                    ]); ?>
                     <?php if ($newPassword): ?>
-                        <?php $renderField('confirm_password', 'تکرار رمز عبور', 'password', '', '', 'new-password', 'lock'); ?>
-                    <?php else: ?><a class="entry-forgot" href="<?= e(url('forgot-password.php')) ?>">رمز عبور را فراموش کرده‌اید؟</a><?php endif; ?>
+                        <?php $renderField('confirm_password', 'تکرار رمز عبور', 'password', ['autocomplete' => 'new-password', 'icon' => 'lock']); ?>
+                    <?php endif; ?>
                 <?php endif; ?>
-                <?php if ($isRegister && !$isVerify): ?><p class="entry-note">پس از تأیید موبایل، حساب شما با بررسی مدیریت فعال می‌شود. این فرم برای ساخت حساب والدین است.</p><?php endif; ?>
-                <button type="submit" class="entry-submit" data-loading-text="<?= e($loadingText) ?>"><span data-submit-label><?= $isRegister ? ($isVerify ? 'تأیید و تکمیل ثبت‌نام' : 'دریافت کد تأیید') : ($isForgot ? ($isVerify ? 'ذخیرهٔ رمز جدید' : 'دریافت کد بازیابی') : ($isReset ? 'ذخیرهٔ رمز جدید' : 'ورود به حساب والدین')) ?></span><span class="entry-spinner" aria-hidden="true"></span></button>
+                <?php if ($isRegister && !$isVerify): ?>
+                    <p class="auth-note"><span class="auth-note-icon" aria-hidden="true"><?= $authIcon('info', 18) ?></span><span>پس از تأیید موبایل، مدیریت مهد حساب شما را بررسی و فعال می‌کند.</span></p>
+                <?php endif; ?>
+                <button type="submit" class="auth-submit" data-loading-text="<?= e($loadingText) ?>">
+                    <span data-submit-label><?= e($submitLabel) ?></span>
+                    <span class="auth-submit-icon" aria-hidden="true"><?= $authIcon('arrow', 20) ?></span>
+                    <span class="auth-spinner" aria-hidden="true"></span>
+                </button>
             </form>
             <?php endif; ?>
+
             <?php if ($isVerify): ?>
-            <form method="post" action="<?= e($formAction) ?>" class="entry-resend" data-auth-form>
+            <form method="post" action="<?= e($formAction) ?>" class="auth-resend" data-auth-form>
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <input type="hidden" name="action" value="resend_otp">
                 <input type="hidden" name="phone" value="<?= e($displayPhone) ?>">
                 <span>کد را دریافت نکرده‌اید؟</span>
                 <button type="submit" data-resend data-wait="<?= max(0, ($resendAvailableAt ?? 0) - time()) ?>">ارسال دوبارهٔ کد</button>
-                <span data-countdown role="timer"></span>
+                <span data-countdown role="timer" dir="ltr"></span>
+                <span class="auth-resend-track" aria-hidden="true" hidden><i data-resend-bar></i></span>
             </form>
             <?php endif; ?>
-            <?php if ($isReset && !($tokenValid ?? false)): ?><a class="entry-link-button" href="<?= e(url('forgot-password.php')) ?>">شروع دوبارهٔ بازیابی</a><?php endif; ?>
-            <?php if ($mode === 'login'): ?><p class="entry-switch">هنوز حساب ندارید؟ <a href="<?= e(url('register.php')) ?>">ثبت‌نام والدین</a></p><?php endif; ?>
-            <div class="entry-staff">مربی یا مدیر مهد هستید؟ <a href="<?= e(url('teacher/login.php')) ?>">ورود مربیان</a><span aria-hidden="true">/</span><a href="<?= e(url('admin/login.php')) ?>">ورود مدیریت</a></div>
+
+            <?php if ($isReset && !($tokenValid ?? false)): ?><a class="auth-submit auth-link-button" href="<?= e(url('forgot-password.php')) ?>"><span>شروع دوبارهٔ بازیابی</span><span class="auth-submit-icon" aria-hidden="true"><?= $authIcon('arrow', 20) ?></span></a><?php endif; ?>
+            <?php if ($isLogin): ?><p class="auth-switch">هنوز حساب ندارید؟ <a href="<?= e(url('register.php')) ?>">ثبت‌نام والدین</a></p><?php endif; ?>
+            <?php if ($isRegister && !$isVerify): ?><p class="auth-switch">قبلاً ثبت‌نام کرده‌اید؟ <a href="<?= e(url('login.php')) ?>">ورود به حساب</a></p><?php endif; ?>
+            <div class="auth-staff">مربی یا مدیر مهد هستید؟ <a href="<?= e(url('teacher/login.php')) ?>">ورود مربیان</a><span aria-hidden="true">·</span><a href="<?= e(url('admin/login.php')) ?>">ورود مدیریت</a></div>
         </div>
-        <p class="entry-bottom">کنار هم، برای روزهای قشنگ کودکی.</p>
+        <p class="auth-foot">کنار هم، برای روزهای قشنگ کودکی.</p>
     </main>
-    <aside class="entry-story" aria-label="همراه خانه و مهدکودک">
-        <div class="entry-story-copy">
-            <h2>کودکی، فصلِ<br>شکفتن است.</h2>
-            <p>از اولین دوستی تا کشف‌های کوچک هر روز؛<br>خانه و مهد، کنار هم می‌مانند.</p>
+
+    <aside class="auth-story" aria-label="همراه خانه و مهدکودک">
+        <div class="auth-story-copy">
+            <h2>کودکی، فصلِ <em>شکفتن</em> است.</h2>
+            <p>از اولین دوستی تا کشف‌های کوچکِ هر روز؛ خانه و مهد، کنار هم می‌مانند.</p>
         </div>
-        <img class="entry-illustration" src="<?= e(url('assets/img/auth-garden.svg')) ?>" width="560" height="460" alt="تصویرسازی یک مهدکودک در باغچه، کنار گل و برگ خندان">
-        <div class="entry-story-footer">
-            <span class="entry-story-mark" aria-hidden="true">✿</span>
-            <p><strong>یک پنجره به روزهای کودکتان</strong><span>گزارش‌های روزانه، پیام‌های مربی و پیگیری شهریه</span></p>
-        </div>
-        <div class="entry-trust" aria-hidden="true">
-            <span>گزارش روزانه</span>
-            <span>حضور و غیاب</span>
-            <span>پیام مربی</span>
-            <span>شهریه</span>
+        <img class="auth-story-art" src="<?= e(url('assets/img/auth-garden.svg')) ?>" width="560" height="460" alt="تصویرسازی یک مهدکودک در باغچه، کنار گل و برگ خندان" decoding="async">
+        <div class="auth-report" aria-hidden="true">
+            <div class="auth-report-head">
+                <span class="auth-report-avatar">آ</span>
+                <span><strong>گزارش امروزِ آوا</strong><small>نمونه · ساعت ۱۳:۴۰</small></span>
+            </div>
+            <p class="auth-report-msg">«امروز با دوستانش یک برج بلند ساخت و ناهارش را کامل خورد.»</p>
+            <ul class="auth-report-tags">
+                <li>حضور ۸:۰۵</li>
+                <li>خواب ۱ ساعت</li>
+                <li>نقاشی با آبرنگ</li>
+            </ul>
         </div>
     </aside>
-</div>
 </div>
 </body>
 </html>
