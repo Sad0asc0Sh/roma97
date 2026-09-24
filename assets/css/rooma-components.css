@@ -133,6 +133,11 @@ a.topbar__item:hover svg { opacity: 1; }
     padding-inline: calc(var(--fh-inset) * var(--fh-p));
 
     pointer-events: none;   /* only the bar itself is interactive */
+
+    /* PERF: the wrapper's padding is rewritten every scroll frame during the
+       morph — containment keeps that layout work inside the fixed header so
+       it never propagates to the page. No visual effect. */
+    contain: layout style;
 }
 
 /* A topbar must not push the header down, because then the header would
@@ -188,7 +193,10 @@ body:has(> .topbar) .site-main > .page-hero:first-child {
     backdrop-filter: blur(calc(var(--fh-blur) * var(--fh-p))) saturate(calc(100% + 90% * var(--fh-p)));
 
     pointer-events: auto;
-    will-change: max-width, border-radius, backdrop-filter;
+    /* NOTE: no will-change here on purpose. max-width / border-radius /
+       backdrop-filter are not compositable, so hinting them only reserves
+       memory without promoting anything — the layer already comes from
+       translateZ(0) + contain above. */
 }
 /* Low-power phones: keep the same capsule look with a cheaper blur.
    20px→14px is ~30% less blur cost on mobile GPUs, visually near-identical
@@ -197,6 +205,11 @@ body:has(> .topbar) .site-main > .page-hero:first-child {
     .site-header__shell {
         --fh-blur: 14px;
     }
+}
+/* Weak devices (JS adds .bg-lite on Save-Data/2G/≤4 cores): same capsule,
+   same glass ramp, just a cheaper blur kernel. Capable devices untouched. */
+.bg-lite .site-header__shell {
+    --fh-blur: 8px;
 }
 
 /* The glass itself lives on a pseudo-element so its opacity can be faded
@@ -246,6 +259,9 @@ body:has(> .topbar) .site-main > .page-hero:first-child {
     overflow: hidden;
     opacity: var(--fh-p);
     pointer-events: none;
+    /* PERF: opacity-only fade driven per scroll frame — own layer so the
+       static sheen gradients are rasterized once, not repainted per frame. */
+    will-change: opacity;
 }
 .site-header__glow::before {
     content: "";
