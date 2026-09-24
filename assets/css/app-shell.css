@@ -153,6 +153,10 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   top: 0;
   z-index: 99;
   gap: 16px;
+  /* PERF: isolate sticky bar paint from the scrolling body */
+  contain: layout paint style;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .app-topbar-right {
@@ -1267,4 +1271,46 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+}
+
+
+/* ── PERF runtime fallbacks (.perf-low / .bg-lite) ───────────────────────
+   JS adds these classes when the device cannot hold ~45fps (or is on
+   Save-Data / 2G / ≤4 cores). Solid surfaces replace glass so sticky
+   bars and overlays stop sampling the page every scroll frame. Visual
+   weight is preserved via slightly more opaque fills. No change on
+   capable devices. */
+.perf-low .site-header,
+.bg-lite .site-header,
+.perf-low .admin-topbar,
+.bg-lite .admin-topbar {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+.perf-low .site-header,
+.bg-lite .site-header { background: rgba(255,255,255,0.96) !important; }
+.perf-low .admin-topbar,
+.bg-lite .admin-topbar { background: rgba(255,255,255,0.96) !important; }
+
+.perf-low .mobile-overlay,
+.bg-lite .mobile-overlay,
+.perf-low .admin-overlay,
+.bg-lite .admin-overlay,
+.perf-low .modal-overlay,
+.bg-lite .modal-overlay,
+.perf-low .gallery-lightbox,
+.bg-lite .gallery-lightbox,
+.perf-low .gallery-overlay,
+.bg-lite .gallery-overlay {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+.perf-low .slider-nav,
+.bg-lite .slider-nav,
+.perf-low .slider-autoplay-toggle,
+.bg-lite .slider-autoplay-toggle {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: rgba(255,255,255,0.28) !important;
 }

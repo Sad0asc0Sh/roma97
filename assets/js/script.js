@@ -3,6 +3,88 @@ document.documentElement.classList.add('js-enabled');
 // Shared reduced-motion preference — every JS-driven motion below defers to it.
 var prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// PERF: cached scroll range. scrollHeight forces layout when read every
+// scroll frame — refresh only on resize / load.
+var _maxScrollCache = -1;
+function getMaxScrollCached() {
+    if (_maxScrollCache < 0) {
+        var d = document.documentElement;
+        _maxScrollCache = Math.max(0, (d.scrollHeight || 0) - (window.innerHeight || 0));
+    }
+    return _maxScrollCache;
+}
+function invalidateMaxScrollCached() { _maxScrollCache = -1; }
+window.addEventListener('resize', invalidateMaxScrollCached, { passive: true });
+window.addEventListener('load', invalidateMaxScrollCached, { passive: true });
+
+// PERF: one shared rAF-throttled scroll bus for every script.js module.
+var _scrollSubs = [];
+var _scrollQueued = false;
+function onSharedScrollFrame() {
+    _scrollQueued = false;
+    var y = window.scrollY || window.pageYOffset || 0;
+    for (var i = 0; i < _scrollSubs.length; i++) {
+        try { _scrollSubs[i](y); } catch (e) { /* keep other subscribers alive */ }
+    }
+}
+function subscribeSharedScroll(fn) {
+    _scrollSubs.push(fn);
+    if (_scrollSubs.length === 1) {
+        window.addEventListener('scroll', function () {
+            if (!_scrollQueued) {
+                _scrollQueued = true;
+                window.requestAnimationFrame(onSharedScrollFrame);
+            }
+        }, { passive: true });
+    }
+    fn(window.scrollY || 0);
+}
+
+// PERF: runtime frame-time governor (same contract as rooma.js).
+(function perfGovernor() {
+    var root = document.documentElement;
+    var samples = 0, slow = 0, last = 0, watching = false, done = false;
+    function onFrame(ts) {
+        if (done) return;
+        if (last) {
+            var dt = ts - last;
+            if (dt > 0 && dt < 120) {
+                samples++;
+                if (dt > 22) slow++;
+            }
+        }
+        last = ts;
+        if (samples >= 40) {
+            done = true;
+            if (slow >= 12) root.classList.add('perf-low');
+            return;
+        }
+        if (watching) window.requestAnimationFrame(onFrame);
+    }
+    function start() {
+        if (watching || done) return;
+        watching = true;
+        last = 0;
+        window.requestAnimationFrame(onFrame);
+    }
+    window.addEventListener('scroll', start, { passive: true });
+
+    // Cheap static tier: Save-Data / 2G / ≤4 cores (mirrors rooma.js bg-lite).
+    try {
+        var conn = navigator.connection || {};
+        var saveData = !!conn.saveData;
+        var slowNet = typeof conn.effectiveType === 'string' &&
+            (conn.effectiveType.indexOf('2g') !== -1 || conn.effectiveType === 'slow-2g');
+        var lowCores = typeof navigator.hardwareConcurrency === 'number' &&
+            navigator.hardwareConcurrency <= 4;
+        var lowMem = typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 2;
+        if (saveData || slowNet || lowCores || lowMem) {
+            root.classList.add('bg-lite');
+            root.classList.add('perf-low');
+        }
+    } catch (e) { /* never break on exotic browsers */ }
+})();
+
 // ============================================
 // SCROLL PROGRESS RIBBON
 // Thin gradient bar pinned to the top edge that
@@ -15,22 +97,12 @@ var prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-redu
     // every scroll frame. Visually identical (RTL: grows right→left).
     bar.style.transformOrigin = 'right center';
     bar.style.willChange = 'transform';
-    var ticking = false;
-    function render() {
-        ticking = false;
-        var doc = document.documentElement;
-        var max = doc.scrollHeight - window.innerHeight;
-        var pct = max > 8 ? (window.scrollY / max) : 0;
+    subscribeSharedScroll(function(y) {
+        var max = getMaxScrollCached();
+        var pct = max > 8 ? (y / max) : 0;
         if (pct < 0) pct = 0; else if (pct > 1) pct = 1;
         bar.style.transform = 'scaleX(' + pct.toFixed(4) + ')';
-    }
-    window.addEventListener('scroll', function() {
-        if (!ticking) {
-            ticking = true;
-            window.requestAnimationFrame(render);
-        }
-    }, { passive: true });
-    render();
+    });
 })();
 
 // ============================================
@@ -354,26 +426,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Header scroll effect (legacy .scrolled variant for style.css pages).
-    // PERF: rAF-batched + state-guarded so no class churn on every pixel.
+    // PERF: shared scroll bus + state-guarded so no class churn on every pixel.
     var header = document.querySelector('.site-header');
     if (header) {
-        var headerTicking = false;
         var headerOn = null;
-        var renderHeader = function() {
-            headerTicking = false;
-            var next = window.scrollY > 50;
+        subscribeSharedScroll(function(y) {
+            var next = y > 50;
             if (next !== headerOn) {
                 headerOn = next;
                 header.classList.toggle('scrolled', next);
             }
-        };
-        window.addEventListener('scroll', function() {
-            if (!headerTicking) {
-                headerTicking = true;
-                window.requestAnimationFrame(renderHeader);
-            }
-        }, { passive: true });
-        renderHeader();
+        });
     }
 
     // Enhanced scroll entrance animation observer
@@ -607,33 +670,25 @@ document.addEventListener('DOMContentLoaded', function() {
     if (bottomNav && !prefersReducedMotion) {
         var lastScrollY = window.scrollY || 0;
         var navHideThreshold = 10;
-        var tickingNav = false;
         var navHidden = null;
 
-        window.addEventListener('scroll', function() {
-            if (!tickingNav) {
-                tickingNav = true;
-                window.requestAnimationFrame(function() {
-                    var currentScrollY = window.scrollY;
-                    var diff = currentScrollY - lastScrollY;
+        subscribeSharedScroll(function(currentScrollY) {
+            var diff = currentScrollY - lastScrollY;
 
-                    if (diff > navHideThreshold && currentScrollY > 200) {
-                        if (navHidden !== true) {
-                            navHidden = true;
-                            bottomNav.classList.add('is-hidden');
-                        }
-                    } else if (diff < -navHideThreshold) {
-                        if (navHidden !== false) {
-                            navHidden = false;
-                            bottomNav.classList.remove('is-hidden');
-                        }
-                    }
-
-                    lastScrollY = currentScrollY;
-                    tickingNav = false;
-                });
+            if (diff > navHideThreshold && currentScrollY > 200) {
+                if (navHidden !== true) {
+                    navHidden = true;
+                    bottomNav.classList.add('is-hidden');
+                }
+            } else if (diff < -navHideThreshold) {
+                if (navHidden !== false) {
+                    navHidden = false;
+                    bottomNav.classList.remove('is-hidden');
+                }
             }
-        }, { passive: true });
+
+            lastScrollY = currentScrollY;
+        });
     }
 
     // ============================================

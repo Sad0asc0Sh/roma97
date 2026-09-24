@@ -515,46 +515,60 @@ html { scrollbar-color: var(--border-strong) var(--surface-sunken); scrollbar-wi
     contain: strict;
 }
 
-/* Drifting colour fields ("aurora blobs") */
+/* Drifting colour fields ("aurora blobs")
+   PERF: filter lives on a static ::before; the parent only animates transform.
+   filter+transform on the SAME element forces the blur to re-rasterize every
+   animation frame on Safari / Firefox / mobile GPUs. Parent-transform +
+   child-filter lets the blur bake once into a layer that then only moves.
+   Gradients stay on --blob-bg so their placement matches the old box exactly. */
 .bg-blob {
     position: absolute;
     border-radius: 50%;
-    filter: blur(70px);
     opacity: .5;
     will-change: transform;
     /* Keep the blur cheap on mobile GPUs */
     transform: translate3d(0, 0, 0);
 }
+.bg-blob::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--blob-bg);
+    filter: blur(70px);
+    pointer-events: none;
+}
 .bg-blob-1 {
+    --blob-bg: radial-gradient(circle at 30% 30%, rgba(61,139,99,.34), rgba(61,139,99,0) 70%);
     width: 46vmax; height: 46vmax;
     top: -14vmax; inset-inline-end: -10vmax;
-    background: radial-gradient(circle at 30% 30%, rgba(61,139,99,.34), rgba(61,139,99,0) 70%);
     animation: blobDrift1 34s var(--ease-in-out) infinite alternate;
 }
 .bg-blob-2 {
+    --blob-bg: radial-gradient(circle at 60% 40%, rgba(196,114,74,.30), rgba(196,114,74,0) 70%);
     width: 40vmax; height: 40vmax;
     top: 32%; inset-inline-start: -14vmax;
-    background: radial-gradient(circle at 60% 40%, rgba(196,114,74,.30), rgba(196,114,74,0) 70%);
     animation: blobDrift2 42s var(--ease-in-out) infinite alternate;
 }
 .bg-blob-3 {
+    --blob-bg: radial-gradient(circle at 40% 60%, rgba(232,168,56,.26), rgba(232,168,56,0) 70%);
     width: 34vmax; height: 34vmax;
     bottom: -12vmax; inset-inline-end: 18%;
-    background: radial-gradient(circle at 40% 60%, rgba(232,168,56,.26), rgba(232,168,56,0) 70%);
     animation: blobDrift3 38s var(--ease-in-out) infinite alternate;
 }
 .bg-blob-4 {
+    --blob-bg: radial-gradient(circle at 50% 50%, rgba(91,141,184,.20), rgba(91,141,184,0) 70%);
     width: 28vmax; height: 28vmax;
     top: 58%; inset-inline-end: -8vmax;
-    background: radial-gradient(circle at 50% 50%, rgba(91,141,184,.20), rgba(91,141,184,0) 70%);
     animation: blobDrift1 46s var(--ease-in-out) infinite alternate-reverse;
 }
 
-[data-theme="dark"] .bg-blob { opacity: .40; filter: blur(80px); }
-[data-theme="dark"] .bg-blob-1 { background: radial-gradient(circle at 30% 30%, rgba(95,180,137,.34), transparent 70%); }
-[data-theme="dark"] .bg-blob-2 { background: radial-gradient(circle at 60% 40%, rgba(219,144,104,.26), transparent 70%); }
-[data-theme="dark"] .bg-blob-3 { background: radial-gradient(circle at 40% 60%, rgba(240,188,92,.22), transparent 70%); }
-[data-theme="dark"] .bg-blob-4 { background: radial-gradient(circle at 50% 50%, rgba(127,174,210,.18), transparent 70%); }
+[data-theme="dark"] .bg-blob { opacity: .40; }
+[data-theme="dark"] .bg-blob::before { filter: blur(80px); }
+[data-theme="dark"] .bg-blob-1 { --blob-bg: radial-gradient(circle at 30% 30%, rgba(95,180,137,.34), transparent 70%); }
+[data-theme="dark"] .bg-blob-2 { --blob-bg: radial-gradient(circle at 60% 40%, rgba(219,144,104,.26), transparent 70%); }
+[data-theme="dark"] .bg-blob-3 { --blob-bg: radial-gradient(circle at 40% 60%, rgba(240,188,92,.22), transparent 70%); }
+[data-theme="dark"] .bg-blob-4 { --blob-bg: radial-gradient(circle at 50% 50%, rgba(127,174,210,.18), transparent 70%); }
 
 @keyframes blobDrift1 {
     0%   { transform: translate3d(0, 0, 0) scale(1); }
@@ -623,8 +637,9 @@ html { scrollbar-color: var(--border-strong) var(--surface-sunken); scrollbar-wi
    • .bg-lite (added by JS on Save-Data / 2G / ≤4 cores) freezes motes and
      halves blob travel without removing them. */
 @media (max-width: 767px) {
-    .bg-blob { filter: blur(52px); opacity: .45; }
-    [data-theme="dark"] .bg-blob { filter: blur(60px); }
+    .bg-blob::before { filter: blur(52px); }
+    .bg-blob { opacity: .45; }
+    [data-theme="dark"] .bg-blob::before { filter: blur(60px); }
     .bg-blob-1 { width: 38vmax; height: 38vmax; }
     .bg-blob-2 { width: 34vmax; height: 34vmax; }
     .bg-blob-3 { width: 30vmax; height: 30vmax; }
@@ -636,18 +651,32 @@ html { scrollbar-color: var(--border-strong) var(--surface-sunken); scrollbar-wi
     animation-duration: 60s;
     opacity: .35;
 }
+.bg-lite .bg-blob::before { filter: blur(40px); }
 .bg-lite .bg-grain { opacity: .35; }
+
+/* Runtime governor (rooma.js): devices that cannot hold ~45fps while
+   scrolling drop decorative blur / glass sampling. Layout and motion
+   stay; only the most expensive paint is relaxed. */
+.perf-low .bg-blob::before { filter: blur(28px); }
+.perf-low .bg-motes { display: none; }
 
 /* Off-screen sections skip rendering until near the viewport.
    content-visibility keeps layout correct (intrinsic size reserves space)
    so there is no scroll-jump and no visual change — just less paint work
    while scrolling long pages on Firefox / low-end Android. */
 @media (prefers-reduced-motion: no-preference) {
+    .section,
+    .section-sm,
+    .section-tight,
     .section-paper,
     .section-sunken,
     .section-soft {
         content-visibility: auto;
         contain-intrinsic-size: auto 700px;
+    }
+    .section-sm,
+    .section-tight {
+        contain-intrinsic-size: auto 420px;
     }
 }
 

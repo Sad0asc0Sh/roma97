@@ -127,7 +127,7 @@
     font-size: 0.82rem;
     font-weight: 600;
     border: 1px solid transparent;
-    transition: all var(--adm-transition);
+    transition: color var(--adm-transition), background-color var(--adm-transition), background var(--adm-transition), border-color var(--adm-transition), box-shadow var(--adm-transition), transform var(--adm-transition), opacity var(--adm-transition);
 }
 .admin-attendance-quick a:hover {
     background: var(--adm-primary);

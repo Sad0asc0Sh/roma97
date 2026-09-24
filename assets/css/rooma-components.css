@@ -105,20 +105,23 @@ a.topbar__item:hover svg { opacity: 1; }
    paint-cheap one driven by a single scroll progress variable `--fh-p`
    (0 → 1), written once per rAF frame by rooma.js:
 
-       --fh-p   →  width      (max-width tightens to a capsule)
+       --fh-p   →  opacity   (of the glass layer only, never the content)
+                   transform (a subtle scale + settle, no vertical entry)
+       --fh-pc  →  width      (max-width tightens to a capsule)
                    border-radius
                    background  (glass fades up via opacity)
                    blur        (backdrop-filter ramps 0 → full)
-                   opacity     (of the glass layer only, never the content)
-                   transform   (a subtle scale + settle, no vertical entry)
                    height / padding (compactness)
 
-   Because `--fh-p` is recomputed every frame, these need no CSS transition,
-   which is what makes the morph track the scroll exactly.
+   `--fh-p` stays fine-grained for compositor-friendly opacity/transform.
+   `--fh-pc` is quantized (~25 steps) so layout, color-mix and the
+   backdrop-filter function are not rebuilt on every compositor frame.
+   Neither uses a CSS transition, so the morph tracks the scroll exactly.
    ══════════════════════════════════════════════════════════════════════════ */
 
 .site-header {
     --fh-p: 0;
+    --fh-pc: 0;
 
     position: fixed;
     inset-inline: 0;
@@ -128,9 +131,11 @@ a.topbar__item:hover svg { opacity: 1; }
     display: flex;
     justify-content: center;
 
-    /* Top offset grows slightly as the capsule detaches from the edge */
-    padding-block-start: calc(var(--fh-top) * var(--fh-p));
-    padding-inline: calc(var(--fh-inset) * var(--fh-p));
+    /* Top offset grows slightly as the capsule detaches from the edge.
+       PERF: driven by coarse --fh-pc (25 steps) — layout is rewritten during
+       the morph, so it must not track every compositor frame. */
+    padding-block-start: calc(var(--fh-top) * var(--fh-pc));
+    padding-inline: calc(var(--fh-inset) * var(--fh-pc));
 
     pointer-events: none;   /* only the bar itself is interactive */
 
@@ -181,22 +186,26 @@ body:has(> .topbar) .site-main > .page-hero:first-child {
     transform: translateZ(0);
     backface-visibility: hidden;
 
-    /* Full-bleed at rest → capsule once condensed */
-    max-width: calc(100% - (100% - var(--fh-max-w)) * var(--fh-p));
+    /* Full-bleed at rest → capsule once condensed (coarse steps: layout) */
+    max-width: calc(100% - (100% - var(--fh-max-w)) * var(--fh-pc));
 
     /* Square at rest → fully rounded capsule */
-    border-radius: calc(var(--fh-radius) * var(--fh-p));
+    border-radius: calc(var(--fh-radius) * var(--fh-pc));
 
-    /* Blur ramps in with the glass. `calc()` inside a filter function is
-       valid and interpolates smoothly. */
-    -webkit-backdrop-filter: blur(calc(var(--fh-blur) * var(--fh-p))) saturate(calc(100% + 90% * var(--fh-p)));
-    backdrop-filter: blur(calc(var(--fh-blur) * var(--fh-p))) saturate(calc(100% + 90% * var(--fh-p)));
-
+    /* PERF: backdrop-filter is off at rest. blur(0) still opens a backdrop
+       root and re-samples the page every scroll frame on Safari / Firefox.
+       JS toggles .is-filtering once the glass starts coming in; the blur
+       amount rides the coarse --fh-pc so the filter function is not rebuilt
+       on every compositor frame. */
     pointer-events: auto;
     /* NOTE: no will-change here on purpose. max-width / border-radius /
        backdrop-filter are not compositable, so hinting them only reserves
        memory without promoting anything — the layer already comes from
        translateZ(0) + contain above. */
+}
+.site-header.is-filtering .site-header__shell {
+    -webkit-backdrop-filter: blur(calc(var(--fh-blur) * var(--fh-pc))) saturate(calc(100% + 90% * var(--fh-pc)));
+    backdrop-filter: blur(calc(var(--fh-blur) * var(--fh-pc))) saturate(calc(100% + 90% * var(--fh-pc)));
 }
 /* Low-power phones: keep the same capsule look with a cheaper blur.
    20px→14px is ~30% less blur cost on mobile GPUs, visually near-identical
@@ -248,6 +257,17 @@ body:has(> .topbar) .site-main > .page-hero:first-child {
         background-color: var(--fh-glass-solid);
     }
 }
+/* Weak devices: same solid swap — glass look, no per-frame backdrop sample. */
+.perf-low .site-header__shell,
+.bg-lite .site-header__shell {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+.perf-low .site-header__shell::before,
+.bg-lite .site-header__shell::before {
+    background-image: none;
+    background-color: var(--fh-glass-solid);
+}
 
 /* Inner sheen — a 1px specular top edge plus a soft vertical falloff. Reads
    as physical thickness. Fades in with the glass. */
@@ -286,10 +306,10 @@ body:has(> .topbar) .site-main > .page-hero:first-child {
     gap: var(--space-sm);
 
     /* Compact by design, and a touch tighter once condensed */
-    height: calc(var(--fh-h) - (var(--fh-h) - var(--fh-h-min)) * var(--fh-p));
+    height: calc(var(--fh-h) - (var(--fh-h) - var(--fh-h-min)) * var(--fh-pc));
 
     /* Wide gutters at rest (aligns with page content) → snug in the capsule */
-    padding-inline: calc(var(--gutter) - (var(--gutter) - var(--fh-pad-min)) * var(--fh-p));
+    padding-inline: calc(var(--gutter) - (var(--gutter) - var(--fh-pad-min)) * var(--fh-pc));
 
     width: 100%;
     max-width: none;
@@ -332,15 +352,18 @@ body:has(> .site-main > section.hero:first-child) .site-header__shell {
     --fh-rest-chip-hover: rgba(255,255,255,.18);
 }
 
-/* Interpolated ink tokens actually used by the content */
+/* Interpolated ink tokens actually used by the content.
+   PERF: color-mix is expensive to recompute (Firefox especially). Drive it
+   from coarse --fh-pc so ink only repaints on the 25 morph steps, while
+   opacity/transform on the glass layers stay on fine --fh-p. */
 .site-header__shell {
-    --fh-ink-now: color-mix(in srgb, var(--fh-ink) calc(var(--fh-p) * 100%), var(--fh-rest-ink));
-    --fh-ink-soft-now: color-mix(in srgb, var(--fh-ink-soft) calc(var(--fh-p) * 100%), var(--fh-rest-ink-soft));
-    --fh-chip-now: color-mix(in srgb, var(--fh-chip) calc(var(--fh-p) * 100%), var(--fh-rest-chip));
-    --fh-chip-border-now: color-mix(in srgb, var(--fh-chip-border) calc(var(--fh-p) * 100%), var(--fh-rest-chip-border));
-    --fh-pill-now: color-mix(in srgb, var(--fh-chip) calc(var(--fh-p) * 100%), var(--fh-rest-pill));
-    --fh-pill-ring-now: color-mix(in srgb, var(--fh-chip-border) calc(var(--fh-p) * 100%), var(--fh-rest-pill-ring));
-    --fh-chip-hover-now: color-mix(in srgb, var(--fh-chip-hover) calc(var(--fh-p) * 100%), var(--fh-rest-chip-hover));
+    --fh-ink-now: color-mix(in srgb, var(--fh-ink) calc(var(--fh-pc) * 100%), var(--fh-rest-ink));
+    --fh-ink-soft-now: color-mix(in srgb, var(--fh-ink-soft) calc(var(--fh-pc) * 100%), var(--fh-rest-ink-soft));
+    --fh-chip-now: color-mix(in srgb, var(--fh-chip) calc(var(--fh-pc) * 100%), var(--fh-rest-chip));
+    --fh-chip-border-now: color-mix(in srgb, var(--fh-chip-border) calc(var(--fh-pc) * 100%), var(--fh-rest-chip-border));
+    --fh-pill-now: color-mix(in srgb, var(--fh-chip) calc(var(--fh-pc) * 100%), var(--fh-rest-pill));
+    --fh-pill-ring-now: color-mix(in srgb, var(--fh-chip-border) calc(var(--fh-pc) * 100%), var(--fh-rest-pill-ring));
+    --fh-chip-hover-now: color-mix(in srgb, var(--fh-chip-hover) calc(var(--fh-pc) * 100%), var(--fh-rest-chip-hover));
 }
 /* No color-mix (older Safari/Firefox): fall back to the resting ink, then
    hard-switch to white once the glass is mostly opaque. Handled in JS via
@@ -382,12 +405,12 @@ body:has(> .site-main > section.hero:first-child) .site-header__shell {
 /* Logo shrinks a little as things tighten. Sizes are frame-driven, so the
    inherited width/height transitions must go or they lag the scroll. */
 .site-header__shell .brand__mark {
-    width:  calc(var(--fh-mark) - (var(--fh-mark) - var(--fh-mark-min)) * var(--fh-p));
-    height: calc(var(--fh-mark) - (var(--fh-mark) - var(--fh-mark-min)) * var(--fh-p));
+    width:  calc(var(--fh-mark) - (var(--fh-mark) - var(--fh-mark-min)) * var(--fh-pc));
+    height: calc(var(--fh-mark) - (var(--fh-mark) - var(--fh-mark-min)) * var(--fh-pc));
     transition: transform var(--t-slow);
 }
 .site-header__shell .brand__logo {
-    height: calc(var(--fh-mark) - (var(--fh-mark) - var(--fh-mark-min)) * var(--fh-p));
+    height: calc(var(--fh-mark) - (var(--fh-mark) - var(--fh-mark-min)) * var(--fh-pc));
     transition: none;
 }
 
@@ -407,14 +430,14 @@ body:has(> .site-main > section.hero:first-child) .site-header__shell {
     background: var(--fh-chip-now);
     border-color: var(--fh-chip-border-now);
     color: var(--fh-ink-now);
-    width:  calc(var(--fh-btn) - (var(--fh-btn) - var(--fh-btn-min)) * var(--fh-p));
-    height: calc(var(--fh-btn) - (var(--fh-btn) - var(--fh-btn-min)) * var(--fh-p));
+    width:  calc(var(--fh-btn) - (var(--fh-btn) - var(--fh-btn-min)) * var(--fh-pc));
+    height: calc(var(--fh-btn) - (var(--fh-btn) - var(--fh-btn-min)) * var(--fh-pc));
     transition: background var(--t-fast), color var(--t-fast),
                 border-color var(--t-fast), transform var(--t-fast);
 }
 .site-header__shell .icon-btn:hover {
     background: var(--fh-chip-hover-now);
-    border-color: color-mix(in srgb, rgba(255,255,255,.32) calc(var(--fh-p) * 100%), var(--fh-rest-chip-border));
+    border-color: color-mix(in srgb, rgba(255,255,255,.32) calc(var(--fh-pc) * 100%), var(--fh-rest-chip-border));
     color: var(--fh-ink-now);
 }
 
@@ -632,6 +655,10 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
    4. MOBILE DRAWER
    ══════════════════════════════════════════════════════════════════════════ */
 .drawer-overlay {
+    /* PERF: isolate the blurred dim in its own compositor layer so the fade
+       never repaints the page behind it. Opacity-only fade = no layout. */
+    contain: strict;
+    transform: translateZ(0);
     position: fixed;
     inset: 0;
     z-index: var(--z-overlay);
@@ -641,10 +668,6 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
     opacity: 0;
     visibility: hidden;
     transition: opacity var(--t-base), visibility var(--t-base);
-    /* PERF: isolate the blurred dim in its own compositor layer so the fade
-       never repaints the page behind it. Opacity-only fade = no layout. */
-    contain: strict;
-    transform: translateZ(0);
     backface-visibility: hidden;
 }
 .drawer-overlay.is-open { opacity: 1; visibility: visible; }
@@ -870,6 +893,8 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
 
 /* On dark photo/ink backgrounds */
 .btn-light { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.32); color: #fff; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.perf-low .btn-light,
+.bg-lite .btn-light { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255,255,255,.22); }
 .btn-light:hover { background: rgba(255,255,255,.24); color: #fff; transform: translateY(-2px); }
 
 .btn-sm { --btn-py: .5rem; --btn-px: 1rem; font-size: var(--text-xs); }
@@ -900,7 +925,9 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
 .badge-success   { background: var(--primary-faint);   color: var(--primary-dark); }
 .badge-warning   { background: var(--accent-light);    color: var(--accent-dark); }
 .badge-danger    { background: rgba(200,90,90,.12);    color: var(--danger); }
-.badge-light     { background: rgba(255,255,255,.18);  color: #fff; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.badge-light     { background: rgba(255,255,255,.22);  color: #fff; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.perf-low .badge-light,
+.bg-lite .badge-light { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255,255,255,.28); }
 .badge-outline   { background: transparent; box-shadow: inset 0 0 0 1px var(--border-strong); color: var(--text-muted); }
 
 /* Eyebrow label above section titles */

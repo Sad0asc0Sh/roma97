@@ -447,7 +447,7 @@ body.auth-standalone {
     border: 2px solid transparent;
     border-radius: var(--auth-radius-sm);
     outline: none;
-    transition: all var(--auth-transition-fast);
+    transition: color var(--auth-transition-fast), background-color var(--auth-transition-fast), background var(--auth-transition-fast), border-color var(--auth-transition-fast), box-shadow var(--auth-transition-fast), transform var(--auth-transition-fast), opacity var(--auth-transition-fast);
 }
 
 .auth-input::placeholder {
@@ -487,7 +487,7 @@ body.auth-standalone {
     justify-content: center;
     color: var(--auth-muted);
     border-radius: 8px;
-    transition: all var(--auth-transition-fast);
+    transition: color var(--auth-transition-fast), background-color var(--auth-transition-fast), background var(--auth-transition-fast), border-color var(--auth-transition-fast), box-shadow var(--auth-transition-fast), transform var(--auth-transition-fast), opacity var(--auth-transition-fast);
     opacity: 0.5;
 }
 
@@ -524,7 +524,7 @@ body.auth-standalone {
     border: none;
     border-radius: var(--auth-radius-sm);
     cursor: pointer;
-    transition: all var(--auth-transition-base);
+    transition: color var(--auth-transition-base), background-color var(--auth-transition-base), background var(--auth-transition-base), border-color var(--auth-transition-base), box-shadow var(--auth-transition-base), transform var(--auth-transition-base), opacity var(--auth-transition-base);
     box-shadow: 0 4px 20px rgba(61,139,99,0.35);
     position: relative;
     overflow: hidden;
@@ -614,7 +614,7 @@ body.auth-standalone {
     border: 2px solid var(--auth-border);
     border-radius: var(--auth-radius-sm);
     cursor: pointer;
-    transition: all var(--auth-transition-base);
+    transition: color var(--auth-transition-base), background-color var(--auth-transition-base), background var(--auth-transition-base), border-color var(--auth-transition-base), box-shadow var(--auth-transition-base), transform var(--auth-transition-base), opacity var(--auth-transition-base);
     text-decoration: none;
 }
 

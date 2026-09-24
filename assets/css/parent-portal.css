@@ -153,6 +153,8 @@
   border-bottom-color: var(--pp-border-light);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  contain: layout paint style;
+  transform: translateZ(0);
 }
 
 /* ── Header ──────────────────────────────────────────────── */
@@ -164,6 +166,10 @@
   z-index: 100;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  /* PERF: isolate sticky glass so scroll invalidation stays local */
+  contain: layout paint style;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 @supports not (background: color-mix(in srgb, red 50%, blue)) {
@@ -682,6 +688,10 @@
 
 /* ── Cards ───────────────────────────────────────────────── */
 .parent-card {
+  /* PERF: off-screen cards skip paint on long portal lists */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 220px;
+  contain: layout paint style;
   background: var(--pp-surface);
   border-radius: var(--pp-radius);
   box-shadow: var(--pp-shadow-sm);
@@ -810,6 +820,9 @@
 }
 
 .child-card-large {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+  contain: layout paint style;
   background: var(--pp-surface);
   border-radius: var(--pp-radius);
   padding: 26px;
@@ -3273,3 +3286,45 @@
   .pwa-banner-text { flex: 1 1 100%; }
 }
 
+
+
+/* ── PERF runtime fallbacks (.perf-low / .bg-lite) ───────────────────────
+   JS adds these classes when the device cannot hold ~45fps (or is on
+   Save-Data / 2G / ≤4 cores). Solid surfaces replace glass so sticky
+   bars and overlays stop sampling the page every scroll frame. Visual
+   weight is preserved via slightly more opaque fills. No change on
+   capable devices. */
+.perf-low .site-header,
+.bg-lite .site-header,
+.perf-low .admin-topbar,
+.bg-lite .admin-topbar {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+.perf-low .site-header,
+.bg-lite .site-header { background: rgba(255,255,255,0.96) !important; }
+.perf-low .admin-topbar,
+.bg-lite .admin-topbar { background: rgba(255,255,255,0.96) !important; }
+
+.perf-low .mobile-overlay,
+.bg-lite .mobile-overlay,
+.perf-low .admin-overlay,
+.bg-lite .admin-overlay,
+.perf-low .modal-overlay,
+.bg-lite .modal-overlay,
+.perf-low .gallery-lightbox,
+.bg-lite .gallery-lightbox,
+.perf-low .gallery-overlay,
+.bg-lite .gallery-overlay {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+.perf-low .slider-nav,
+.bg-lite .slider-nav,
+.perf-low .slider-autoplay-toggle,
+.bg-lite .slider-autoplay-toggle {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: rgba(255,255,255,0.28) !important;
+}

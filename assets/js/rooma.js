@@ -43,6 +43,25 @@
     function $(sel, ctx) { return (ctx || doc).querySelector(sel); }
     function $$(sel, ctx) { return Array.prototype.slice.call((ctx || doc).querySelectorAll(sel)); }
 
+    /** Cached document scroll range. scrollHeight forces layout when read
+     *  every frame — refresh only on resize / load / explicit invalidate. */
+    var maxScroll = -1;
+    function getMaxScroll() {
+        if (maxScroll < 0) {
+            maxScroll = Math.max(0, (doc.documentElement.scrollHeight || 0) - (win.innerHeight || 0));
+        }
+        return maxScroll;
+    }
+    function invalidateMaxScroll() { maxScroll = -1; }
+    win.addEventListener('resize', invalidateMaxScroll, { passive: true });
+    win.addEventListener('load', invalidateMaxScroll, { passive: true });
+    if (hasIO) {
+        // Long pages grow as images decode / reveals settle.
+        try {
+            new ResizeObserver(invalidateMaxScroll).observe(doc.documentElement);
+        } catch (e) { /* older browsers */ }
+    }
+
     /** Batches scroll work into a single rAF pass shared by all modules. */
     var scrollSubs = [];
     var scrollQueued = false;
@@ -62,6 +81,42 @@
         }
         fn(win.scrollY || 0);
     }
+
+    /* PERF: runtime frame-time governor. If the device cannot hold ~45fps
+       while scrolling, drop the expensive glass / blur work (class `perf-low`)
+       rather than letting every frame miss vsync. Capable devices never see
+       this class, so the designed look is untouched there. */
+    (function perfGovernor() {
+        var samples = 0, slow = 0, last = 0, watching = false, done = false;
+
+        function onFrame(ts) {
+            if (done) return;
+            if (last) {
+                var dt = ts - last;
+                // Ignore tab-switch / breakpoint gaps
+                if (dt > 0 && dt < 120) {
+                    samples++;
+                    if (dt > 22) slow++;
+                }
+            }
+            last = ts;
+            if (samples >= 40) {
+                done = true;
+                if (slow >= 12) root.classList.add('perf-low');
+                return;
+            }
+            if (watching) win.requestAnimationFrame(onFrame);
+        }
+
+        function start() {
+            if (watching || done) return;
+            watching = true;
+            last = 0;
+            win.requestAnimationFrame(onFrame);
+        }
+        // Only measure during real scroll work, not idle first paint.
+        win.addEventListener('scroll', start, { passive: true, once: false });
+    })();
 
     function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
@@ -142,7 +197,7 @@
         }
 
         subscribeScroll(function (y) {
-            var max = doc.documentElement.scrollHeight - win.innerHeight;
+            var max = getMaxScroll();
             var pct = max > 8 ? clamp(y / max, 0, 1) : 0;
 
             if (bar) bar.style.transform = 'scaleX(' + pct.toFixed(4) + ')';
@@ -187,7 +242,9 @@
         var GLASS_AT = 0.55;    // p above which the glass counts as "on"
 
         var lastP = -1;
+        var lastPc = -1;
         var glass = false;
+        var filtering = false;
 
         function update(y) {
             // While the drawer or lightbox holds the scroll lock the page
@@ -196,24 +253,42 @@
 
             // Eased so the first pixels of scroll read as a gentle swell
             // rather than an abrupt snap into the capsule.
-            // PERF: quantize to 0.002 steps (≈0.2% of the morph). Visually
-            // identical to 0.001 but halves style recalculations on
-            // high-frequency scroll (trackpads, 120Hz screens, Firefox).
             var raw = clamp(y / MORPH_AT, 0, 1);
             var p = raw * raw * (3 - 2 * raw);          // smoothstep
-            p = Math.round(p * 500) / 500;              // avoid style churn
 
-            if (p !== lastP) {
-                lastP = p;
-                header.style.setProperty('--fh-p', String(p));
+            // PERF: two quantization tiers.
+            //  --fh-p  fine (0.005)  → opacity / transform only (compositor)
+            //  --fh-pc coarse (0.04) → layout sizes, color-mix, backdrop-filter
+            // Layout + color-mix + filter recalculation is what janks Firefox /
+            // Safari on 120Hz trackpads; 25 coarse steps over a 140px morph is
+            // visually identical to a continuous ramp.
+            var pf = Math.round(p * 200) / 200;
+            var pc = Math.round(p * 25) / 25;
 
-                // Only used by the no-color-mix fallback, which cannot
-                // interpolate the ink and needs a single clean switch.
-                var nextGlass = p >= GLASS_AT;
-                if (nextGlass !== glass) {
-                    glass = nextGlass;
-                    header.classList.toggle('is-glass', glass);
-                }
+            if (pf !== lastP) {
+                lastP = pf;
+                header.style.setProperty('--fh-p', String(pf));
+            }
+            if (pc !== lastPc) {
+                lastPc = pc;
+                header.style.setProperty('--fh-pc', String(pc));
+            }
+
+            // backdrop-filter: none at rest — blur(0) still opens an
+            // expensive backdrop root and samples the page every frame.
+            // Enable only once the glass is actually coming in.
+            var nextFilter = pc > 0;
+            if (nextFilter !== filtering) {
+                filtering = nextFilter;
+                header.classList.toggle('is-filtering', filtering);
+            }
+
+            // Only used by the no-color-mix fallback, which cannot
+            // interpolate the ink and needs a single clean switch.
+            var nextGlass = p >= GLASS_AT;
+            if (nextGlass !== glass) {
+                glass = nextGlass;
+                header.classList.toggle('is-glass', glass);
             }
         }
 
@@ -967,8 +1042,20 @@
         if (!els.length) return;
 
         var items = els.map(function (el) {
-            return { el: el, speed: parseFloat(el.getAttribute('data-parallax')) || 0.12, visible: true };
+            return { el: el, speed: parseFloat(el.getAttribute('data-parallax')) || 0.12, visible: true, top: 0, height: 0 };
         });
+
+        // PERF: document-space rect cache. Measuring with getBoundingClientRect
+        // on every scroll frame is forced sync layout; store top/height once and
+        // derive viewport position from scrollY.
+        function measure(it) {
+            var r = it.el.getBoundingClientRect();
+            it.top = r.top + (win.scrollY || win.pageYOffset || 0);
+            it.height = r.height;
+        }
+        function measureAll() {
+            for (var i = 0; i < items.length; i++) measure(items[i]);
+        }
 
         if (hasIO) {
             var pio = new IntersectionObserver(function (entries) {
@@ -978,6 +1065,7 @@
                             // Widen the visible window slightly so elements
                             // entering the viewport never pop in late.
                             items[k].visible = en.isIntersecting;
+                            if (en.isIntersecting) measure(items[k]);
                             break;
                         }
                     }
@@ -987,16 +1075,21 @@
         }
 
         var vh = win.innerHeight || 800;
-        win.addEventListener('resize', function () { vh = win.innerHeight || 800; }, { passive: true });
+        win.addEventListener('resize', function () {
+            vh = win.innerHeight || 800;
+            measureAll();
+        }, { passive: true });
+        win.addEventListener('load', measureAll, { passive: true });
+        measureAll();
 
-        subscribeScroll(function () {
+        subscribeScroll(function (y) {
             for (var i = 0; i < items.length; i++) {
                 var it = items[i];
                 if (!it.visible) continue;
-                var r = it.el.getBoundingClientRect();
-                if (r.bottom < -200 || r.top > vh + 200) continue;
+                var topInView = it.top - y;
+                if (topInView + it.height < -200 || topInView > vh + 200) continue;
                 // Distance of the element's centre from the viewport centre
-                var mid = r.top + r.height / 2 - vh / 2;
+                var mid = topInView + it.height / 2 - vh / 2;
                 it.el.style.transform = 'translate3d(0,' + (-mid * it.speed).toFixed(2) + 'px,0)';
             }
         });
@@ -1086,8 +1179,11 @@
                 (conn.effectiveType.indexOf('2g') !== -1 || conn.effectiveType === 'slow-2g');
             var lowCores = typeof navigator.hardwareConcurrency === 'number' &&
                 navigator.hardwareConcurrency <= 4;
-            if (saveData || slowNet || lowCores) {
+            var lowMem = typeof navigator.deviceMemory === 'number' &&
+                navigator.deviceMemory <= 2;
+            if (saveData || slowNet || lowCores || lowMem) {
                 doc.body.classList.add('bg-lite');
+                doc.body.classList.add('perf-low');
             }
         } catch (e) { /* never break visuals on exotic browsers */ }
     })();

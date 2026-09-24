@@ -261,9 +261,17 @@ body {
     width: 340px; height: 340px;
     border-radius: 50%;
     bottom: -120px; inset-inline-start: -80px;
-    background: radial-gradient(circle, rgba(232,168,56,0.22), transparent 70%);
-    filter: blur(30px);
+    /* PERF: soft multi-stop gradient instead of filter:blur on an animated
+       pseudo — filter+transform re-rasterizes the kernel every animation
+       frame. Stops approximate the old blur(30px) falloff. */
+    background: radial-gradient(circle,
+        rgba(232,168,56,0.22) 0%,
+        rgba(232,168,56,0.14) 35%,
+        rgba(232,168,56,0.06) 55%,
+        rgba(232,168,56,0.02) 70%,
+        transparent 85%);
     pointer-events: none;
+    will-change: transform;
 }
 @media (prefers-reduced-motion: no-preference) {
     .stats-section::after { animation: orbFloat 14s ease-in-out infinite; }
@@ -516,6 +524,6 @@ body {
 @media (max-width: 767px) {
     .hero-fallback .container::before { width: 130px; height: 130px; inset-inline-end: -30px; }
     .hero-fallback .container::after  { width: 100px; height: 100px; inset-inline-start: -24px; }
-    .stats-section::after { width: 200px; height: 200px; filter: blur(24px); }
+    .stats-section::after { width: 200px; height: 200px; }
     .testimonial-card::before { font-size: 5rem; top: -18px; }
 }
