@@ -1,7 +1,10 @@
 (() => {
     'use strict';
+
+    /* ── Helpers ───────────────────────────── */
     const digits = value => value.replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
         .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+
     const normalizePhone = value => {
         let phone = digits(value).replace(/[^0-9]/g, '');
         if (phone.startsWith('0098')) phone = '0' + phone.slice(4);
@@ -9,14 +12,52 @@
         else if (phone.startsWith('9') && phone.length === 10) phone = '0' + phone;
         return phone;
     };
+
+    /** 09123456789 → 0912 345 6789 (display only while typing) */
+    const prettyPhone = raw => {
+        const p = normalizePhone(raw);
+        if (p.length <= 4) return p;
+        if (p.length <= 7) return p.slice(0, 4) + ' ' + p.slice(4);
+        return p.slice(0, 4) + ' ' + p.slice(4, 7) + ' ' + p.slice(7, 11);
+    };
+
+    const wrapOf = input => input.closest('.entry-input-wrap');
+    const setWrapState = (input, state) => {
+        const wrap = wrapOf(input);
+        if (!wrap) return;
+        wrap.classList.toggle('is-valid', state === 'valid');
+        wrap.classList.toggle('is-invalid', state === 'invalid');
+    };
+
     const setError = (input, message) => {
         input.setCustomValidity(message);
         if (message) input.setAttribute('aria-invalid', 'true');
         else input.removeAttribute('aria-invalid');
         const target = document.getElementById(input.id + '-error');
         if (target) target.textContent = message;
+        if (message) setWrapState(input, 'invalid');
+        else if (input.value) setWrapState(input, isValidValue(input) ? 'valid' : null);
+        else setWrapState(input, null);
     };
-    const validate = input => {
+
+    /* Soft check: does this value pass? (no DOM error write) */
+    const isValidValue = input => {
+        if (input.required && !input.value) return false;
+        if (input.matches('[data-phone]') && !/^09[0-9]{9}$/.test(normalizePhone(input.value))) return false;
+        if (input.matches('[data-otp]') && !/^[0-9]{5}$/.test(digits(input.value.trim()))) return false;
+        if (input.matches('[data-new-password]')) {
+            const bytes = new TextEncoder().encode(input.value).length;
+            if (bytes < 8 || bytes > 72 || !/[A-Za-z]/.test(input.value) || !/[0-9]/.test(input.value) || input.value.includes('\0')) return false;
+        }
+        if (input.matches('[data-confirm-password]')) {
+            const pass = input.form && input.form.querySelector('[data-new-password]');
+            if (!pass || input.value !== pass.value) return false;
+        }
+        if (input.matches('[data-name]') && !/^[\p{L}\p{Z}\s'\-‌]+$/u.test(input.value.trim())) return false;
+        return true;
+    };
+
+    const validate = (input, silent) => {
         let message = '';
         if (input.required && !input.value) message = 'لطفاً این بخش را تکمیل کنید.';
         else if (input.matches('[data-phone]') && !/^09[0-9]{9}$/.test(normalizePhone(input.value))) {
@@ -30,60 +71,183 @@
         } else if (input.matches('[data-confirm-password]')
             && input.value !== input.form.querySelector('[data-new-password]')?.value) {
             message = 'تکرار رمز عبور با رمز جدید یکسان نیست.';
-        } else if (['first_name', 'last_name'].includes(input.id)
+        } else if (input.matches('[data-name]')
             && !/^[\p{L}\p{Z}\s'\-‌]+$/u.test(input.value.trim())) {
             message = 'نام را با حروف وارد کنید.';
         }
-        setError(input, message);
+        if (!silent) setError(input, message);
+        else setWrapState(input, message ? 'invalid' : (input.value ? 'valid' : null));
         return !message;
     };
+
+    /* ── Password strength ─────────────────── */
+    const strengthOf = (password) => {
+        if (!password) return 0;
+        let score = 0;
+        const bytes = new TextEncoder().encode(password).length;
+        if (bytes >= 8) score++;
+        if (bytes >= 12) score++;
+        if (/[A-Za-z]/.test(password) && /[0-9]/.test(password)) score++;
+        if (/[^A-Za-z0-9]/.test(password) || (bytes >= 16 && /[A-Za-z]/.test(password) && /[0-9]/.test(password))) score++;
+        if (password.length < 8) score = Math.min(score, 1);
+        return Math.max(0, Math.min(4, score));
+    };
+
+    const strengthLabel = ['', 'ضعیف', 'قابل قبول', 'خوب', 'عالی'];
+
+    document.querySelectorAll('[data-strength-for]').forEach(box => {
+        const input = document.getElementById(box.dataset.strengthFor);
+        if (!input) return;
+        const text = box.querySelector('[data-strength-text]');
+        const sync = () => {
+            if (!input.value) {
+                box.classList.remove('is-visible');
+                box.removeAttribute('data-level');
+                return;
+            }
+            const level = strengthOf(input.value);
+            box.classList.add('is-visible');
+            box.setAttribute('data-level', String(level));
+            if (text) text.textContent = level ? ('قدرت رمز: ' + strengthLabel[level]) : 'قدرت رمز: خیلی ضعیف';
+        };
+        input.addEventListener('input', sync);
+        input.addEventListener('focus', sync);
+    });
+
+    /* ── Caps lock ─────────────────────────── */
+    document.querySelectorAll('[data-password]').forEach(input => {
+        const caps = input.closest('.entry-field')?.querySelector('[data-caps]');
+        if (!caps) return;
+        const update = (e) => {
+            const on = !!(e && typeof e.getModifierState === 'function' && e.getModifierState('CapsLock'));
+            caps.classList.toggle('is-on', on);
+        };
+        input.addEventListener('keyup', update);
+        input.addEventListener('keydown', update);
+        input.addEventListener('blur', () => caps.classList.remove('is-on'));
+    });
+
+    /* ── Reveal password ───────────────────── */
     document.querySelectorAll('[data-reveal]').forEach(button => {
         button.hidden = false;
-        const originalLabel = button.getAttribute('aria-label');
+        const originalLabel = button.getAttribute('aria-label') || 'نمایش رمز';
         button.addEventListener('click', () => {
             const input = document.getElementById(button.dataset.reveal);
+            if (!input) return;
             const show = input.type === 'password';
             input.type = show ? 'text' : 'password';
             button.setAttribute('aria-pressed', String(show));
             button.setAttribute('aria-label', show ? originalLabel.replace('نمایش', 'پنهان کردن') : originalLabel);
+            // re-sync strength visibility after type flip
+            input.dispatchEvent(new Event('input', { bubbles: true }));
         });
     });
+
+    /* ── Phone live format ─────────────────── */
+    document.querySelectorAll('[data-phone]').forEach(input => {
+        let composing = false;
+        input.addEventListener('compositionstart', () => { composing = true; });
+        input.addEventListener('compositionend', () => { composing = false; });
+        input.addEventListener('input', (event) => {
+            if (composing || event.isComposing) return;
+            const raw = input.value;
+            const sel = input.selectionStart;
+            const hadSpaceBefore = /\s$/.test(raw) && sel === raw.length;
+            const formatted = prettyPhone(raw);
+            if (formatted !== raw) {
+                input.value = formatted;
+                try {
+                    const pos = hadSpaceBefore ? formatted.length : Math.min(formatted.length, (sel || formatted.length));
+                    input.setSelectionRange(pos, pos);
+                } catch (e) { /* ignore */ }
+            }
+        });
+        input.addEventListener('blur', () => {
+            // store normalized for validation; display pretty
+            const p = normalizePhone(input.value);
+            if (p) input.value = prettyPhone(p);
+        });
+    });
+
+    /* ── OTP: digits only + optional auto-submit ─ */
+    const maybeAutoSubmitOtp = (input) => {
+        if (input.value.length !== 5) return;
+        const form = input.form;
+        if (!form || !form.hasAttribute('data-auto-submit')) return;
+        if (form.getAttribute('aria-busy') === 'true') return;
+        window.setTimeout(() => {
+            if (input.value.length === 5 && form.getAttribute('aria-busy') !== 'true') {
+                if (form.requestSubmit) form.requestSubmit();
+                else form.submit();
+            }
+        }, 220);
+    };
+
     document.querySelectorAll('[data-otp]').forEach(input => {
-        input.addEventListener('input', () => { input.value = digits(input.value); });
+        input.addEventListener('input', () => {
+            const cleaned = digits(input.value).replace(/\D/g, '').slice(0, 5);
+            input.value = cleaned;
+            setWrapState(input, cleaned.length === 5 ? 'valid' : null);
+            maybeAutoSubmitOtp(input);
+        });
         input.addEventListener('paste', event => {
             const code = digits(event.clipboardData.getData('text')).replace(/\s/g, '');
             if (/^[0-9]{5}$/.test(code)) {
                 event.preventDefault();
                 input.value = code;
                 setError(input, '');
+                setWrapState(input, 'valid');
+                maybeAutoSubmitOtp(input);
+            } else if (/^[0-9]+$/.test(code)) {
+                event.preventDefault();
+                input.value = code.slice(0, 5);
+                setWrapState(input, input.value.length === 5 ? 'valid' : null);
             }
         });
     });
+
+    /* ── Forms ─────────────────────────────── */
     document.querySelectorAll('[data-auth-form]').forEach(form => {
         form.noValidate = true;
         const inputs = [...form.querySelectorAll('input:not([type="hidden"])')];
+
         inputs.forEach(input => {
-            input.addEventListener('blur', () => { if (input.value) validate(input); });
+            input.addEventListener('blur', () => {
+                if (input.value || input.required) validate(input);
+                if (input.matches('[data-phone]') && input.value) {
+                    const p = normalizePhone(input.value);
+                    if (p) input.value = prettyPhone(p);
+                }
+            });
             input.addEventListener('input', () => {
+                // clear error while typing; soft-valid check
                 setError(input, '');
                 form.classList.remove('entry-shake');
+                if (input.value) {
+                    setWrapState(input, isValidValue(input) ? 'valid' : null);
+                }
                 if (input.matches('[data-new-password]')) {
                     const confirm = form.querySelector('[data-confirm-password]');
-                    if (confirm?.value) validate(confirm);
+                    if (confirm?.value) validate(confirm, false);
+                }
+                if (input.matches('[data-confirm-password]') && input.value) {
+                    // live match feedback
+                    const pass = form.querySelector('[data-new-password]');
+                    if (pass && pass.value && input.value === pass.value) {
+                        setError(input, '');
+                        setWrapState(input, 'valid');
+                    }
                 }
             });
         });
+
         form.addEventListener('submit', event => {
             if (form.getAttribute('aria-busy') === 'true') { event.preventDefault(); return; }
             const invalid = inputs.filter(input => !validate(input));
             if (invalid.length) {
-                /* اعتبارسنجی ناموفق = هیچ ناوبری رخ نمی‌دهد؛ پس هر لودینگ
-                   سرگردان (مثلاً از هندلر دیگری) را حتماً پاک کن تا نوار بالا
-                   در چرخهٔ بی‌پایان گیر نکند. */
                 event.preventDefault();
                 if (window.__romaClearNav) { try { window.__romaClearNav(); } catch (e) {} }
                 else document.documentElement.classList.remove('is-navigating');
-                /* بازخورد لمسی قوی: لرزش فرم + فوکوس روی اولین خطا */
                 form.classList.remove('entry-shake');
                 void form.offsetWidth;
                 form.classList.add('entry-shake');
@@ -94,8 +258,9 @@
                 }
                 return;
             }
-            inputs.filter(input => input.matches('[data-phone]')).forEach(input => { input.value = normalizePhone(input.value); });
-            /* فقط وقتی به اینجا رسیدیم ارسال واقعی است: حالا دکمه را قفل و لودینگ بده. */
+            inputs.filter(input => input.matches('[data-phone]')).forEach(input => {
+                input.value = normalizePhone(input.value);
+            });
             form.setAttribute('aria-busy', 'true');
             form.querySelectorAll('button[type="submit"]').forEach(button => {
                 button.disabled = true;
@@ -107,11 +272,11 @@
                     label.textContent = loadingText;
                 }
             });
-            /* نوار پیشرفت بالا توسط اسکریپت داخل head مدیریت می‌شود (تک‌منبع)؛
-               اینجا فقط برای اطمینان و هم‌زمانی اضافه می‌کنیم. */
             document.documentElement.classList.add('is-navigating');
         });
     });
+
+    /* ── Resend countdown ──────────────────── */
     const refreshResend = (button, keepUntil) => {
         if (!button || !button.form) return;
         const timer = button.form.querySelector('[data-countdown]');
@@ -121,7 +286,6 @@
         const until = button._romaUntil;
         const tick = () => {
             const remaining = Math.max(0, Math.ceil((until - Date.now()) / 1000));
-            /* اگر فرم در حال ارسال است قفل بماند، وگرنه فقط شمارش‌معکوس تصمیم بگیرد. */
             button.disabled = remaining > 0 || button.form.getAttribute('aria-busy') === 'true';
             if (timer) timer.textContent = remaining ? `(${remaining.toLocaleString('fa-IR')} ثانیه)` : '';
             return remaining;
@@ -133,6 +297,7 @@
         }
     };
     document.querySelectorAll('[data-resend]').forEach(refreshResend);
+
     window.addEventListener('pageshow', () => {
         if (window.__romaClearNav) { try { window.__romaClearNav(); } catch (e) {} }
         else {
@@ -141,10 +306,7 @@
         }
         document.querySelectorAll('[data-auth-form]').forEach(form => {
             form.removeAttribute('aria-busy');
-            /* همهٔ دکمه‌های سابمیت (از جمله «ارسال دوباره») باید آزاد شوند؛
-               در غیر این صورت بعد از بازگشت با دکمهٔ Back مرورگر قفل می‌مانند. */
             form.querySelectorAll('button[type="submit"]').forEach(button => {
-                /* دکمهٔ شمارش‌معکوس را منطق tick مدیریت می‌کند؛ فقط لیبل را برگردان. */
                 if (!button.hasAttribute('data-resend')) button.disabled = false;
                 button.removeAttribute('aria-disabled');
                 const label = button.querySelector('[data-submit-label]');
@@ -154,10 +316,10 @@
                 }
             });
         });
-        /* شمارش‌معکوس ارسال مجدد را بعد از بازگشت تازه‌سازی کن (بدون ریست زمان). */
         document.querySelectorAll('[data-resend]').forEach(b => refreshResend(b, true));
     });
-    // Prefetch مقصد هنگام اعلام قصد کاربر (هاور/فوکوس/تاچ) — فقط هم‌مبدأ و GET، بدون تغییر رفتار کلیک.
+
+    /* ── Prefetch on intent ────────────────── */
     const prefetched = new Set();
     const prefetchUrl = url => {
         if (!url || prefetched.has(url)) return;
@@ -177,12 +339,9 @@
         a.addEventListener('mouseenter', go, { passive: true });
         a.addEventListener('focus', go);
         a.addEventListener('touchstart', go, { passive: true });
-        /* نوار پیشرفت (is-navigating) عمداً اینجا دستکاری نمی‌شود: تک‌منبعِ آن
-           اسکریپت داخل head است که تب فعال و لینک هم‌صفحه را نادیده می‌گیرد و
-           با تأخیر صفر preventDefault را بررسی می‌کند. دستکاری دوباره همین‌جا
-           علت اصلی لودینگ بی‌پایان روی تب فعال بود. */
     });
-    // فوکوس آغازین فقط دسکتاپ و فقط وقتی خطایی برای اصلاح وجود ندارد.
+
+    /* ── Focus management ──────────────────── */
     try {
         const hasError = document.querySelector('[aria-invalid="true"], [data-server-error]');
         const finePointer = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
@@ -194,7 +353,10 @@
                 });
             }
         }
-    } catch (e) { /* فوکوس تزئینی است؛ خطا را نادیده بگیر */ }
+    } catch (e) { /* decorative focus */ }
+
     const error = document.querySelector('[aria-invalid="true"], [data-server-error]');
-    if (error) error.focus();
+    if (error) {
+        try { error.focus({ preventScroll: false }); } catch (e) { error.focus(); }
+    }
 })();

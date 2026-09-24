@@ -26,31 +26,73 @@ elseif ($isReset) { $loadingText = 'در حال ذخیرهٔ رمز جدید…'
 else { $loadingText = 'در حال ارسال کد…'; }
 $name = siteName();
 $logo = siteLogo();
-$renderField = static function (string $id, string $label, string $type, string $value = '', string $hint = '', string $autocomplete = '') use ($fieldErrors): void {
+
+/** نشان SVG ساده برای آیکون فیلدها (بدون وابستگی خارجی) */
+$entryIcon = static function (string $kind): string {
+    $paths = [
+        'user' => '<circle cx="12" cy="8" r="3.4"/><path d="M5.5 19c1.6-3.2 4-4.8 6.5-4.8S16.9 15.8 18.5 19"/>',
+        'phone' => '<path d="M7 3.5h3l1.2 4-2 1.4a12 12 0 0 0 5.9 5.9l1.4-2 4 1.2v3A2 2 0 0 1 18.4 19C10.5 18.4 5.6 13.5 5 5.6A2 2 0 0 1 7 3.5z"/>',
+        'lock' => '<rect x="5.5" y="10.5" width="13" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>',
+        'key' => '<circle cx="8.5" cy="12" r="3.2"/><path d="M11.5 12h8l-1.5 2m1.5-2-1.5-2"/>',
+        'shield' => '<path d="M12 3.5 19 6v5.2c0 4.2-2.8 7.4-7 9.3-4.2-1.9-7-5.1-7-9.3V6l7-2.5z"/>',
+        'sms' => '<rect x="3.5" y="5.5" width="17" height="12" rx="2.5"/><path d="m5 8 7 5 7-5"/>',
+    ];
+    $d = $paths[$kind] ?? $paths['user'];
+    return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $d . '</svg>';
+};
+
+$renderField = static function (
+    string $id,
+    string $label,
+    string $type,
+    string $value = '',
+    string $hint = '',
+    string $autocomplete = '',
+    string $icon = 'user',
+    bool $showStrength = false
+) use ($fieldErrors, $entryIcon): void {
     $isPassword = $type === 'password';
     $otp = $id === 'otp_code';
     $phoneField = $id === 'phone';
+    $nameField = in_array($id, ['first_name', 'last_name'], true);
     $invalid = isset($fieldErrors[$id]);
+    $inputClass = $otp ? ' data-otp' : '';
     ?>
     <div class="entry-field">
         <label for="<?= e($id) ?>"><?= e($label) ?></label>
-        <div class="entry-input-wrap">
+        <div class="entry-input-wrap<?= $invalid ? ' is-invalid' : '' ?>">
+            <span class="entry-field-icon" aria-hidden="true"><?= $entryIcon($otp ? 'sms' : ($phoneField ? 'phone' : ($isPassword ? 'lock' : $icon))) ?></span>
             <input id="<?= e($id) ?>" name="<?= e($id) ?>" type="<?= e($type) ?>" value="<?= e($value) ?>"
                 autocomplete="<?= e($autocomplete) ?>" required aria-describedby="<?= e($id) ?>-hint <?= e($id) ?>-error"
                 <?= $invalid ? 'aria-invalid="true"' : '' ?>
                 <?= ($phoneField || $isPassword || $otp) ? 'dir="ltr"' : '' ?>
                 <?= $phoneField ? 'inputmode="tel" maxlength="20" placeholder="0912 345 6789" data-phone' : '' ?>
-                <?= $otp ? 'inputmode="numeric" maxlength="5" pattern="[0-9۰-۹٠-٩]{5}" placeholder="— — — — —" data-otp' : '' ?>
-                <?= !$phoneField && !$isPassword && !$otp ? 'maxlength="100"' : '' ?>
-                <?= $isPassword ? 'maxlength="4096"' : '' ?>
+                <?= $otp ? 'inputmode="numeric" maxlength="5" pattern="[0-9۰-۹٠-٩]{5}" placeholder="—  —  —  —  —" data-otp' : '' ?>
+                <?= $nameField ? 'data-name maxlength="100"' : '' ?>
+                <?= !$phoneField && !$isPassword && !$otp && !$nameField ? 'maxlength="100"' : '' ?>
+                <?= $isPassword ? 'maxlength="4096" data-password' : '' ?>
                 <?= $isPassword && $autocomplete === 'new-password' && $id !== 'confirm_password' ? 'data-new-password' : '' ?>
                 <?= $id === 'confirm_password' ? 'data-confirm-password' : '' ?>>
+            <span class="entry-status entry-status-ok" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 5 5L19 7"/></svg>
+            </span>
+            <span class="entry-status entry-status-err" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </span>
             <?php if ($isPassword): ?>
                 <button class="entry-reveal" type="button" data-reveal="<?= e($id) ?>" aria-label="نمایش <?= e($label) ?>" aria-pressed="false" hidden>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="eye-slash" d="m3 3 18 18"/></svg>
+                    <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="eye-slash" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path d="m3 3 18 18"/></svg>
                 </button>
             <?php endif; ?>
         </div>
+        <?php if ($isPassword): ?><span class="entry-caps" data-caps>⇪ Caps Lock روشن است</span><?php endif; ?>
+        <?php if ($showStrength && $id !== 'confirm_password'): ?>
+            <div class="entry-strength" data-strength-for="<?= e($id) ?>" data-level="0" aria-live="polite">
+                <div class="entry-strength-bar" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                <div class="entry-strength-text" data-strength-text></div>
+            </div>
+        <?php endif; ?>
         <small id="<?= e($id) ?>-hint" class="entry-hint"><?= e($hint) ?></small>
         <small id="<?= e($id) ?>-error" class="entry-field-error" aria-live="polite"><?= e($fieldErrors[$id] ?? '') ?></small>
     </div>
@@ -61,9 +103,10 @@ $renderField = static function (string $id, string $label, string $type, string 
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#F6F9F2">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#F3F7EF">
     <meta name="robots" content="noindex, nofollow">
+    <meta name="color-scheme" content="light">
     <title><?= e($pageTitle ?? $heading . ' | ' . $name) ?></title>
     <link rel="icon" href="<?= e(url('assets/img/favicon.svg')) ?>" type="image/svg+xml">
     <link rel="apple-touch-icon" href="<?= e(url('assets/icons/icon-180.png')) ?>">
@@ -86,21 +129,16 @@ $renderField = static function (string $id, string $label, string $type, string 
       ]
     }
     </script>
-    <?php // بازخورد فوری ناوبری: فقط وقتی ناوبری واقعی رخ می‌دهد نوار پیشرفت را نشان بده. ?>
     <style>
     .entry-progress{position:fixed;top:0;right:0;left:0;height:3px;z-index:60;pointer-events:none;opacity:0;transition:opacity .2s ease}
-    .entry-progress span{display:block;height:100%;width:35%;background:#3d8b63;border-radius:3px}
+    .entry-progress span{display:block;height:100%;width:35%;background:linear-gradient(90deg,#2f7a52,#8bc4a0);border-radius:3px}
     html.is-navigating .entry-progress{opacity:1}
     html.is-navigating .entry-progress span{animation:entry-progress-slide 1.1s ease-in-out infinite}
     @keyframes entry-progress-slide{0%{transform:translateX(120%)}50%{transform:translateX(0)}100%{transform:translateX(-120%)}}
     html.is-navigating body{cursor:progress}
     </style>
     <script>
-    /* نوار پیشرفت بالای صفحه — نسخهٔ مقاوم در برابر لودینگ بی‌پایان:
-       - کلیک/سابمیت را با تأخیر صفر بررسی می‌کند تا اگر اعتبارسنجی یا هندلر دیگری
-         جلوی ناوبری را گرفت (preventDefault)، لودینگ روشن نماند.
-       - روی تب فعال (aria-current) و لینک هم‌صفحه (همان URL) لودینگ نمی‌دهد.
-       - تایمر اطمینان: اگر ناوبری رخ نداد، حداکثر بعد از چند ثانیه پاک می‌شود. */
+    /* نوار پیشرفت بالای صفحه — نسخهٔ مقاوم در برابر لودینگ بی‌پایان */
     (function(){
         var d=document.documentElement;
         var navTimer=null;
@@ -142,15 +180,11 @@ $renderField = static function (string $id, string $label, string $type, string 
             var t=e.target;
             var a=t&&t.closest?t.closest('a[href]'):null;
             if(!a)return;
-            /* به هندلرهای دیگر (اعتبارسنجی، PWA و…) فرصت بده تا preventDefault کنند؛
-               بعد تصمیم بگیر. همین یک setTimeout ریشهٔ لودینگ بی‌پایان کلیک‌هاست. */
             setTimeout(function(){if(e.defaultPrevented)return;nav(a);},0);
         },false);
         document.addEventListener('submit',function(e){
             var f=e.target;
             if(!f||!f.hasAttribute||!f.hasAttribute('data-auth-form'))return;
-            /* اعتبارسنجی parent-auth.js در فاز حبابی اجرا و در صورت خطا preventDefault
-               می‌کند؛ پس اینجا هم بعد از آن بررسی می‌کنیم. */
             setTimeout(function(){
                 if(e.defaultPrevented){
                     if(!f.hasAttribute('aria-busy'))clearNav();
@@ -172,7 +206,7 @@ $renderField = static function (string $id, string $label, string $type, string 
 <header class="entry-topbar">
     <a class="entry-logo" href="<?= e(url('index.php')) ?>">
         <?php if ($logo !== ''): ?><img src="<?= e(url($logo)) ?>" alt="<?= e($name) ?>" width="140" height="44">
-        <?php else: ?><svg width="42" height="42" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5C10 5 5 17 7 29s10 16 17 16 17-4 17-16S38 5 24 5" fill="#3D8B63"/><path d="M14 23q4-5 8 0m5 0q4-5 8 0M19 31q6 7 12 0" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg><span><?= e($name) ?></span><?php endif; ?>
+        <?php else: ?><svg width="42" height="42" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5C10 5 5 17 7 29s10 16 17 16 17-4 17-16S38 5 24 5" fill="#2F7A52"/><path d="M14 23q4-5 8 0m5 0q4-5 8 0M19 31q6 7 12 0" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg><span><?= e($name) ?></span><?php endif; ?>
     </a>
     <a class="entry-home" href="<?= e(url('index.php')) ?>">صفحهٔ اصلی <span aria-hidden="true">↗</span></a>
 </header>
@@ -181,7 +215,7 @@ $renderField = static function (string $id, string $label, string $type, string 
         <div class="entry-card">
             <?php if (!$isForgot && !$isReset): ?>
             <div class="entry-sticky">
-                <nav class="entry-tabs" aria-label="حساب والدین">
+                <nav class="entry-tabs" aria-label="حساب والدین" data-active="<?= $isRegister ? 'register' : 'login' ?>">
                     <a href="<?= e(url('login.php')) ?>" <?= !$isRegister ? 'aria-current="page"' : '' ?>>ورود به حساب</a>
                     <a href="<?= e(url('register.php')) ?>" <?= $isRegister ? 'aria-current="page"' : '' ?>>ثبت‌نام والدین</a>
                 </nav>
@@ -196,33 +230,52 @@ $renderField = static function (string $id, string $label, string $type, string 
             </div>
             <?php endif; ?>
             <div class="entry-heading"><h1><?= e($heading) ?></h1><p><?= e($description) ?></p></div>
-            <?php if ($success): ?><div class="entry-notice entry-notice-success" role="status"><?= e($success) ?></div><?php endif; ?>
-            <?php if ($messages): ?><div class="entry-notice entry-notice-error" role="alert" tabindex="-1" data-server-error><ul><?php foreach (array_unique($messages) as $message): ?><li><?= e($message) ?></li><?php endforeach; ?></ul></div><?php endif; ?>
+            <?php if ($success): ?>
+                <div class="entry-notice entry-notice-success" role="status">
+                    <span class="entry-notice-icon" aria-hidden="true">✓</span>
+                    <div><?= e($success) ?></div>
+                </div>
+            <?php endif; ?>
+            <?php if ($messages): ?>
+                <div class="entry-notice entry-notice-error" role="alert" tabindex="-1" data-server-error>
+                    <span class="entry-notice-icon" aria-hidden="true">!</span>
+                    <ul><?php foreach (array_unique($messages) as $message): ?><li><?= e($message) ?></li><?php endforeach; ?></ul>
+                </div>
+            <?php endif; ?>
             <?php if ($isVerify): ?>
                 <div class="entry-recipient"><bdi><?= e(persianNumber($displayPhone)) ?></bdi><a href="<?= e(url($endpoint)) ?>"><?= $isRegister ? 'ویرایش اطلاعات' : 'تغییر شماره' ?></a></div>
             <?php endif; ?>
             <?php if ((!$isReset || ($tokenValid ?? false)) && empty($teacherRecovery)): ?>
-            <form method="post" action="<?= e($formAction) ?>" class="entry-form" data-auth-form>
+            <form method="post" action="<?= e($formAction) ?>" class="entry-form" data-auth-form<?= $isVerify ? ' data-auto-submit' : '' ?>>
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <?php if ($isRegister || $isForgot): ?><input type="hidden" name="action" value="<?= $isRegister ? ($isVerify ? 'verify_otp' : 'submit_form') : ($isVerify ? 'set_new_password' : 'request_otp') ?>"><?php endif; ?>
                 <?php if ($isReset): ?><input type="hidden" name="token" value="<?= e($rawToken) ?>"><?php endif; ?>
                 <?php if ($isVerify): ?>
                     <input type="hidden" name="phone" value="<?= e($displayPhone) ?>">
-                    <?php $renderField('otp_code', 'کد تأیید پیامکی', 'text', '', 'کد را می‌توانید یک‌جا جای‌گذاری کنید.', 'one-time-code'); ?>
+                    <?php $renderField('otp_code', 'کد تأیید پیامکی', 'text', '', 'کد را می‌توانید یک‌جا جای‌گذاری کنید.', 'one-time-code', 'sms'); ?>
                 <?php elseif ($isRegister): ?>
                     <div class="entry-name-row">
-                        <?php $renderField('first_name', 'نام والد', 'text', $old['first_name'] ?? '', '', 'given-name'); ?>
-                        <?php $renderField('last_name', 'نام خانوادگی والد', 'text', $old['last_name'] ?? '', '', 'family-name'); ?>
+                        <?php $renderField('first_name', 'نام والد', 'text', $old['first_name'] ?? '', '', 'given-name', 'user'); ?>
+                        <?php $renderField('last_name', 'نام خانوادگی والد', 'text', $old['last_name'] ?? '', '', 'family-name', 'user'); ?>
                     </div>
                 <?php endif; ?>
                 <?php if (!$isVerify && !$isReset): ?>
-                    <?php $renderField('phone', 'شماره موبایل', 'tel', $isRegister ? ($old['phone'] ?? '') : ($phone ?? ''), $isRegister ? 'کد تأیید را به همین شماره می‌فرستیم.' : '', $mode === 'login' ? 'username' : 'tel'); ?>
+                    <?php $renderField('phone', 'شماره موبایل', 'tel', $isRegister ? ($old['phone'] ?? '') : ($phone ?? ''), $isRegister ? 'کد تأیید را به همین شماره می‌فرستیم.' : '', $mode === 'login' ? 'username' : 'tel', 'phone'); ?>
                 <?php endif; ?>
                 <?php if ($mode === 'login' || ($isRegister && !$isVerify) || ($isForgot && $isVerify) || $isReset): ?>
                     <?php $newPassword = $mode !== 'login';
-                    $renderField($isForgot ? 'new_password' : 'password', $newPassword ? 'رمز عبور جدید' : 'رمز عبور', 'password', '', $newPassword ? 'حداقل ۸ کاراکتر، شامل حرف انگلیسی و عدد؛ حداکثر ۷۲ بایت.' : '', $newPassword ? 'new-password' : 'current-password'); ?>
+                    $renderField(
+                        $isForgot ? 'new_password' : 'password',
+                        $newPassword ? 'رمز عبور جدید' : 'رمز عبور',
+                        'password',
+                        '',
+                        $newPassword ? 'حداقل ۸ کاراکتر، شامل حرف انگلیسی و عدد؛ حداکثر ۷۲ بایت.' : '',
+                        $newPassword ? 'new-password' : 'current-password',
+                        'lock',
+                        $newPassword
+                    ); ?>
                     <?php if ($newPassword): ?>
-                        <?php $renderField('confirm_password', 'تکرار رمز عبور', 'password', '', '', 'new-password'); ?>
+                        <?php $renderField('confirm_password', 'تکرار رمز عبور', 'password', '', '', 'new-password', 'lock'); ?>
                     <?php else: ?><a class="entry-forgot" href="<?= e(url('forgot-password.php')) ?>">رمز عبور را فراموش کرده‌اید؟</a><?php endif; ?>
                 <?php endif; ?>
                 <?php if ($isRegister && !$isVerify): ?><p class="entry-note">پس از تأیید موبایل، حساب شما با بررسی مدیریت فعال می‌شود. این فرم برای ساخت حساب والدین است.</p><?php endif; ?>
@@ -246,9 +299,21 @@ $renderField = static function (string $id, string $label, string $type, string 
         <p class="entry-bottom">کنار هم، برای روزهای قشنگ کودکی.</p>
     </main>
     <aside class="entry-story" aria-label="همراه خانه و مهدکودک">
-        <div class="entry-story-copy"><h2>کودکی، فصلِ<br>شکفتن است.</h2><p>از اولین دوستی تا کشف‌های کوچک هر روز؛<br>خانه و مهد، کنار هم می‌مانند.</p></div>
+        <div class="entry-story-copy">
+            <h2>کودکی، فصلِ<br>شکفتن است.</h2>
+            <p>از اولین دوستی تا کشف‌های کوچک هر روز؛<br>خانه و مهد، کنار هم می‌مانند.</p>
+        </div>
         <img class="entry-illustration" src="<?= e(url('assets/img/auth-garden.svg')) ?>" width="560" height="460" alt="تصویرسازی یک مهدکودک در باغچه، کنار گل و برگ خندان">
-        <div class="entry-story-footer"><span class="entry-story-mark" aria-hidden="true">✿</span><p><strong>یک پنجره به روزهای کودکتان</strong><span>گزارش‌های روزانه، پیام‌های مربی و پیگیری شهریه</span></p></div>
+        <div class="entry-story-footer">
+            <span class="entry-story-mark" aria-hidden="true">✿</span>
+            <p><strong>یک پنجره به روزهای کودکتان</strong><span>گزارش‌های روزانه، پیام‌های مربی و پیگیری شهریه</span></p>
+        </div>
+        <div class="entry-trust" aria-hidden="true">
+            <span>گزارش روزانه</span>
+            <span>حضور و غیاب</span>
+            <span>پیام مربی</span>
+            <span>شهریه</span>
+        </div>
     </aside>
 </div>
 </body>
