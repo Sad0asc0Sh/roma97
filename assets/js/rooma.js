@@ -303,8 +303,45 @@
 
         var lastFocused = null;
         var isOpen = false;
+        var unlockTimer = null;
+        // PERF: cached once. The old code called getComputedStyle(panel) on
+        // every touchmove, forcing a style recalc per move event and janking
+        // the swipe-to-close gesture. Direction never changes at runtime.
+        var isRtlPanel = (function () {
+            try {
+                if (root.getAttribute('dir') === 'rtl') return true;
+                if (root.getAttribute('dir') === 'ltr') return false;
+                if (win.getComputedStyle) return win.getComputedStyle(panel).direction === 'rtl';
+            } catch (e) { /* fall through */ }
+            return true; // site default is RTL
+        })();
 
         var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+
+        function lockScroll() {
+            // PERF: overflow:hidden on <html>/<body> reflows the whole page.
+            // Doing it in the same frame as the slide-in start stole the
+            // first animation frames on Firefox / mid Android. One rAF later
+            // the drawer is already mid-flight and the reflow is invisible.
+            if (unlockTimer) { clearTimeout(unlockTimer); unlockTimer = null; }
+            win.requestAnimationFrame(function () {
+                if (!isOpen) return;
+                root.classList.add('no-scroll');
+                doc.body.classList.add('no-scroll');
+            });
+        }
+
+        function unlockScrollDelayed() {
+            // PERF: keep the page locked while the overlay fades out so the
+            // unlock reflow lands after the animation, not inside it.
+            if (unlockTimer) clearTimeout(unlockTimer);
+            unlockTimer = setTimeout(function () {
+                unlockTimer = null;
+                if (isOpen) return; // reopened in the meantime — stay locked
+                root.classList.remove('no-scroll');
+                doc.body.classList.remove('no-scroll');
+            }, 300);
+        }
 
         function open() {
             if (isOpen) return;
@@ -314,8 +351,7 @@
             panel.classList.add('is-open');
             if (overlay) overlay.classList.add('is-open');
             panel.setAttribute('aria-hidden', 'false');
-            root.classList.add('no-scroll');
-            doc.body.classList.add('no-scroll');
+            lockScroll();
             openBtns.forEach(function (b) { b.setAttribute('aria-expanded', 'true'); });
 
             // Move focus into the panel
@@ -332,8 +368,7 @@
             panel.classList.remove('is-open');
             if (overlay) overlay.classList.remove('is-open');
             panel.setAttribute('aria-hidden', 'true');
-            root.classList.remove('no-scroll');
-            doc.body.classList.remove('no-scroll');
+            unlockScrollDelayed();
             openBtns.forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
 
             // preventScroll: the burger lives inside the position:sticky header,
@@ -384,10 +419,9 @@
             var dx = e.touches[0].clientX - sx;
             var dy = e.touches[0].clientY - sy;
             if (Math.abs(dy) > Math.abs(dx)) { tracking = false; return; }   // vertical scroll
-            var isRtl = getComputedStyle(panel).direction === 'rtl' ||
-                        root.getAttribute('dir') === 'rtl';
             // RTL panel sits at the right → swiping right (positive dx) closes it
-            var closing = isRtl ? dx > 62 : dx < -62;
+            // (direction is cached at init — see isRtlPanel — no per-move reflow)
+            var closing = isRtlPanel ? dx > 62 : dx < -62;
             if (closing) { tracking = false; close(); }
         }, { passive: true });
         panel.addEventListener('touchend', function () { tracking = false; }, { passive: true });

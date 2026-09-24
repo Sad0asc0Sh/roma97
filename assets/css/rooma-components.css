@@ -625,8 +625,27 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
     opacity: 0;
     visibility: hidden;
     transition: opacity var(--t-base), visibility var(--t-base);
+    /* PERF: isolate the blurred dim in its own compositor layer so the fade
+       never repaints the page behind it. Opacity-only fade = no layout. */
+    contain: strict;
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
 .drawer-overlay.is-open { opacity: 1; visibility: visible; }
+/* PERF: backdrop-blur must repaint the whole viewport on every fade frame —
+   brutal on software-rendered Firefox / weak Android GPUs. Weak devices
+   (JS adds .bg-lite on Save-Data/2G/≤4 cores) and reduced-transparency users
+   get the same dim with zero blur cost; capable devices are untouched. */
+.bg-lite .drawer-overlay {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
+@media (prefers-reduced-transparency: reduce) {
+    .drawer-overlay {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+}
 
 .drawer {
     position: fixed;
@@ -643,6 +662,12 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
     transition: transform .42s var(--ease-out-soft);
     overscroll-behavior: contain;
     visibility: hidden;
+    /* PERF: own compositor layer + style/layout containment. Previously the
+       panel had no layer, so the large shadow-xl and the whole subtree were
+       repainted on every slide frame. Timing/easing untouched. */
+    contain: layout style;
+    will-change: transform;
+    backface-visibility: hidden;
 }
 [dir="rtl"] .drawer { transform: translateX(100%); }
 [dir="ltr"] .drawer { transform: translateX(-100%); }
@@ -678,11 +703,14 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
     /* Staggered entrance driven by --i set inline in the markup */
     opacity: 0;
     transform: translateX(18px);
-    transition: background var(--t-fast), color var(--t-fast);
+    transition: background-color var(--t-fast), color var(--t-fast);
 }
 .drawer.is-open .drawer__link {
     animation: drawerItemIn .45s var(--ease-out-soft) forwards;
     animation-delay: calc(80ms + var(--i, 0) * 45ms);
+    /* PERF: layer hint only while open — 7 concurrent opacity/transform
+       tweens no longer fight the panel slide for paint. Released on close. */
+    will-change: opacity, transform;
 }
 @keyframes drawerItemIn {
     to { opacity: 1; transform: translateX(0); }
