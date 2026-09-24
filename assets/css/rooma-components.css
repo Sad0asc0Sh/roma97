@@ -681,6 +681,13 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
     pointer-events: none;
+    /* PERF: own compositor layer for the blurred dim so Safari/Firefox keep
+       the sampled backdrop cached while the parent fades (opacity-only).
+       Final look identical — the 4px glass still fades in with the dim. */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 .drawer-overlay.is-open {
     opacity: 1;
@@ -720,10 +727,13 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
     visibility: hidden;
     opacity: 0;
     pointer-events: none;
-    /* PERF: own compositor layer + style/layout containment. Previously the
-       panel had no layer, so the large shadow-xl and the whole subtree were
-       repainted on every slide frame. Timing/easing untouched. */
-    contain: layout style;
+    /* PERF: own compositor layer + layout/paint/style containment. Previously
+       the panel had no paint boundary, so the large shadow-xl and the whole
+       subtree could invalidate the page behind it on every slide frame in
+       Firefox/Safari. `paint` clips to the padding box, but the staggered
+       links only ever drift ≤2px past the body padding while at opacity 0
+       (invisible), so clipping is a visual no-op. Timing/easing untouched. */
+    contain: layout paint style;
     will-change: transform;
     backface-visibility: hidden;
 }
@@ -753,6 +763,10 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    /* PERF: vertical scroll stays on the native fast path on Android
+       browsers; horizontal swipes still reach the swipe-to-close listener
+       on the panel. No visual change. */
+    touch-action: pan-y;
     padding: var(--space-md) var(--space-md) var(--space-xl);
 }
 .drawer__nav { display: flex; flex-direction: column; gap: .2rem; }
@@ -769,6 +783,10 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
     /* Staggered entrance driven by --i set inline in the markup */
     opacity: 0;
     transform: translate3d(18px, 0, 0);
+    /* PERF: stable raster while the stagger runs — Safari/Firefox otherwise
+       re-rasterize the SVG icon + text of each link mid-slide. Invisible. */
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
     transition: background-color var(--t-fast), color var(--t-fast);
 }
 .drawer.is-open .drawer__link {

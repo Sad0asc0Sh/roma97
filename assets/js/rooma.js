@@ -379,6 +379,11 @@
         var lastFocused = null;
         var isOpen = false;
         var unlockTimer = null;
+        // PERF: one reset hook per opener. The closed panel rests at
+        // visibility:hidden, so the compositor may drop its raster — the
+        // warm flag is cleared on every real close so the next pointerdown
+        // primes the layer again instead of sliding cold.
+        var primeResets = [];
         // PERF: cached once. The old code called getComputedStyle(panel) on
         // every touchmove, forcing a style recalc per move event and janking
         // the swipe-to-close gesture. Direction never changes at runtime.
@@ -459,6 +464,12 @@
             unlockScrollDelayed();
             openBtns.forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
 
+            // The layer may be reclaimed while hidden — force a re-warm
+            // before the next open so it never slides cold.
+            for (var i = 0; i < primeResets.length; i++) {
+                try { primeResets[i](); } catch (err) { /* keep closing */ }
+            }
+
             // preventScroll: the burger lives inside the position:sticky header,
             // and focusing it without this flag makes Chromium reveal-scroll the
             // page upward every time the drawer closes.
@@ -466,11 +477,19 @@
         }
 
         openBtns.forEach(function (b) {
-            // PERF: paint the off-screen panel once on first pointer-down so
-            // the open transition starts against an already-rasterized layer.
-            // Resting CSS uses visibility:hidden (skips paint); priming briefly
-            // paints the subtree at opacity 0 and keeps it painted via inert
-            // so the 420ms slide does not pay first-raster cost mid-animation.
+            // PERF: warm the off-screen panel's raster before it slides, so
+            // the 420ms transition starts against an already-painted layer
+            // instead of paying first-raster cost inside the first frames
+            // (the hitch felt as "lag" right after tapping the burger in
+            // Firefox / software-rendered browsers). Resting CSS uses
+            // visibility:hidden (skips paint); priming paints the subtree
+            // once at opacity 0 — invisible and off-screen — and keeps it
+            // unfocusable via inert until open.
+            // Deliberately no forced reflow here: a sync layout inside the
+            // input handler delays the click itself. Hover / touchstart
+            // precede activation by a frame or more, so the next natural
+            // paint already includes the panel; a cold keyboard activation
+            // warms one frame via double-rAF below instead.
             var primed = false;
             function prime() {
                 if (primed || isOpen) return;
@@ -478,14 +497,25 @@
                 panel.style.visibility = 'visible';
                 panel.style.opacity = '0';
                 if (panel.setAttribute) panel.setAttribute('inert', '');
-                // Force style + layout so the next paint includes the panel.
-                void panel.offsetWidth;
             }
+            primeResets.push(function () { primed = false; });
+            b.addEventListener('pointerenter', prime, { passive: true });
             b.addEventListener('pointerdown', prime, { passive: true });
             b.addEventListener('touchstart', prime, { passive: true });
+            b.addEventListener('focus', prime);
             b.addEventListener('click', function (e) {
                 e.preventDefault();
-                isOpen ? close() : open();
+                if (isOpen) { close(); return; }
+                if (primed) { open(); return; }
+                // Cold activation (keyboard / scripted, no prior hover):
+                // paint one invisible frame first so the slide never starts
+                // mid-raster. Two frames (~32ms) sit below perception.
+                prime();
+                win.requestAnimationFrame(function () {
+                    win.requestAnimationFrame(function () {
+                        if (!isOpen) open();
+                    });
+                });
             });
         });
         closeBtns.forEach(function (b) { b.addEventListener('click', close); });
