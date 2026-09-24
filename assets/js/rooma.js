@@ -196,9 +196,12 @@
 
             // Eased so the first pixels of scroll read as a gentle swell
             // rather than an abrupt snap into the capsule.
+            // PERF: quantize to 0.002 steps (≈0.2% of the morph). Visually
+            // identical to 0.001 but halves style recalculations on
+            // high-frequency scroll (trackpads, 120Hz screens, Firefox).
             var raw = clamp(y / MORPH_AT, 0, 1);
             var p = raw * raw * (3 - 2 * raw);          // smoothstep
-            p = Math.round(p * 1000) / 1000;            // avoid style churn
+            p = Math.round(p * 500) / 500;              // avoid style churn
 
             if (p !== lastP) {
                 lastP = p;
@@ -841,18 +844,43 @@
         });
     })();
 
-    /* ─── 13. Card cursor glow ─────────────────────────────────────────── */
+    /* ─── 13. Card cursor glow ───────────────────────────────────────────
+     * PERF: rAF-throttled per card + rect cached on enter. Previously every
+     * pointermove did a getBoundingClientRect (forced layout) + two custom
+     * property writes → repaint of a radial gradient. Now at most one write
+     * per frame, rect re-used while the pointer stays on the card. */
     (function cardGlow() {
         if (!prefersFinePointer() || reduceMotion) return;
         var cards = $$('.card-glow');
         if (!cards.length) return;
 
         cards.forEach(function (card) {
+            var rect = null;
+            var queued = false;
+            var px = 0, py = 0;
+
+            card.addEventListener('pointerenter', function () {
+                rect = card.getBoundingClientRect();
+            }, { passive: true });
+
             card.addEventListener('pointermove', function (e) {
-                var r = card.getBoundingClientRect();
-                card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
-                card.style.setProperty('--my', (e.clientY - r.top) + 'px');
-            });
+                px = e.clientX; py = e.clientY;
+                if (queued) return;
+                queued = true;
+                win.requestAnimationFrame(function () {
+                    queued = false;
+                    // Re-measure only if the rect is stale (scroll/resize can
+                    // move the card while hovered). Cheap guard: re-cache when
+                    // the pointer falls outside the cached box.
+                    if (!rect || px < rect.left || px > rect.right || py < rect.top || py > rect.bottom) {
+                        rect = card.getBoundingClientRect();
+                    }
+                    card.style.setProperty('--mx', (px - rect.left) + 'px');
+                    card.style.setProperty('--my', (py - rect.top) + 'px');
+                });
+            }, { passive: true });
+
+            card.addEventListener('pointerleave', function () { rect = null; }, { passive: true });
         });
     })();
 
@@ -894,23 +922,47 @@
         });
     })();
 
-    /* ─── 15. Parallax-lite ────────────────────────────────────────────── */
+    /* ─── 15. Parallax-lite ──────────────────────────────────────────────
+     * PERF: only visible items are measured per frame. An IntersectionObserver
+     * keeps a `visible` set so off-screen [data-parallax] nodes cost zero
+     * getBoundingClientRect calls during scroll — previously every node was
+     * measured on every scroll frame (forced sync layout). */
     (function parallax() {
         if (reduceMotion || isTouch) return;
         var els = $$('[data-parallax]');
         if (!els.length) return;
 
         var items = els.map(function (el) {
-            return { el: el, speed: parseFloat(el.getAttribute('data-parallax')) || 0.12 };
+            return { el: el, speed: parseFloat(el.getAttribute('data-parallax')) || 0.12, visible: true };
         });
+
+        if (hasIO) {
+            var pio = new IntersectionObserver(function (entries) {
+                entries.forEach(function (en) {
+                    for (var k = 0; k < items.length; k++) {
+                        if (items[k].el === en.target) {
+                            // Widen the visible window slightly so elements
+                            // entering the viewport never pop in late.
+                            items[k].visible = en.isIntersecting;
+                            break;
+                        }
+                    }
+                });
+            }, { rootMargin: '220px 0px 220px 0px', threshold: 0 });
+            items.forEach(function (it) { pio.observe(it.el); });
+        }
+
+        var vh = win.innerHeight || 800;
+        win.addEventListener('resize', function () { vh = win.innerHeight || 800; }, { passive: true });
 
         subscribeScroll(function () {
             for (var i = 0; i < items.length; i++) {
                 var it = items[i];
+                if (!it.visible) continue;
                 var r = it.el.getBoundingClientRect();
-                if (r.bottom < -200 || r.top > win.innerHeight + 200) continue;
+                if (r.bottom < -200 || r.top > vh + 200) continue;
                 // Distance of the element's centre from the viewport centre
-                var mid = r.top + r.height / 2 - win.innerHeight / 2;
+                var mid = r.top + r.height / 2 - vh / 2;
                 it.el.style.transform = 'translate3d(0,' + (-mid * it.speed).toFixed(2) + 'px,0)';
             }
         });
@@ -955,22 +1007,55 @@
         }, true);
     })();
 
-    /* ─── 17. Pause background work when hidden ────────────────────────── */
+    /* ─── 16b. Pause continuous decor while off-screen ─────────────────
+     * PERF: infinite CSS loops (cardBob, bgPan, orbFloat, iconBreathe,
+     * blobDrift, hero kenBurns) keep the compositor awake even when the
+     * user has scrolled far past them. Toggle .is-offscreen when the host
+     * leaves the viewport — visuals while visible are identical. */
+    (function pauseOffscreen() {
+        if (!hasIO || reduceMotion) return;
+        var sel = '.stats-section, .cta-banner, .cta-banner-wrapper, ' +
+            '.testimonials-slider, .newsletter-card, .newsletter-section, ' +
+            '.hero-fallback, .site-footer, .trust-strip, .hero__viewport, .slider';
+        var hosts = $$(sel);
+        if (!hosts.length) return;
+        var oio = new IntersectionObserver(function (entries) {
+            entries.forEach(function (en) {
+                en.target.classList.toggle('is-offscreen', !en.isIntersecting);
+            });
+        }, { rootMargin: '240px 0px 240px 0px', threshold: 0 });
+        hosts.forEach(function (h) {
+            h.classList.add('is-offscreen');
+            oio.observe(h);
+        });
+    })();
+
+    /* ─── 17. Pause background work when hidden ──────────────────────────
+     * PERF: .bg-canvas is position:fixed so it can never scroll off-screen —
+     * the old sentinel did nothing. Instead: pause on tab-hide, enable a
+     * lite mode (fewer blur costs) on Save-Data / 2G / low-core devices.
+     * Visual output on capable devices is untouched. */
     (function bgPause() {
         var canvas = $('.bg-canvas');
         if (!canvas) return;
 
-        doc.addEventListener('visibilitychange', function () {
-            doc.body.classList.toggle('bg-paused', doc.hidden);
-        });
-
-        // Also stop the (relatively costly) blur animation while off-screen
-        if (hasIO) {
-            var sentinel = doc.createElement('div');
-            sentinel.setAttribute('aria-hidden', 'true');
-            sentinel.style.cssText = 'position:absolute;top:0;height:1px;width:1px;';
-            doc.body.appendChild(sentinel);
+        function syncPaused() {
+            doc.body.classList.toggle('bg-paused', !!doc.hidden);
         }
+        doc.addEventListener('visibilitychange', syncPaused);
+        syncPaused();
+
+        try {
+            var conn = navigator.connection || {};
+            var saveData = !!conn.saveData;
+            var slowNet = typeof conn.effectiveType === 'string' &&
+                (conn.effectiveType.indexOf('2g') !== -1 || conn.effectiveType === 'slow-2g');
+            var lowCores = typeof navigator.hardwareConcurrency === 'number' &&
+                navigator.hardwareConcurrency <= 4;
+            if (saveData || slowNet || lowCores) {
+                doc.body.classList.add('bg-lite');
+            }
+        } catch (e) { /* never break visuals on exotic browsers */ }
     })();
 
     /* ─── 18. Share buttons ────────────────────────────────────────────── */

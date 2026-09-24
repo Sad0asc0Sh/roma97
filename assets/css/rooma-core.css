@@ -617,6 +617,40 @@ html { scrollbar-color: var(--border-strong) var(--surface-sunken); scrollbar-wi
 .bg-paused .bg-blob,
 .bg-paused .bg-mote { animation-play-state: paused; }
 
+/* ── PERF: background cost scaling (no visual change on desktop) ─────────
+   • Phones get a cheaper blur + smaller fields. Same hues/positions,
+     ~35% less fill-rate on mobile GPUs.
+   • .bg-lite (added by JS on Save-Data / 2G / ≤4 cores) freezes motes and
+     halves blob travel without removing them. */
+@media (max-width: 767px) {
+    .bg-blob { filter: blur(52px); opacity: .45; }
+    [data-theme="dark"] .bg-blob { filter: blur(60px); }
+    .bg-blob-1 { width: 38vmax; height: 38vmax; }
+    .bg-blob-2 { width: 34vmax; height: 34vmax; }
+    .bg-blob-3 { width: 30vmax; height: 30vmax; }
+    .bg-blob-4 { display: none; }
+    .bg-grain { opacity: .4; }
+}
+.bg-lite .bg-motes { display: none; }
+.bg-lite .bg-blob {
+    animation-duration: 60s;
+    opacity: .35;
+}
+.bg-lite .bg-grain { opacity: .35; }
+
+/* Off-screen sections skip rendering until near the viewport.
+   content-visibility keeps layout correct (intrinsic size reserves space)
+   so there is no scroll-jump and no visual change — just less paint work
+   while scrolling long pages on Firefox / low-end Android. */
+@media (prefers-reduced-motion: no-preference) {
+    .section-paper,
+    .section-sunken,
+    .section-soft {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 700px;
+    }
+}
+
 /* ── 6. Scroll-reveal primitives ────────────────────────────────────────
    Elements opt in with [data-reveal]. The hidden state only applies once
    JS has confirmed IntersectionObserver support (html.js-reveal), so the

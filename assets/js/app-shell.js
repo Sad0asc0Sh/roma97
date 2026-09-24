@@ -149,30 +149,53 @@ function initGlobalSearchKeybind() {
     }
   });
 
+  // PERF: debounced + rAF-batched + cached text. Previously every keystroke
+  // re-read textContent of every row/card (forced layout on 200+ rows) and
+  // wrote inline animation each time. Now: 150ms debounce, text cached once,
+  // DOM writes batched in a single frame, no per-keystroke animation churn.
+  let searchTimer = null;
+  let searchRaf = 0;
+  let rowCache = null;
+  let cardCache = null;
+
+  function buildCache() {
+    if (!rowCache) {
+      rowCache = Array.from(document.querySelectorAll('.app-table tbody tr, .admin-table tbody tr, .payments-table tbody tr, .attendance-table tbody tr'))
+        .map((row) => ({ el: row, text: (row.textContent || '').toLowerCase() }));
+    }
+    if (!cardCache) {
+      cardCache = Array.from(document.querySelectorAll('.admin-child-card, .child-card-large, .child-list-card, .event-card, .admin-event-card, .quick-list-item'))
+        .map((card) => ({ el: card, text: (card.textContent || '').toLowerCase() }));
+    }
+  }
+
+  function applySearch(query) {
+    buildCache();
+    const q = query;
+    if (rowCache) {
+      for (let i = 0; i < rowCache.length; i++) {
+        const item = rowCache[i];
+        item.el.style.display = (q === '' || item.text.includes(q)) ? '' : 'none';
+      }
+    }
+    if (cardCache) {
+      for (let j = 0; j < cardCache.length; j++) {
+        const c = cardCache[j];
+        c.el.style.display = (q === '' || c.text.includes(q)) ? '' : 'none';
+      }
+    }
+  }
+
   searchInput.addEventListener('input', (e) => {
     const query = e.target.value.trim().toLowerCase();
-    const tableRows = document.querySelectorAll('.app-table tbody tr, .admin-table tbody tr, .payments-table tbody tr, .attendance-table tbody tr');
-
-    tableRows.forEach(row => {
-      const text = row.textContent.toLowerCase();
-      if (query === '' || text.includes(query)) {
-        row.style.display = '';
-        row.style.animation = 'fadeIn 0.25s ease-out';
-      } else {
-        row.style.display = 'none';
-      }
-    });
-
-    const cards = document.querySelectorAll('.admin-child-card, .child-card-large, .child-list-card, .event-card, .admin-event-card, .quick-list-item');
-    cards.forEach(card => {
-      const text = card.textContent.toLowerCase();
-      if (query === '' || text.includes(query)) {
-        card.style.display = '';
-        card.style.animation = 'fadeScale 0.25s ease-out';
-      } else {
-        card.style.display = 'none';
-      }
-    });
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      if (searchRaf) cancelAnimationFrame(searchRaf);
+      searchRaf = requestAnimationFrame(() => {
+        searchRaf = 0;
+        applySearch(query);
+      });
+    }, 150);
   });
 }
 

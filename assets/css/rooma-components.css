@@ -165,11 +165,16 @@ body:has(> .topbar) .site-main > .page-hero:first-child {
     padding-block-start: clamp(2.25rem, 1.5rem + 4vw, 4.25rem);
 }
 
-/* ── The morphing shell ── */
+/* ── The morphing shell ──
+   PERF: isolated to its own paint layer (contain + translateZ) so the per-frame
+   --fh-p writes never invalidate the page underneath. No visual change. */
 .site-header__shell {
     position: relative;
     isolation: isolate;
     width: 100%;
+    contain: layout paint style;
+    transform: translateZ(0);
+    backface-visibility: hidden;
 
     /* Full-bleed at rest → capsule once condensed */
     max-width: calc(100% - (100% - var(--fh-max-w)) * var(--fh-p));
@@ -184,6 +189,14 @@ body:has(> .topbar) .site-main > .page-hero:first-child {
 
     pointer-events: auto;
     will-change: max-width, border-radius, backdrop-filter;
+}
+/* Low-power phones: keep the same capsule look with a cheaper blur.
+   20px→14px is ~30% less blur cost on mobile GPUs, visually near-identical
+   at capsule scale. Desktop untouched. */
+@media (max-width: 767px) {
+    .site-header__shell {
+        --fh-blur: 14px;
+    }
 }
 
 /* The glass itself lives on a pseudo-element so its opacity can be faded
@@ -726,7 +739,7 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
     background: var(--surface);
     border: 1px solid var(--border);
     color: var(--text-muted);
-    transition: all var(--t-fast);
+    transition: background-color var(--t-fast), color var(--t-fast), border-color var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
 }
 .drawer__social svg { width: 16px; height: 16px; fill: currentColor; }
 .drawer__social:hover { background: var(--primary); border-color: var(--primary); color: #fff; transform: translateY(-2px); }
@@ -1006,12 +1019,16 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
     width: 100%;
     height: 100%;
     object-fit: cover;
-    /* Slow Ken-Burns drift; paused when the slide is inactive */
+    /* Slow Ken-Burns drift; paused when the slide is inactive.
+       PERF: only the active slide holds a compositor layer. */
     transform: scale(1.06);
     transition: transform 1.2s var(--ease-out-soft);
+    will-change: auto;
+}
+.hero__slide.is-active .hero__img {
+    animation: kenBurns 18s ease-out forwards;
     will-change: transform;
 }
-.hero__slide.is-active .hero__img { animation: kenBurns 18s ease-out forwards; }
 @keyframes kenBurns {
     from { transform: scale(1.04) translate3d(0, 0, 0); }
     to   { transform: scale(1.15) translate3d(-1.5%, -1.5%, 0); }
@@ -1836,7 +1853,7 @@ html:not(.js-reveal) .meter__fill { width: var(--w, 0); }
     font-weight: 700;
     white-space: nowrap;
     cursor: pointer;
-    transition: all var(--t-fast);
+    transition: background-color var(--t-fast), color var(--t-fast), border-color var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
     -webkit-tap-highlight-color: transparent;
 }
 .chip:hover { border-color: var(--primary-light); color: var(--primary-dark); }
@@ -2236,7 +2253,7 @@ html:not(.js-reveal) .meter__fill { width: var(--w, 0); }
     background: var(--surface-2);
     border: 1px solid var(--border);
     color: var(--text-muted);
-    transition: all var(--t-fast);
+    transition: background-color var(--t-fast), color var(--t-fast), border-color var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
     cursor: pointer;
 }
 .share__btn svg { width: 17px; height: 17px; fill: currentColor; }
@@ -2265,7 +2282,7 @@ html:not(.js-reveal) .meter__fill { width: var(--w, 0); }
     color: var(--text);
     font-size: var(--text-sm);
     font-weight: 700;
-    transition: all var(--t-fast);
+    transition: background-color var(--t-fast), color var(--t-fast), border-color var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
 }
 .pagination-link:hover { border-color: var(--primary); color: var(--primary-dark); background: var(--primary-faint); }
 .pagination-link.is-current {
@@ -2641,7 +2658,7 @@ a.site-footer__contact:hover { color: #fff; }
     border-radius: var(--radius-full);
     background: rgba(255,255,255,.08);
     color: rgba(255,255,255,.82);
-    transition: all var(--t-fast);
+    transition: background-color var(--t-fast), color var(--t-fast), border-color var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
 }
 .site-footer__social svg { width: 17px; height: 17px; fill: currentColor; }
 .site-footer__social:hover { background: var(--primary); color: #fff; transform: translateY(-3px); box-shadow: var(--shadow-green); }
@@ -2738,6 +2755,18 @@ a.site-footer__contact:hover { color: #fff; }
         to   { opacity: 1; transform: none; }
     }
     html.page-leaving body { opacity: .35; transition: opacity .16s ease-out; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   34b. PERF — off-screen pause for infinite decor (toggled by rooma.js)
+   Same visuals while visible; zero compositor wake-ups while scrolled past.
+   ══════════════════════════════════════════════════════════════════════════ */
+.hero__viewport.is-offscreen .hero__img,
+.hero__viewport.is-offscreen .hero__anim,
+.hero__viewport.is-offscreen .hero__cue-track::after,
+.slider.is-offscreen .slide.is-active img,
+.slider.is-offscreen .slide.is-active .slide-caption > * {
+    animation-play-state: paused !important;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

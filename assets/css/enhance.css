@@ -23,6 +23,10 @@ body {
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Ccircle cx='2' cy='2' r='1.4' fill='%233d8b63' opacity='0.05'/%3E%3Ccircle cx='16' cy='14' r='1' fill='%23c4724a' opacity='0.04'/%3E%3C/svg%3E");
     background-attachment: fixed;
 }
+/* PERF: see style.css — fixed attachment janks mobile scroll. */
+@media (max-width: 767px), (hover: none) {
+    body { background-attachment: scroll; }
+}
 
 [data-theme="dark"] body {
     background-image:
@@ -31,19 +35,28 @@ body {
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Ccircle cx='2' cy='2' r='1.4' fill='%236aaf8a' opacity='0.05'/%3E%3Ccircle cx='16' cy='14' r='1' fill='%23dfa080' opacity='0.04'/%3E%3C/svg%3E");
 }
 
-/* ── 2. Scroll progress ribbon ─────────────────────────────── */
-.scroll-progress {
+/* ── 2. Scroll progress ribbon ───────────────────────────────
+   PERF: compositor-only scaleX (was width + 80ms linear transition that ran
+   layout on every scroll frame). #scrollProgress is set to scaleX(0..1) by
+   script.js; legacy width-based pages keep working via the fallback below. */
+.scroll-progress,
+#scrollProgress {
     position: fixed;
     top: 0;
     right: 0;
+    left: 0;
     height: 3px;
-    width: 0%;
+    width: 100%;
     background: linear-gradient(90deg, #3D8B63, #E8A838, #C4724A);
     border-start-end-radius: 3px;
     z-index: 3000;
     pointer-events: none;
-    transition: width 0.08s linear;
+    transform: scaleX(0);
+    transform-origin: right center;
+    will-change: transform;
 }
+[dir="ltr"] .scroll-progress,
+[dir="ltr"] #scrollProgress { transform-origin: left center; }
 
 /* ── 3. Buttons: shine sweep + richer depth ────────────────── */
 .btn-primary, .btn-secondary {
@@ -468,6 +481,19 @@ body {
 [data-theme="dark"] .nav-link.active {
     background: linear-gradient(135deg, rgba(61,139,99,0.35), rgba(61,139,99,0.15));
     box-shadow: inset 0 0 0 1px rgba(106,175,138,0.3);
+}
+
+/* ── 19b. PERF: pause continuous loops while off-screen ────────────
+   JS (rooma.js §pauseOffscreen) toggles .is-offscreen on these hosts when
+   they leave the viewport (+240px margin). Same visuals while visible,
+   zero compositor work while scrolled past. Fallback: no JS → animations
+   simply keep running as before. */
+.is-offscreen,
+.is-offscreen::before,
+.is-offscreen::after,
+.is-offscreen .testimonial-card,
+.is-offscreen .trust-item svg {
+    animation-play-state: paused !important;
 }
 
 /* ── 20. Reduced motion: kill every continuous loop ────────── */

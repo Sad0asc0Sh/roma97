@@ -214,7 +214,7 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   font-size: var(--app-text-sm);
   color: var(--app-text);
   box-sizing: border-box;
-  transition: all var(--app-transition);
+  transition: background-color var(--app-transition), color var(--app-transition), border-color var(--app-transition), transform var(--app-transition), box-shadow var(--app-transition);
 }
 
 .app-search-input:focus {
@@ -256,7 +256,7 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   justify-content: center;
   cursor: pointer;
   position: relative;
-  transition: all var(--app-transition);
+  transition: background-color var(--app-transition), color var(--app-transition), border-color var(--app-transition), transform var(--app-transition), box-shadow var(--app-transition);
   text-decoration: none;
 }
 
@@ -295,7 +295,7 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   border: 1px solid var(--app-border);
   background: var(--app-surface);
   cursor: pointer;
-  transition: all var(--app-transition);
+  transition: background-color var(--app-transition), color var(--app-transition), border-color var(--app-transition), transform var(--app-transition), box-shadow var(--app-transition);
 }
 
 .app-user-trigger:hover {
@@ -563,7 +563,7 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   cursor: pointer;
   border-radius: var(--app-radius-xs);
   padding: 4px 8px;
-  transition: all var(--app-transition);
+  transition: background-color var(--app-transition), color var(--app-transition), border-color var(--app-transition), transform var(--app-transition), box-shadow var(--app-transition);
 }
 
 .app-drawer-close:hover {
@@ -696,7 +696,7 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   font-size: var(--app-text-sm);
   color: var(--app-text);
   animation: appSlideLeft 0.3s ease-out;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .app-toast.success { border-right-color: var(--app-success); }
@@ -843,7 +843,7 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   line-height: 1.4;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all var(--app-transition);
+  transition: background-color var(--app-transition), color var(--app-transition), border-color var(--app-transition), transform var(--app-transition), box-shadow var(--app-transition);
   text-decoration: none;
   box-sizing: border-box;
 }

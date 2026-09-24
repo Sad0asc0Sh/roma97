@@ -211,6 +211,13 @@
 html { scroll-behavior: smooth; direction: rtl; overflow-x: hidden; overflow-x: clip; max-width: 100%; }
 [dir="ltr"], [dir="ltr"] * { direction: ltr; }
 body { font-family: var(--font-base); font-size: var(--font-size-base); line-height: var(--line-height-base); color: var(--neutral-dark); background: var(--bg-cream); background-image: radial-gradient(circle at 20% 10%, rgba(61,139,99,0.04) 0%, transparent 30%), radial-gradient(circle at 80% 80%, rgba(196,114,74,0.04) 0%, transparent 35%), radial-gradient(circle at 50% 50%, rgba(232,168,56,0.03) 0%, transparent 50%); background-attachment: fixed; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; overflow-x: hidden; overflow-x: clip; width: 100%; max-width: 100%; position: relative; }
+/* PERF: background-attachment:fixed repaints the whole page on every scroll
+   frame on iOS Safari + mobile Chrome (and janks low-end Firefox). Desktop
+   keeps the fixed texture; touch / small screens fall back to scroll — on
+   iOS fixed is treated as scroll anyway, so there is no visual change there. */
+@media (max-width: 767px), (hover: none) {
+    body { background-attachment: scroll; }
+}
 img { max-width: 100%; height: auto; display: block; }
 a { color: var(--primary); text-decoration: none; transition: color var(--transition-fast); }
 a:hover { color: var(--primary-dark); }
@@ -901,6 +908,14 @@ html.js-enabled .slide-in-left.visible { opacity: 1; transform: translateX(0); }
         padding: 0 4px max(4px, env(safe-area-inset-bottom));
         box-shadow: 0 -4px 24px rgba(44,62,58,0.08), 0 -1px 4px rgba(44,62,58,0.04);
     }
+    .mobile-bottom-nav,
+    .bottom-nav {
+        transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+        will-change: transform;
+    }
+    .mobile-bottom-nav.is-hidden {
+        transform: translateY(110%);
+    }
     .mobile-bottom-nav .bottom-nav-item,
     .bottom-nav-item {
         display: flex;
@@ -911,7 +926,7 @@ html.js-enabled .slide-in-left.visible { opacity: 1; transform: translateX(0); }
         color: var(--muted);
         font-size: 0.625rem;
         text-decoration: none;
-        transition: all var(--transition-fast);
+        transition: background-color var(--transition-fast), color var(--transition-fast), transform var(--transition-fast), opacity var(--transition-fast);
         border-radius: var(--radius-sm);
         min-width: 0;
         flex: 1 1 0;
@@ -940,7 +955,7 @@ html.js-enabled .slide-in-left.visible { opacity: 1; transform: translateX(0); }
         height: 3px;
         background: var(--gradient-primary);
         border-radius: 0 0 var(--radius-full) var(--radius-full);
-        transition: all var(--transition-base);
+        transition: opacity var(--transition-base), transform var(--transition-base);
     }
     .mobile-bottom-nav .bottom-nav-item.active .bottom-nav-indicator,
     .bottom-nav-item.active .bottom-nav-indicator {
@@ -958,7 +973,7 @@ html.js-enabled .slide-in-left.visible { opacity: 1; transform: translateX(0); }
     .bottom-nav-icon {
         width: 22px;
         height: 22px;
-        transition: all var(--transition-base);
+        transition: background-color var(--transition-base), color var(--transition-base), transform var(--transition-base);
         padding: 3px;
         border-radius: var(--radius-sm);
     }

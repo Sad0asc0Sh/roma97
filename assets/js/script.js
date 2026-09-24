@@ -11,19 +11,26 @@ var prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-redu
 (function() {
     var bar = document.getElementById('scrollProgress');
     if (!bar) return;
+    // PERF: transform:scaleX is compositor-only; width triggers layout on
+    // every scroll frame. Visually identical (RTL: grows right→left).
+    bar.style.transformOrigin = 'right center';
+    bar.style.willChange = 'transform';
     var ticking = false;
+    function render() {
+        ticking = false;
+        var doc = document.documentElement;
+        var max = doc.scrollHeight - window.innerHeight;
+        var pct = max > 8 ? (window.scrollY / max) : 0;
+        if (pct < 0) pct = 0; else if (pct > 1) pct = 1;
+        bar.style.transform = 'scaleX(' + pct.toFixed(4) + ')';
+    }
     window.addEventListener('scroll', function() {
         if (!ticking) {
-            window.requestAnimationFrame(function() {
-                var doc = document.documentElement;
-                var max = doc.scrollHeight - window.innerHeight;
-                var pct = max > 0 ? (window.scrollY / max) * 100 : 0;
-                bar.style.width = Math.min(pct, 100) + '%';
-                ticking = false;
-            });
             ticking = true;
+            window.requestAnimationFrame(render);
         }
     }, { passive: true });
+    render();
 })();
 
 // ============================================
@@ -346,17 +353,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Header scroll effect
+    // Header scroll effect (legacy .scrolled variant for style.css pages).
+    // PERF: rAF-batched + state-guarded so no class churn on every pixel.
     var header = document.querySelector('.site-header');
     if (header) {
-        var scrollHandler = function() {
-            if (window.scrollY > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
+        var headerTicking = false;
+        var headerOn = null;
+        var renderHeader = function() {
+            headerTicking = false;
+            var next = window.scrollY > 50;
+            if (next !== headerOn) {
+                headerOn = next;
+                header.classList.toggle('scrolled', next);
             }
         };
-        window.addEventListener('scroll', scrollHandler, { passive: true });
+        window.addEventListener('scroll', function() {
+            if (!headerTicking) {
+                headerTicking = true;
+                window.requestAnimationFrame(renderHeader);
+            }
+        }, { passive: true });
+        renderHeader();
     }
 
     // Enhanced scroll entrance animation observer
@@ -576,46 +593,45 @@ document.addEventListener('DOMContentLoaded', function() {
     // MOBILE BOTTOM NAVIGATION
     // ============================================
 
-    // Add haptic-style touch feedback to bottom nav items
-    var bottomNavItems = document.querySelectorAll('.mobile-bottom-nav .bottom-nav-item, .public-bottom-nav .bottom-nav-item');
-    bottomNavItems.forEach(function(item) {
-        item.addEventListener('touchstart', function() {
-            this.style.transition = 'transform 0.1s ease';
-        }, { passive: true });
-        item.addEventListener('touchend', function() {
-            var el = this;
-            setTimeout(function() {
-                el.style.transition = '';
-            }, 150);
-        }, { passive: true });
-    });
+    // Add haptic-style touch feedback to bottom nav items.
+    // PERF: no inline style writes — the press scale lives in CSS (:active)
+    // so touch scrolling never triggers style recalc from JS.
+    // (Kept as a no-op hook for future haptics; intentionally style-free.)
 
     // Hide bottom nav on scroll down, show on scroll up (mobile only).
     // Skipped for reduced-motion users — the sliding bar is pure motion.
+    // PERF: transform-only + class toggle. The transition lives in CSS
+    // (.mobile-bottom-nav.is-anim + .is-hidden) so JS writes one cheap
+    // property per direction change instead of transition+transform inline.
     var bottomNav = document.querySelector('.mobile-bottom-nav');
     if (bottomNav && !prefersReducedMotion) {
-        var lastScrollY = 0;
+        var lastScrollY = window.scrollY || 0;
         var navHideThreshold = 10;
-        var ticking = false;
+        var tickingNav = false;
+        var navHidden = null;
 
         window.addEventListener('scroll', function() {
-            if (!ticking) {
+            if (!tickingNav) {
+                tickingNav = true;
                 window.requestAnimationFrame(function() {
                     var currentScrollY = window.scrollY;
                     var diff = currentScrollY - lastScrollY;
 
                     if (diff > navHideThreshold && currentScrollY > 200) {
-                        bottomNav.style.transform = 'translateY(100%)';
-                        bottomNav.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
+                        if (navHidden !== true) {
+                            navHidden = true;
+                            bottomNav.classList.add('is-hidden');
+                        }
                     } else if (diff < -navHideThreshold) {
-                        bottomNav.style.transform = 'translateY(0)';
-                        bottomNav.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
+                        if (navHidden !== false) {
+                            navHidden = false;
+                            bottomNav.classList.remove('is-hidden');
+                        }
                     }
 
                     lastScrollY = currentScrollY;
-                    ticking = false;
+                    tickingNav = false;
                 });
-                ticking = true;
             }
         }, { passive: true });
     }
