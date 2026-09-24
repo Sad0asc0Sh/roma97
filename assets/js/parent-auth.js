@@ -13,12 +13,50 @@
         return phone;
     };
 
-    /** 09123456789 → 0912 345 6789 (display only while typing) */
+    /** 09123456789 → 0912 345 6789 (display while typing; digits only, max 11) */
     const prettyPhone = raw => {
-        const p = normalizePhone(raw);
+        const p = digits(String(raw || '')).replace(/[^0-9]/g, '').slice(0, 11);
         if (p.length <= 4) return p;
         if (p.length <= 7) return p.slice(0, 4) + ' ' + p.slice(4);
         return p.slice(0, 4) + ' ' + p.slice(4, 7) + ' ' + p.slice(7, 11);
+    };
+
+    /** How many digits sit at/before the caret? (Persian/Arabic digits count too) */
+    const digitsBeforeCaret = (value, caret) => {
+        const head = value.slice(0, Math.max(0, caret));
+        // Count after converting ۰-۹ / ٠-٩ → 0-9 so fa-keyboard input keeps the caret
+        return (digits(head).match(/[0-9]/g) || []).length;
+    };
+
+    /** Map “N digits seen” back to a caret index in the formatted string */
+    const caretAfterDigits = (formatted, digitCount) => {
+        if (digitCount <= 0) return 0;
+        let seen = 0;
+        for (let i = 0; i < formatted.length; i++) {
+            if (formatted[i] >= '0' && formatted[i] <= '9') {
+                seen++;
+                if (seen >= digitCount) return i + 1;
+            }
+        }
+        return formatted.length;
+    };
+
+    /**
+     * Reformat phone input WITHOUT moving typed digits around.
+     * Cursor is restored by digit count, not raw string index —
+     * inserting spaces used to park the caret mid-number and stack later digits.
+     */
+    const applyPhoneFormat = (input) => {
+        const prev = input.value;
+        const caret = input.selectionStart == null ? prev.length : input.selectionStart;
+        const digitCount = digitsBeforeCaret(prev, caret);
+        const next = prettyPhone(prev);
+        if (next === prev) return;
+        input.value = next;
+        try {
+            const pos = caretAfterDigits(next, digitCount);
+            input.setSelectionRange(pos, pos);
+        } catch (e) { /* ignore */ }
     };
 
     const wrapOf = input => input.closest('.entry-input-wrap');
@@ -143,29 +181,56 @@
         });
     });
 
-    /* ── Phone live format ─────────────────── */
+    /* ── Phone live format (cursor-safe) ───── */
     document.querySelectorAll('[data-phone]').forEach(input => {
         let composing = false;
+        input.setAttribute('maxlength', '13'); // "0912 345 6789"
+        input.setAttribute('inputmode', 'numeric');
+        input.setAttribute('autocomplete', input.getAttribute('autocomplete') || 'tel');
+
         input.addEventListener('compositionstart', () => { composing = true; });
-        input.addEventListener('compositionend', () => { composing = false; });
-        input.addEventListener('input', (event) => {
-            if (composing || event.isComposing) return;
-            const raw = input.value;
-            const sel = input.selectionStart;
-            const hadSpaceBefore = /\s$/.test(raw) && sel === raw.length;
-            const formatted = prettyPhone(raw);
-            if (formatted !== raw) {
-                input.value = formatted;
-                try {
-                    const pos = hadSpaceBefore ? formatted.length : Math.min(formatted.length, (sel || formatted.length));
-                    input.setSelectionRange(pos, pos);
-                } catch (e) { /* ignore */ }
-            }
+        input.addEventListener('compositionend', () => {
+            composing = false;
+            applyPhoneFormat(input);
         });
+
+        input.addEventListener('input', (event) => {
+            if (composing || (event && event.isComposing)) return;
+            applyPhoneFormat(input);
+        });
+
+        // Paste: keep only digits, then format
+        input.addEventListener('paste', (event) => {
+            const text = (event.clipboardData || window.clipboardData).getData('text') || '';
+            const clean = digits(text).replace(/[^0-9]/g, '').slice(0, 11);
+            if (!clean) {
+                event.preventDefault();
+                return;
+            }
+            event.preventDefault();
+            input.value = clean; // digits first, then format with caret at end
+            applyPhoneFormat(input);
+            try {
+                const pos = input.value.length;
+                input.setSelectionRange(pos, pos);
+            } catch (e) { /* ignore */ }
+        });
+
+        // Block non-digit keystrokes early (still allow navigation keys)
+        input.addEventListener('keydown', (event) => {
+            if (event.ctrlKey || event.metaKey || event.altKey) return;
+            const k = event.key;
+            if (k === 'Backspace' || k === 'Delete' || k === 'Tab' || k === 'Enter'
+                || k === 'ArrowLeft' || k === 'ArrowRight' || k === 'ArrowUp' || k === 'ArrowDown'
+                || k === 'Home' || k === 'End' || k === 'Escape' || k === 'Process') return;
+            // allow digit / Persian digit / Arabic digit
+            if (/^[0-9۰-۹٠-٩]$/.test(k)) return;
+            if (k.length === 1) event.preventDefault();
+        });
+
         input.addEventListener('blur', () => {
-            // store normalized for validation; display pretty
             const p = normalizePhone(input.value);
-            if (p) input.value = prettyPhone(p);
+            input.value = p ? prettyPhone(p) : prettyPhone(input.value);
         });
     });
 
