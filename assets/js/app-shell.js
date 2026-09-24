@@ -315,6 +315,10 @@ window.openDrawer = function(title, contentHtml) {
   if (titleEl) titleEl.textContent = title || 'فرم مدیریت';
   if (bodyEl && contentHtml) bodyEl.innerHTML = contentHtml;
 
+  // PERF: flush layout after content injection so the slide starts on a
+  // clean frame instead of competing with innerHTML style/layout work.
+  void drawer.offsetWidth;
+
   overlay.classList.add('active');
   drawer.classList.add('open');
 };

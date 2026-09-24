@@ -642,7 +642,9 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
     height: 2px;
     border-radius: 2px;
     background: currentColor;
-    transition: transform .34s var(--ease-spring), opacity .2s var(--ease-in-out), width .34s var(--ease-spring);
+    /* PERF: width is never animated (line 2 is fixed at 74%; the X morph uses
+       scaleX). Transitioning it forced layout on every burger frame. */
+    transition: transform .34s var(--ease-spring), opacity .2s var(--ease-in-out);
 }
 .burger__line:nth-child(1) { top: 0; }
 .burger__line:nth-child(2) { top: 6px; width: 74%; }
@@ -662,25 +664,40 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
     position: fixed;
     inset: 0;
     z-index: var(--z-overlay);
+    /* No filter here: animating opacity on a backdrop-filter element forces
+       the blur to re-sample every fade frame. The solid dim + 4px glass live
+       together on ::before so the parent is a pure opacity layer. */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--t-base), visibility 0s linear .28s;
+    backface-visibility: hidden;
+    will-change: opacity;
+}
+.drawer-overlay::before {
+    content: "";
+    position: absolute;
+    inset: 0;
     background: rgba(19,48,38,.5);
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity var(--t-base), visibility var(--t-base);
-    backface-visibility: hidden;
+    pointer-events: none;
 }
-.drawer-overlay.is-open { opacity: 1; visibility: visible; }
+.drawer-overlay.is-open {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity var(--t-base), visibility 0s linear 0s;
+}
 /* PERF: backdrop-blur must repaint the whole viewport on every fade frame —
    brutal on software-rendered Firefox / weak Android GPUs. Weak devices
    (JS adds .bg-lite on Save-Data/2G/≤4 cores) and reduced-transparency users
    get the same dim with zero blur cost; capable devices are untouched. */
-.bg-lite .drawer-overlay {
+.bg-lite .drawer-overlay::before,
+.perf-low .drawer-overlay::before {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
 }
 @media (prefers-reduced-transparency: reduce) {
-    .drawer-overlay {
+    .drawer-overlay::before {
         -webkit-backdrop-filter: none;
         backdrop-filter: none;
     }
@@ -697,10 +714,12 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
     background: var(--surface);
     border-inline-start: 1px solid var(--border);
     box-shadow: var(--shadow-xl);
-    transform: translateX(100%);          /* off-screen toward inline-end */
-    transition: transform .42s var(--ease-out-soft);
+    transform: translate3d(100%, 0, 0);  /* off-screen toward inline-end */
+    transition: transform .42s var(--ease-out-soft), visibility 0s linear .42s, opacity 0s linear .42s;
     overscroll-behavior: contain;
     visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
     /* PERF: own compositor layer + style/layout containment. Previously the
        panel had no layer, so the large shadow-xl and the whole subtree were
        repainted on every slide frame. Timing/easing untouched. */
@@ -708,9 +727,17 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
     will-change: transform;
     backface-visibility: hidden;
 }
-[dir="rtl"] .drawer { transform: translateX(100%); }
-[dir="ltr"] .drawer { transform: translateX(-100%); }
-.drawer.is-open { transform: translateX(0); visibility: visible; }
+[dir="rtl"] .drawer { transform: translate3d(100%, 0, 0); }
+[dir="ltr"] .drawer { transform: translate3d(-100%, 0, 0); }
+.drawer.is-open {
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    /* visibility/opacity stay at 1 for the whole slide-out; they only drop
+       after the 0.42s move (delayed above) so close is a real slide, not a pop. */
+    transition: transform .42s var(--ease-out-soft), visibility 0s linear 0s, opacity 0s linear 0s;
+}
 
 .drawer__head {
     display: flex;
@@ -741,18 +768,18 @@ body:has(> .site-main > .page-hero:first-child) .site-main {
     color: var(--text);
     /* Staggered entrance driven by --i set inline in the markup */
     opacity: 0;
-    transform: translateX(18px);
+    transform: translate3d(18px, 0, 0);
     transition: background-color var(--t-fast), color var(--t-fast);
 }
 .drawer.is-open .drawer__link {
     animation: drawerItemIn .45s var(--ease-out-soft) forwards;
     animation-delay: calc(80ms + var(--i, 0) * 45ms);
-    /* PERF: layer hint only while open — 7 concurrent opacity/transform
-       tweens no longer fight the panel slide for paint. Released on close. */
-    will-change: opacity, transform;
+    /* PERF: the animation itself promotes each item for its run. A standing
+       will-change on 7+ links reserved layers that fought the panel slide for
+       the GPU on mid-range Android — the main source of open stutter. */
 }
 @keyframes drawerItemIn {
-    to { opacity: 1; transform: translateX(0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 .drawer__link svg {
     width: 20px; height: 20px;

@@ -418,22 +418,35 @@
             }, 300);
         }
 
+        function clearPriming() {
+            panel.style.visibility = '';
+            panel.style.opacity = '';
+            if (panel.removeAttribute) panel.removeAttribute('inert');
+        }
+
         function open() {
             if (isOpen) return;
             isOpen = true;
             lastFocused = doc.activeElement;
 
+            // Drop any priming inline overrides so .is-open CSS drives the slide.
+            clearPriming();
             panel.classList.add('is-open');
             if (overlay) overlay.classList.add('is-open');
             panel.setAttribute('aria-hidden', 'false');
             lockScroll();
             openBtns.forEach(function (b) { b.setAttribute('aria-expanded', 'true'); });
 
-            // Move focus into the panel
-            // preventScroll: focus must never nudge any scroll container
-            // (the page can otherwise creep upward while the drawer slides in)
+            // Move focus into the panel AFTER the slide settles. Focusing at
+            // 120ms forced a mid-animation style/layout pass and stuttered the
+            // first frames of the open on Firefox / mid Android.
+            // preventScroll: focus must never nudge any scroll container.
             var first = panel.querySelector(FOCUSABLE);
-            if (first) setTimeout(function () { first.focus({ preventScroll: true }); }, 120);
+            if (first) {
+                setTimeout(function () {
+                    if (isOpen) first.focus({ preventScroll: true });
+                }, 450);
+            }
         }
 
         function close() {
@@ -453,6 +466,23 @@
         }
 
         openBtns.forEach(function (b) {
+            // PERF: paint the off-screen panel once on first pointer-down so
+            // the open transition starts against an already-rasterized layer.
+            // Resting CSS uses visibility:hidden (skips paint); priming briefly
+            // paints the subtree at opacity 0 and keeps it painted via inert
+            // so the 420ms slide does not pay first-raster cost mid-animation.
+            var primed = false;
+            function prime() {
+                if (primed || isOpen) return;
+                primed = true;
+                panel.style.visibility = 'visible';
+                panel.style.opacity = '0';
+                if (panel.setAttribute) panel.setAttribute('inert', '');
+                // Force style + layout so the next paint includes the panel.
+                void panel.offsetWidth;
+            }
+            b.addEventListener('pointerdown', prime, { passive: true });
+            b.addEventListener('touchstart', prime, { passive: true });
             b.addEventListener('click', function (e) {
                 e.preventDefault();
                 isOpen ? close() : open();
