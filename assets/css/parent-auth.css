@@ -1,4 +1,4 @@
-/* Brand tokens (colors, radii) live in auth-tokens.css — load it first. */
+﻿/* Brand tokens (colors, radii) live in auth-tokens.css â€” load it first. */
 :root {
     --entry-surface: #f6f9f2;
 }
@@ -17,7 +17,16 @@ body.parent-auth { margin: 0; background: var(--entry-surface); color: var(--ent
 .entry-home span { font-size: 22px; }
 .entry-layout { display: grid; grid-template-columns: 1fr 1fr; max-width: 1320px; margin: 0 auto 35px; padding: 0 28px; gap: 32px; align-items: stretch; }
 .entry-main { padding: 28px 20px 8px; display: flex; align-items: center; justify-content: center; flex-direction: column; min-width: 0; }
-.entry-card { width: 100%; max-width: 444px; }
+/* Framed form chassis â€” consistent at every breakpoint */
+.entry-card {
+    width: 100%;
+    max-width: 444px;
+    background: var(--auth-surface-card, #fff);
+    border: 1px solid rgba(36, 62, 50, 0.08);
+    border-radius: 20px;
+    padding: 26px 26px 22px;
+    box-shadow: 0 10px 30px rgba(36, 62, 50, 0.07), 0 2px 8px rgba(36, 62, 50, 0.04);
+}
 .entry-tabs { padding: 5px; background: #e9efe4; border-radius: 14px; display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 34px; }
 .entry-tabs a { text-align: center; padding: 10px 8px; text-decoration: none; font-size: 14px; color: var(--entry-muted); border-radius: 10px; }
 .entry-tabs a[aria-current] { color: var(--entry-green); background: #fff; box-shadow: 0 2px 6px #243e320a; font-weight: 700; }
@@ -46,6 +55,8 @@ body.parent-auth { margin: 0; background: var(--entry-surface); color: var(--ent
 .entry-field-error { color: var(--entry-error); }
 .entry-hint:empty, .entry-field-error:empty { display: none; }
 .entry-name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.entry-name-row label { font-size: 12.5px; line-height: 1.5; }
+.entry-name-row .entry-field input { height: 50px; }
 .entry-forgot { align-self: flex-start; font-size: 12px; margin-top: -5px; text-decoration: none; min-height: 32px; display: inline-flex; align-items: center; }
 .entry-submit, .entry-link-button { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; border-radius: 11px; padding: 11px 18px; border: 1px solid var(--entry-green); color: white; background: var(--entry-green); font-weight: 700; cursor: pointer; width: 100%; transition: background .15s, transform .08s, box-shadow .15s, opacity .15s; }
 .entry-submit:hover:not(:disabled) { background: #1d5035; box-shadow: 0 4px 14px #243e3226; }
@@ -53,12 +64,12 @@ body.parent-auth { margin: 0; background: var(--entry-surface); color: var(--ent
 .entry-submit:disabled { cursor: wait; opacity: .8; }
 .entry-link-button { color: white !important; text-decoration: none; }
 .entry-spinner { display: none; width: 18px; height: 18px; border: 2px solid #ffffff60; border-top-color: white; border-radius: 50%; flex-shrink: 0; }
-/* اسپینر برای هر دو فرم ورود و ارسال مجدد (هر فرمی که aria-busy گرفت) */
+/* Ø§Ø³Ù¾ÛŒÙ†Ø± Ø¨Ø±Ø§ÛŒ Ù‡Ø± Ø¯Ùˆ ÙØ±Ù… ÙˆØ±ÙˆØ¯ Ùˆ Ø§Ø±Ø³Ø§Ù„ Ù…Ø¬Ø¯Ø¯ (Ù‡Ø± ÙØ±Ù…ÛŒ Ú©Ù‡ aria-busy Ú¯Ø±ÙØª) */
 [data-auth-form][aria-busy="true"] .entry-spinner { display: block; animation: entry-spin .8s linear infinite; }
 [data-auth-form][aria-busy="true"] .entry-submit { cursor: wait; }
 button[data-resend]:disabled { opacity: .65; }
 @keyframes entry-spin { to { transform: rotate(360deg); } }
-/* بازخورد خطای اعتبارسنجی: لرزش کوتاه فرم + تأکید روی فیلد نامعتبر */
+/* Ø¨Ø§Ø²Ø®ÙˆØ±Ø¯ Ø®Ø·Ø§ÛŒ Ø§Ø¹ØªØ¨Ø§Ø±Ø³Ù†Ø¬ÛŒ: Ù„Ø±Ø²Ø´ Ú©ÙˆØªØ§Ù‡ ÙØ±Ù… + ØªØ£Ú©ÛŒØ¯ Ø±ÙˆÛŒ ÙÛŒÙ„Ø¯ Ù†Ø§Ù…Ø¹ØªØ¨Ø± */
 .entry-shake { animation: entry-shake .42s ease; }
 @keyframes entry-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(6px); } 40% { transform: translateX(-6px); } 60% { transform: translateX(4px); } 80% { transform: translateX(-3px); } }
 .entry-field input[aria-invalid="true"] { border-color: var(--entry-error); box-shadow: 0 0 0 3px #a12d3714; }
@@ -67,12 +78,12 @@ button[data-resend]:disabled { opacity: .65; }
 .entry-staff { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 7px; border-top: 1px solid var(--entry-line); padding-top: 22px; margin-top: 28px; color: var(--entry-muted); font-size: 11px; }
 .entry-staff a { display: inline-flex; min-height: 32px; align-items: center; }
 .entry-bottom { color: var(--entry-muted); font-size: 11px; text-align: center; margin-top: 26px; }
-.entry-story { background: #e8efdd; border-radius: 32px 32px 120px 32px; padding: 45px 36px 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; min-width: 0; }
-.entry-story-copy { text-align: center; }
-.entry-story h2 { font-family: 'Baloo Bhaijaan 2', 'Vazirmatn', sans-serif; font-size: clamp(38px, 4.7vw, 64px); font-weight: 700; line-height: 1.2; margin: 0 0 18px; color: #295439; }
+.entry-story { background: #e8efdd; border-radius: 32px 32px 120px 32px; padding: 36px 32px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; overflow: hidden; min-width: 0; }
+.entry-story-copy { text-align: center; flex: 0 0 auto; }
+.entry-story h2 { font-family: 'Baloo Bhaijaan 2', 'Vazirmatn', sans-serif; font-size: clamp(30px, 3.2vw, 52px); font-weight: 700; line-height: 1.25; margin: 0 0 12px; color: #295439; }
 .entry-story-copy p { color: #506649; font-size: 14px; line-height: 1.9; margin: 0; }
-.entry-illustration { display: block; width: 100%; height: auto; max-width: 440px; margin: 2px auto 0; }
-.entry-story-footer { display: flex; align-items: center; gap: 12px; margin-top: 0; padding-bottom: 6px; }
+.entry-illustration { display: block; width: 100%; height: auto; max-width: 400px; max-height: min(42vh, 340px); object-fit: contain; margin: 0 auto; flex: 1 1 auto; min-height: 0; }
+.entry-story-footer { display: flex; align-items: center; gap: 12px; margin-top: 0; padding-bottom: 2px; flex: 0 0 auto; }
 .entry-story-mark { font-size: 42px; color: #527847; }
 .entry-story-footer p { margin: 0; }
 .entry-story-footer strong { display: block; font-size: 13px; font-weight: 600; }
@@ -82,7 +93,7 @@ button[data-resend]:disabled { opacity: .65; }
 .entry-notice li + li { margin-top: 5px; }
 .entry-notice-error { color: #8b2732; background: #fceff0; border: 1px solid #e8c3c7; }
 .entry-notice-success { color: #245b3d; background: #e4f1e6; border: 1px solid #bed7c3; }
-.entry-sticky { position: sticky; top: 0; z-index: 3; background: var(--entry-surface); padding-block: 12px 4px; }
+.entry-sticky { position: sticky; top: 0; z-index: 3; background: var(--auth-surface-card, #fff); padding-block: 4px 4px; }
 .entry-sticky .entry-tabs { margin-bottom: 12px; }
 .entry-steps { display: flex; list-style: none; padding: 0; margin: 0 0 20px; color: var(--entry-muted); font-size: 11px; }
 .entry-steps li { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; text-align: center; line-height: 1.6; }
@@ -101,32 +112,61 @@ button[data-resend]:disabled { opacity: .65; }
 .entry-resend button:disabled { color: var(--entry-muted); cursor: default; text-decoration: none; }
 @media (min-width: 992px) {
     body.parent-auth { overflow: hidden; }
-    .entry-layout { height: calc(100dvh - 114px); min-height: 560px; margin-bottom: 20px; }
-    .entry-main { justify-content: flex-start; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #bcccba transparent; scroll-padding-top: 70px; }
+    .entry-layout {
+        height: calc(100dvh - 114px);
+        min-height: 560px;
+        margin-bottom: 20px;
+        /* Slightly favor the form column so fields don't feel sparse */
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+        gap: 28px;
+    }
+    .entry-main { justify-content: flex-start; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #bcccba transparent; scroll-padding-top: 70px; padding-inline: 12px; }
     .entry-main::-webkit-scrollbar { width: 8px; }
     .entry-main::-webkit-scrollbar-thumb { background: #c9d5c4; border-radius: 8px; }
     .entry-main::-webkit-scrollbar-thumb:hover { background: #b0c2ad; }
     .entry-main::-webkit-scrollbar-track { background: transparent; }
-    .entry-card { margin-block: auto; }
-    .entry-sticky { background: linear-gradient(var(--entry-surface) 85%, transparent); padding-block: 12px 8px; margin-block-end: 22px; }
+    .entry-card { margin-block: auto; max-width: 460px; padding: 28px 30px 24px; }
+    .entry-sticky { background: linear-gradient(var(--auth-surface-card, #fff) 85%, transparent); padding-block: 4px 8px; margin-block-end: 18px; }
     .entry-bottom { margin-top: 12px; padding-bottom: 6px; }
-    .entry-story { height: 100%; min-height: 0; }
+    .entry-story { height: 100%; min-height: 0; padding: 28px 28px 22px; border-radius: 28px 28px 100px 28px; }
+    .entry-story h2 { font-size: clamp(28px, 2.8vw, 46px); margin-bottom: 10px; }
+    .entry-illustration { max-width: 100%; max-height: min(38vh, 300px); }
 }
-/* Tablet (768–991px): single column, wider form card, compact brand aside */
+/* Laptop band (992â€“1279px): tighter story, denser form â€” the awkward middle */
+@media (min-width: 992px) and (max-width: 1279px) {
+    .entry-layout { padding: 0 18px; gap: 18px; }
+    .entry-card { max-width: 430px; padding: 22px 22px 18px; }
+    .entry-story { padding: 22px 18px 16px; border-radius: 22px 22px 72px 22px; }
+    .entry-story h2 { font-size: clamp(26px, 2.6vw, 36px); margin-bottom: 8px; }
+    .entry-story-copy p { font-size: 13px; line-height: 1.75; }
+    .entry-illustration { max-height: min(34vh, 240px); }
+    .entry-story-footer strong { font-size: 12px; }
+    .entry-story-footer p span { font-size: 10px; }
+    .entry-story-mark { font-size: 32px; }
+    .entry-heading h1 { font-size: clamp(23px, 2.1vw, 28px); }
+    .entry-tabs { margin-bottom: 22px; }
+    .entry-steps { margin-bottom: 14px; font-size: 10px; gap: 2px; }
+    .entry-steps li span { width: 22px; height: 22px; font-size: 11px; }
+    .entry-form { gap: 14px; }
+    .entry-staff { margin-top: 20px; padding-top: 16px; }
+}
+/* Tablet (768â€“991px): single column, wider form card, compact brand aside */
 @media (min-width: 768px) and (max-width: 991px) {
     .entry-layout { display: block; max-width: 560px; padding: 0 28px; margin-bottom: 24px; }
     .entry-main { padding: 20px 0 0; }
     .entry-story { display: none; }
+    .entry-card { max-width: 520px; margin-inline: auto; }
 }
 
-@media (max-width: 991px) { .entry-layout { gap: 12px; padding-inline: 20px; } .entry-main { padding-inline: 12px; } .entry-story { padding-inline: 18px; } .entry-story h2 { font-size: 45px; } }
+@media (max-width: 991px) { .entry-layout { gap: 12px; padding-inline: 20px; } .entry-main { padding-inline: 12px; } .entry-story { padding-inline: 18px; } }
 @media (max-width: 767px) {
     .entry-topbar { padding: 16px 24px; }
-    .entry-layout { display: block; padding: 0 24px; max-width: 520px; margin-bottom: 16px; }
+    .entry-layout { display: block; padding: 0 20px; max-width: 520px; margin-bottom: 16px; }
     .entry-main { padding: 16px 0 0; }
     .entry-story { display: none; }
+    .entry-card { padding: 22px 20px 18px; border-radius: 18px; }
     .entry-logo { font-size: 18px; }
-    .entry-tabs { margin-bottom: 27px; }
+    .entry-tabs { margin-bottom: 22px; }
     .entry-heading h1 { font-size: 27px; }
     .entry-heading p { font-size: 13px; }
     .entry-bottom { margin-top: 20px; }
@@ -135,9 +175,9 @@ button[data-resend]:disabled { opacity: .65; }
 @media (max-width: 479px) { .entry-layout { padding-inline: 16px; } .entry-topbar { padding-inline: 16px; } .entry-name-row { grid-template-columns: 1fr; } .entry-steps { font-size: 9.5px; } .entry-heading h1 { font-size: 25px; } }
 @media (prefers-reduced-motion: reduce) { .parent-auth *, .parent-auth *::before, .parent-auth *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } .entry-shake { animation: none !important; } }
 
-/* ── Navigation feedback (افزودنی؛ هیچ قانون موجودی تغییر نکرده) ──────────
-   نوار پیشرفت بالای صفحه + کم‌نور شدن لینک‌ها هنگام ناوبری تا تأخیر سرور
-   حس «کلیکِ مرده» ندهد. همه‌چیز تزئینی است و منطق فرم/اعتبارسنجی دست‌نخورده است. */
+/* â”€â”€ Navigation feedback (Ø§ÙØ²ÙˆØ¯Ù†ÛŒØ› Ù‡ÛŒÚ† Ù‚Ø§Ù†ÙˆÙ† Ù…ÙˆØ¬ÙˆØ¯ÛŒ ØªØºÛŒÛŒØ± Ù†Ú©Ø±Ø¯Ù‡) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   Ù†ÙˆØ§Ø± Ù¾ÛŒØ´Ø±ÙØª Ø¨Ø§Ù„Ø§ÛŒ ØµÙØ­Ù‡ + Ú©Ù…â€ŒÙ†ÙˆØ± Ø´Ø¯Ù† Ù„ÛŒÙ†Ú©â€ŒÙ‡Ø§ Ù‡Ù†Ú¯Ø§Ù… Ù†Ø§ÙˆØ¨Ø±ÛŒ ØªØ§ ØªØ£Ø®ÛŒØ± Ø³Ø±ÙˆØ±
+   Ø­Ø³ Â«Ú©Ù„ÛŒÚ©Ù Ù…Ø±Ø¯Ù‡Â» Ù†Ø¯Ù‡Ø¯. Ù‡Ù…Ù‡â€ŒÚ†ÛŒØ² ØªØ²Ø¦ÛŒÙ†ÛŒ Ø§Ø³Øª Ùˆ Ù…Ù†Ø·Ù‚ ÙØ±Ù…/Ø§Ø¹ØªØ¨Ø§Ø±Ø³Ù†Ø¬ÛŒ Ø¯Ø³Øªâ€ŒÙ†Ø®ÙˆØ±Ø¯Ù‡ Ø§Ø³Øª. */
 .entry-progress { position: fixed; top: 0; right: 0; left: 0; height: 3px; z-index: 60; pointer-events: none; opacity: 0; transition: opacity .2s ease; }
 .entry-progress span { display: block; height: 100%; width: 35%; background: #3d8b63; border-radius: 3px; }
 html.is-navigating .entry-progress { opacity: 1; }
@@ -158,3 +198,4 @@ html.is-navigating .entry-recipient a { opacity: .55; pointer-events: none; }
     html.is-navigating .entry-progress span { animation: none; transform: none; width: 100%; }
     .entry-tabs a.is-pending::after { animation: none; }
 }
+

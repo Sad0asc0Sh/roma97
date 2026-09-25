@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preview — parent auth layout</title>
+<link rel="stylesheet" href="../assets/css/fonts.css">
+<link rel="stylesheet" href="../assets/css/auth-tokens.css">
+<link rel="stylesheet" href="../assets/css/parent-auth.css">
+</head>
+<body class="parent-auth">
+<div class="entry-progress" aria-hidden="true"><span></span></div>
+<header class="entry-topbar">
+    <a class="entry-logo" href="#">
+        <svg width="42" height="42" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5C10 5 5 17 7 29s10 16 17 16 17-4 17-16S38 5 24 5" fill="#3D8B63"/><path d="M14 23q4-5 8 0m5 0q4-5 8 0M19 31q6 7 12 0" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <span>Roma</span>
+    </a>
+    <a class="entry-home" href="#">صفحهٔ اصلی <span aria-hidden="true">↗</span></a>
+</header>
+<div class="entry-layout">
+    <main class="entry-main" id="entry-main">
+        <div class="entry-card">
+            <div class="entry-sticky">
+                <nav class="entry-tabs" aria-label="حساب والدین">
+                    <a href="#">ورود به حساب</a>
+                    <a href="#" aria-current="page">ثبت‌نام والدین</a>
+                </nav>
+                <ol class="entry-steps" aria-label="مراحل ثبت‌نام">
+                    <li aria-current="step"><span>۱</span> اطلاعات والد</li>
+                    <li><span>۲</span> تأیید موبایل</li>
+                    <li><span>۳</span> بررسی مدیریت</li>
+                    <li><span>۴</span> ورود به پنل</li>
+                </ol>
+            </div>
+            <div class="entry-heading">
+                <h1>به خانوادهٔ ما بپیوندید</h1>
+                <p>حساب والدین را بسازید و همراه روزهای کودکتان باشید.</p>
+            </div>
+            <form method="post" action="#" class="entry-form" data-auth-form>
+                <div class="entry-name-row">
+                    <div class="entry-field">
+                        <label for="first_name">نام والد</label>
+                        <div class="entry-input-wrap">
+                            <input type="text" id="first_name" name="first_name" dir="ltr" autocomplete="given-name">
+                        </div>
+                    </div>
+                    <div class="entry-field">
+                        <label for="last_name">نام خانوادگی والد</label>
+                        <div class="entry-input-wrap">
+                            <input type="text" id="last_name" name="last_name" dir="ltr" autocomplete="family-name">
+                        </div>
+                    </div>
+                </div>
+                <div class="entry-field">
+                    <label for="phone">شماره موبایل</label>
+                    <div class="entry-input-wrap">
+                        <input type="tel" id="phone" name="phone" data-phone dir="ltr" placeholder="0912 345 6789" autocomplete="tel">
+                    </div>
+                    <small class="entry-hint">کد تأیید را به همین شماره می‌فرستیم.</small>
+                </div>
+                <p class="entry-note">پس از تأیید موبایل، حساب شما با بررسی مدیریت فعال می‌شود.</p>
+                <button type="submit" class="entry-submit"><span>دریافت کد تأیید</span><span class="entry-spinner" aria-hidden="true"></span></button>
+            </form>
+            <div class="entry-staff">مربی یا مدیر مهد هستید؟ <a href="#">ورود مربیان</a><span aria-hidden="true">/</span><a href="#">ورود مدیریت</a></div>
+        </div>
+        <p class="entry-bottom">کنار هم، برای روزهای قشنگ کودکی.</p>
+    </main>
+    <aside class="entry-story" aria-label="همراه خانه و مهدکودک">
+        <div class="entry-story-copy">
+            <h2>کودکی، فصلِ<br>شکفتن است.</h2>
+            <p>از اولین دوستی تا کشف‌های کوچک هر روز؛<br>خانه و مهد، کنار هم می‌مانند.</p>
+        </div>
+        <img class="entry-illustration" src="../assets/img/auth-garden.svg" width="560" height="460" alt="تصویرسازی مهدکودک">
+        <div class="entry-story-footer">
+            <span class="entry-story-mark" aria-hidden="true">✿</span>
+            <p><strong>یک پنجره به روزهای کودکتان</strong><span>گزارش‌های روزانه، پیام‌های مربی و پیگیری شهریه</span></p>
+        </div>
+    </aside>
+</div>
+</body>
+</html>
