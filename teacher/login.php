@@ -85,6 +85,7 @@ $siteNameValue = e(siteName());
     <title>ورود معلم | <?= $siteNameValue ?></title>
     <link rel="preload" href="<?= e(url('assets/fonts/Vazirmatn-Regular.woff2')) ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?= e(url('assets/css/fonts.css')) ?>">
+    <link rel="stylesheet" href="<?= e(asset('assets/css/auth-tokens.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset('assets/css/auth.css')) ?>">
 </head>
 <body class="auth-standalone">
@@ -178,7 +179,7 @@ $siteNameValue = e(siteName());
                     <label for="email" class="auth-field-label">آدرس ایمیل</label>
                     <div class="auth-field-wrap">
                         <svg class="auth-field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                        <input type="email" id="email" name="email" class="auth-input<?= $error !== '' ? ' has-error' : '' ?>" value="<?= e($_POST['email'] ?? '') ?>" placeholder="example@email.com" autocomplete="username" required autofocus>
+                        <input type="email" id="email" name="email" class="auth-input<?= $error !== '' ? ' has-error' : '' ?>" value="<?= e($_POST['email'] ?? '') ?>" placeholder="example@email.com" autocomplete="username" dir="ltr" required autofocus>
                     </div>
                 </div>
 
@@ -189,7 +190,7 @@ $siteNameValue = e(siteName());
                     </div>
                     <div class="auth-field-wrap">
                         <svg class="auth-field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                        <input type="password" id="password" name="password" class="auth-input<?= $error !== '' ? ' has-error' : '' ?>" placeholder="رمز عبور خود را وارد کنید" autocomplete="current-password" required>
+                        <input type="password" id="password" name="password" class="auth-input<?= $error !== '' ? ' has-error' : '' ?>" placeholder="رمز عبور خود را وارد کنید" autocomplete="current-password" dir="ltr" required>
                         <button type="button" class="auth-toggle-pwd" aria-label="نمایش رمز عبور">
                             <svg class="eye-open" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                         </button>

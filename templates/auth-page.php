@@ -72,6 +72,7 @@ $renderField = static function (string $id, string $label, string $type, string 
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="preload" href="<?= e(url('assets/fonts/Vazirmatn-Regular.woff2')) ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?= e(asset('assets/css/fonts.css')) ?>">
+    <link rel="stylesheet" href="<?= e(asset('assets/css/auth-tokens.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset('assets/css/parent-auth.css')) ?>">
     <script>window.ROMA_SW_URL = <?= json_encode(url('sw.js'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;</script>
     <script src="<?= e(asset('assets/js/parent-auth.js')) ?>" defer></script>

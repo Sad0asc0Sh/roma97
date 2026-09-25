@@ -1,32 +1,11 @@
 /* ============================================
    SHARED AUTH PAGE DESIGN SYSTEM
    Enterprise-grade, unified login/register UI
+   Brand tokens: assets/css/auth-tokens.css (load first)
    ============================================ */
 :root {
-    --auth-primary: #3D8B63;
-    --auth-primary-dark: #2E6B4C;
-    --auth-primary-light: #6AAF8A;
-    --auth-secondary: #C4724A;
-    --auth-accent: #E8A838;
-    --auth-success: #3D8B63;
-    --auth-danger: #C85A5A;
-    --auth-neutral-dark: #2C3E3A;
-    --auth-neutral-medium: #5A6E68;
-    --auth-neutral-light: #FAF8F4;
-    --auth-white: #FFFFFF;
-    --auth-muted: #8A9490;
-    --auth-border: #E4DDD2;
-    --auth-gradient: linear-gradient(135deg, #3D8B63 0%, #5BAA7E 100%);
+    /* Page-level extras only — brand colors/radii/shadows come from auth-tokens.css */
     --auth-gradient-hero: linear-gradient(160deg, #1a2e24 0%, #1b3a2a 30%, #2d4a3a 60%, #1a2e24 100%);
-    --auth-font: 'Vazirmatn', 'Tahoma', 'Segoe UI', system-ui, sans-serif;
-    --auth-radius-sm: 12px;
-    --auth-radius-md: 16px;
-    --auth-radius-lg: 24px;
-    --auth-shadow-sm: 0 2px 12px rgba(61,139,99,0.08);
-    --auth-shadow-md: 0 8px 24px rgba(61,139,99,0.12);
-    --auth-shadow-lg: 0 16px 40px rgba(0,0,0,0.1);
-    --auth-transition-fast: 0.2s cubic-bezier(0.4,0,0.2,1);
-    --auth-transition-base: 0.3s cubic-bezier(0.4,0,0.2,1);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -85,7 +64,7 @@ body.auth-standalone {
     padding: 60px;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 992px) {
     .auth-brand { display: flex; }
 }
 
@@ -254,7 +233,7 @@ body.auth-standalone {
     margin-bottom: 40px;
 }
 
-@media (min-width: 1024px) { .auth-mobile-logo { display: none; } }
+@media (min-width: 992px) { .auth-mobile-logo { display: none; } }
 
 .auth-mobile-logo-icon {
     width: 48px;
@@ -408,7 +387,7 @@ body.auth-standalone {
 }
 
 .auth-field-label .label-optional {
-    color: var(--auth-muted);
+    color: var(--auth-neutral-medium);
     font-weight: 400;
     font-size: 0.8125rem;
 }
@@ -440,7 +419,8 @@ body.auth-standalone {
     width: 100%;
     padding: 14px 44px;
     font-family: var(--auth-font);
-    font-size: 0.9375rem;
+    /* 16px fixed — Safari iOS zooms when input font-size < 16px */
+    font-size: 16px;
     font-weight: 500;
     color: var(--auth-neutral-dark);
     background: var(--auth-neutral-light);
@@ -477,17 +457,20 @@ body.auth-standalone {
 
 .auth-toggle-pwd {
     position: absolute;
-    left: 12px;
+    left: 6px;
+    top: 50%;
+    margin-top: -22px;
     background: none;
     border: none;
     cursor: pointer;
-    padding: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding: 0;
+    min-width: 44px;
+    min-height: 44px;
+    display: grid;
+    place-items: center;
     color: var(--auth-muted);
     border-radius: 8px;
-    transition: color var(--auth-transition-fast), background-color var(--auth-transition-fast), background var(--auth-transition-fast), border-color var(--auth-transition-fast), box-shadow var(--auth-transition-fast), transform var(--auth-transition-fast), opacity var(--auth-transition-fast);
+    transition: color var(--auth-transition-fast), background-color var(--auth-transition-fast), background var(--auth-transition-fast), border-color var(--auth-transition-fast), box-shadow var(--auth-transition-fast), opacity var(--auth-transition-fast);
     opacity: 0.5;
 }
 
@@ -495,6 +478,10 @@ body.auth-standalone {
     color: var(--auth-primary);
     background: rgba(61,139,99,0.08);
     opacity: 1;
+}
+
+.auth-field-wrap:has(.auth-toggle-pwd) .auth-input {
+    padding-left: 56px;
 }
 
 /* Two column form row */
@@ -587,7 +574,7 @@ body.auth-standalone {
     align-items: center;
     gap: 16px;
     margin: 4px 0;
-    color: var(--auth-muted);
+    color: var(--auth-neutral-medium);
     font-size: 0.8125rem;
 }
 
@@ -635,7 +622,7 @@ body.auth-standalone {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    color: var(--auth-muted);
+    color: var(--auth-neutral-medium);
     font-size: 0.8125rem;
     text-decoration: none;
     transition: color var(--auth-transition-fast);
@@ -656,7 +643,7 @@ body.auth-standalone {
 }
 
 .auth-footer p {
-    color: var(--auth-muted);
+    color: var(--auth-neutral-medium);
     font-size: 0.75rem;
     margin: 0;
 }
@@ -698,8 +685,14 @@ body.auth-standalone {
     outline-offset: 2px;
 }
 
-/* Responsive: Tablet */
-@media (max-width: 768px) {
+/* Responsive: Tablet (768–991px) — wider form card, brand panel still hidden */
+@media (min-width: 768px) and (max-width: 991px) {
+    .auth-form-container { max-width: 540px; }
+    .auth-form-panel { padding: 36px 32px 48px; }
+}
+
+/* Responsive: Mobile + small tablet */
+@media (max-width: 767px) {
     .auth-form-panel { padding: 28px 24px 40px; }
     .auth-form-container { max-width: 100%; }
 }
@@ -797,12 +790,12 @@ body.auth-standalone {
 }
 
 /* ============================================
-   DESKTOP LAYOUT OVERRIDE (≥ 1024px)
+   DESKTOP LAYOUT OVERRIDE (≥ 992px)
    - Brand panel: LEFT, fixed (no scroll)
    - Form panel:  RIGHT, scrollable
    Must come AFTER base styles to override properly.
    ============================================ */
-@media (min-width: 1024px) {
+@media (min-width: 992px) {
     body.auth-standalone {
         overflow: hidden;       /* Prevent page-level scroll */
     }

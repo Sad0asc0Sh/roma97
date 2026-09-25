@@ -1,0 +1,59 @@
+/* ============================================
+   AUTH DESIGN TOKENS
+   Single source for login/register pages.
+   Standalone: does not load rooma-core.css.
+   Values mirror rooma-core.css brand palette.
+   ============================================ */
+:root {
+    /* Brand — same hex values as rooma-core.css */
+    --auth-primary:       var(--green-500, #3D8B63);
+    --auth-primary-dark:  var(--green-600, #2F6F4F);
+    --auth-primary-deep:  var(--green-700, #25573E);
+    --auth-primary-light: #6AAF8A;
+    --auth-secondary:     var(--clay-500,  #C4724A);
+    --auth-accent:        var(--honey-400, #E8A838);
+    --auth-success:       var(--green-500, #3D8B63);
+    --auth-danger:        var(--danger,    #C85A5A);
+
+    /* Ink & text — AA-safe for real copy */
+    --auth-ink:           var(--ink,         #1E3A30);
+    --auth-text:          var(--text,        #253F35);
+    --auth-neutral-dark:  var(--ink,         #1E3A30);
+    --auth-neutral-medium: var(--text-muted, #5F7269); /* real text */
+    --auth-text-muted:    var(--text-muted,  #5F7269);
+    --auth-muted:         #8A9490; /* decorative / disabled only */
+    --auth-border:        var(--border,      #E6DED1);
+    --auth-neutral-light: var(--page,        #FAF6EE);
+    --auth-surface:       var(--page,        #FAF6EE);
+    --auth-surface-card:  var(--surface,     #FFFFFF);
+    --auth-white:         var(--surface,     #FFFFFF);
+
+    /* Radius */
+    --auth-radius-sm:   10px;
+    --auth-radius-md:   14px;
+    --auth-radius-lg:   24px;
+    --auth-radius-full: 9999px;
+
+    /* Shadows */
+    --auth-shadow-sm: 0 2px 12px rgba(61,139,99,0.08);
+    --auth-shadow-md: var(--shadow-md, 0 4px 8px rgba(30,58,48,.05), 0 12px 28px rgba(30,58,48,.08));
+    --auth-shadow-lg: 0 16px 40px rgba(0,0,0,0.1);
+    --auth-shadow-green: var(--shadow-green, 0 10px 30px rgba(61,139,99,.28));
+
+    /* Gradient */
+    --auth-gradient: var(--grad-primary, linear-gradient(135deg, #3D8B63 0%, #5BA97E 100%));
+    --auth-gradient-hero: linear-gradient(160deg, #1a2e24 0%, #1b3a2a 30%, #2d4a3a 60%, #1a2e24 100%);
+
+    /* Type & motion */
+    --auth-font: 'Vazirmatn', 'Tahoma', 'Segoe UI', system-ui, sans-serif;
+    --auth-transition-fast: 0.2s cubic-bezier(0.4,0,0.2,1);
+    --auth-transition-base: 0.3s cubic-bezier(0.4,0,0.2,1);
+
+    /* Parent-entry aliases (parent-auth.css) */
+    --entry-ink:    var(--auth-ink);
+    --entry-green:  var(--auth-primary);
+    --entry-muted:  var(--auth-neutral-medium);
+    --entry-line:   var(--auth-border);
+    --entry-surface: #f6f9f2;
+    --entry-error:  var(--auth-danger);
+}
