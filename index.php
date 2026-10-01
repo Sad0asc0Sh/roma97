@@ -890,9 +890,9 @@ foreach ($galleryItems as $g) {
                 </span>
                 <h2 class="split__title">روایتی از عشق، امنیت و رشد شکوفه‌های فردا</h2>
                 <p class="split__text">
-                    مهدکودک <?php echo e($siteNameV); ?> از سال ۱۳۹۵ با دو کلاس کوچک و یک باور
+                    مهدکودک <?php echo e($siteNameV); ?> از سال ۱۳۹۷ با دو کلاس کوچک و یک باور
                     ساده شروع کرد: سال‌های نخست زندگی، شالودهٔ شخصیت و آیندهٔ یک انسان را
-                    می‌سازد. امروز پس از ده سال، همان باور با تجربه، آموزش تخصصی مربیان و
+                    می‌سازد. امروز پس از هشت سال، همان باور با تجربه، آموزش تخصصی مربیان و
                     اعتماد بیش از ۵۰۰ خانواده پشتیبانی می‌شود.
                 </p>
                 <p class="split__text">
@@ -919,7 +919,7 @@ foreach ($galleryItems as $g) {
                     <figcaption class="frame__chip">
                         <span class="frame__chip-icon"><?php echo icon('award', 18); ?></span>
                         <span>
-                            <span class="frame__chip-num">از ۱۳۹۵</span>
+                            <span class="frame__chip-num">از ۱۳۹۷</span>
                             <span class="frame__chip-label">همراه خانواده‌های ایرانی</span>
                         </span>
                     </figcaption>
