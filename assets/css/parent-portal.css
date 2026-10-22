@@ -3268,18 +3268,156 @@
   box-shadow: var(--pp-shadow-sm);
 }
 
-.pwa-steps {
-  margin: 0 0 8px;
-  padding-inline-start: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+/* Guide panes — each platform is sectioned: a short intro, one or two
+   method blocks (numbered step rows on a timeline), a tip callout and a
+   success strip, instead of one flat run of text. */
+.pwa-pane[hidden] { display: none !important; }
+
+.pwa-pane-intro {
+  margin: 0 0 14px;
   font-size: 0.875rem;
-  color: var(--pp-text-secondary);
   line-height: 2;
+  color: var(--pp-text-secondary);
 }
 
-.pwa-steps strong { color: var(--pp-text); }
+.pwa-pane-intro strong { color: var(--pp-text); }
+
+.pwa-method {
+  border: 1px solid var(--pp-border-light);
+  border-radius: var(--pp-radius-md);
+  background: var(--pp-surface-soft);
+  padding: 14px 16px 4px;
+  margin-bottom: 12px;
+}
+
+.pwa-method-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.pwa-method-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--pp-radius-xs);
+  background: var(--pp-primary-tint);
+  color: var(--pp-primary);
+  flex-shrink: 0;
+}
+
+.pwa-method-head h4 {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--pp-text);
+}
+
+.pwa-method-badge {
+  background: var(--pp-primary);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--pp-radius-full);
+  flex-shrink: 0;
+}
+
+.pwa-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pwa-step {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding-bottom: 14px;
+}
+
+/* Timeline connector between the step badges */
+.pwa-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 34px;
+  bottom: 2px;
+  inset-inline-start: 13px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--pp-border);
+}
+
+.pwa-step-num {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--pp-primary);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.pwa-step-body { flex: 1; min-width: 0; padding-top: 3px; }
+
+.pwa-step-body > strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.875rem;
+  color: var(--pp-text);
+}
+
+.pwa-step-body p {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.9;
+  color: var(--pp-text-secondary);
+}
+
+.pwa-step-body p strong { color: var(--pp-text); }
+
+.pwa-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: var(--pp-info-bg);
+  border-radius: var(--pp-radius-sm);
+  font-size: 0.8125rem;
+  line-height: 1.9;
+  color: var(--pp-text);
+}
+
+.pwa-note svg { flex-shrink: 0; margin-top: 4px; color: var(--pp-info); }
+.pwa-note strong { color: var(--pp-text); }
+.pwa-note > span > strong:first-child { color: var(--pp-info); }
+
+.pwa-done {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--pp-success-bg);
+  border-radius: var(--pp-radius-sm);
+  font-size: 0.8125rem;
+  line-height: 1.9;
+  color: var(--pp-text);
+}
+
+.pwa-done svg { flex-shrink: 0; color: var(--pp-success); }
 
 .pwa-modal-foot {
   display: flex;

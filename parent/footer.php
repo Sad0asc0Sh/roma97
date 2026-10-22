@@ -50,21 +50,177 @@ $footerJyFa = persianNumber((string) $footerJy);
                 <button type="button" class="pwa-tab" data-pwa-tab="desktop" role="tab">کامپیوتر</button>
             </div>
             <div class="pwa-panes">
-                <ol class="pwa-steps" data-pwa-pane="android">
-                    <li>دکمه <strong>«نصب»</strong> بالای همین صفحه را بزنید و <strong>Install</strong> را تأیید کنید.</li>
-                    <li>اگر دکمه نصب ندیدید: منوی <strong>⋮</strong> مرورگر کروم ← <strong>Install app / نصب برنامه</strong>.</li>
-                    <li>آیکون «روما» به صفحه اصلی گوشی اضافه می‌شود و مثل یک اپ مستقل باز می‌شود.</li>
-                </ol>
-                <ol class="pwa-steps" data-pwa-pane="ios" hidden>
-                    <li>این صفحه را در مرورگر <strong>Safari</strong> باز کنید.</li>
-                    <li>دکمه <strong>اشتراک‌گذاری</strong> (مربع با فلش رو به بالا) را بزنید.</li>
-                    <li>گزینه <strong>Add to Home Screen / افزودن به صفحه اصلی</strong> را انتخاب و <strong>Add</strong> را بزنید.</li>
-                </ol>
-                <ol class="pwa-steps" data-pwa-pane="desktop" hidden>
-                    <li>در نوار آدرس مرورگر (کروم/Edge) روی آیکون <strong>نصب (Install)</strong> کلیک کنید.</li>
-                    <li>یا منوی مرورگر ← <strong>Install / نصب برنامه</strong>.</li>
-                    <li>اپ در منوی استارت/داک شما قرار می‌گیرد و در پنجره مستقل اجرا می‌شود.</li>
-                </ol>
+                <section class="pwa-pane" data-pwa-pane="android" role="tabpanel">
+                    <p class="pwa-pane-intro">گوشی اندرویدی دارید؟ یکی از دو روش زیر کافی است؛ روش اول سریع‌تر و ساده‌تر است.</p>
+                    <div class="pwa-method">
+                        <div class="pwa-method-head">
+                            <span class="pwa-method-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                            <h4>روش پیشنهادی — نصب خودکار</h4>
+                            <span class="pwa-method-badge">سریع‌تر</span>
+                        </div>
+                        <ol class="pwa-steps">
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۱</span>
+                            <div class="pwa-step-body">
+                                <strong>دکمه «نصب اپ» را بزنید</strong>
+                                <p>همین دکمه در نوار ابزار بالای صفحه قرار دارد؛ یا از دکمه «نصب خودکار» پایین همین راهنما استفاده کنید.</p>
+                            </div>
+                        </li>
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۲</span>
+                            <div class="pwa-step-body">
+                                <strong>نصب را تأیید کنید</strong>
+                                <p>در پنجره‌ای که مرورگر نشان می‌دهد، گزینه «نصب / Install» را انتخاب کنید.</p>
+                            </div>
+                        </li>
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۳</span>
+                            <div class="pwa-step-body">
+                                <strong>اپ را از صفحه اصلی باز کنید</strong>
+                                <p>آیکون «روما» به صفحه اصلی گوشی اضافه می‌شود و مثل یک اپ مستقل، بدون مرورگر باز می‌شود.</p>
+                            </div>
+                        </li>
+                        </ol>
+                    </div>
+                    <div class="pwa-method">
+                        <div class="pwa-method-head">
+                            <span class="pwa-method-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></span>
+                            <h4>روش جایگزین — از منوی مرورگر</h4>
+                        </div>
+                        <ol class="pwa-steps">
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۱</span>
+                            <div class="pwa-step-body">
+                                <strong>منوی مرورگر را باز کنید</strong>
+                                <p>روی علامت <strong>⋮</strong> در گوشه مرورگر کروم بزنید.</p>
+                            </div>
+                        </li>
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۲</span>
+                            <div class="pwa-step-body">
+                                <strong>«نصب برنامه» را انتخاب کنید</strong>
+                                <p>گزینه Install app / نصب برنامه را در فهرست منو پیدا کنید.</p>
+                            </div>
+                        </li>
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۳</span>
+                            <div class="pwa-step-body">
+                                <strong>نصب را کامل کنید</strong>
+                                <p>«نصب» را بزنید تا آیکون روما به صفحه اصلی گوشی اضافه شود.</p>
+                            </div>
+                        </li>
+                        </ol>
+                    </div>
+                    <p class="pwa-note"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span><strong>نکته:</strong> در بعضی گوشی‌ها اسم این گزینه «افزودن به صفحه اصلی» است. در مرورگر سامسونگ هم از منوی <strong>☰</strong>، «افزودن صفحه به ← صفحه اصلی» همین کار را می‌کند.</span></p>
+                    <p class="pwa-done"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span><strong>تمام شد!</strong> از این به بعد اپ والدین روما را مستقیم از صفحه اصلی گوشی باز کنید.</span></p>
+                </section>
+
+                <section class="pwa-pane" data-pwa-pane="ios" role="tabpanel" hidden>
+                    <p class="pwa-pane-intro">در آیفون و آیپد، نصب فقط از مرورگر <strong>Safari</strong> انجام می‌شود و کمتر از یک دقیقه طول می‌کشد.</p>
+                    <div class="pwa-method">
+                        <div class="pwa-method-head">
+                            <span class="pwa-method-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                            <h4>مراحل نصب در سافاری</h4>
+                        </div>
+                        <ol class="pwa-steps">
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۱</span>
+                            <div class="pwa-step-body">
+                                <strong>صفحه را در Safari باز کنید</strong>
+                                <p>اگر الان در مرورگر دیگری هستید، نشانی همین سایت را در سافاری وارد کنید.</p>
+                            </div>
+                        </li>
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۲</span>
+                            <div class="pwa-step-body">
+                                <strong>دکمه اشتراک‌گذاری را بزنید</strong>
+                                <p>آیکون مربع با فلش رو به بالا، در نوار پایین سافاری قرار دارد.</p>
+                            </div>
+                        </li>
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۳</span>
+                            <div class="pwa-step-body">
+                                <strong>«افزودن به صفحه اصلی» را انتخاب کنید</strong>
+                                <p>در فهرست بازشده کمی پایین بروید و گزینه Add to Home Screen را بزنید.</p>
+                            </div>
+                        </li>
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۴</span>
+                            <div class="pwa-step-body">
+                                <strong>«افزودن / Add» را بزنید</strong>
+                                <p>آیکون روما روی صفحه اصلی آیفون قرار می‌گیرد.</p>
+                            </div>
+                        </li>
+                        </ol>
+                    </div>
+                    <p class="pwa-note"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span><strong>نکته:</strong> اگر دکمه اشتراک‌گذاری را نمی‌بینید، یک بار روی نوار آدرس بزنید تا نوار ابزار سافاری کامل نمایش داده شود.</span></p>
+                    <p class="pwa-done"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span><strong>تمام شد!</strong> از این به بعد اپ والدین روما را مستقیم از صفحه اصلی آیفون باز کنید.</span></p>
+                </section>
+
+                <section class="pwa-pane" data-pwa-pane="desktop" role="tabpanel" hidden>
+                    <p class="pwa-pane-intro">در کامپیوتر، نصب از مرورگر <strong>کروم</strong> یا <strong>Edge</strong> انجام می‌شود.</p>
+                    <div class="pwa-method">
+                        <div class="pwa-method-head">
+                            <span class="pwa-method-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+                            <h4>روش پیشنهادی — آیکون نصب مرورگر</h4>
+                            <span class="pwa-method-badge">سریع‌تر</span>
+                        </div>
+                        <ol class="pwa-steps">
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۱</span>
+                            <div class="pwa-step-body">
+                                <strong>روی آیکون نصب کلیک کنید</strong>
+                                <p>در سمت راست نوار آدرس مرورگر، آیکونی شبیه مانیتور با فلش دانلود می‌بینید.</p>
+                            </div>
+                        </li>
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۲</span>
+                            <div class="pwa-step-body">
+                                <strong>«نصب / Install» را بزنید</strong>
+                                <p>در پنجره تأیید مرورگر، نصب را تأیید کنید.</p>
+                            </div>
+                        </li>
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۳</span>
+                            <div class="pwa-step-body">
+                                <strong>اپ آماده است</strong>
+                                <p>روما در پنجره‌ای مستقل باز می‌شود و به منوی استارت (ویندوز) یا داک (مک) اضافه شده است.</p>
+                            </div>
+                        </li>
+                        </ol>
+                    </div>
+                    <div class="pwa-method">
+                        <div class="pwa-method-head">
+                            <span class="pwa-method-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg></span>
+                            <h4>روش جایگزین — از منوی مرورگر</h4>
+                        </div>
+                        <ol class="pwa-steps">
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۱</span>
+                            <div class="pwa-step-body">
+                                <strong>منوی مرورگر را باز کنید</strong>
+                                <p>روی علامت <strong>⋮</strong> در گوشه مرورگر بزنید.</p>
+                            </div>
+                        </li>
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۲</span>
+                            <div class="pwa-step-body">
+                                <strong>گزینه نصب را انتخاب کنید</strong>
+                                <p>در کروم: «نصب روما / Install app» — در Edge: «برنامه‌ها ← نصب این سایت به‌عنوان برنامه».</p>
+                            </div>
+                        </li>
+                        <li class="pwa-step">
+                            <span class="pwa-step-num" aria-hidden="true">۳</span>
+                            <div class="pwa-step-body">
+                                <strong>نصب را تأیید کنید</strong>
+                                <p>تا اپ به فهرست برنامه‌های کامپیوتر اضافه شود.</p>
+                            </div>
+                        </li>
+                        </ol>
+                    </div>
+                    <p class="pwa-note"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span><strong>نکته:</strong> فایرفاکس روی کامپیوتر نصب مستقیم اپ را پشتیبانی نمی‌کند؛ برای نصب، از کروم یا Edge استفاده کنید.</span></p>
+                    <p class="pwa-done"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span><strong>تمام شد!</strong> اپ روما مثل یک برنامه معمولی از منوی استارت یا داک اجرا می‌شود.</span></p>
+                </section>
             </div>
             <div class="pwa-modal-foot">
                 <button type="button" class="btn btn-primary btn-sm" data-pwa-install>نصب خودکار</button>
