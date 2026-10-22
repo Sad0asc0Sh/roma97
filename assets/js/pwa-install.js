@@ -213,22 +213,62 @@
   }
 
   /* ── User dropdown (unified parent header) ──────────────── */
-  function initUserMenu() {
-    var trigger = $('#parentUserTrigger');
-    var menu = $('#parentUserMenu');
-    if (!trigger || !menu) return;
-    trigger.addEventListener('click', function (e) {
-      e.stopPropagation();
-      menu.classList.toggle('show');
-      trigger.setAttribute('aria-expanded', menu.classList.contains('show') ? 'true' : 'false');
+  /* The menu used to be wired inside a DOMContentLoaded callback: when
+     this file executed after that event had already fired (async load,
+     service-worker cache timing, template order), init never ran and the
+     profile trigger looked completely dead — no error, no menu. The menu
+     is now handled by ONE delegated document listener registered
+     immediately, so it works regardless of when this file loads or where
+     the header markup sits, and it can never be bound twice. */
+  function userMenuEls() {
+    return { trigger: $('#parentUserTrigger'), menu: $('#parentUserMenu') };
+  }
+
+  function setUserMenu(open) {
+    var els = userMenuEls();
+    if (!els.trigger || !els.menu) return;
+    els.menu.classList.toggle('show', open);
+    els.trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function closeUserMenu() { setUserMenu(false); }
+
+  /* Guarded so a duplicate include of this file can never double-toggle. */
+  if (!window.__romaUserMenuWired) {
+    window.__romaUserMenuWired = true;
+    document.addEventListener('click', handleUserMenuClick);
+    document.addEventListener('keydown', handleUserMenuKeydown);
+    window.addEventListener('pageshow', function (e) {
+      if (e.persisted) closeUserMenu();
     });
-    document.addEventListener('click', function () {
-      menu.classList.remove('show');
-      trigger.setAttribute('aria-expanded', 'false');
-    });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') menu.classList.remove('show');
-    });
+  }
+
+  function handleUserMenuClick(e) {
+    if (!e.target || typeof e.target.closest !== 'function') return;
+    var els = userMenuEls();
+    if (!els.trigger || !els.menu) return;
+
+    if (e.target.closest('#parentUserTrigger')) {
+      e.preventDefault();
+      setUserMenu(!els.menu.classList.contains('show'));
+      return;
+    }
+    if (e.target.closest('#parentUserMenu')) {
+      /* Choosing an item navigates / opens the guide / submits logout —
+         close behind it. Clicks on the menu head or dividers keep it open. */
+      if (e.target.closest('a, button')) closeUserMenu();
+      return;
+    }
+    closeUserMenu();
+  }
+
+  function handleUserMenuKeydown(e) {
+    if (e.key !== 'Escape') return;
+    var els = userMenuEls();
+    if (els.menu && els.menu.classList.contains('show')) {
+      closeUserMenu();
+      if (els.trigger) els.trigger.focus();
+    }
   }
 
   /* ── Dismissible dashboard install card ─────────────────── */
@@ -250,14 +290,25 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
+  /* Run as soon as the DOM is usable — including when this script is
+     executed after DOMContentLoaded already fired, where the old single
+     DOMContentLoaded listener silently never ran. Idempotent: the theme
+     and install-card wirings are bound at most once. */
+  function initShell() {
+    if (window.__romaShellInit) return;
+    window.__romaShellInit = true;
     if (isStandalone()) {
       document.documentElement.classList.add('pwa-installed');
       try { localStorage.setItem(INSTALLED_KEY, '1'); } catch (e) {}
     }
     initThemeToggle();
-    initUserMenu();
     initInstallCard();
     maybeShowBanner();
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initShell);
+  } else {
+    initShell();
+  }
 })();

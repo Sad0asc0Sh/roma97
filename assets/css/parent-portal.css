@@ -153,7 +153,9 @@
   border-bottom-color: var(--pp-border-light);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  contain: layout paint style;
+  /* No `paint` containment: it clips absolutely-positioned dropdowns
+     (user menu) at the bar's box, making them invisible when open. */
+  contain: layout style;
   transform: translateZ(0);
 }
 
@@ -166,8 +168,12 @@
   z-index: 100;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  /* PERF: isolate sticky glass so scroll invalidation stays local */
-  contain: layout paint style;
+  /* PERF: isolate sticky glass so scroll invalidation stays local.
+     `paint` containment is deliberately NOT used here: it clips
+     descendants at the header box, and the profile dropdown
+     (.parent-dropdown) hangs below the header — with paint containment
+     it was open in the DOM yet painted invisible. */
+  contain: layout style;
   transform: translateZ(0);
   backface-visibility: hidden;
 }
@@ -2886,7 +2892,24 @@
   z-index: 500;
 }
 
-.parent-dropdown.show { display: block; }
+.parent-dropdown.show {
+  display: block;
+  transform-origin: top left;
+  animation: parentDropdownIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes parentDropdownIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .parent-dropdown.show { animation: none; }
+}
+
+/* The trigger chevron points up while the menu is open */
+.parent-user-trigger .parent-chevron { transition: transform var(--pp-transition); }
+.parent-user-trigger[aria-expanded="true"] .parent-chevron { transform: rotate(180deg); }
 
 .parent-dropdown-head {
   padding: 10px 12px 8px;
@@ -2932,6 +2955,21 @@
 }
 
 .parent-dropdown-item:hover { background: var(--pp-primary-tint); }
+
+/* Per-item meaning icons: fixed slot so titles align in one column,
+   tinted with the brand green; the exit item keeps its danger tint. */
+.parent-dropdown-icon {
+  flex: none;
+  color: var(--pp-primary);
+  opacity: 0.85;
+}
+
+.parent-dropdown-item:hover .parent-dropdown-icon { opacity: 1; }
+
+.parent-dropdown-item.danger .parent-dropdown-icon {
+  color: var(--pp-danger);
+  opacity: 0.9;
+}
 
 .parent-dropdown-item.danger { color: var(--pp-danger); }
 .parent-dropdown-item.danger:hover { background: var(--pp-danger-bg); }
@@ -3273,8 +3311,6 @@
   .parent-user-trigger { padding: 4px; }
   .parent-install-btn span { display: none; }
   .parent-install-btn { width: 38px; padding: 0; }
-  .parent-website-btn span { display: none; }
-  .parent-website-btn { width: 38px; padding: 0; }
 }
 
 @media (max-width: 480px) {
