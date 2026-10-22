@@ -71,17 +71,33 @@
   });
 
   /* ── Install action ─────────────────────────────────────── */
+  /* Show exactly one guide pane. The inline display is deliberate: the
+     hidden attribute alone is not enough — a stylesheet rule that sets
+     display on the pane (the old .pwa-steps{display:flex} did exactly
+     that) silently defeats it, and every platform's steps stack together
+     in one list no matter which tab is active. An inline style wins over
+     any such cached or older stylesheet, so the tabs can never merge. */
+  function showPane(modal, name) {
+    if (!modal) return;
+    $all('[data-pwa-tab]', modal).forEach(function (t) {
+      var on = t.getAttribute('data-pwa-tab') === name;
+      t.classList.toggle('active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    $all('[data-pwa-pane]', modal).forEach(function (p) {
+      var on = p.getAttribute('data-pwa-pane') === name;
+      p.hidden = !on;
+      p.style.display = on ? '' : 'none';
+      p.setAttribute('aria-hidden', on ? 'false' : 'true');
+    });
+  }
+
   function openGuide() {
     var modal = $('#pwaGuideModal');
     if (!modal) return;
     // Pick the right tab for this device.
     var platform = isIOS() ? 'ios' : (isAndroid() ? 'android' : 'desktop');
-    $all('[data-pwa-tab]', modal).forEach(function (t) {
-      t.classList.toggle('active', t.getAttribute('data-pwa-tab') === platform);
-    });
-    $all('[data-pwa-pane]', modal).forEach(function (p) {
-      p.hidden = p.getAttribute('data-pwa-pane') !== platform;
-    });
+    showPane(modal, platform);
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
@@ -124,14 +140,7 @@
     var tab = e.target.closest('[data-pwa-tab]');
     if (tab) {
       e.preventDefault();
-      var modal = tab.closest('#pwaGuideModal');
-      var name = tab.getAttribute('data-pwa-tab');
-      $all('[data-pwa-tab]', modal).forEach(function (t) {
-        t.classList.toggle('active', t === tab);
-      });
-      $all('[data-pwa-pane]', modal).forEach(function (p) {
-        p.hidden = p.getAttribute('data-pwa-pane') !== name;
-      });
+      showPane(tab.closest('#pwaGuideModal'), tab.getAttribute('data-pwa-tab'));
       return;
     }
     // Click on modal backdrop closes
