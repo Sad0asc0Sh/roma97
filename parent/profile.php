@@ -537,8 +537,23 @@ require_once __DIR__ . '/header.php';
     </div>
     <div class="profile-info">
         <h1><?= e($displayName) ?></h1>
-        <p class="profile-email" dir="ltr" style="text-align:right;font-family:monospace;"><?= !empty($infoOld['phone']) ? e(persianNumber($infoOld['phone'])) : e($infoOld['email']) ?></p>
-        <span class="status-badge status-badge-<?= e($status) ?>"><?= e($statusLabel) ?></span>
+        <div class="profile-meta">
+            <?php if (!empty($infoOld['phone'])): ?>
+                <span class="profile-contact-chip" aria-label="شماره موبایل">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                    <span class="profile-contact-value" dir="ltr"><?= e(persianNumber($infoOld['phone'])) ?></span>
+                    <?php if (!empty($parent['phone_verified'])): ?>
+                        <svg class="profile-chip-check" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <?php endif; ?>
+                </span>
+            <?php elseif (!empty($infoOld['email'])): ?>
+                <span class="profile-contact-chip" aria-label="ایمیل">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>
+                    <span class="profile-contact-value" dir="ltr"><?= e($infoOld['email']) ?></span>
+                </span>
+            <?php endif; ?>
+            <span class="status-badge status-badge-<?= e($status) ?>"><?= e($statusLabel) ?></span>
+        </div>
     </div>
 </div>
 

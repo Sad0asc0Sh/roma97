@@ -2120,6 +2120,39 @@
   margin-bottom: 10px;
 }
 
+/* Name, contact and status read as one unit: the phone/email sits in a
+   pill chip (icon + value + verified check) on the same row as the
+   status badge, instead of a bare monospace line under the name. */
+.profile-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.profile-contact-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--pp-surface-soft);
+  border: 1px solid var(--pp-border-light);
+  border-radius: var(--pp-radius-full);
+  color: var(--pp-text);
+}
+
+.profile-contact-chip > svg { color: var(--pp-primary); flex-shrink: 0; }
+
+.profile-contact-chip .profile-chip-check { color: var(--pp-success); }
+
+.profile-contact-value {
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
 .profile-forms-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -2436,6 +2469,8 @@
     text-align: center;
     padding: 24px 20px;
   }
+
+  .profile-meta { justify-content: center; }
 
   .profile-forms-grid {
     grid-template-columns: 1fr;
