@@ -165,7 +165,7 @@ $flashError = getFlash('error');
     <?php endif; ?>
 
     <div class="form-container">
-        <form method="post" action="<?= e(url('admin/edit-parent.php?id=' . $parentId)) ?>" novalidate>
+        <form method="post" action="<?= e(url('admin/edit-parent.php?id=' . $parentId)) ?>" novalidate class="child-form">
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="parent_id" value="<?= $parentId ?>">
 
@@ -209,12 +209,12 @@ $flashError = getFlash('error');
                     <input type="checkbox" id="phone_verified" name="phone_verified" value="1" <?= $old['phone_verified'] === 1 ? 'checked' : '' ?>>
                     <label for="phone_verified" style="margin:0;">شماره موبایل تأییدشده است</label>
                 </div>
-                <small style="color:var(--muted);line-height:1.8;display:block;">تغییر شماره از این صفحه مستقیم اعمال می‌شود و کد پیامکی نمی‌خواهد، چون تغییر توسط مدیریت انجام می‌شود؛ در پنل خود والد، تغییر شماره همچنان فقط با کد تأیید انجام می‌شود.</small>
+                <small style="color:var(--adm-text-muted);line-height:1.8;display:block;">تغییر شماره از این صفحه مستقیم اعمال می‌شود و کد پیامکی نمی‌خواهد، چون تغییر توسط مدیریت انجام می‌شود؛ در پنل خود والد، تغییر شماره همچنان فقط با کد تأیید انجام می‌شود.</small>
             </div>
 
             <div class="form-card">
                 <h2>تنظیمات دریافت پیامک والد</h2>
-                <p style="color:var(--muted);line-height:1.8;">همان گزینه‌هایی که والد در پروفایل خود می‌بیند؛ مدیریت می‌تواند هنگام ثبت دستی آن‌ها را تنظیم کند.</p>
+                <p style="color:var(--adm-text-muted);line-height:1.8;">همان گزینه‌هایی که والد در پروفایل خود می‌بیند؛ مدیریت می‌تواند هنگام ثبت دستی آن‌ها را تنظیم کند.</p>
                 <?php
                 $prefs = [
                     'sms_pref_daily_report' => 'گزارش روزانه',
@@ -241,7 +241,7 @@ $flashError = getFlash('error');
     <div class="form-card" style="margin-top:20px;">
         <h2>کودکان این والد</h2>
         <?php if ($parentChildren === []): ?>
-            <p style="color:var(--muted);">هنوز کودکی برای این والد ثبت نشده است.</p>
+            <p style="color:var(--adm-text-muted);">هنوز کودکی برای این والد ثبت نشده است.</p>
         <?php else: ?>
             <ul>
                 <?php foreach ($parentChildren as $ch): ?>

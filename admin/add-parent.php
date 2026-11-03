@@ -179,7 +179,7 @@ $childStatusOptions = [
 <section class="dashboard">
     <h1>ثبت دستی والد جدید</h1>
     <p><a href="<?= e(url('admin/parents.php')) ?>">→ بازگشت به مدیریت والدین</a></p>
-    <p style="color:var(--muted);line-height:1.9;">والد را مستقیم توسط مدیریت ثبت کنید؛ نیازی به ثبت‌نام و کد پیامکی توسط خود والد نیست. در همین فرم می‌توانید یک یا چند کودک او را هم‌زمان ثبت و به کلاس اختصاص دهید — والد و همه کودکان در یک تراکنش ذخیره می‌شوند و اگر خطایی رخ دهد هیچ‌کدام ثبت نمی‌شوند. عکس کودک را بعداً از صفحه «ویرایش کودک» می‌توانید اضافه کنید.</p>
+    <p style="color:var(--adm-text-muted);line-height:1.9;">والد را مستقیم توسط مدیریت ثبت کنید؛ نیازی به ثبت‌نام و کد پیامکی توسط خود والد نیست. در همین فرم می‌توانید یک یا چند کودک او را هم‌زمان ثبت و به کلاس اختصاص دهید — والد و همه کودکان در یک تراکنش ذخیره می‌شوند و اگر خطایی رخ دهد هیچ‌کدام ثبت نمی‌شوند. عکس کودک را بعداً از صفحه «ویرایش کودک» می‌توانید اضافه کنید.</p>
 
     <?php if ($flashSuccess !== null): ?><div class="notice" role="status"><?= e($flashSuccess) ?></div><?php endif; ?>
     <?php if ($flashError !== null): ?><div class="alert" role="alert"><?= e($flashError) ?></div><?php endif; ?>
@@ -190,7 +190,7 @@ $childStatusOptions = [
     <?php endif; ?>
 
     <div class="form-container">
-        <form method="post" action="<?= e(url('admin/add-parent.php')) ?>" novalidate id="addParentForm">
+        <form method="post" action="<?= e(url('admin/add-parent.php')) ?>" novalidate id="addParentForm" class="child-form">
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
 
             <div class="form-card">
@@ -234,7 +234,7 @@ $childStatusOptions = [
 
             <div class="form-card">
                 <h2>کودکان این والد</h2>
-                <p style="color:var(--muted);line-height:1.8;">بدون افزودن کودک هم می‌توانید فقط والد را ثبت کنید. برای هر کودک یک بلوک اضافه کنید. تخصیص کلاس فقط برای کودک با وضعیت «فعال» انجام می‌شود (مانند ویرایش کودک).</p>
+                <p style="color:var(--adm-text-muted);line-height:1.8;">بدون افزودن کودک هم می‌توانید فقط والد را ثبت کنید. برای هر کودک یک بلوک اضافه کنید. تخصیص کلاس فقط برای کودک با وضعیت «فعال» انجام می‌شود (مانند ویرایش کودک).</p>
                 <div id="childrenContainer">
                     <?php foreach ($oldChildren as $idx => $child): ?>
                         <?php $ci = $idx; require __DIR__ . '/partials/admin-child-block.php'; ?>

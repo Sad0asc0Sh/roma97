@@ -1032,7 +1032,7 @@ section.dashboard>h1,.admin-dash-top h1{font-size:1.5rem;font-weight:800;color:v
 .form-card h2{font-size:1.05rem;font-weight:700;color:var(--adm-text);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--adm-border-light)}
 .child-form .form-card label{display:block;font-weight:600;font-size:0.8rem;margin-bottom:6px;color:var(--adm-text)}
 .child-form input[type="text"],.child-form input[type="tel"],.child-form input[type="email"],
-.child-form input[type="number"],.child-form select,.child-form textarea,
+.child-form input[type="number"],.child-form input[type="password"],.child-form select,.child-form textarea,
 .child-form input[type="date"],.child-form input[type="file"]{
     width:100%;padding:10px 14px;border:1.5px solid var(--adm-border);border-radius:var(--adm-radius-sm);
     font-family:var(--adm-font);font-size:0.85rem;color:var(--adm-text);background:var(--adm-surface);

@@ -131,7 +131,7 @@ $flashError = getFlash('error');
 <section class="dashboard">
     <h1>ثبت دستی کودک جدید</h1>
     <p><a href="<?= e(url('admin/children.php')) ?>">→ بازگشت به فهرست کودکان</a></p>
-    <p style="color:var(--muted);line-height:1.9;">کودک را برای یک والد موجود مستقیم توسط مدیریت ثبت کنید. تخصیص کلاس فقط برای کودک با وضعیت «فعال» انجام می‌شود.</p>
+    <p style="color:var(--adm-text-muted);line-height:1.9;">کودک را برای یک والد موجود مستقیم توسط مدیریت ثبت کنید. تخصیص کلاس فقط برای کودک با وضعیت «فعال» انجام می‌شود.</p>
 
     <?php if ($flashSuccess !== null): ?><div class="notice" role="status"><?= e($flashSuccess) ?></div><?php endif; ?>
     <?php if ($flashError !== null): ?><div class="alert" role="alert"><?= e($flashError) ?></div><?php endif; ?>
@@ -140,7 +140,7 @@ $flashError = getFlash('error');
     <?php endif; ?>
 
     <div class="form-container">
-        <form method="post" action="<?= e(url('admin/add-child.php')) ?>" enctype="multipart/form-data" novalidate>
+        <form method="post" action="<?= e(url('admin/add-child.php')) ?>" enctype="multipart/form-data" novalidate class="child-form">
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
 
             <div class="form-card">
