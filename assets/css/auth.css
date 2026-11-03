@@ -330,6 +330,12 @@ body.auth-standalone {
     color: #c53030;
 }
 
+.auth-alert--info {
+    background: rgba(43,122,86,0.07);
+    border: 1px solid rgba(43,122,86,0.22);
+    color: #256b4a;
+}
+
 .auth-alert-icon { flex-shrink: 0; margin-top: 2px; }
 
 /* Alert list (multiple errors) */
