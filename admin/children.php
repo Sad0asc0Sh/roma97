@@ -132,7 +132,10 @@ $filterHref = static fn (string $value): string => url(
 <section class="dashboard">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:12px;">
         <h1 style="margin:0;">ثبت‌نام کودکان</h1>
-        <a href="<?= e(url('admin/export-csv.php?' . http_build_query(['type' => 'children', 'status' => $statusFilter]))) ?>" class="btn btn-secondary">📥 دریافت خروجی CSV کودکان</a>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <a href="<?= e(url('admin/add-child.php')) ?>" class="btn btn-primary">+ کودک جدید</a>
+            <a href="<?= e(url('admin/export-csv.php?' . http_build_query(['type' => 'children', 'status' => $statusFilter]))) ?>" class="btn btn-secondary">📥 دریافت خروجی CSV کودکان</a>
+        </div>
     </div>
 
     <p class="admin-attendance-quick">

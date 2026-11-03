@@ -114,6 +114,9 @@ $fe=getFlash('error');$fs=getFlash('success');$resetLinkUrl=getFlash('reset_link
 <section class="dashboard">
     <div class="app-toolbar">
         <h1 class="m-0 font-bold">مدیریت والدین</h1>
+        <div class="app-toolbar-actions">
+            <a href="<?=e(url('admin/add-parent.php'))?>" class="app-btn app-btn-primary">+ والد جدید</a>
+        </div>
     </div>
 
     <?php if(!empty($resetLinkUrl)):?>
@@ -166,6 +169,8 @@ $fe=getFlash('error');$fs=getFlash('success');$resetLinkUrl=getFlash('reset_link
                         <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="activate"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-success">فعال‌سازی</button></form>
                     <?php endif;?>
                     <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="generate_reset_link"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-secondary" title="ساخت لینک بازیابی رمز عبور">🔑 بازیابی رمز</button></form>
+                    <a href="<?=e(url('admin/edit-parent.php?id='.(int)$p['id']))?>" class="btn btn-sm btn-secondary">ویرایش</a>
+                    <a href="<?=e(url('admin/add-child.php?parent_id='.(int)$p['id']))?>" class="btn btn-sm btn-secondary">افزودن کودک</a>
                 </td>
             </tr>
         <?php endforeach;?>

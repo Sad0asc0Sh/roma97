@@ -115,7 +115,7 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
 
 <?php
 $isContentActive = in_array($currentPage, ['slides.php', 'gallery.php', 'news.php', 'pages.php'], true);
-$isChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php', 'edit-child.php', 'attendance.php', 'classrooms.php', 'parents.php'], true);
+$isChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php', 'edit-child.php', 'add-child.php', 'attendance.php', 'classrooms.php', 'parents.php', 'add-parent.php', 'edit-parent.php'], true);
 $isFinanceActive = in_array($currentPage, ['tuition.php', 'salary.php', 'expenses.php', 'reports.php'], true);
 ?>
 <script>
@@ -175,7 +175,7 @@ function toggleAdminSubmenu(btn, id) {
                     <span class="nav-arrow">&#8250;</span>
                 </button>
                 <div class="admin-nav-submenu <?php echo $isChildrenActive ? 'open active' : ''; ?>" id="submenu-children" style="<?php echo $isChildrenActive ? 'display:flex;' : 'display:none;'; ?>">
-                    <a href="<?php echo e(url('admin/children.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'children.php' || $currentPage === 'child-detail.php' ? 'active' : ''; ?>">
+                    <a href="<?php echo e(url('admin/children.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'children.php' || $currentPage === 'child-detail.php' || $currentPage === 'add-child.php' ? 'active' : ''; ?>">
                         <span class="nav-text">تمام کودکان</span>
                     </a>
                     <a href="<?php echo e(url('admin/attendance.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'attendance.php' ? 'active' : ''; ?>">
@@ -185,7 +185,7 @@ function toggleAdminSubmenu(btn, id) {
                         <span class="nav-text">کلاس‌ها</span>
                     </a>
 
-                    <a href="<?php echo e(url('admin/parents.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'parents.php' ? 'active' : ''; ?>">
+                    <a href="<?php echo e(url('admin/parents.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'parents.php' || $currentPage === 'add-parent.php' || $currentPage === 'edit-parent.php' ? 'active' : ''; ?>">
                         <span class="nav-text">مدیریت والدین</span>
                     </a>                </div>
             </div>

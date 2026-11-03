@@ -22,6 +22,7 @@ $suites = [
     'tests/parent-phone-test.php',
     'tests/role-matrix-test.php',
     'tests/teacher-helpers-test.php',
+    'tests/admin-parents-test.php',
 ];
 
 $root = dirname(__DIR__);
