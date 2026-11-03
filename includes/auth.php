@@ -456,9 +456,102 @@ function isTeacherLoggedIn(): bool
         && filter_var($_SESSION['teacher_id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false;
 }
 
+/**
+ * Clear teacher authentication keys without clobbering unrelated session state,
+ * or reset the session cleanly if the teacher account was deactivated/removed.
+ */
+function destroyTeacherSession(): void
+{
+    unset(
+        $_SESSION['teacher_id'],
+        $_SESSION['teacher_name'],
+        $_SESSION['teacher_first_name'],
+        $_SESSION['teacher_role_title'],
+        $_SESSION['teacher_avatar'],
+        $_SESSION['teacher_classroom_id'],
+        $_SESSION['teacher_has_class']
+    );
+}
+
+/**
+ * Enforce Teacher authentication, live account-status verification, and
+ * page-level authorization matrix.
+ */
 function requireTeacherLogin(): void
 {
     if (!isTeacherLoggedIn()) {
         redirect(url('teacher/login.php'));
+    }
+
+    require_once __DIR__ . '/permissions.php';
+
+    $teacherId = (int) ($_SESSION['teacher_id'] ?? 0);
+
+    // Pages call this guard twice per request (the page itself, then
+    // teacher/header.php). The live account refresh below costs a DB
+    // round-trip, so it runs ONCE per request per teacher; the cheap
+    // page-matrix check still runs on every call.
+    static $refreshedFor = 0;
+    $hasAssignedClassroom = (bool) ($_SESSION['teacher_has_class'] ?? true);
+
+    if ($refreshedFor === $teacherId) {
+        teacherEnforcePageMatrix($hasAssignedClassroom);
+        return;
+    }
+    $refreshedFor = $teacherId;
+
+    try {
+        require_once __DIR__ . '/db.php';
+        $pdo = getDb();
+        $stmt = $pdo->prepare(
+            'SELECT t.id, t.first_name, t.last_name, t.status, t.role_title, t.avatar,
+                    (SELECT COUNT(*) FROM classrooms cl WHERE cl.teacher_id = t.id) AS classroom_count
+             FROM teachers t
+             WHERE t.id = :id
+             LIMIT 1'
+        );
+        $stmt->execute([':id' => $teacherId]);
+        $row = $stmt->fetch();
+
+        if ($row === false || (string) ($row['status'] ?? '') !== 'active') {
+            destroyTeacherSession();
+            setFlash('error', 'حساب کاربری شما فعال نیست یا دسترسی شما تغییر کرده است. لطفاً دوباره وارد شوید.');
+            redirect(url('teacher/login.php'));
+        }
+
+        $_SESSION['teacher_name']       = trim((string) $row['first_name'] . ' ' . (string) $row['last_name']);
+        $_SESSION['teacher_first_name'] = (string) $row['first_name'];
+        $_SESSION['teacher_role_title'] = (string) ($row['role_title'] ?? 'مربی مهد');
+        $_SESSION['teacher_avatar']     = (string) ($row['avatar'] ?? '');
+        $hasAssignedClassroom           = (int) ($row['classroom_count'] ?? 0) > 0;
+        $_SESSION['teacher_has_class']  = $hasAssignedClassroom;
+    } catch (Throwable $e) {
+        error_log('requireTeacherLogin refresh failed: ' . $e->getMessage());
+    }
+
+    teacherEnforcePageMatrix($hasAssignedClassroom);
+}
+
+/**
+ * Fail-closed page check for the teacher portal: a teacher script
+ * that is not in the role's matrix list bounces to the dashboard
+ * (which both roles may open, so this can never loop). Scripts
+ * outside teacher/ are not this guard's business.
+ */
+function teacherEnforcePageMatrix(bool $hasAssignedClassroom): void
+{
+    $accessRole = $hasAssignedClassroom ? 'assigned_coach' : 'unassigned_coach';
+    $scriptName = (string) ($_SERVER['SCRIPT_NAME'] ?? '');
+    $scriptPath = $scriptName !== '' ? $scriptName : (string) ($_SERVER['PHP_SELF'] ?? '');
+
+    if (!str_contains($scriptPath, '/teacher/') && !str_starts_with($scriptPath, 'teacher/')) {
+        return;
+    }
+
+    $currentPage = 'teacher/' . basename($scriptPath);
+
+    if (!isTeacherPageAllowed($currentPage, $accessRole)) {
+        setFlash('error', 'شما به این صفحه دسترسی ندارید.');
+        redirect(url('teacher/index.php'));
     }
 }

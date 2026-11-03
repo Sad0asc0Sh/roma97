@@ -164,6 +164,24 @@ function initializeTeachersTables(): void
         if (!in_array('sort_order', $cols, true)) {
             $pdo->exec("ALTER TABLE teachers ADD COLUMN sort_order INT DEFAULT 0 AFTER show_in_team");
         }
+
+        // Idempotently ensure psychological & developmental factor columns exist on daily_reports
+        $drCols = $pdo->query("SHOW COLUMNS FROM daily_reports")->fetchAll(PDO::FETCH_COLUMN);
+        $psychCols = [
+            'social_interaction'    => "VARCHAR(80) DEFAULT NULL AFTER mood",
+            'focus_level'           => "VARCHAR(80) DEFAULT NULL AFTER social_interaction",
+            'communication_style'   => "VARCHAR(80) DEFAULT NULL AFTER focus_level",
+            'separation_adaptation' => "VARCHAR(80) DEFAULT NULL AFTER communication_style",
+            'nutrition_status'      => "VARCHAR(80) DEFAULT NULL AFTER separation_adaptation",
+            'rest_energy'           => "VARCHAR(80) DEFAULT NULL AFTER nutrition_status",
+            'strengths_observed'    => "VARCHAR(500) DEFAULT NULL AFTER rest_energy",
+            'coping_strategy'       => "VARCHAR(500) DEFAULT NULL AFTER strengths_observed",
+        ];
+        foreach ($psychCols as $colName => $colDef) {
+            if (!in_array($colName, $drCols, true)) {
+                $pdo->exec("ALTER TABLE daily_reports ADD COLUMN {$colName} {$colDef}");
+            }
+        }
     } catch (Throwable $e) {
         error_log($e->getMessage());
     }

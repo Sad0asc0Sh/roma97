@@ -21,6 +21,7 @@ $suites = [
     'tests/sms-queue-reaper-test.php',
     'tests/parent-phone-test.php',
     'tests/role-matrix-test.php',
+    'tests/teacher-helpers-test.php',
 ];
 
 $root = dirname(__DIR__);

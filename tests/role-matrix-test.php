@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * B1 — Role matrix must fail CLOSED for unknown roles.
+ * B1 — Role matrix must fail CLOSED for unknown roles (admin & teacher portals).
  *
  * Regression test for: `$matrix[$role] ?? $matrix['owner']` in
  * includes/auth.php::isPageAllowedForRole(), which silently granted owner-level
@@ -103,5 +103,23 @@ testAssert($dupes === [], 'no duplicate pages inside any role list');
 testAssert(isPageAllowedForRole('admin/definitely-not-here.php', 'owner') === false, 'unknown page denied for owner');
 testAssert(isPageAllowedForRole('admin/../config.php', 'owner') === false, 'path-traversal page denied for owner');
 testAssert(isPageAllowedForRole('', 'owner') === false, 'empty page denied for owner');
+
+// ── F. Teacher Portal Permissions & Capabilities Matrix ─────────────────────
+require_once $projectRoot . '/includes/permissions.php';
+testAssert(isTeacherPageAllowed('teacher/index.php', 'assigned_coach') === true, 'assigned_coach can access teacher/index.php');
+testAssert(isTeacherPageAllowed('teacher/child-detail.php', 'assigned_coach') === true, 'assigned_coach can access teacher/child-detail.php');
+testAssert(isTeacherPageAllowed('teacher/profile.php', 'unassigned_coach') === true, 'unassigned_coach can access teacher/profile.php');
+testAssert(isTeacherPageAllowed('teacher/child-detail.php', 'unassigned_coach') === false, 'unassigned_coach denied teacher/child-detail.php');
+testAssert(isTeacherPageAllowed('teacher/index.php', 'unknown_role') === false, 'unknown teacher role denied teacher/index.php');
+testAssert(teacherHasCapability('attendance.write', true) === true, 'assigned teacher has attendance.write capability');
+testAssert(teacherHasCapability('attendance.write', false) === false, 'unassigned teacher lacks attendance.write capability');
+
+// Every page in the teacher matrix must exist on disk — a matrix entry
+// pointing at a missing file is a dead nav link waiting to happen.
+foreach (teacherPermissionsMatrix() as $tRole => $tPages) {
+    foreach ($tPages as $tPage) {
+        testAssert(is_file($projectRoot . '/' . $tPage), "teacher matrix page exists: {$tRole} → {$tPage}");
+    }
+}
 
 exit(testSummary('role-matrix-test'));

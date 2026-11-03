@@ -149,10 +149,7 @@ function initGlobalSearchKeybind() {
     }
   });
 
-  // PERF: debounced + rAF-batched + cached text. Previously every keystroke
-  // re-read textContent of every row/card (forced layout on 200+ rows) and
-  // wrote inline animation each time. Now: 150ms debounce, text cached once,
-  // DOM writes batched in a single frame, no per-keystroke animation churn.
+  // PERF: debounced + rAF-batched + cached text.
   let searchTimer = null;
   let searchRaf = 0;
   let rowCache = null;
@@ -164,7 +161,7 @@ function initGlobalSearchKeybind() {
         .map((row) => ({ el: row, text: (row.textContent || '').toLowerCase() }));
     }
     if (!cardCache) {
-      cardCache = Array.from(document.querySelectorAll('.admin-child-card, .child-card-large, .child-list-card, .event-card, .admin-event-card, .quick-list-item'))
+      cardCache = Array.from(document.querySelectorAll('.admin-child-card, .child-card-large, .child-list-card, .event-card, .admin-event-card, .quick-list-item, .tp-child-card, .tp-att-row, .tp-report-card, .tp-msg-item'))
         .map((card) => ({ el: card, text: (card.textContent || '').toLowerCase() }));
     }
   }
@@ -523,8 +520,6 @@ function initShamsiDatePicker() {
       if (Number.isFinite(parsedY)) curJy = Math.min(Math.max(parsedY, cfg.yearMin), cfg.yearMax);
       if (parsedM >= 1 && parsedM <= 12) curJm = parsedM;
     } else if (cfg.isBirth && !input.value.trim()) {
-      // For birthdate: open a few years back so parent doesn't start from today
-      // and doesn't need 100+ clicks to reach a 3-10 year old child.
       curJy = Math.max(cfg.yearMin, tJy - 4);
       curJm = tJm;
     }
@@ -662,8 +657,6 @@ function initShamsiDatePicker() {
         updateCalendar();
       });
 
-      // Clicking the year title opens the year-grid (covers the "up to 10 years" request
-      // with one tap instead of 120 month steps).
       container.querySelector('.sdp-year-btn').addEventListener('click', (e) => {
         e.stopPropagation();
         viewMode = 'years';
@@ -676,7 +669,6 @@ function initShamsiDatePicker() {
         todayBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           if (cfg.isBirth) {
-            // For birth fields "today" is invalid; jump to max allowed instead.
             curJy = cfg.yearMax;
             curJm = tJm;
           } else {
@@ -693,7 +685,6 @@ function initShamsiDatePicker() {
       const totalPages = Math.max(1, Math.ceil(totalYears / 12));
       if (yearPage < 0) yearPage = 0;
       if (yearPage >= totalPages) yearPage = totalPages - 1;
-      // Page 0 = newest years (yearMax downwards)
       const startY = cfg.yearMax - yearPage * 12;
       const endY = Math.max(cfg.yearMin, startY - 11);
 

@@ -13,10 +13,11 @@ if (isTeacherLoggedIn()) {
     redirect(url('teacher/index.php'));
 }
 
-$error = '';
+$error   = (string) (getFlash('error') ?? '');
+$success = (string) (getFlash('success') ?? '');
 
 if (!checkBruteForce('teacher_login')) {
-    $error = 'تعداد تلاشهای ناموفق زیاد است. لطفاً ۱۵ دقیقه دیگر تلاش کنید.';
+    $error = 'تعداد تلاش‌های ناموفق زیاد است. لطفاً ۱۵ دقیقه دیگر تلاش کنید.';
 }
 
 if (isPostRequest() && $error === '') {
@@ -36,13 +37,13 @@ if (isPostRequest() && $error === '') {
         ) {
             $error = 'ایمیل یا رمز عبور نامعتبر است.';
         } elseif (!checkBruteForce('teacher_login', $email)) {
-            $error = 'تعداد تلاشهای ناموفق زیاد است. لطفاً ۱۵ دقیقه دیگر تلاش کنید.';
+            $error = 'تعداد تلاش‌های ناموفق زیاد است. لطفاً ۱۵ دقیقه دیگر تلاش کنید.';
         } else {
             try {
                 initializeTeachersTables();
                 $pdo = getDb();
                 $stmt = $pdo->prepare(
-                    'SELECT id, first_name, last_name, password, status FROM teachers WHERE email = :email LIMIT 1'
+                    'SELECT id, first_name, last_name, password, status, role_title, avatar FROM teachers WHERE email = :email LIMIT 1'
                 );
                 $stmt->execute([':email' => $email]);
                 $teacher = $stmt->fetch();
@@ -58,10 +59,13 @@ if (isPostRequest() && $error === '') {
                 } else {
                     resetLoginAttempts('teacher_login', $email);
                     session_regenerate_id(true);
-                    $_SESSION['last_activity'] = time();
-                    $_SESSION['teacher_id']   = (int) $teacher['id'];
+                    $_SESSION['last_activity']      = time();
+                    $_SESSION['teacher_id']         = (int) $teacher['id'];
+                    $_SESSION['teacher_name']       = trim($teacher['first_name'] . ' ' . $teacher['last_name']);
+                    $_SESSION['teacher_first_name'] = (string) $teacher['first_name'];
+                    $_SESSION['teacher_role_title'] = (string) ($teacher['role_title'] ?? 'مربی مهد');
+                    $_SESSION['teacher_avatar']     = (string) ($teacher['avatar'] ?? '');
                     recordAudit('auth.login', 'teacher', (int) $teacher['id']);
-                    $_SESSION['teacher_name'] = trim($teacher['first_name'] . ' ' . $teacher['last_name']);
                     rotateCsrfToken();
                     redirect(url('teacher/index.php'));
                 }
@@ -80,11 +84,11 @@ $siteNameValue = e(siteName());
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="ورود معلم مهد کودک <?= $siteNameValue ?>">
-    <meta name="theme-color" content="#E8A838">
-    <title>ورود معلم | <?= $siteNameValue ?></title>
+    <meta name="description" content="ورود مربی مهد کودک <?= $siteNameValue ?>">
+    <meta name="theme-color" content="#2B7A56">
+    <title>ورود مربیان | <?= $siteNameValue ?></title>
     <link rel="preload" href="<?= e(url('assets/fonts/Vazirmatn-Regular.woff2')) ?>" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="<?= e(url('assets/css/fonts.css')) ?>">
+    <link rel="stylesheet" href="<?= e(asset('assets/css/fonts.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset('assets/css/auth-tokens.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset('assets/css/auth.css')) ?>">
 </head>
@@ -110,32 +114,32 @@ $siteNameValue = e(siteName());
                     </defs>
                 </svg>
             </div>
-            <h2 class="auth-brand-title">پنل معلم <span><?= $siteNameValue ?></span></h2>
-            <p class="auth-brand-subtitle">ابزارهای مدیریت کلاس، ثبت گزارش روزانه و ارتباط با والدین</p>
+            <h2 class="auth-brand-title">پنل مربیان <span><?= $siteNameValue ?></span></h2>
+            <p class="auth-brand-subtitle">میز کار هوشمند مدیریت کلاس، پرونده سلامت کودکان، ثبت حضور و غیاب و گزارش روزانه</p>
             <ul class="auth-brand-features">
                 <li>
                     <div class="auth-feature-icon">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
                     </div>
-                    <span>مشاهده لیست کودکان کلاس</span>
+                    <span>مشاهده پرونده سلامت، حساسیت‌ها و کودکان کلاس</span>
                 </li>
                 <li>
                     <div class="auth-feature-icon">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                     </div>
-                    <span>ثبت گزارش روزانه هر کودک</span>
+                    <span>ثبت سریع گزارش روزانه و قالب‌های فعالیت</span>
                 </li>
                 <li>
                     <div class="auth-feature-icon">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                     </div>
-                    <span>حضور و غیاب آنلاین</span>
+                    <span>حضور و غیاب آنلاین با اطلاع‌رسانی خودکار</span>
                 </li>
                 <li>
                     <div class="auth-feature-icon">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                     </div>
-                    <span>ارتباط مستقیم با والدین</span>
+                    <span>ارتباط مستقیم با والدین و مشاهده فیش حقوقی</span>
                 </li>
             </ul>
         </div>
@@ -159,10 +163,10 @@ $siteNameValue = e(siteName());
             <div class="auth-header auth-anim-2">
                 <span class="auth-role-badge auth-role-badge--teacher">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5"/></svg>
-                    پنل معلم
+                    پنل مربیان
                 </span>
-                <h1>ورود معلم</h1>
-                <p>برای دسترسی به پنل معلمی وارد شوید</p>
+                <h1>ورود مربیان</h1>
+                <p>برای دسترسی به پنل تخصصی مربی وارد شوید</p>
             </div>
 
             <?php if ($error !== ''): ?>
@@ -172,11 +176,17 @@ $siteNameValue = e(siteName());
                 </div>
             <?php endif; ?>
 
+            <?php if ($success !== ''): ?>
+                <div class="auth-alert auth-anim-2" role="status" style="background:#E3F5EB;color:#237A4B;border:1px solid rgba(35,122,75,0.2);">
+                    <span><?= e($success) ?></span>
+                </div>
+            <?php endif; ?>
+
             <form method="post" action="<?= e(url('teacher/login.php')) ?>" novalidate class="auth-form" id="authForm">
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
 
                 <div class="auth-field auth-anim-3">
-                    <label for="email" class="auth-field-label">آدرس ایمیل</label>
+                    <label for="email" class="auth-field-label">آدرس ایمیل سازمانی / شخصی</label>
                     <div class="auth-field-wrap">
                         <svg class="auth-field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                         <input type="email" id="email" name="email" class="auth-input<?= $error !== '' ? ' has-error' : '' ?>" value="<?= e($_POST['email'] ?? '') ?>" placeholder="example@email.com" autocomplete="username" dir="ltr" required autofocus>
@@ -198,7 +208,7 @@ $siteNameValue = e(siteName());
                 </div>
 
                 <button type="submit" class="auth-submit auth-anim-5" id="submitBtn">
-                    <span class="btn-text">ورود به پنل معلم</span>
+                    <span class="btn-text">ورود به پنل مربیان</span>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
                     <span class="auth-spinner"></span>
                 </button>

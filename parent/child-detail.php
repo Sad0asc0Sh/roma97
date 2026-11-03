@@ -4,11 +4,11 @@ declare(strict_types=1);
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/error_handler.php';
 
-
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/parent_children_helpers.php';
+require_once __DIR__ . '/../includes/teacher_portal_helpers.php';
 
 requireParentLogin();
 
@@ -41,6 +41,7 @@ $classroom = null;
 
 try {
     initializeParentTables();
+    initializeTeachersTables();
     $pdo = getDb();
 
     $parentStmt = $pdo->prepare(
@@ -104,10 +105,13 @@ SQL
         ]);
         $todayAtt = $todayStmt->fetch() ?: null;
 
-        // Fetch today's per-child daily report
+        // Fetch today's per-child daily report including psychological assessment fields
         $reportStmt = $pdo->prepare(
             <<<'SQL'
-SELECT dr.mood, dr.activities, dr.notes, t.first_name, t.last_name
+SELECT dr.mood, dr.social_interaction, dr.focus_level, dr.communication_style,
+       dr.separation_adaptation, dr.nutrition_status, dr.rest_energy,
+       dr.strengths_observed, dr.coping_strategy,
+       dr.activities, dr.notes, t.first_name, t.last_name
 FROM daily_reports dr
 INNER JOIN teachers t ON t.id = dr.teacher_id
 WHERE dr.child_id = :child_id AND dr.report_date = :today
@@ -120,11 +124,13 @@ SQL
         ]);
         $dailyReport = $reportStmt->fetch() ?: null;
 
-        // Report history — the child's growth story, not just today's snapshot.
-        // Capped at 4 weeks so the page stays fast as records accumulate.
+        // Report history — last 4 weeks
         $historyStmt = $pdo->prepare(
             <<<'SQL'
-SELECT dr.report_date, dr.mood, dr.activities, dr.notes, t.first_name, t.last_name
+SELECT dr.report_date, dr.mood, dr.social_interaction, dr.focus_level, dr.communication_style,
+       dr.separation_adaptation, dr.nutrition_status, dr.rest_energy,
+       dr.strengths_observed, dr.coping_strategy,
+       dr.activities, dr.notes, t.first_name, t.last_name
 FROM daily_reports dr
 INNER JOIN teachers t ON t.id = dr.teacher_id
 WHERE dr.child_id = :child_id AND dr.report_date < :today
@@ -228,29 +234,29 @@ require_once __DIR__ . '/header.php';
 
     <!-- Today's Attendance -->
     <div class="child-detail-card">
-        <h2>حضور و غیاب امروز</h2>
+        <h2>حضور و گذار صبحگاهی امروز</h2>
         <?php if ($todayAtt !== null): ?>
             <div class="attendance-today">
                 <?php
                 $attStatus = (string) ($todayAtt['status'] ?? '');
                 $attBadge = match($attStatus) {
-                    'present' => '<span class="attendance-badge badge-present">حاضر</span>',
-                    'absent' => '<span class="attendance-badge badge-absent">غایب</span>',
-                    'late' => '<span class="attendance-badge badge-late">تأخیر</span>',
-                    'excused' => '<span class="attendance-badge badge-excused">غیبت موجه</span>',
+                    'present' => '<span class="attendance-badge badge-present">حاضر (پذیرش ایمن)</span>',
+                    'absent' => '<span class="attendance-badge badge-absent">عدم حضور</span>',
+                    'late' => '<span class="attendance-badge badge-late">ورود با تأخیر</span>',
+                    'excused' => '<span class="attendance-badge badge-excused">غیبت با هماهنگی</span>',
                     default => '<span class="attendance-badge badge-not-marked">ثبت نشده</span>'
                 };
                 echo $attBadge;
                 ?>
                 <div class="attendance-times">
                     <?php if (!empty($todayAtt['check_in'])): ?>
-                        <p><strong>زمان ورود</strong> <?= e(parentPortalFormatTimeShort($todayAtt['check_in']))?></p>
+                        <p><strong>زمان پذیرش صبح:</strong> <?= e(parentPortalFormatTimeShort($todayAtt['check_in']))?></p>
                     <?php endif; ?>
                     <?php if (!empty($todayAtt['check_out'])): ?>
-                        <p><strong>زمان خروج</strong> <?= e(parentPortalFormatTimeShort($todayAtt['check_out']))?></p>
+                        <p><strong>زمان تحویل:</strong> <?= e(parentPortalFormatTimeShort($todayAtt['check_out']))?></p>
                     <?php endif; ?>
                     <?php if (!empty($todayAtt['notes'])): ?>
-                        <p class="attendance-notes"><strong>یادداشت</strong> <?= nl2br(e((string) $todayAtt['notes']))?></p>
+                        <p class="attendance-notes"><strong>مشاهده گذار صبحگاهی:</strong> <?= nl2br(e((string) $todayAtt['notes']))?></p>
                     <?php endif; ?>
             </div>
         </div>
@@ -259,64 +265,97 @@ require_once __DIR__ . '/header.php';
         <?php endif; ?>
   </div>
 
-    <!-- Today's Report -->
+    <!-- Today's Psychological & Developmental Report -->
     <div class="child-detail-card">
-        <h2>گزارش روزانه امروز</h2>
+        <h2>مشاهده روان‌شناختی و گزارش روزانه امروز</h2>
         <?php if ($dailyReport !== null): ?>
             <div class="daily-report">
                 <p>
-                    <strong>حال و هوای کلاس</strong>
-                    <?php
-                    $moodEmoji = match ($dailyReport['mood']) {
-                        'happy'       => '😊 شاد',
-                        'normal'      => '😐 عادی',
-                        'mixed'       => '😅 ترکیبی',
-                        'challenging' => '😤 چالش‌برانگیز',
-                        default       => e((string) ($dailyReport['mood'] ?? 'ثبت نشده')),
-                    };
-                    echo $moodEmoji;
-                    ?>
-               </p>
+                    <strong>وضعیت تنظیم هیجانی و آرامش کودک:</strong>
+                    <?= e(teacherMoodFullLabel((string) ($dailyReport['mood'] ?? 'normal'))) ?>
+                </p>
+
+                <?php if (!empty($dailyReport['social_interaction']) || !empty($dailyReport['focus_level']) || !empty($dailyReport['separation_adaptation'])): ?>
+                    <div class="child-detail-grid" style="margin-top:8px;margin-bottom:8px;">
+                        <?php if (!empty($dailyReport['social_interaction'])): ?>
+                            <div class="detail-item">
+                                <span class="detail-label">تعامل با همسالان</span>
+                                <span class="detail-value" style="font-size:0.84rem;"><?= e(teacherPsychFactorLabel('social_interaction', (string) $dailyReport['social_interaction'])) ?></span>
+                            </div>
+                        <?php endif; ?>
+                        <?php if (!empty($dailyReport['focus_level'])): ?>
+                            <div class="detail-item">
+                                <span class="detail-label">تمرکز و کارکرد اجرایی</span>
+                                <span class="detail-value" style="font-size:0.84rem;"><?= e(teacherPsychFactorLabel('focus_level', (string) $dailyReport['focus_level'])) ?></span>
+                            </div>
+                        <?php endif; ?>
+                        <?php if (!empty($dailyReport['communication_style'])): ?>
+                            <div class="detail-item">
+                                <span class="detail-label">ابراز هیجان و کلام</span>
+                                <span class="detail-value" style="font-size:0.84rem;"><?= e(teacherPsychFactorLabel('communication_style', (string) $dailyReport['communication_style'])) ?></span>
+                            </div>
+                        <?php endif; ?>
+                        <?php if (!empty($dailyReport['separation_adaptation'])): ?>
+                            <div class="detail-item">
+                                <span class="detail-label">سازگاری و جدایی صبحگاهی</span>
+                                <span class="detail-value" style="font-size:0.84rem;"><?= e(teacherPsychFactorLabel('separation_adaptation', (string) $dailyReport['separation_adaptation'])) ?></span>
+                            </div>
+                        <?php endif; ?>
+                        <?php if (!empty($dailyReport['nutrition_status'])): ?>
+                            <div class="detail-item">
+                                <span class="detail-label">رفتار تغذیه‌ای</span>
+                                <span class="detail-value" style="font-size:0.84rem;"><?= e(teacherPsychFactorLabel('nutrition_status', (string) $dailyReport['nutrition_status'])) ?></span>
+                            </div>
+                        <?php endif; ?>
+                        <?php if (!empty($dailyReport['rest_energy'])): ?>
+                            <div class="detail-item">
+                                <span class="detail-label">تنظیم حسی و انرژی</span>
+                                <span class="detail-value" style="font-size:0.84rem;"><?= e(teacherPsychFactorLabel('rest_energy', (string) $dailyReport['rest_energy'])) ?></span>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($dailyReport['strengths_observed'])): ?>
+                    <p><strong>🌟 نقطه قوت و دستاورد امروز کودک:</strong><br><?= nl2br(e((string) $dailyReport['strengths_observed']))?></p>
+                <?php endif; ?>
+                <?php if (!empty($dailyReport['coping_strategy'])): ?>
+                    <p><strong>🧭 همراهی مربی و پیشنهاد هم‌افزایی برای خانه:</strong><br><?= nl2br(e((string) $dailyReport['coping_strategy']))?></p>
+                <?php endif; ?>
                 <?php if (!empty($dailyReport['activities'])): ?>
-                    <p><strong>فعالیت‌ها</strong><br><?= nl2br(e((string) $dailyReport['activities']))?></p>
+                    <p><strong>🎨 فعالیت‌های رشدی امروز:</strong><br><?= nl2br(e((string) $dailyReport['activities']))?></p>
                 <?php endif; ?>
                 <?php if (!empty($dailyReport['notes'])): ?>
-                    <p><strong>یادداشت معلم</strong><br><?= nl2br(e((string) $dailyReport['notes']))?></p>
+                    <p><strong>💬 روایت توصیفی مربی:</strong><br><?= nl2br(e((string) $dailyReport['notes']))?></p>
                 <?php endif; ?>
                 <p class="report-teacher">
-                    گزارش توسط: <?= e(trim($dailyReport['first_name'] . ' ' . $dailyReport['last_name'])) ?>
+                    ثبت‌شده توسط مربی: <?= e(trim($dailyReport['first_name'] . ' ' . $dailyReport['last_name'])) ?>
                </p>
         </div>
         <?php else: ?>
-            <p class="muted">گزارش امروز هنوز توسط معلم ارسال نشده است</p>
+            <p class="muted">گزارش امروز هنوز توسط مربی ثبت نشده است</p>
         <?php endif; ?>
   </div>
 
     <!-- Report History: the last 4 weeks of the child's story -->
     <?php if ($dailyReportHistory !== []): ?>
     <div class="child-detail-card">
-        <h2>گزارش‌های روزانه هفته‌های اخیر</h2>
+        <h2>گزارش‌های روان‌شناختی و رشدی هفته‌های اخیر</h2>
         <div style="display:grid;gap:12px;">
             <?php foreach ($dailyReportHistory as $hist): ?>
-                <?php
-                $histMood = match ($hist['mood']) {
-                    'happy'       => '😊 شاد',
-                    'normal'      => '😐 عادی',
-                    'mixed'       => '😅 ترکیبی',
-                    'challenging' => '😤 چالش‌برانگیز',
-                    default       => '—',
-                };
-                ?>
                 <div style="border:1px solid var(--border, #e5e5e5);border-radius:12px;padding:12px 14px;">
                     <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:center;">
                         <strong style="font-size:0.9rem;"><?= e(shamsiDate((string) $hist['report_date'], 'with_day')) ?></strong>
-                        <span style="font-size:0.85rem;"><?= $histMood ?></span>
+                        <span style="font-size:0.85rem;font-weight:700;color:var(--pp-primary);"><?= e(teacherMoodLabel((string) ($hist['mood'] ?? 'normal'))) ?></span>
                     </div>
+                    <?php if (trim((string) ($hist['strengths_observed'] ?? '')) !== ''): ?>
+                        <p style="margin:8px 0 0;font-size:0.85rem;line-height:1.8;"><strong>🌟 توانمندی مشاهده‌شده:</strong> <?= e((string) $hist['strengths_observed']) ?></p>
+                    <?php endif; ?>
                     <?php if (trim((string) ($hist['activities'] ?? '')) !== ''): ?>
-                        <p style="margin:8px 0 0;font-size:0.85rem;line-height:1.8;"><strong>فعالیت‌ها:</strong> <?= nl2br(e((string) $hist['activities'])) ?></p>
+                        <p style="margin:6px 0 0;font-size:0.85rem;line-height:1.8;"><strong>🎨 فعالیت‌ها:</strong> <?= nl2br(e((string) $hist['activities'])) ?></p>
                     <?php endif; ?>
                     <?php if (trim((string) ($hist['notes'] ?? '')) !== ''): ?>
-                        <p style="margin:6px 0 0;font-size:0.85rem;line-height:1.8;"><strong>یادداشت معلم:</strong> <?= nl2br(e((string) $hist['notes'])) ?></p>
+                        <p style="margin:6px 0 0;font-size:0.85rem;line-height:1.8;"><strong>💬 یادداشت مربی:</strong> <?= nl2br(e((string) $hist['notes'])) ?></p>
                     <?php endif; ?>
                 </div>
             <?php endforeach; ?>

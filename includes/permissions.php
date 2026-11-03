@@ -103,3 +103,95 @@ function adminRoleLabel(string $role): string
         default        => $role,
     };
 }
+
+/**
+ * Central permissions matrix for the Teacher / Coach portal (پنل مربیان).
+ *
+ * Defines allowed pages and capabilities based on teacher access tier:
+ *  - 'assigned_coach'   : Active teacher with ≥1 assigned classroom
+ *  - 'unassigned_coach' : Active teacher without an assigned classroom yet
+ */
+function teacherPermissionsMatrix(): array
+{
+    return [
+        'assigned_coach' => [
+            'teacher/index.php',
+            'teacher/children.php',
+            'teacher/child-detail.php',
+            'teacher/attendance.php',
+            'teacher/report.php',
+            'teacher/schedule.php',
+            'teacher/messages.php',
+            'teacher/profile.php',
+            'teacher/logout.php',
+        ],
+        'unassigned_coach' => [
+            'teacher/index.php',
+            'teacher/children.php',
+            'teacher/attendance.php',
+            'teacher/report.php',
+            'teacher/schedule.php',
+            'teacher/messages.php',
+            'teacher/profile.php',
+            'teacher/logout.php',
+        ],
+    ];
+}
+
+/**
+ * Capabilities matrix for teacher actions (used to gate mutations & UI controls).
+ *
+ * @return array<string, list<string>>
+ */
+function teacherCapabilitiesMatrix(): array
+{
+    return [
+        'assigned_coach' => [
+            'dashboard.view',
+            'classroom.view',
+            'classroom.switch',
+            'children.list',
+            'children.detail',
+            'attendance.view',
+            'attendance.write',
+            'report.view',
+            'report.write',
+            'schedule.view',
+            'messages.view',
+            'messages.send',
+            'profile.view',
+            'profile.edit',
+            'salary.view',
+        ],
+        'unassigned_coach' => [
+            'dashboard.view',
+            'schedule.view',
+            'profile.view',
+            'profile.edit',
+            'salary.view',
+        ],
+    ];
+}
+
+/**
+ * Whether a teacher page is allowed for the given teacher access role.
+ */
+function isTeacherPageAllowed(string $pagePath, string $teacherAccessRole = 'assigned_coach'): bool
+{
+    $matrix = teacherPermissionsMatrix();
+    $allowed = $matrix[$teacherAccessRole] ?? [];
+
+    return in_array($pagePath, $allowed, true);
+}
+
+/**
+ * Whether the teacher has a specific operational capability.
+ */
+function teacherHasCapability(string $capability, bool $hasAssignedClassroom = true): bool
+{
+    $role = $hasAssignedClassroom ? 'assigned_coach' : 'unassigned_coach';
+    $matrix = teacherCapabilitiesMatrix();
+    $caps = $matrix[$role] ?? [];
+
+    return in_array($capability, $caps, true);
+}
