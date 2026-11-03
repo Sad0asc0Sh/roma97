@@ -6,7 +6,7 @@ defined('ROOMA_APP') || define('ROOMA_APP', true);
 defined('ROMA_APP') || define('ROMA_APP', true);
 
 // Global application build version for cache-busting static assets on mobile and desktop
-defined('APP_BUILD') || define('APP_BUILD', '20260918_02');
+defined('APP_BUILD') || define('APP_BUILD', '20261103_01');
 
 /*
  * Environment-specific overrides.
