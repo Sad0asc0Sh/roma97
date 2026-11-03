@@ -171,6 +171,9 @@ $fe=getFlash('error');$fs=getFlash('success');$resetLinkUrl=getFlash('reset_link
                     <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="generate_reset_link"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-secondary" title="ساخت لینک بازیابی رمز عبور">🔑 بازیابی رمز</button></form>
                     <a href="<?=e(url('admin/edit-parent.php?id='.(int)$p['id']))?>" class="btn btn-sm btn-secondary">ویرایش</a>
                     <a href="<?=e(url('admin/add-child.php?parent_id='.(int)$p['id']))?>" class="btn btn-sm btn-secondary">افزودن کودک</a>
+                    <?php if(in_array(currentAdminRole(),['owner','manager'],true)):?>
+                        <a href="<?=e(url('admin/delete-parent.php?id='.(int)$p['id']))?>" class="btn btn-sm btn-reject">حذف</a>
+                    <?php endif;?>
                 </td>
             </tr>
         <?php endforeach;?>

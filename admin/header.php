@@ -115,7 +115,7 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
 
 <?php
 $isContentActive = in_array($currentPage, ['slides.php', 'gallery.php', 'news.php', 'pages.php'], true);
-$isChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php', 'edit-child.php', 'add-child.php', 'attendance.php', 'classrooms.php', 'parents.php', 'add-parent.php', 'edit-parent.php'], true);
+$isChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php', 'edit-child.php', 'add-child.php', 'attendance.php', 'classrooms.php', 'parents.php', 'add-parent.php', 'edit-parent.php', 'delete-parent.php'], true);
 $isFinanceActive = in_array($currentPage, ['tuition.php', 'salary.php', 'expenses.php', 'reports.php'], true);
 ?>
 <script>
@@ -185,7 +185,7 @@ function toggleAdminSubmenu(btn, id) {
                         <span class="nav-text">کلاس‌ها</span>
                     </a>
 
-                    <a href="<?php echo e(url('admin/parents.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'parents.php' || $currentPage === 'add-parent.php' || $currentPage === 'edit-parent.php' ? 'active' : ''; ?>">
+                    <a href="<?php echo e(url('admin/parents.php')); ?>" class="admin-nav-subitem <?php echo $currentPage === 'parents.php' || $currentPage === 'add-parent.php' || $currentPage === 'edit-parent.php' || $currentPage === 'delete-parent.php' ? 'active' : ''; ?>">
                         <span class="nav-text">مدیریت والدین</span>
                     </a>                </div>
             </div>

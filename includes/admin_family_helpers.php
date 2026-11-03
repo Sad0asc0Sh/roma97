@@ -343,6 +343,260 @@ function adminFamilyCreateParentWithChildren(PDO $pdo, array $parent, array $chi
 }
 
 /**
+ * Read-only impact snapshot for deleting a parent: identity, children and
+ * the counts of everything that will disappear with the account.
+ *
+ * Deletion relies on the schema's ON DELETE CASCADE for children and every
+ * child-linked table (child_classroom, attendance, daily_reports,
+ * classroom_waitlist, tuition_plans, tuition_payments, tuition_reminder_log).
+ * The counts below cover those PLUS the tables that have NO foreign key and
+ * must be cleaned explicitly (counted here, deleted in
+ * adminFamilyDeleteParent()): messages, password_reset_tokens and the
+ * still-unsent rows of sms_queue, plus live sms_verification_codes for the
+ * parent's phone number.
+ *
+ * History tables (sms_logs, notification_log, audit_log) are intentionally
+ * NOT part of this snapshot: they are send/audit history and survive an
+ * account deletion.
+ *
+ * @return array{parent:array<string,mixed>,children:list<array<string,mixed>>,
+ *               counts:array<string,int>,tuition_total_paid:float,
+ *               photo_paths:list<string>,avatar_path:?string}|null
+ *         Null when the parent does not exist.
+ */
+function adminFamilyParentDeleteImpact(PDO $pdo, int $parentId): ?array
+{
+    $stmt = $pdo->prepare(
+        'SELECT id, first_name, last_name, phone, email, status, avatar FROM parents WHERE id = :id LIMIT 1'
+    );
+    $stmt->execute([':id' => $parentId]);
+    $parent = $stmt->fetch();
+    if ($parent === false) {
+        return null;
+    }
+
+    $chStmt = $pdo->prepare(
+        'SELECT id, first_name, last_name, status, photo FROM children WHERE parent_id = :pid ORDER BY created_at ASC, id ASC'
+    );
+    $chStmt->execute([':pid' => $parentId]);
+    $children = [];
+    $photoPaths = [];
+    foreach ($chStmt->fetchAll() as $row) {
+        $children[] = [
+            'id' => (int) $row['id'],
+            'first_name' => (string) $row['first_name'],
+            'last_name' => (string) $row['last_name'],
+            'full_name' => trim((string) $row['first_name'] . ' ' . (string) $row['last_name']),
+            'status' => (string) $row['status'],
+            'photo' => (($row['photo'] ?? null) !== null && (string) $row['photo'] !== '') ? (string) $row['photo'] : null,
+        ];
+        if (($row['photo'] ?? null) !== null && (string) $row['photo'] !== '') {
+            $photoPaths[] = (string) $row['photo'];
+        }
+    }
+
+    $countFor = static function (string $sql, array $params) use ($pdo): int {
+        $s = $pdo->prepare($sql);
+        $s->execute($params);
+        return (int) $s->fetchColumn();
+    };
+    $childScope = 'child_id IN (SELECT id FROM children WHERE parent_id = :pid)';
+
+    $payStmt = $pdo->prepare(
+        'SELECT COUNT(*) AS c, COALESCE(SUM(amount), 0) AS total FROM tuition_payments WHERE parent_id = :pid'
+    );
+    $payStmt->execute([':pid' => $parentId]);
+    $payRow = $payStmt->fetch() ?: ['c' => 0, 'total' => 0];
+
+    $phone = (string) ($parent['phone'] ?? '');
+    $otpCount = 0;
+    if ($phone !== '') {
+        $otpCount = $countFor(
+            'SELECT COUNT(*) FROM sms_verification_codes WHERE phone = :phone',
+            [':phone' => $phone]
+        );
+    }
+
+    $counts = [
+        'children' => count($children),
+        'child_classroom' => $countFor("SELECT COUNT(*) FROM child_classroom WHERE {$childScope}", [':pid' => $parentId]),
+        'classroom_waitlist' => $countFor("SELECT COUNT(*) FROM classroom_waitlist WHERE {$childScope}", [':pid' => $parentId]),
+        'attendance' => $countFor("SELECT COUNT(*) FROM attendance WHERE {$childScope}", [':pid' => $parentId]),
+        'daily_reports' => $countFor("SELECT COUNT(*) FROM daily_reports WHERE {$childScope}", [':pid' => $parentId]),
+        'tuition_plans' => $countFor("SELECT COUNT(*) FROM tuition_plans WHERE {$childScope}", [':pid' => $parentId]),
+        'tuition_payments' => (int) $payRow['c'],
+        'tuition_reminder_log' => $countFor('SELECT COUNT(*) FROM tuition_reminder_log WHERE parent_id = :pid', [':pid' => $parentId]),
+        'messages' => $countFor(
+            "SELECT COUNT(*) FROM messages WHERE parent_id = :pid OR (sender_type = 'parent' AND sender_id = :pid2)",
+            [':pid' => $parentId, ':pid2' => $parentId]
+        ),
+        'password_reset_tokens' => $countFor(
+            "SELECT COUNT(*) FROM password_reset_tokens WHERE account_type = 'parent' AND account_id = :pid",
+            [':pid' => $parentId]
+        ),
+        'sms_queue_pending' => $countFor(
+            "SELECT COUNT(*) FROM sms_queue WHERE parent_id = :pid AND status IN ('pending', 'sending')",
+            [':pid' => $parentId]
+        ),
+        'sms_verification_codes' => $otpCount,
+    ];
+
+    $avatar = (($parent['avatar'] ?? null) !== null && (string) $parent['avatar'] !== '')
+        ? (string) $parent['avatar'] : null;
+
+    return [
+        'parent' => [
+            'id' => (int) $parent['id'],
+            'first_name' => (string) $parent['first_name'],
+            'last_name' => (string) $parent['last_name'],
+            'full_name' => trim((string) $parent['first_name'] . ' ' . (string) $parent['last_name']),
+            'phone' => $phone,
+            'email' => (($parent['email'] ?? null) !== null) ? (string) $parent['email'] : null,
+            'status' => (string) $parent['status'],
+            'avatar' => $avatar,
+        ],
+        'children' => $children,
+        'counts' => $counts,
+        'tuition_total_paid' => (float) $payRow['total'],
+        'photo_paths' => $photoPaths,
+        'avatar_path' => $avatar,
+    ];
+}
+
+/**
+ * Delete a parent and EVERYTHING that belongs to the account, in ONE
+ * transaction. Throws RuntimeException when the parent does not exist.
+ *
+ * Order inside the transaction:
+ *  1. password_reset_tokens — live password-reset credentials must die
+ *     with the account (no FK on this table).
+ *  2. messages — both the parent's portal thread rows (parent_id) and any
+ *     message sent BY the parent (sender_type='parent'); no FK.
+ *  3. sms_queue rows still 'pending'/'sending' for this parent — a queued
+ *     SMS must never be sent to a deleted account. Rows already 'sent',
+ *     'failed' or 'cancelled' are delivery history and stay.
+ *  4. sms_verification_codes for the parent's stored phone — live OTPs.
+ *  5. DELETE FROM parents — the schema's ON DELETE CASCADE then removes
+ *     children and all child-linked data (classroom enrolment/waitlist,
+ *     attendance, daily reports, tuition plans, tuition payments and the
+ *     tuition reminder log).
+ *
+ * sms_logs, notification_log and audit_log are deliberately NOT touched:
+ * they are send/audit history and must not be rewritten by a deletion.
+ *
+ * The audit entry is NOT written here: recordAudit() resolves its own
+ * connection through getDb() instead of using the caller's PDO, so this
+ * helper (which accepts any PDO) cannot guarantee the audit would land on
+ * the same connection/transaction. The caller records
+ * recordAudit('parent.delete', 'parent', $id, $snapshot) AFTER this
+ * function returns successfully, using the returned snapshot.
+ *
+ * File removal (children photos, parent avatar) is also the caller's job,
+ * AFTER the transaction has committed — never inside it.
+ *
+ * @return array{snapshot:array<string,mixed>,deleted:array<string,int>,
+ *               photo_paths:list<string>,avatar_path:?string}
+ */
+function adminFamilyDeleteParent(PDO $pdo, int $parentId): array
+{
+    $ownTx = !$pdo->inTransaction();
+    if ($ownTx) {
+        $pdo->beginTransaction();
+    }
+    try {
+        // Snapshot INSIDE the transaction so the counts and the deletion
+        // always describe the same state of the data.
+        $snapshot = adminFamilyParentDeleteImpact($pdo, $parentId);
+        if ($snapshot === null) {
+            throw new RuntimeException('والد یافت نشد.');
+        }
+        $phone = (string) $snapshot['parent']['phone'];
+
+        $deleted = [];
+
+        $stmt = $pdo->prepare(
+            "DELETE FROM password_reset_tokens WHERE account_type = 'parent' AND account_id = :id"
+        );
+        $stmt->execute([':id' => $parentId]);
+        $deleted['password_reset_tokens'] = $stmt->rowCount();
+
+        $stmt = $pdo->prepare(
+            "DELETE FROM messages WHERE parent_id = :id OR (sender_type = 'parent' AND sender_id = :id2)"
+        );
+        $stmt->execute([':id' => $parentId, ':id2' => $parentId]);
+        $deleted['messages'] = $stmt->rowCount();
+
+        $stmt = $pdo->prepare(
+            "DELETE FROM sms_queue WHERE parent_id = :id AND status IN ('pending', 'sending')"
+        );
+        $stmt->execute([':id' => $parentId]);
+        $deleted['sms_queue_pending'] = $stmt->rowCount();
+
+        $deleted['sms_verification_codes'] = 0;
+        if ($phone !== '') {
+            $phones = [$phone];
+            if (function_exists('normalizeIranianPhone')) {
+                $normalized = normalizeIranianPhone($phone);
+                if ($normalized !== '' && $normalized !== $phone) {
+                    $phones[] = $normalized;
+                }
+            }
+            foreach ($phones as $ph) {
+                $stmt = $pdo->prepare('DELETE FROM sms_verification_codes WHERE phone = :phone');
+                $stmt->execute([':phone' => $ph]);
+                $deleted['sms_verification_codes'] += $stmt->rowCount();
+            }
+        }
+
+        $stmt = $pdo->prepare('DELETE FROM parents WHERE id = :id');
+        $stmt->execute([':id' => $parentId]);
+        if ($stmt->rowCount() !== 1) {
+            throw new RuntimeException('والد یافت نشد.');
+        }
+        $deleted['parents'] = 1;
+        $deleted['children'] = (int) $snapshot['counts']['children'];
+
+        if ($ownTx) {
+            $pdo->commit();
+        }
+    } catch (Throwable $e) {
+        if ($ownTx && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
+
+    return [
+        'snapshot' => $snapshot,
+        'deleted' => $deleted,
+        'photo_paths' => $snapshot['photo_paths'],
+        'avatar_path' => $snapshot['avatar_path'],
+    ];
+}
+
+/**
+ * Delete a parent's avatar file — mirrors parent/profile.php::deleteAvatarFile()
+ * (only files physically under assets/uploads/avatars/ are ever unlinked).
+ */
+function adminFamilyDeleteParentAvatar(?string $relativePath): void
+{
+    if ($relativePath === null || $relativePath === '') {
+        return;
+    }
+    $projectRoot = realpath(__DIR__ . '/..');
+    $avatarRoot = realpath(__DIR__ . '/../assets/uploads/avatars');
+    if ($projectRoot === false || $avatarRoot === false) {
+        return;
+    }
+    $candidate = realpath($projectRoot . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $relativePath));
+    if ($candidate !== false
+        && str_starts_with($candidate, $avatarRoot . DIRECTORY_SEPARATOR)
+        && is_file($candidate)) {
+        @unlink($candidate);
+    }
+}
+
+/**
  * Create one child for an existing parent (+ enrolment) in ONE transaction.
  * @param array<string,mixed> $child Normalised child with dob_gregorian.
  */
