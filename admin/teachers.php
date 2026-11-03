@@ -9,6 +9,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
+require_once __DIR__ . '/../includes/sms.php';
 
 requireLogin();
 
@@ -181,7 +182,7 @@ if (isPostRequest()) {
             'first_name'      => trim((string) ($_POST['first_name'] ?? '')),
             'last_name'       => trim((string) ($_POST['last_name'] ?? '')),
             'email'           => trim((string) ($_POST['email'] ?? '')),
-            'phone'           => trim((string) ($_POST['phone'] ?? '')),
+            'phone'           => normalizeIranianPhone(trim((string) ($_POST['phone'] ?? ''))),
             'national_id'     => trim((string) ($_POST['national_id'] ?? '')),
             'education_level' => trim((string) ($_POST['education_level'] ?? '')),
             'major'           => trim((string) ($_POST['major'] ?? '')),
@@ -200,8 +201,13 @@ if (isPostRequest()) {
         // Validate
         if ($fields['first_name'] === '') $formErrors[] = 'نام الزامی است.';
         if ($fields['last_name'] === '')  $formErrors[] = 'نام خانوادگی الزامی است.';
-        if ($fields['email'] === '' || !filter_var($fields['email'], FILTER_VALIDATE_EMAIL)) {
-            $formErrors[] = 'ایمیل معتبر الزامی است.';
+        // Email is optional; when given it must be a valid address.
+        if ($fields['email'] !== '' && !filter_var($fields['email'], FILTER_VALIDATE_EMAIL)) {
+            $formErrors[] = 'ایمیل وارد شده معتبر نیست.';
+        }
+        // The mobile number is the teacher's login identifier: required + valid.
+        if (!isValidIranianMobile($fields['phone'])) {
+            $formErrors[] = 'شماره موبایل معتبر برای ورود معلم الزامی است.';
         }
         if ($postAction === 'add' && $fields['password'] === '') {
             $formErrors[] = 'هنگام افزودن معلم، رمز عبور الزامی است.';
@@ -218,16 +224,35 @@ if (isPostRequest()) {
 
         if (empty($formErrors)) {
             try {
-                // Ensure email is unique (exclude the current teacher when editing).
-                $emailCheck = $pdo->prepare(
-                    'SELECT id FROM teachers WHERE email = :email AND id != :tid LIMIT 1'
+                $excludeId = $teacherId > 0 ? $teacherId : -1;
+                // Email uniqueness applies only when an email was given
+                // (exclude the current teacher when editing).
+                if ($fields['email'] !== '') {
+                    $emailCheck = $pdo->prepare(
+                        'SELECT id FROM teachers WHERE email = :email AND id != :tid LIMIT 1'
+                    );
+                    $emailCheck->execute([
+                        ':email' => $fields['email'],
+                        ':tid'   => $excludeId,
+                    ]);
+                    if ($emailCheck->fetchColumn() !== false) {
+                        $formErrors[] = 'معلم دیگری با این ایمیل قبلاً ثبت شده است.';
+                    }
+                }
+                // The phone is the login identifier: it must be unique.
+                $phoneCheck = $pdo->prepare(
+                    'SELECT id FROM teachers WHERE phone = :phone AND id != :tid LIMIT 1'
                 );
-                $emailCheck->execute([
-                    ':email' => $fields['email'],
-                    ':tid'   => $teacherId > 0 ? $teacherId : -1,
+                $phoneCheck->execute([
+                    ':phone' => $fields['phone'],
+                    ':tid'   => $excludeId,
                 ]);
-                if ($emailCheck->fetchColumn() !== false) {
-                    $formErrors[] = 'معلم دیگری با این ایمیل قبلاً ثبت شده است.';
+                if ($phoneCheck->fetchColumn() !== false) {
+                    $formErrors[] = 'معلم دیگری با این شماره موبایل قبلاً ثبت شده است.';
+                }
+
+                if (!empty($formErrors)) {
+                    // Uniqueness failed; skip the save, errors render below.
                 } else {
                     $avatarPath = handleTeacherUpload('avatar', 'avatars');
                     $certPath   = handleTeacherUpload('certificate_file', 'certificates');
@@ -251,8 +276,8 @@ if (isPostRequest()) {
                         $stmt->execute([
                             ':fn'  => $fields['first_name'],
                             ':ln'  => $fields['last_name'],
-                            ':em'  => $fields['email'],
-                            ':ph'  => $fields['phone'] ?: null,
+                            ':em'  => $fields['email'] !== '' ? $fields['email'] : null,
+                            ':ph'  => $fields['phone'],
                             ':pw'  => password_hash($fields['password'], PASSWORD_DEFAULT),
                             ':av'  => $avatarPath,
                             ':ni'  => $fields['national_id'] ?: null,
@@ -283,8 +308,8 @@ if (isPostRequest()) {
                         $params   = [
                             ':fn'  => $fields['first_name'],
                             ':ln'  => $fields['last_name'],
-                            ':em'  => $fields['email'],
-                            ':ph'  => $fields['phone'] ?: null,
+                            ':em'  => $fields['email'] !== '' ? $fields['email'] : null,
+                            ':ph'  => $fields['phone'],
                             ':av'  => $finalAvatar,
                             ':ni'  => $fields['national_id'] ?: null,
                             ':el'  => $fields['education_level'] ?: null,
@@ -441,14 +466,15 @@ require_once __DIR__ . '/header.php';
                        value="<?= e((string) ($editTeacher['last_name'] ?? $formData['last_name'] ?? '')) ?>" required>
             </div>
             <div class="form-group">
-                <label for="tf_email">ایمیل <span class="req">*</span></label>
+                <label for="tf_email">ایمیل (اختیاری)</label>
                 <input type="email" id="tf_email" name="email" class="form-control"
-                       value="<?= e((string) ($editTeacher['email'] ?? $formData['email'] ?? '')) ?>" required>
+                       value="<?= e((string) ($editTeacher['email'] ?? $formData['email'] ?? '')) ?>">
             </div>
             <div class="form-group">
-                <label for="tf_phone">تلفن</label>
+                <label for="tf_phone">شماره موبایل (شناسه ورود) <span class="req">*</span></label>
                 <input type="tel" id="tf_phone" name="phone" class="form-control"
-                       value="<?= e((string) ($editTeacher['phone'] ?? $formData['phone'] ?? '')) ?>">
+                       inputmode="tel" autocomplete="tel" dir="ltr" placeholder="09123456789"
+                       value="<?= e((string) ($editTeacher['phone'] ?? $formData['phone'] ?? '')) ?>" required>
             </div>
             <div class="form-group">
                 <label for="tf_password">رمز عبور <?= $editTeacher ? '(خالی بگذارید تا تغییر نکند)' : '<span class="req">*</span>' ?></label>
@@ -574,7 +600,7 @@ require_once __DIR__ . '/header.php';
                         </td>
                         <td><strong><?= e($fullName) ?></strong></td>
                         <td><?= e((string) ($t['role_title'] ?? '—')) ?></td>
-                        <td><?= e((string) $t['email']) ?></td>
+                        <td><?= e((string) ($t['email'] ?? '—')) ?></td>
                         <td><?= e((string) ($t['phone'] ?? '—')) ?></td>
                         <td>
                             <span class="badge <?= $inTeam ? 'badge-active' : 'badge-inactive' ?>">
@@ -675,7 +701,7 @@ require_once __DIR__ . '/header.php';
                             <span class="badge <?= e($badgeClass) ?>"><?= ucfirst($tStatus) ?></span>
                         </div>
                     </div>
-                    <p><?= e((string) $t['email']) ?></p>
+                    <?php if (!empty($t['email'])): ?><p><?= e((string) $t['email']) ?></p><?php endif; ?>
                     <?php if (!empty($t['phone'])): ?><p><svg width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-inline-end:4px;"><use href="<?= e(asset('assets/img/icons.svg#icon-phone')) ?>"/></svg> <?= e((string) $t['phone']) ?></p><?php endif; ?>
                     <?php if (!empty($t['education_level'])): ?><p><svg width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-inline-end:4px;"><use href="<?= e(asset('assets/img/icons.svg#icon-academic-cap')) ?>"/></svg> <?= e((string) $t['education_level']) ?></p><?php endif; ?>
                     <div class="tmc-actions">

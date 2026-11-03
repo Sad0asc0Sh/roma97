@@ -165,6 +165,32 @@ function initializeTeachersTables(): void
             $pdo->exec("ALTER TABLE teachers ADD COLUMN sort_order INT DEFAULT 0 AFTER show_in_team");
         }
 
+        // Teachers log in with their mobile number: email is optional and
+        // the phone is the unique login identifier (same shape as parents).
+        // Idempotent: relax email's NOT NULL where the legacy schema set it.
+        $emailCol = $pdo->query("SHOW COLUMNS FROM teachers LIKE 'email'")->fetch();
+        if ($emailCol && ($emailCol['Null'] ?? 'YES') === 'NO') {
+            $pdo->exec("ALTER TABLE teachers MODIFY email VARCHAR(150) NULL DEFAULT NULL");
+        }
+        // Add the unique phone index only when no real duplicates exist;
+        // duplicates would make the ALTER fail, so skip + log instead of
+        // breaking the request (admin resolves them, next request retries).
+        $phoneUnique = $pdo->query(
+            "SHOW INDEX FROM teachers WHERE Column_name = 'phone' AND Non_unique = 0"
+        )->fetch();
+        if (!$phoneUnique) {
+            $dupPhone = $pdo->query(
+                "SELECT phone FROM teachers
+                  WHERE phone IS NOT NULL AND phone <> ''
+                  GROUP BY phone HAVING COUNT(*) > 1 LIMIT 1"
+            )->fetch();
+            if ($dupPhone) {
+                error_log('teachers.phone has duplicates; unique index skipped until resolved.');
+            } else {
+                $pdo->exec("ALTER TABLE teachers ADD UNIQUE KEY uq_teachers_phone (phone)");
+            }
+        }
+
         // Idempotently ensure psychological & developmental factor columns exist on daily_reports
         $drCols = $pdo->query("SHOW COLUMNS FROM daily_reports")->fetchAll(PDO::FETCH_COLUMN);
         $psychCols = [

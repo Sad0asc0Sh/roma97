@@ -8,6 +8,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
+require_once __DIR__ . '/../includes/sms.php';
 
 if (isTeacherLoggedIn()) {
     redirect(url('teacher/index.php'));
@@ -25,39 +26,37 @@ if (isPostRequest() && $error === '') {
     if (!validateCsrfToken($token)) {
         $error = 'درخواست نامعتبر است. لطفاً دوباره تلاش کنید.';
     } else {
-        $email    = trim((string) ($_POST['email'] ?? ''));
+        $phone    = normalizeIranianPhone(trim((string) ($_POST['phone'] ?? '')));
         $password = (string) ($_POST['password'] ?? '');
 
         if (
-            $email === ''
-            || strlen($email) > 150
-            || !filter_var($email, FILTER_VALIDATE_EMAIL)
+            !isValidIranianMobile($phone)
             || $password === ''
             || strlen($password) > 255
         ) {
-            $error = 'ایمیل یا رمز عبور نامعتبر است.';
-        } elseif (!checkBruteForce('teacher_login', $email)) {
+            $error = 'شماره موبایل یا رمز عبور نامعتبر است.';
+        } elseif (!checkBruteForce('teacher_login', $phone)) {
             $error = 'تعداد تلاش‌های ناموفق زیاد است. لطفاً ۱۵ دقیقه دیگر تلاش کنید.';
         } else {
             try {
                 initializeTeachersTables();
                 $pdo = getDb();
                 $stmt = $pdo->prepare(
-                    'SELECT id, first_name, last_name, password, status, role_title, avatar FROM teachers WHERE email = :email LIMIT 1'
+                    'SELECT id, first_name, last_name, password, status, role_title, avatar FROM teachers WHERE phone = :phone LIMIT 1'
                 );
-                $stmt->execute([':email' => $email]);
+                $stmt->execute([':phone' => $phone]);
                 $teacher = $stmt->fetch();
 
                 if (
                     $teacher === false
                     || !password_verify($password, (string) $teacher['password'])
                 ) {
-                    $error = 'ایمیل یا رمز عبور نامعتبر است.';
-                    recordFailedAttempt('teacher_login', $email);
+                    $error = 'شماره موبایل یا رمز عبور نامعتبر است.';
+                    recordFailedAttempt('teacher_login', $phone);
                 } elseif ((string) $teacher['status'] !== 'active') {
                     $error = 'حساب شما فعال نیست. لطفاً با مدیر تماس بگیرید.';
                 } else {
-                    resetLoginAttempts('teacher_login', $email);
+                    resetLoginAttempts('teacher_login', $phone);
                     session_regenerate_id(true);
                     $_SESSION['last_activity']      = time();
                     $_SESSION['teacher_id']         = (int) $teacher['id'];
@@ -186,10 +185,10 @@ $siteNameValue = e(siteName());
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
 
                 <div class="auth-field auth-anim-3">
-                    <label for="email" class="auth-field-label">آدرس ایمیل سازمانی / شخصی</label>
+                    <label for="phone" class="auth-field-label">شماره موبایل</label>
                     <div class="auth-field-wrap">
-                        <svg class="auth-field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                        <input type="email" id="email" name="email" class="auth-input<?= $error !== '' ? ' has-error' : '' ?>" value="<?= e($_POST['email'] ?? '') ?>" placeholder="example@email.com" autocomplete="username" dir="ltr" required autofocus>
+                        <svg class="auth-field-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                        <input type="tel" id="phone" name="phone" class="auth-input<?= $error !== '' ? ' has-error' : '' ?>" value="<?= e($_POST['phone'] ?? '') ?>" placeholder="09123456789" autocomplete="username" inputmode="tel" dir="ltr" required autofocus>
                     </div>
                 </div>
 
