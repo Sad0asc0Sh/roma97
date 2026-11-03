@@ -153,8 +153,12 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   top: 0;
   z-index: 99;
   gap: 16px;
-  /* PERF: isolate sticky bar paint from the scrolling body */
-  contain: layout paint style;
+  /* PERF: isolate the sticky bar from the scrolling body — but `paint`
+     containment is deliberately NOT used: it clips descendants at the
+     bar's box, and the user dropdown (.app-dropdown-menu) hangs below
+     the bar, so with paint containment it was open in the DOM yet
+     painted invisible and unclickable on desktop and mobile alike. */
+  contain: layout style;
   transform: translateZ(0);
   backface-visibility: hidden;
 }

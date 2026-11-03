@@ -5,7 +5,9 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   initSidebarToggle();
-  initUserDropdown();
+  /* initUserDropdown is intentionally NOT in this list: it wires itself
+     immediately at the bottom of its section (delegated listeners), so
+     the topbar user menu can never be left dead by load timing. */
   initGlobalSearchKeybind();
   initTabs();
   initConfirmDialogs();
@@ -120,21 +122,67 @@ function initSidebarToggle() {
 }
 
 /* ── USER DROPDOWN MENU ────────────────────────────────────── */
-function initUserDropdown() {
-  const userTrigger = document.getElementById('appUserTrigger');
-  const userMenu = document.getElementById('appUserMenu');
+/* Handled by ONE delegated document listener registered immediately,
+   not inside DOMContentLoaded: when this file executes after that
+   event has already fired (async load, service-worker cache timing,
+   template order), a DOMContentLoaded-only wiring never runs and the
+   trigger looks completely dead — no error, no menu. Delegation also
+   means the elements are looked up at click time, so it works no
+   matter where the topbar markup sits, and the guard below makes a
+   duplicate include of this file harmless (it can never double-toggle). */
+function appUserMenuEls() {
+  return {
+    trigger: document.getElementById('appUserTrigger'),
+    menu: document.getElementById('appUserMenu')
+  };
+}
 
-  if (userTrigger && userMenu) {
-    userTrigger.addEventListener('click', (e) => {
-      e.stopPropagation();
-      userMenu.classList.toggle('show');
-    });
+function setAppUserMenu(open) {
+  const els = appUserMenuEls();
+  if (!els.trigger || !els.menu) return;
+  els.menu.classList.toggle('show', open);
+  els.trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
 
-    document.addEventListener('click', () => {
-      userMenu.classList.remove('show');
-    });
+function handleAppUserMenuClick(e) {
+  if (!e.target || typeof e.target.closest !== 'function') return;
+  const els = appUserMenuEls();
+  if (!els.trigger || !els.menu) return;
+
+  if (e.target.closest('#appUserTrigger')) {
+    e.preventDefault();
+    setAppUserMenu(!els.menu.classList.contains('show'));
+    return;
+  }
+  if (e.target.closest('#appUserMenu')) {
+    /* Choosing an item navigates / submits logout — close behind it.
+       Clicks on the menu head or dividers keep it open. */
+    if (e.target.closest('a, button')) setAppUserMenu(false);
+    return;
+  }
+  setAppUserMenu(false);
+}
+
+function handleAppUserMenuKeydown(e) {
+  if (e.key !== 'Escape') return;
+  const els = appUserMenuEls();
+  if (els.menu && els.menu.classList.contains('show')) {
+    setAppUserMenu(false);
+    if (els.trigger) els.trigger.focus();
   }
 }
+
+function initUserDropdown() {
+  if (window.__romaAppUserMenuWired) return;
+  window.__romaAppUserMenuWired = true;
+  document.addEventListener('click', handleAppUserMenuClick);
+  document.addEventListener('keydown', handleAppUserMenuKeydown);
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted) setAppUserMenu(false);
+  });
+}
+
+initUserDropdown();
 
 /* ── GLOBAL SEARCH KEYBOARD SHORTCUT (/) & LIVE CLIENT FILTER ──── */
 function initGlobalSearchKeybind() {

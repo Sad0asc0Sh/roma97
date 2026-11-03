@@ -96,12 +96,12 @@ window.toggleMobileSidebar = window.toggleMobileSidebar || function(evtOrState) 
         </a>
 
         <div class="app-user-menu">
-            <button type="button" class="app-user-trigger" id="appUserTrigger">
+            <button type="button" class="app-user-trigger" id="appUserTrigger" aria-haspopup="menu" aria-expanded="false" aria-label="منوی کاربری <?= e($userName) ?>">
                 <span class="app-avatar"><?= e($userFirstChar) ?></span>
                 <span class="app-user-name"><?= e($userName) ?></span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            <div class="app-dropdown-menu" id="appUserMenu">
+            <div class="app-dropdown-menu" id="appUserMenu" role="menu" aria-label="منوی کاربری">
                 <div style="padding:6px 12px;font-size:12px;color:var(--app-text-muted)"><?= e($userRoleName) ?></div>
                 <div class="app-dropdown-divider"></div>
                 <?php if (isset($_SESSION['admin_id'])): ?>
