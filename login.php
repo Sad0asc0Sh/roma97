@@ -9,6 +9,7 @@ require_once __DIR__ . '/includes/db.php';
 require_once __DIR__ . '/includes/audit.php';
 require_once __DIR__ . '/includes/sms.php';
 require_once __DIR__ . '/includes/auth_flow.php';
+require_once __DIR__ . '/includes/unified_auth.php';
 
 if (isLoggedIn()) { redirect(url('admin/index.php')); }
 if (isParentLoggedIn()) { redirect(url('parent/index.php')); }
@@ -20,8 +21,10 @@ $successMessage = getFlash('success');
 $phone = '';
 $fieldErrors = [];
 $pdo = null;
-// اتصال تنبل به ذخیره‌سازی: نمایش فرم (GET) نیازی به DB ندارد؛ فقط هنگام POST
-// وصل شو تا ناوبری بین تب‌های ورود/ثبت‌نام سبک بماند. پیام‌ها و منطق ورود بدون تغییر است.
+
+// Unified login: identifier is a phone (parent/teacher) or username (admin).
+// The hidden `panel` field is a UI hint ONLY and is never trusted —
+// unifiedAttemptLogin() decides the panel from the credential server-side.
 if (isPostRequest()) {
     try {
         initializeFinancialTables();
@@ -34,50 +37,52 @@ if (isPostRequest()) {
 
 if (isPostRequest()) {
     $error = '';
-    $phone = normalizeIranianPhone(trim(authInput($_POST, 'phone')));
+    $identifier = trim(authInput($_POST, 'identifier'));
+    $phone = $identifier;
     $password = authInput($_POST, 'password');
+    $kind = unifiedIdentifierKind($identifier);
+
     if (!validateCsrfToken(authInput($_POST, 'csrf_token'))) {
         $error = 'زمان اعتبار فرم تمام شده است. لطفاً دوباره تلاش کنید.';
-    } elseif (!isValidIranianMobile($phone)) {
-        $fieldErrors['phone'] = 'شماره موبایل معتبر وارد کنید؛ مانند 09123456789.';
+    } elseif ($kind === 'invalid') {
+        $fieldErrors['identifier'] = 'شماره موبایل یا نام کاربری معتبر وارد کنید.';
+        $error = 'شماره موبایل یا نام کاربری معتبر وارد کنید.';
     } elseif ($password === '' || strlen($password) > 4096 || str_contains($password, "\0")) {
         $fieldErrors['password'] = 'رمز عبور خود را وارد کنید.';
+        $error = 'رمز عبور خود را وارد کنید.';
     } elseif ($pdo === null) {
         $error = 'سامانه ورود موقتاً در دسترس نیست. کمی بعد دوباره تلاش کنید.';
     } else {
+        // Per-panel brute-force buckets keyed by identifier.
+        $bucket = $kind === 'username' ? 'admin_login' : 'unified_phone_login';
+        $throttleKey = $kind === 'username' ? mb_strtolower($identifier, 'UTF-8') : normalizeIranianPhone($identifier);
         try {
-            if (!checkBruteForce('parent_login', $phone)) {
+            if (!checkBruteForce($bucket, $throttleKey)) {
                 $error = 'تعداد تلاش‌ها بیش از حد مجاز است. ۱۵ دقیقه دیگر تلاش کنید.';
             } else {
-                $statement = $pdo->prepare('SELECT id, first_name, last_name, phone, password, status FROM parents WHERE phone = :phone LIMIT 1');
-                $statement->execute([':phone' => $phone]);
-                $parent = $statement->fetch();
-                if (!$parent || !password_verify($password, (string) $parent['password'])) {
-                    recordFailedAttempt('parent_login', $phone);
-                    $error = 'شماره موبایل یا رمز عبور نادرست است. اطلاعات را بررسی کنید یا رمز را بازیابی کنید.';
-                } elseif ($parent['status'] === 'pending') {
-                    $error = 'ثبت‌نام شما دریافت شده و منتظر تأیید مدیریت مهدکودک است. پس از فعال‌سازی می‌توانید وارد شوید.';
-                } elseif ($parent['status'] !== 'active') {
-                    $error = 'حساب شما فعال نیست. برای پیگیری با مدیریت مهد تماس بگیرید.';
-                } else {
-                    resetLoginAttempts('parent_login', $phone);
-                    session_regenerate_id(true);
-                    $_SESSION['last_activity'] = time();
-                    $_SESSION['parent_id'] = (int) $parent['id'];
-                    $_SESSION['parent_name'] = trim($parent['first_name'] . ' ' . $parent['last_name']);
-                    $_SESSION['parent_first_name'] = (string) $parent['first_name'];
-                    recordAudit('auth.login', 'parent', (int) $parent['id']);
-                    rotateCsrfToken();
-                    redirect(url('parent/index.php'));
+                $attempt = unifiedAttemptLogin($pdo, $identifier, $password);
+                if ($attempt['error'] === 'ok') {
+                    resetLoginAttempts($bucket, $throttleKey);
+                    unifiedEstablishSession($attempt['panel'], $attempt['user']);
+                    recordAudit('auth.login', $attempt['panel'], (int) $attempt['user']['id']);
+                    redirect(unifiedPanelHome($attempt['panel']));
+                }
+                recordFailedAttempt($bucket, $throttleKey);
+                if ($attempt['error'] === 'ambiguous') {
+                    recordAudit('auth.login_ambiguous', 'unified', null, ['identifier_kind' => $kind]);
+                }
+                $error = $attempt['message'];
+                if ($attempt['error'] === 'invalid_input') {
+                    $fieldErrors['identifier'] = $error;
                 }
             }
         } catch (Throwable $exception) {
-            error_log('Login failed: ' . $exception->getMessage());
+            error_log('Unified login failed: ' . $exception->getMessage());
             $error = 'ورود موقتاً در دسترس نیست. کمی بعد دوباره تلاش کنید.';
         }
     }
 }
 
 $authMode = 'login';
-$pageTitle = 'ورود به پنل والدین | ' . siteName();
-require __DIR__ . '/templates/auth-page.php';
+$pageTitle = 'ورود | ' . siteName();
+require __DIR__ . '/templates/unified-auth-page.php';

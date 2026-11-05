@@ -18,6 +18,9 @@ if (($argv[1] ?? '') === 'worker') {
     require $root . '/config.php';
     require $root . '/includes/auth.php';
     require $root . '/includes/csrf.php';
+    require $root . '/includes/sms.php';
+    require $root . '/includes/auth_flow.php';
+    require $root . '/includes/unified_auth.php';
     $_SESSION = $request['session'];
     $_SERVER['REQUEST_METHOD'] = $request['method'];
     $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
@@ -94,10 +97,10 @@ try {
     $check($parent !== false && $parent['status'] === 'pending' && (int) $parent['phone_verified'] === 1, 'Verified registration creates pending parent');
     $check(password_verify($password, $parent['password']), 'Registration stores working password hash');
     $check(!isset($registered['registration_pending']), 'Completed registration clears pending session');
-    [$html, $session] = $request('login.php', ['phone' => $phone, 'password' => $password]);
+    [$html, $session] = $request('login.php', ['identifier' => $phone, 'password' => $password]);
     $check(!isset($session['parent_id']) && str_contains($html, 'منتظر'), 'Pending parent sees approval notice');
     $server->exec("UPDATE parents SET status='active' WHERE id=" . (int) $parent['id']);
-    [$html, $session] = $request('login.php', ['phone' => $phone, 'password' => $password]);
+    [$html, $session] = $request('login.php', ['identifier' => $phone, 'password' => $password]);
     $check(($session['parent_id'] ?? null) === (int) $parent['id'], 'Active parent login establishes real session');
     [$html, $recovery] = $request('forgot-password.php', ['action' => 'request_otp', 'phone' => $phone]);
     $check(isset($recovery['password_reset_pending']['parent_id']), 'Recovery request stores account and challenge');
@@ -108,7 +111,7 @@ try {
     $hash = $server->query('SELECT password FROM parents')->fetchColumn();
     $check(password_verify($newPassword, $hash), 'OTP recovery changes password in MySQL');
     $check(!isset($recovered['password_reset_pending']), 'Recovery clears pending session');
-    [$html, $session] = $request('login.php', ['phone' => $phone, 'password' => $newPassword]);
+    [$html, $session] = $request('login.php', ['identifier' => $phone, 'password' => $newPassword]);
     $check(($session['parent_id'] ?? null) === (int) $parent['id'], 'Login with recovered password succeeds');
     $token = bin2hex(random_bytes(32));
     $stmt = $server->prepare("INSERT INTO password_reset_tokens (token,account_type,account_id,expires_at) VALUES (?, 'parent', ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))");

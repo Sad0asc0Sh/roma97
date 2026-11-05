@@ -18,7 +18,7 @@ initializeNotificationTables();
 requireLogin();
 
 if (!isset($_SESSION['admin_id'])) {
-    redirect(url('admin/login.php'));
+    redirect(url('login.php'));
 }
 $adminId = (int) $_SESSION['admin_id'];
 $pdo = getDb();

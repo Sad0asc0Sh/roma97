@@ -310,7 +310,7 @@ function isLoggedIn(): bool
 function requireLogin(): void
 {
     if (!isLoggedIn()) {
-        redirect(url('admin/login.php'));
+        redirect(url('login.php'));
     }
 
     // Re-fetch the role from the DB on every request: a long-lived session must
@@ -326,7 +326,7 @@ function requireLogin(): void
         if ($row === false) {
             destroyAdminSession();
             setFlash('error', 'حساب شما دیگر فعال نیست. لطفاً دوباره وارد شوید.');
-            redirect(url('admin/login.php'));
+            redirect(url('login.php'));
         }
         $role = (string) ($row['role'] ?? $sessionRole);
         if ($role !== $sessionRole) {
@@ -346,7 +346,7 @@ function requireLogin(): void
         }
         destroyAdminSession();
         setFlash('error', 'نقش کاربری شما معتبر نیست. لطفاً دوباره وارد شوید.');
-        redirect(url('admin/login.php'));
+        redirect(url('login.php'));
     }
 
     // Use SCRIPT_NAME rather than PHP_SELF to prevent PATH_INFO permission bypasses
@@ -480,7 +480,7 @@ function destroyTeacherSession(): void
 function requireTeacherLogin(): void
 {
     if (!isTeacherLoggedIn()) {
-        redirect(url('teacher/login.php'));
+        redirect(url('login.php'));
     }
 
     require_once __DIR__ . '/permissions.php';
@@ -516,7 +516,7 @@ function requireTeacherLogin(): void
         if ($row === false || (string) ($row['status'] ?? '') !== 'active') {
             destroyTeacherSession();
             setFlash('error', 'حساب کاربری شما فعال نیست یا دسترسی شما تغییر کرده است. لطفاً دوباره وارد شوید.');
-            redirect(url('teacher/login.php'));
+            redirect(url('login.php'));
         }
 
         $_SESSION['teacher_name']       = trim((string) $row['first_name'] . ' ' . (string) $row['last_name']);

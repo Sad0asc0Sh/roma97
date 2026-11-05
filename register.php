@@ -222,4 +222,4 @@ if ($pdo instanceof PDO && isValidIranianMobile($verifyPhone)) {
 $successFlash = getFlash('success');
 $pageTitle = $step === 'verify' ? 'تایید شماره موبایل' : 'ثبت‌نام والدین | ' . siteName();
 $authMode = 'register';
-require __DIR__ . '/templates/auth-page.php';
+require __DIR__ . '/templates/unified-auth-page.php';

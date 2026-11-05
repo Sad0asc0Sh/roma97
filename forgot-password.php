@@ -161,4 +161,4 @@ if ($pdo instanceof PDO && isValidIranianMobile($phone)) {
 }
 $pageTitle = 'بازیابی رمز عبور | ' . siteName();
 $authMode = 'forgot';
-require __DIR__ . '/templates/auth-page.php';
+require __DIR__ . '/templates/unified-auth-page.php';

@@ -11,7 +11,7 @@ require_once __DIR__ . '/../includes/audit.php';
 $rawToken = trim((string) ($_GET['token'] ?? ''));
 
 if ($rawToken === '' || strlen($rawToken) > 64) {
-    redirect(url('teacher/login.php'));
+    redirect(url('login.php'));
 }
 
 try {
@@ -28,7 +28,7 @@ try {
     $claim->execute([':token' => $rawToken]);
 
     if ($claim->rowCount() === 0) {
-        redirect(url('teacher/login.php'));
+        redirect(url('login.php'));
     }
 
     $stmt = $pdo->prepare(
@@ -43,7 +43,7 @@ try {
     $row = $stmt->fetch();
 
     if ($row === false || (string) $row['status'] !== 'active') {
-        redirect(url('teacher/login.php'));
+        redirect(url('login.php'));
     }
 
     session_regenerate_id(true);
@@ -60,5 +60,5 @@ try {
     redirect(url('teacher/index.php'));
 } catch (Throwable $e) {
     error_log($e->getMessage());
-    redirect(url('teacher/login.php'));
+    redirect(url('login.php'));
 }

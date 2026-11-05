@@ -9,12 +9,12 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 
 if (!isPostRequest()) {
-    redirect(url('teacher/login.php'));
+    redirect(url('login.php'));
 }
 
 $token = $_POST['csrf_token'] ?? '';
 if (!validateCsrfToken($token)) {
-    redirect(url('teacher/login.php'));
+    redirect(url('login.php'));
 }
 
 // Fully destroy the session for security
@@ -39,4 +39,4 @@ session_destroy();
 session_start();
 session_regenerate_id(true);
 
-redirect(url('teacher/login.php'));
+redirect(url('login.php'));

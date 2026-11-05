@@ -112,7 +112,7 @@ if (preg_match('/\A[a-f0-9]{64}\z/', $rawToken) !== 1) {
                             if ($accountType === 'parent') { unset($_SESSION['password_reset_pending']); }
                             recordAudit('auth.password_reset', $accountType, $accountId);
                             setFlash('success', 'رمز عبور با موفقیت تغییر یافت. اکنون می‌توانید وارد شوید.');
-                            redirect(url($accountType === 'parent' ? 'login.php' : 'teacher/login.php'));
+                            redirect(url('login.php'));
                         }
                     }
                 }
@@ -127,4 +127,4 @@ if (preg_match('/\A[a-f0-9]{64}\z/', $rawToken) !== 1) {
 
 $pageTitle = 'تنظیم رمز عبور جدید | ' . siteName();
 $authMode = 'reset';
-require __DIR__ . '/templates/auth-page.php';
+require __DIR__ . '/templates/unified-auth-page.php';

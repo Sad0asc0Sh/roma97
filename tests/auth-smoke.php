@@ -7,6 +7,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/sms.php';
 require_once __DIR__ . '/../includes/auth_flow.php';
+require_once __DIR__ . '/../includes/unified_auth.php';
 
 $checks = 0;
 $check = static function (bool $condition, string $message) use (&$checks): void {
@@ -39,7 +40,7 @@ foreach ([['login', 'form'], ['register', 'form'], ['register', 'verify'], ['for
     $rawToken = str_repeat('a', 64);
     $teacherRecovery = false;
     ob_start();
-    require __DIR__ . '/../templates/auth-page.php';
+    require __DIR__ . '/../templates/unified-auth-page.php';
     $html = ob_get_clean();
     $dom = new DOMDocument();
     libxml_use_internal_errors(true);
@@ -62,5 +63,20 @@ foreach ([['login', 'form'], ['register', 'form'], ['register', 'verify'], ['for
         $check($xpath->query('//input[@name="otp_code" and @maxlength="5" and @autocomplete="one-time-code"]')->length === 1, "$context: OTP attributes");
         $check($xpath->query('//button[@data-resend and @data-wait="42"]')->length === 1, "$context: server cooldown");
     }
+    if ($authMode === 'login') {
+        $check($xpath->query('//input[@name="identifier" and @autocomplete="username"]')->length === 1, "$context: unified identifier field");
+        $check($xpath->query('//input[@name="panel" and @type="hidden"]')->length === 1, "$context: panel hint hidden field");
+    }
 }
+
+// ── Unified routing: identifier classification (pure, no DB) ──
+$check(unifiedIdentifierKind('09123456789') === 'phone', 'unified: parent/teacher phone routed as phone');
+$check(unifiedIdentifierKind('۰۹۱۲۳۴۵۶۷۸۹') === 'phone', 'unified: Persian phone routed as phone');
+$check(unifiedIdentifierKind('+989123456789') === 'phone', 'unified: international phone routed as phone');
+$check(unifiedIdentifierKind('admin_user1') === 'username', 'unified: admin username routed as username');
+$check(unifiedIdentifierKind('ab') === 'invalid', 'unified: short username rejected');
+$check(unifiedIdentifierKind('') === 'invalid', 'unified: empty identifier rejected');
+$check(unifiedIsValidPanelHint('auto') === true, 'unified: auto hint accepted');
+$check(unifiedIsValidPanelHint('admin') === true, 'unified: admin hint accepted');
+$check(unifiedIsValidPanelHint('superuser') === false, 'unified: invented hint rejected');
 fwrite(STDOUT, "PASS: $checks authentication helper and template checks. No database writes or SMS requests.\n");
