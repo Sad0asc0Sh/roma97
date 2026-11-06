@@ -1056,6 +1056,36 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
     isolation: isolate;
     overflow: hidden;
     background: var(--ink-night);
+
+    /* ── Hero sizing system — the ONLY place to tune the banner ──────────
+       --hero-chrome   space the first screen keeps free besides the banner:
+                       header + top bar (≈95px) + a ≈55px peek of the next
+                       section, so visitors can see there is more below.
+       --hero-h-min    smallest height at which eyebrow + headline + two lines
+                       of text + CTAs still fit.
+       --hero-h-max    hard ceiling for big monitors / ultrawide screens.
+       --hero-h-fluid  grows gently with the window width:
+                       ≈460px @1024 · 500px @1280 · 525px @1440 · 600px @1920,
+                       reaching the ceiling at ≈2180px.
+       --hero-h        the result: the fluid height, but never taller than the
+                       window can actually show (svh) and never below the min.
+       --hero-focus    object-position: which part of the artwork `cover` keeps.
+       --hero-frame/-edge
+                       arrows, pause button and scroll cue sit on a centred
+                       frame of --hero-ui-max instead of the screen edge.   */
+    --hero-chrome: 150px;
+    --hero-h-min: 420px;
+    --hero-h-max: 640px;
+    --hero-h-fluid: clamp(var(--hero-h-min), 15.6vw + 300px, var(--hero-h-max));
+    --hero-vh: 100vh;
+    --hero-h: max(var(--hero-h-min), min(var(--hero-h-fluid), calc(var(--hero-vh) - var(--hero-chrome))));
+    --hero-focus: 50% 38%;
+    --hero-ui-max: 1560px;
+    --hero-frame: max(0px, calc((100% - var(--hero-ui-max)) / 2));
+    --hero-edge: calc(var(--hero-frame) + var(--gutter));
+}
+@supports (height: 100svh) {
+    .hero { --hero-vh: 100svh; }
 }
 /* Slides are stacked in a single grid cell. Every slide therefore
    contributes to the container height (unlike absolute positioning, which
@@ -1086,13 +1116,27 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
     width: 100%;
     height: 100%;
 }
+/* Ultrawide / 4K (> 2560px). The admin uploader keeps artwork at 2560px wide at
+   most; past that, `cover` would upscale it (soft) and crop its height hard
+   (a 5:1 ribbon). So the picture stops growing and its outer edges melt into
+   the hero background instead of stretching. */
+@media (min-width: 2561px) {
+    .hero__media {
+        inset-inline: calc((100% - 2560px) / 2);
+        -webkit-mask-image: linear-gradient(to right, transparent, #000 12rem, #000 calc(100% - 12rem), transparent);
+                mask-image: linear-gradient(to right, transparent, #000 12rem, #000 calc(100% - 12rem), transparent);
+    }
+}
 .hero__img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    /* Slow Ken-Burns drift; paused when the slide is inactive.
+    object-position: var(--hero-focus);
+    /* Slow Ken-Burns zoom; paused when the slide is inactive.
+       Kept shallow (max +5 %): `cover` already crops the artwork on every
+       window ratio, so the zoom must not crop a lot more on top of that.
        PERF: only the active slide holds a compositor layer. */
-    transform: scale(1.06);
+    transform: scale(1);
     transition: transform 1.2s var(--ease-out-soft);
     will-change: auto;
 }
@@ -1101,8 +1145,18 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
     will-change: transform;
 }
 @keyframes kenBurns {
-    from { transform: scale(1.04) translate3d(0, 0, 0); }
-    to   { transform: scale(1.15) translate3d(-1.5%, -1.5%, 0); }
+    from { transform: scale(1); }
+    to   { transform: scale(1.05); }
+}
+/* Reduced motion: the global reset shortens animations to ~0 ms, which would
+   jump the image straight to its END state (zoomed in) and leave it there.
+   Show the plain, un-zoomed artwork instead. */
+@media (prefers-reduced-motion: reduce) {
+    .hero__img,
+    .hero__slide.is-active .hero__img {
+        animation: none;
+        transform: none;
+    }
 }
 
 .hero__scrim {
@@ -1117,9 +1171,21 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    /* Fluid, never taller than the viewport minus the header */
-    min-height: clamp(420px, 58vw, 620px);
-    padding-block: clamp(3rem, 2rem + 8vw, 6rem) clamp(3.25rem, 2rem + 5vw, 4rem);
+    /* Height comes from the sizing system on .hero (--hero-h): fluid with the
+       window width, never taller than the first screen can show, capped on
+       big monitors. min-height (not height) so long admin text can still grow it. */
+    min-height: var(--hero-h);
+    /* The header is NOT over the banner (the top bar reserves its space), so a
+       tall top padding only wasted ~96px of picture. */
+    padding-block: clamp(1.5rem, 1rem + 2vw, 3rem) clamp(3.25rem, 2rem + 5vw, 4rem);
+}
+/* Arrow lane. The prev/next arrows live in the page margin. Where that margin
+   is too narrow to hold them (tablets and small laptops, < 1320px) the text
+   column is inset by the arrow width so the arrows never sit on the headline. */
+@media (min-width: 768px) and (max-width: 1319px) {
+    .hero__slide .hero__inner {
+        padding-inline: calc(var(--gutter) + 3.25rem);
+    }
 }
 /* Phones: a compact "peek" hero. Short enough that the trust strip below
    is visible on first load (signals there's more, invites scrolling)
@@ -1150,11 +1216,16 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
 
 .hero__title {
     font-size: var(--text-5xl);
+    /* The slider renders the title as <p>, which inherited the 1.8 body leading
+       (≈94px per line at 52px). Display text needs display leading. */
+    line-height: var(--leading-snug);
     color: #fff;
     margin-block: .7rem .6rem;
     text-shadow: 0 2px 24px rgba(0,0,0,.4);
     /* Persian headlines wrap unpredictably — allow it, never clip */
     overflow-wrap: break-word;
+    /* Break the lines evenly instead of leaving a one-word second line */
+    text-wrap: balance;
 }
 .hero__sub {
     font-size: var(--text-lg);
@@ -1163,6 +1234,19 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
     max-width: 36rem;
     margin-bottom: var(--space-lg);
     text-shadow: 0 1px 12px rgba(0,0,0,.35);
+}
+/* Bounded content: from tablet up the banner must not grow just because an
+   admin typed a very long headline or lead. Each is shown in 3 lines at most
+   (a normal 2-line headline is untouched). */
+@media (min-width: 768px) {
+    .hero__title,
+    .hero__sub {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        overflow: hidden;
+    }
 }
 .hero__actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
 .hero__actions .btn { flex: 0 1 auto; }
@@ -1206,8 +1290,8 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
 .hero__nav svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.5; }
 .hero__nav:hover { background: rgba(0,0,0,.5); opacity: 1; }
 .hero__nav:active { transform: translateY(-50%) scale(.92); }
-.hero__nav--prev { inset-inline-start: var(--gutter); }
-.hero__nav--next { inset-inline-end: var(--gutter); }
+.hero__nav--prev { inset-inline-start: var(--hero-edge); }
+.hero__nav--next { inset-inline-end: var(--hero-edge); }
 /* On phones the arrows would sit on top of the caption text — swipe and the
    dots are the primary controls there, so the arrows are hidden instead. */
 @media (max-width: 767px) {
@@ -1255,7 +1339,7 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
     position: absolute;
     z-index: 4;
     top: clamp(.8rem, .5rem + 1vw, 1.2rem);
-    inset-inline-start: clamp(.8rem, .5rem + 1vw, 1.2rem);
+    inset-inline-start: calc(var(--hero-frame) + clamp(.8rem, .5rem + 1vw, 1.2rem));
     display: grid;
     place-items: center;
     width: 34px; height: 34px;
@@ -1280,7 +1364,7 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
     position: absolute;
     z-index: 4;
     bottom: clamp(2.6rem, 2rem + 2vw, 3.4rem);
-    inset-inline-end: var(--gutter);
+    inset-inline-end: var(--hero-edge);
     display: none;
     align-items: center;
     gap: .5rem;

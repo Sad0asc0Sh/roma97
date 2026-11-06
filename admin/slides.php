@@ -629,7 +629,7 @@ require_once __DIR__ . '/header.php';
                         <span>تصویر بنر دسکتاپ <?= $editSlide ? '<span style="color:var(--adm-text-muted);font-weight:400">(اختیاری)</span>' : '<span style="color:#EF4444;">*</span>' ?></span>
                         <button type="button" class="slide-prompt-btn" onclick="togglePromptBox('desktop-prompt-box', event)" title="مشخصات استاندارد تصویر">?</button>
                     </label>
-                    <span style="font-size:0.78rem;color:var(--adm-text-muted);">۱۹۲۰×۶۰۰ px — تا ۵۰ مگابایت</span>
+                    <span style="font-size:0.78rem;color:var(--adm-text-muted);">۲۵۶۰×۸۰۰ px (حداقل ۱۹۲۰×۶۰۰) — تا ۵۰ مگابایت</span>
                 </div>
 
                 <div id="desktop-prompt-box" class="slide-prompt-popover" style="display:none;">
@@ -646,7 +646,7 @@ require_once __DIR__ . '/header.php';
                             <button type="button" class="slide-prompt-close" onclick="togglePromptBox('desktop-prompt-box', event)">&times;</button>
                         </div>
                     </div>
-                    <div id="desktop-prompt-text" class="slide-prompt-text">Wide panoramic website hero banner, 16:5 aspect ratio (1920x600). A bright, joyful, and modern Scandinavian-style daycare and preschool classroom with soft natural sunlight streaming through large floor-to-ceiling windows. Happy toddler children (ages 2 to 6) engaged in cheerful Montessori educational activities, colorful learning toys, cozy soft reading nook, warm natural wood textures, lush indoor green plants. Clean commercial interior photography, soft depth of field, wide panoramic negative space in the center for clear text readability, 8k resolution, cinematic soft lighting.</div>
+                    <div id="desktop-prompt-text" class="slide-prompt-text">Wide panoramic website hero banner, 16:5 aspect ratio (2560x800). A bright, joyful, and modern Scandinavian-style daycare and preschool classroom with soft natural sunlight streaming through large floor-to-ceiling windows. Happy toddler children (ages 2 to 6) engaged in cheerful Montessori educational activities, colorful learning toys, cozy soft reading nook, warm natural wood textures, lush indoor green plants. Clean commercial interior photography, soft depth of field, calm, low-detail negative space on the right side and lower area for headline text, main subjects on the left and center, 8k resolution, cinematic soft lighting.</div>
                 </div>
 
                 <?php if ($editSlide): ?>

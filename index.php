@@ -125,12 +125,12 @@ foreach ($galleryItems as $g) {
                     <div class="hero__media">
                         <picture>
                             <?php if (!empty($slide['image_mobile'])): ?>
-                                <source media="(max-width: 767px)" srcset="<?php echo e(url((string) $slide['image_mobile'])); ?>">
+                                <source media="(max-width: 991px)" srcset="<?php echo e(url((string) $slide['image_mobile'])); ?>">
                             <?php endif; ?>
                             <img class="hero__img"
                                  src="<?php echo e(url((string) $slide['image'])); ?>"
                                  alt="<?php echo e($title); ?>"
-                                 width="1920" height="1072"
+                                 width="1920" height="600"
                                  loading="<?php echo $isFirst ? 'eager' : 'lazy'; ?>"
                                  decoding="<?php echo $isFirst ? 'sync' : 'async'; ?>"
                                  <?php echo $isFirst ? 'fetchpriority="high"' : ''; ?>>
