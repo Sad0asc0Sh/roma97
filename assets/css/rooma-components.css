@@ -1083,6 +1083,38 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
     --hero-ui-max: 1560px;
     --hero-frame: max(0px, calc((100% - var(--hero-ui-max)) / 2));
     --hero-edge: calc(var(--hero-frame) + var(--gutter));
+
+    /* ── Element scale — text and buttons inside the banner ──────────────
+       Fluid (clamp) and in rem, so the visitor's text-size setting and the
+       browser zoom still scale everything (WCAG 1.4.4).
+       --hero-title-fs   headline    26px @360 · 31px @600 · 40px @1024 · 52px @1640+
+       --hero-sub-fs     lead text   15px @360 · 16px @768 · 19px @1640+
+       --hero-sub-mb     space under the lead text (16px → 24px)
+       --hero-btn-h      button      48px on phones … 54px on big monitors
+                         (touch target >= 44px: WCAG 2.5.5, Apple HIG; Material: 48dp)
+       --hero-btn-fs / --hero-btn-px   button label size and side padding
+       --hero-eyebrow-fs label above the headline (12px → 13px)
+       --hero-cta-fg     text colour of the orange button (#fff = the old look,
+                         but white on the amber end measures only 2.1:1)
+       --hero-lane       phones: free strip at the top for the pause button
+       Legibility on bright photos (WCAG 1.4.3: 3:1 headline, 4.5:1 small text):
+       --hero-scrim-m    up to 991px: stronger gradient behind the text
+       --hero-halo-rgb   992px and up: soft halo behind the text column     */
+    --hero-title-fs: clamp(1.625rem, 1.2rem + 2vw, 3.25rem);
+    --hero-sub-fs: clamp(.9375rem, .88rem + .3vw, 1.1875rem);
+    --hero-sub-mb: clamp(1rem, .85rem + .6vw, 1.5rem);
+    --hero-btn-h: clamp(3rem, 2.8rem + .6vw, 3.4rem);
+    --hero-btn-fs: clamp(.9375rem, .91rem + .2vw, 1.0625rem);
+    --hero-btn-px: clamp(1rem, .75rem + 1.2vw, 1.75rem);
+    --hero-eyebrow-fs: clamp(.75rem, .72rem + .1vw, .8125rem);
+    --hero-cta-fg: #0B1712;
+    --hero-lane: 3.5rem;
+    --hero-scrim-m: linear-gradient(to top, rgba(19,48,38,.94) 0%, rgba(19,48,38,.82) 40%, rgba(19,48,38,.56) 78%, rgba(19,48,38,.18) 100%);
+    --hero-halo-rgb: 19, 48, 38;
+}
+[data-theme="dark"] .hero {
+    --hero-scrim-m: linear-gradient(to top, rgba(4,12,9,.96) 0%, rgba(6,16,12,.88) 40%, rgba(6,16,12,.6) 78%, rgba(6,16,12,.2) 100%);
+    --hero-halo-rgb: 6, 16, 12;
 }
 @supports (height: 100svh) {
     .hero { --hero-vh: 100svh; }
@@ -1164,6 +1196,9 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
     inset: 0;
     background: var(--grad-hero);
 }
+@media (max-width: 991px) {
+    .hero__scrim { background: var(--hero-scrim-m); }
+}
 
 .hero__inner {
     position: relative;
@@ -1195,13 +1230,8 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
     .hero__inner {
         min-height: min(52vh, 420px);
         min-height: min(52svh, 420px);
-        padding-block: 1.5rem 2.25rem;
-    }
-    .hero__title { font-size: var(--text-3xl); }
-    .hero__sub {
-        font-size: var(--text-sm);
-        line-height: var(--leading-snug);
-        margin-bottom: var(--space-md);
+        /* top = lane for the pause button, so it never sits on the label */
+        padding-block: var(--hero-lane) 2.25rem;
     }
 }
 /* Small phones: trim further so the hero stays a fraction of the screen */
@@ -1209,13 +1239,40 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
     .hero__inner {
         min-height: min(48vh, 380px);
         min-height: min(48svh, 380px);
-        padding-block: 1.25rem 2rem;
+        padding-block: var(--hero-lane) 2rem;
     }
 }
 .hero__content { max-width: 44rem; color: #fff; }
+/* Desktop: a soft halo behind the text column keeps white text readable on a
+   bright photo without darkening the rest of the picture. */
+@media (min-width: 992px) {
+    .hero__content { position: relative; }
+    .hero__content::before {
+        content: '';
+        position: absolute;
+        z-index: -1;
+        inset: -3.5rem -4.5rem -2.5rem -4.5rem;
+        pointer-events: none;
+        background: radial-gradient(ellipse 62% 64% at 50% 52%,
+            rgba(var(--hero-halo-rgb), .58) 0%,
+            rgba(var(--hero-halo-rgb), .4) 55%,
+            rgba(var(--hero-halo-rgb), 0) 100%);
+    }
+}
 
+/* Label above the headline. The glass chip is dark (not white) so the white 12px
+   text keeps >= 4.5:1 on any photo — white-on-white-glass measured 1.8:1. */
+.hero .eyebrow {
+    font-size: var(--hero-eyebrow-fs);
+    line-height: 1.5;
+    padding: .3rem .8rem;
+}
+.hero .eyebrow-light {
+    background: rgba(10,26,19,.62);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.28);
+}
 .hero__title {
-    font-size: var(--text-5xl);
+    font-size: var(--hero-title-fs);
     /* The slider renders the title as <p>, which inherited the 1.8 body leading
        (≈94px per line at 52px). Display text needs display leading. */
     line-height: var(--leading-snug);
@@ -1228,31 +1285,46 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
     text-wrap: balance;
 }
 .hero__sub {
-    font-size: var(--text-lg);
-    line-height: var(--leading-snug);
-    color: rgba(255,255,255,.93);
+    font-size: var(--hero-sub-fs);
+    line-height: 1.6;
+    color: rgba(255,255,255,.95);
     max-width: 36rem;
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--hero-sub-mb);
     text-shadow: 0 1px 12px rgba(0,0,0,.35);
 }
-/* Bounded content: from tablet up the banner must not grow just because an
-   admin typed a very long headline or lead. Each is shown in 3 lines at most
-   (a normal 2-line headline is untouched). */
+/* Bounded content: the banner must not grow just because an admin typed a very
+   long headline or lead. Phones show at most 5 lines of each (enough for normal
+   text even at 200% text size, WCAG 1.4.4); tablet and up 3 and 3. */
+.hero__title,
+.hero__sub {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.hero__title,
+.hero__sub { -webkit-line-clamp: 5; line-clamp: 5; }
 @media (min-width: 768px) {
     .hero__title,
-    .hero__sub {
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 3;
-        line-clamp: 3;
-        overflow: hidden;
-    }
+    .hero__sub { -webkit-line-clamp: 3; line-clamp: 3; }
 }
 .hero__actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
-.hero__actions .btn { flex: 0 1 auto; }
-@media (max-width: 420px) {
-    .hero__actions { flex-direction: column; align-items: stretch; }
-    .hero__actions .btn { width: 100%; }
+/* Both buttons use the hero scale instead of the global .btn-lg (55px tall). */
+.hero__actions .btn {
+    --btn-py: .5rem;
+    --btn-px: var(--hero-btn-px);
+    flex: 0 1 auto;
+    min-height: var(--hero-btn-h);
+    font-size: var(--hero-btn-fs);
+}
+/* Orange button: the brand gradient is too light for white text (2.1:1 at the
+   amber end; WCAG AA needs 4.5:1). Near-black text gives 5:1+ on the whole
+   gradient and keeps the brand colours. */
+.hero__actions .btn-secondary,
+.hero__actions .btn-secondary:hover { color: var(--hero-cta-fg); }
+/* Small phones: the two buttons share one row when both fit, otherwise they
+   wrap and each takes the full width. */
+@media (max-width: 480px) {
+    .hero__actions .btn { flex: 1 1 auto; }
 }
 
 /* Slide text entrance */
@@ -1354,6 +1426,9 @@ html:not(.js-reveal) .section-head__title .u-mark::after { transform: scaleX(1);
     transition: opacity var(--t-fast), background var(--t-fast);
 }
 .hero__playpause:hover { opacity: 1; }
+/* The 34px circle looks right, but a fingertip needs ~44px: the hit area grows invisibly
+   (32px padding box + 2 x 6px = 44px; WCAG 2.5.5 / Apple HIG). */
+.hero__playpause::after { content: ''; position: absolute; inset: -6px; }
 .hero__playpause svg { width: 14px; height: 14px; fill: currentColor; stroke: none; }
 .hero__playpause .i-play { display: none; }
 .hero__playpause[aria-pressed="false"] .i-play { display: block; }
