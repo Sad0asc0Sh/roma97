@@ -11,6 +11,8 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/parent_children_helpers.php';
 
 requireParentLogin();
+require_once __DIR__ . '/../includes/portal_ui.php';
+require_once __DIR__ . '/../includes/portal_rules.php';
 
 $parentId = (int) $_SESSION['parent_id'];
 $parentStatus = 'active';
@@ -28,6 +30,8 @@ $tuitionExpected = 0.0;
 $tuitionPaid = 0.0;
 $tuitionBalance = 0.0;
 $hasActiveChild = false;
+$tuitionDue = 0.0;
+$tuitionCreditAmount = 0.0;
 
 $successMessage = getFlash('success');
 $errorMessage = getFlash('error');
@@ -99,6 +103,8 @@ SQL
             $tuitionExpected += (float) $breakdown['expected'];
             $tuitionPaid     += (float) $breakdown['paid'];
             $tuitionBalance  += (float) $breakdown['balance'];
+            $tuitionDue += max(0, (float) $breakdown['balance']);
+            $tuitionCreditAmount += max(0, -(float) $breakdown['balance']);
             $hasActiveChild = true;
         }
     }
@@ -140,46 +146,7 @@ require_once __DIR__ . '/header.php';
  </div>
 <?php endif; ?>
 
-<!-- Welcome Section -->
-<section class="parent-welcome">
-    <div class="parent-welcome-content">
-        <?php if ($avatar !== null): ?>
-            <img class="parent-avatar-large" src="<?= e(url($avatar)) ?>" alt="<?= e($firstName) ?>">
-        <?php else: ?>
-            <div class="parent-avatar-large parent-avatar-placeholder">
-                <?= e(userInitial($firstName)) ?>
-         </div>
-        <?php endif; ?>
-        <div class="parent-welcome-text">
-            <h1>خوش آمدید، <?= e($firstName) ?> عزیز!</h1>
-            <p class="parent-welcome-subtitle">امروز کوچولوهای شما چه خبر؟</p>
-            <?php
-            $statusLabel = match ($parentStatus) {
-                'pending' => 'در انتظار تأیید',
-                'suspended' => 'مسدود شده',
-                default => 'فعال',
-            };
-            ?>
-            <span class="status-badge status-badge-<?= e($parentStatus) ?>"><?= e($statusLabel)?></span>
-      </div>
-  </div>
-</section>
-
-<!-- PWA install card — install the parent app straight from the website -->
-<section class="pwa-card" id="pwaDashboardCard" aria-label="نصب اپلیکیشن والدین">
-    <span class="pwa-card-icon" aria-hidden="true">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-    </span>
-    <div class="pwa-card-body">
-        <h3>اپ والدین روما را نصب کنید</h3>
-        <p>بدون نیاز به کافه‌بازار؛ مستقیم از همین وب‌سایت روی گوشی یا کامپیوتر نصب می‌شود و گزارش روزانه فرزندتان همیشه یک لمس فاصله دارد.</p>
-    </div>
-    <div class="pwa-card-actions">
-        <button type="button" class="pwa-card-install" data-pwa-install>نصب اپ</button>
-        <button type="button" class="pwa-card-guide" data-pwa-guide>راهنمای نصب</button>
-    </div>
-    <button type="button" class="pwa-card-hide" data-pwa-card-hide aria-label="پنهان کردن">✕</button>
-</section>
+<?php portalWelcome('دفتر خانواده · ' . siteName(), 'سلام ' . $firstName . '، خوش آمدید.', 'از حال امروز فرزندتان باخبر شوید؛ حضور، گزارش مربی و پیام‌های مهد اینجاست.', [['پرونده و گزارش فرزندان', 'parent/children.php'], ['پیام به مدیریت', 'parent/messages.php#parentReplyForm']]); ?>
 
 <!-- Today's Status Summary Strip (Quick 2-second glance for busy parents) -->
 <?php if ($children !== []): ?>
@@ -219,8 +186,8 @@ require_once __DIR__ . '/header.php';
 <?php if ($hasActiveChild): ?>
     <?php
     // Shared settle tolerance so the portal never disagrees with the office.
-    $tuitionSettled = $tuitionBalance < tuitionSettleTolerance();
-    $tuitionCredit  = $tuitionBalance < -tuitionSettleTolerance();
+    $tuitionSettled = $tuitionDue < tuitionSettleTolerance();
+    $tuitionCredit = $tuitionSettled && $tuitionCreditAmount > tuitionSettleTolerance();
     ?>
     <section class="parent-section">
         <?php
@@ -237,7 +204,7 @@ require_once __DIR__ . '/header.php';
                             این ماه به‌طور کامل تسویه شده است. سپاس از همراهی شما! 💚
                         <?php else: ?>
                             مانده قابل پرداخت:
-                            <strong class="tuition-due-amount"><?= e(persianNumber(number_format($tuitionBalance))) ?> تومان</strong>
+                            <strong class="tuition-due-amount"><?= e(persianNumber(number_format($tuitionDue))) ?> تومان</strong>
                             از مجموع <?= e(persianNumber(number_format($tuitionExpected))) ?> تومان
                         <?php endif; ?>
                     </p>
@@ -403,5 +370,22 @@ require_once __DIR__ . '/header.php';
       </a>
   </div>
 </section>
+
+<!-- PWA install card — install the parent app straight from the website -->
+<section class="pwa-card" id="pwaDashboardCard" aria-label="نصب اپلیکیشن والدین">
+    <span class="pwa-card-icon" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+    </span>
+    <div class="pwa-card-body">
+        <h3>اپ والدین روما را نصب کنید</h3>
+        <p>بدون نیاز به کافه‌بازار؛ مستقیم از همین وب‌سایت روی گوشی یا کامپیوتر نصب می‌شود و گزارش روزانه فرزندتان همیشه یک لمس فاصله دارد.</p>
+    </div>
+    <div class="pwa-card-actions">
+        <button type="button" class="pwa-card-install" data-pwa-install>نصب اپ</button>
+        <button type="button" class="pwa-card-guide" data-pwa-guide>راهنمای نصب</button>
+    </div>
+    <button type="button" class="pwa-card-hide" data-pwa-card-hide aria-label="پنهان کردن">✕</button>
+</section>
+
 
 <?php require_once __DIR__ . '/footer.php'; ?>

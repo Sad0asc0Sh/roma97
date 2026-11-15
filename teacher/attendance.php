@@ -24,6 +24,7 @@ require_once __DIR__ . '/../includes/permissions.php';
 require_once __DIR__ . '/../includes/teacher_portal_helpers.php';
 
 requireTeacherLogin();
+require_once __DIR__ . '/../includes/portal_rules.php';
 
 $teacherId   = (int) $_SESSION['teacher_id'];
 $teacherName = (string) ($_SESSION['teacher_name'] ?? 'مربی');
@@ -85,14 +86,14 @@ try {
     initializeNotificationTables();
     $pdo = getDb();
 
-    $ctx         = teacherResolveClassroomContext($pdo, $teacherId);
+    $ctx         = teacherResolveClassroomContext($pdo, $teacherId, isPostRequest());
     $classrooms  = $ctx['classrooms'];
     $classroom   = $ctx['active'];
     $classroomId = $ctx['active_id'];
 
     if ($classroom !== null) {
         if (isPostRequest()) {
-            $redirectUrl = url('teacher/attendance.php?date=' . rawurlencode($selectedDate));
+            $redirectUrl = url('teacher/attendance.php?classroom_id=' . $classroomId . '&date=' . rawurlencode($selectedDate));
 
             if (!validateCsrfToken((string) ($_POST['csrf_token'] ?? ''))) {
                 setFlash('error', 'درخواست نامعتبر است. لطفاً صفحه را دوباره بارگذاری کنید.');
@@ -174,6 +175,7 @@ SQL
                         && !array_key_exists($childId, $previousStatuses)) {
                         $checkIn = date('H:i:00');
                     }
+                    [$checkIn, $checkOut] = portalAttendanceTimes($status, $checkIn, $checkOut);
 
                     $upsert->execute([
                         ':child_id'  => $childId,
@@ -276,7 +278,7 @@ SQL
     }
 } catch (Throwable $exception) {
     error_log('teacher/attendance failed: ' . $exception->getMessage());
-    $errorMessage = 'بارگذاری حضور و غیاب با مشکل مواجه شد. لطفاً دوباره تلاش کنید.';
+    $errorMessage = $exception instanceof InvalidArgumentException ? $exception->getMessage() : 'ذخیره یا بارگذاری حضور و غیاب انجام نشد. لطفاً دوباره تلاش کنید.';
 }
 
 $isToday       = $selectedDate === $today;
@@ -396,6 +398,7 @@ require_once __DIR__ . '/header.php';
     </div>
 
     <form method="post" action="<?= e(url('teacher/attendance.php?date=' . rawurlencode($selectedDate))) ?>" id="attendanceForm">
+        <input type="hidden" name="classroom_id" value="<?= $classroomId ?>">
         <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
         <input type="hidden" name="attendance_date" value="<?= e($selectedDate) ?>">
 

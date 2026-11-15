@@ -58,7 +58,7 @@ try {
     initializeNotificationTables();
     $pdo = getDb();
 
-    $ctx         = teacherResolveClassroomContext($pdo, $teacherId);
+    $ctx         = teacherResolveClassroomContext($pdo, $teacherId, isPostRequest());
     $classrooms  = $ctx['classrooms'];
     $classroom   = $ctx['active'];
     $classroomId = $ctx['active_id'];
@@ -79,12 +79,16 @@ SQL
         $allowedChildIds = array_map(static fn (array $c): int => (int) $c['id'], $children);
 
         if (isPostRequest()) {
-            $postDate    = teacherValidOperationalDate((string) ($_POST['report_date'] ?? $selectedDate), 7) ?? $today;
-            $redirectUrl = url('teacher/report.php?date=' . rawurlencode($postDate));
+            $postDate = teacherValidOperationalDate((string) ($_POST['report_date'] ?? ''), 7);
+            $redirectUrl = url('teacher/report.php?classroom_id=' . $classroomId . '&date=' . rawurlencode($postDate ?? $selectedDate));
 
             $csrfToken = (string) ($_POST['csrf_token'] ?? '');
             if (!validateCsrfToken($csrfToken)) {
                 setFlash('error', 'درخواست نامعتبر است. لطفاً دوباره تلاش کنید.');
+                redirect($redirectUrl);
+            }
+            if ($postDate === null) {
+                setFlash('error', 'گزارش ذخیره نشد. تاریخ باید مربوط به امروز یا حداکثر ۷ روز گذشته باشد.');
                 redirect($redirectUrl);
             }
 
@@ -169,9 +173,13 @@ SQL;
                 };
 
                 foreach ($allowedChildIds as $childId) {
-                    $mood = (string) ($moods[$childId] ?? 'normal');
+                    // Missing rows (including truncated POSTs) must never erase saved reports.
+                    if (!array_key_exists($childId, $moods)) {
+                        continue;
+                    }
+                    $mood = (string) $moods[$childId];
                     if (!in_array($mood, $allowedMoods, true)) {
-                        $mood = 'normal';
+                        continue;
                     }
 
                     $socVal = $validateFactor('social_interaction', (string) ($socialIn[$childId] ?? ''));
@@ -185,27 +193,6 @@ SQL;
                     $copVal          = mb_substr(trim((string) ($copingIn[$childId] ?? '')), 0, 500, 'UTF-8');
                     $childActivities = trim((string) ($activities[$childId] ?? ''));
                     $childNotes      = trim((string) ($notes[$childId] ?? ''));
-
-                    $isAllDefaultFactors = (
-                        $socVal === $factorsCatalog['social_interaction']['default'] &&
-                        $focVal === $factorsCatalog['focus_level']['default'] &&
-                        $comVal === $factorsCatalog['communication_style']['default'] &&
-                        $sepVal === $factorsCatalog['separation_adaptation']['default'] &&
-                        $nutVal === $factorsCatalog['nutrition_status']['default'] &&
-                        $rstVal === $factorsCatalog['rest_energy']['default']
-                    );
-
-                    if (
-                        !isset($previousReports[$childId])
-                        && $mood === 'normal'
-                        && $isAllDefaultFactors
-                        && $strVal === ''
-                        && $copVal === ''
-                        && $childActivities === ''
-                        && $childNotes === ''
-                    ) {
-                        continue;
-                    }
 
                     $uStmt->execute([
                         ':tid'        => $teacherId,
@@ -332,7 +319,7 @@ SQL;
 } catch (Throwable $e) {
     error_log('teacher/report failed: ' . $e->getMessage());
     if (!$errorMessage) {
-        $errorMessage = 'خطایی در بارگذاری فرم ارزیابی روان‌شناختی و گزارش روزانه رخ داد.';
+        $errorMessage = $e instanceof InvalidArgumentException ? $e->getMessage() : 'ذخیره یا بارگذاری گزارش روزانه انجام نشد. لطفاً دوباره تلاش کنید.';
     }
 }
 
@@ -521,6 +508,7 @@ require_once __DIR__ . '/header.php';
     </div>
 
     <form method="post" action="<?= e(url('teacher/report.php?date=' . rawurlencode($selectedDate))) ?>" class="report-form" id="psychReportForm">
+        <input type="hidden" name="classroom_id" value="<?= $classroomId ?>">
         <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
         <input type="hidden" name="report_date" value="<?= e($selectedDate) ?>">
 
@@ -529,7 +517,7 @@ require_once __DIR__ . '/header.php';
                 <?php
                 $cid          = (int) $child['id'];
                 $existing     = $reports[$cid] ?? null;
-                $moodCurrent  = (string) ($existing['mood'] ?? 'normal');
+                $moodCurrent  = (string) ($existing['mood'] ?? '');
                 $socCurrent   = (string) ($existing['social_interaction'] ?? $factorsCatalog['social_interaction']['default']);
                 $focCurrent   = (string) ($existing['focus_level'] ?? $factorsCatalog['focus_level']['default']);
                 $comCurrent   = (string) ($existing['communication_style'] ?? $factorsCatalog['communication_style']['default']);
@@ -609,7 +597,8 @@ require_once __DIR__ . '/header.php';
                         <!-- Hidden/Synced Select for Emotional Regulation + Coach Co-Regulation Tip -->
                         <div class="tp-form-group" style="margin-bottom:2px;">
                             <label for="mood_<?= $cid ?>" class="tp-label">شرح بالینی وضعیت تنظیم هیجانی و راهبرد هم‌تنظیمی مربی</label>
-                            <select id="mood_<?= $cid ?>" name="mood[<?= $cid ?>]" class="tp-select child-mood-select" onchange="selectQuickMood(<?= $cid ?>, this.value)" required>
+                            <select id="mood_<?= $cid ?>" name="mood[<?= $cid ?>]" class="tp-select child-mood-select" onchange="selectQuickMood(<?= $cid ?>, this.value)">
+                                <option value="">هنوز مشاهده‌ای ثبت نشده</option>
                                 <?php foreach ($moodCatalog as $mKey => $mMeta): ?>
                                     <option value="<?= e($mKey) ?>" <?= $moodCurrent === $mKey ? 'selected' : '' ?>>
                                         <?= e($mMeta['label']) ?> — (<?= e($mMeta['clinical_desc']) ?>)
@@ -763,7 +752,7 @@ require_once __DIR__ . '/header.php';
 
     function selectQuickMood(childId, moodVal) {
         var sel = document.getElementById('mood_' + childId);
-        if (sel) { sel.value = moodVal; }
+        if (sel) { sel.value = moodVal; sel.dispatchEvent(new Event('input', {bubbles: true})); }
         var bar = document.getElementById('qmood-bar-' + childId);
         if (bar) {
             bar.querySelectorAll('.tp-quick-mood-btn').forEach(function (btn) {

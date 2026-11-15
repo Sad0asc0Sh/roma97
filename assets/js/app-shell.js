@@ -43,16 +43,14 @@ function initSidebarToggle() {
   if (sidebarToggle && sidebar) {
     sidebarToggle.addEventListener('click', () => {
       sidebar.classList.toggle('collapsed');
-      localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed') ? '1' : '0');
+      try { localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed') ? '1' : '0'); } catch (e) {}
     });
 
-    if (localStorage.getItem('sidebar_collapsed') === '1') {
-      sidebar.classList.add('collapsed');
-    }
+    try { if (localStorage.getItem('sidebar_collapsed') === '1') sidebar.classList.add('collapsed'); } catch (e) {}
   }
 
   if (sidebar && overlay) {
-    if (mobileToggle) {
+    if (mobileToggle && !mobileToggle.hasAttribute('onclick')) {
       mobileToggle.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -186,61 +184,41 @@ initUserDropdown();
 
 /* ── GLOBAL SEARCH KEYBOARD SHORTCUT (/) & LIVE CLIENT FILTER ──── */
 function initGlobalSearchKeybind() {
-  const searchInput = document.getElementById('appSearchInput');
-  if (!searchInput) return;
-
-  document.addEventListener('keydown', (e) => {
-    if ((e.key === '/' || (e.ctrlKey && e.key === 'k')) && document.activeElement !== searchInput) {
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
-      e.preventDefault();
-      searchInput.focus();
-    }
+  const input = document.getElementById('appSearchInput');
+  const main = document.querySelector('main');
+  if (!input || !main) return;
+  // Pages with a dedicated register filter should have only one search owner.
+  const ownSearch = main.querySelector('input[type="search"], #attendanceSearch, #reportSearch, #childSearch');
+  if (ownSearch) {
+    input.closest('.app-search-box, .tp-search-wrap')?.setAttribute('hidden', '');
+    return;
+  }
+  const selector = '.app-table tbody tr, .admin-table tbody tr, .payments-table tbody tr, .attendance-table tbody tr, .admin-child-card, .child-card-large, .child-list-card, .event-card, .admin-event-card, .quick-list-item, .tp-child-card, .tp-att-row, .tp-report-card, .tp-msg-item, .portal-row';
+  const items = [...main.querySelectorAll(selector)];
+  if (!items.length) { input.closest('.app-search-box, .tp-search-wrap')?.setAttribute('hidden', ''); return; }
+  input.placeholder = 'جست‌وجو در همین صفحه…';
+  const normalize = value => value.toLowerCase().replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/[\u200c\u200f]/g,' ').replace(/[۰-۹]/g,c=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(c)).replace(/\s+/g,' ').trim();
+  const notice = document.createElement('p');
+  notice.className = 'portal-search-empty';
+  notice.setAttribute('role','status');
+  notice.hidden = true;
+  main.prepend(notice);
+  input.addEventListener('input', () => {
+    const q = normalize(input.value);
+    let visible = 0;
+    items.forEach(item => {
+      const match = !q || normalize(item.textContent || '').includes(q);
+      item.classList.toggle('portal-filter-hidden', !match);
+      if(match) visible++;
+    });
+    notice.hidden = !q || visible > 0;
+    notice.textContent = 'نتیجه‌ای در این صفحه پیدا نشد. عبارت جست‌وجو را تغییر دهید.';
   });
-
-  // PERF: debounced + rAF-batched + cached text.
-  let searchTimer = null;
-  let searchRaf = 0;
-  let rowCache = null;
-  let cardCache = null;
-
-  function buildCache() {
-    if (!rowCache) {
-      rowCache = Array.from(document.querySelectorAll('.app-table tbody tr, .admin-table tbody tr, .payments-table tbody tr, .attendance-table tbody tr'))
-        .map((row) => ({ el: row, text: (row.textContent || '').toLowerCase() }));
+  document.addEventListener('keydown', event => {
+    if((event.key === '/' || ((event.ctrlKey || event.metaKey) && event.key === 'k')) && !event.target.closest('input,textarea,select,[contenteditable]')) {
+      event.preventDefault(); input.focus();
     }
-    if (!cardCache) {
-      cardCache = Array.from(document.querySelectorAll('.admin-child-card, .child-card-large, .child-list-card, .event-card, .admin-event-card, .quick-list-item, .tp-child-card, .tp-att-row, .tp-report-card, .tp-msg-item'))
-        .map((card) => ({ el: card, text: (card.textContent || '').toLowerCase() }));
-    }
-  }
-
-  function applySearch(query) {
-    buildCache();
-    const q = query;
-    if (rowCache) {
-      for (let i = 0; i < rowCache.length; i++) {
-        const item = rowCache[i];
-        item.el.style.display = (q === '' || item.text.includes(q)) ? '' : 'none';
-      }
-    }
-    if (cardCache) {
-      for (let j = 0; j < cardCache.length; j++) {
-        const c = cardCache[j];
-        c.el.style.display = (q === '' || c.text.includes(q)) ? '' : 'none';
-      }
-    }
-  }
-
-  searchInput.addEventListener('input', (e) => {
-    const query = e.target.value.trim().toLowerCase();
-    if (searchTimer) clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-      if (searchRaf) cancelAnimationFrame(searchRaf);
-      searchRaf = requestAnimationFrame(() => {
-        searchRaf = 0;
-        applySearch(query);
-      });
-    }, 150);
+    if(event.key === 'Escape' && document.activeElement === input) { input.value=''; input.dispatchEvent(new Event('input')); }
   });
 }
 

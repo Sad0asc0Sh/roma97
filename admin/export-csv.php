@@ -13,6 +13,11 @@ require_once __DIR__ . '/../includes/audit.php';
 requireLogin();
 
 $type = (string) ($_GET['type'] ?? '');
+$sourcePage = ['tuition' => 'admin/tuition.php', 'salary' => 'admin/salary.php', 'children' => 'admin/children.php'][$type] ?? null;
+if ($sourcePage === null || !isPageAllowedForRole($sourcePage, currentAdminRole())) {
+    http_response_code(403);
+    exit('شما به خروجی این بخش دسترسی ندارید.');
+}
 
 try {
     initializeFinancialTables();

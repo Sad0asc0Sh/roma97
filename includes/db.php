@@ -592,6 +592,13 @@ function initializeMessagingTable(): void
     // shape without running the .sql file by hand.
     try {
         $pdo = getDb();
+        $pdo->exec("CREATE TABLE IF NOT EXISTS message_reads (
+            message_id INT NOT NULL,
+            parent_id INT NOT NULL,
+            read_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (message_id, parent_id),
+            INDEX idx_message_reads_parent (parent_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         $senderTypeRow = $pdo->query("SHOW COLUMNS FROM messages LIKE 'sender_type'")->fetch();
         if ($senderTypeRow && is_string($senderTypeRow['Type'] ?? null) && !str_contains($senderTypeRow['Type'], "'parent'")) {

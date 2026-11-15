@@ -1,7 +1,7 @@
 /* Roma PWA Service Worker — network-first for pages, cache-first for assets. */
 'use strict';
 
-var CACHE_VERSION = 'roma-v2';
+var CACHE_VERSION = 'roma-v3';
 var STATIC_CACHE = CACHE_VERSION + '-static';
 var PAGES_CACHE = CACHE_VERSION + '-pages';
 
@@ -17,10 +17,6 @@ function abs(path) {
 }
 
 var PRECACHE = [
-  './',
-  'index.php',
-  'parent/index.php',
-  'login.php',
   'manifest.webmanifest',
   'assets/icons/icon-192.png',
   'assets/icons/icon-512.png',
@@ -28,6 +24,7 @@ var PRECACHE = [
   'assets/css/fonts.css',
   'assets/css/app-shell.css',
   'assets/css/parent-portal.css',
+  'assets/css/portal-experience.css',
   'assets/js/app-shell.js',
   'assets/js/pwa-install.js'
 ];
@@ -56,7 +53,9 @@ self.addEventListener('activate', function (event) {
 });
 
 function isAsset(url) {
-  return /\.(css|js|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot)(\?|#|$)/i.test(url.pathname);
+  var relative = url.pathname.slice(new URL(scopeBase()).pathname.length);
+  return /^assets\/(css|js|fonts|icons|img)\//.test(relative)
+    && /\.(css|js|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot)$/i.test(url.pathname);
 }
 
 self.addEventListener('fetch', function (event) {
@@ -71,16 +70,8 @@ self.addEventListener('fetch', function (event) {
   // Navigations (HTML pages): network first, fall back to cache, then home.
   if (req.mode === 'navigate' || (req.headers.get('accept') || '').indexOf('text/html') !== -1) {
     event.respondWith(
-      fetch(req).then(function (res) {
-        var copy = res.clone();
-        caches.open(PAGES_CACHE).then(function (cache) { cache.put(req, copy); });
-        return res;
-      }).catch(function () {
-        return caches.match(req).then(function (hit) {
-          return hit || caches.match(abs('index.php')).then(function (home) {
-            return home || Response.error();
-          });
-        });
+      fetch(req).catch(function () {
+        return new Response('<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>اتصال برقرار نیست</title><body style="font:18px Tahoma;line-height:2;text-align:center;padding:15vh 24px;background:#f2f6fa;color:#243c50"><h1>اتصال اینترنت برقرار نیست</h1><p>برای دیدن اطلاعات به‌روز و ذخیره تغییرات، به اینترنت متصل شوید.</p><button style="font:inherit;padding:12px 24px" onclick="location.reload()">تلاش دوباره</button></body></html>', {status: 503, headers: {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store'}});
       })
     );
     return;

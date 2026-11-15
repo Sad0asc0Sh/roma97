@@ -49,7 +49,7 @@ if (!defined('ROOMA_APP')) {
  *     active_id: int
  * }
  */
-function teacherResolveClassroomContext(PDO $pdo, int $teacherId): array
+function teacherResolveClassroomContext(PDO $pdo, int $teacherId, bool $forWrite = false): array
 {
     $stmt = $pdo->prepare(
         <<<'SQL'
@@ -76,7 +76,13 @@ SQL
         $byId[(int) $cl['id']] = $cl;
     }
 
-    $requested = filter_var($_GET['classroom_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    // A form belongs to the classroom where it was opened, even if another
+    // browser tab changes the session's active classroom in the meantime.
+    $isWrite = $forWrite;
+    $requested = filter_var($isWrite ? ($_POST['classroom_id'] ?? null) : ($_GET['classroom_id'] ?? null), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    if ($isWrite && (!is_int($requested) || !isset($byId[$requested]))) {
+        throw new InvalidArgumentException('کلاس این فرم معتبر نیست یا دسترسی شما تغییر کرده است. صفحه را دوباره باز کنید.');
+    }
     if (is_int($requested) && isset($byId[$requested])) {
         $_SESSION['teacher_classroom_id'] = $requested;
         return ['classrooms' => $classrooms, 'active' => $byId[$requested], 'active_id' => $requested];

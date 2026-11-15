@@ -11,6 +11,8 @@ require_once __DIR__ . '/../includes/permissions.php';
 require_once __DIR__ . '/../includes/teacher_portal_helpers.php';
 
 requireTeacherLogin();
+require_once __DIR__ . '/../includes/portal_ui.php';
+require_once __DIR__ . '/../includes/ui.php';
 
 $teacherId     = (int) $_SESSION['teacher_id'];
 $teacherName   = (string) ($_SESSION['teacher_name'] ?? 'مربی');
@@ -137,83 +139,7 @@ require_once __DIR__ . '/header.php';
     <div class="alert" role="alert"><?= e($error) ?></div>
 <?php endif; ?>
 
-<!-- Welcome Hero Banner -->
-<section class="tp-welcome-banner" aria-label="خوش‌آمدگویی مربی">
-    <div class="tp-welcome-profile">
-        <?php if ($teacherAvatar !== ''): ?>
-            <img src="<?= e(url($teacherAvatar)) ?>" alt="<?= e($teacherName) ?>" class="tp-welcome-avatar">
-        <?php else: ?>
-            <div class="tp-welcome-avatar"><?= e(userInitial($teacherName, 'م')) ?></div>
-        <?php endif; ?>
-        <div class="tp-welcome-text">
-            <h1>روز بخیر، <?= e($teacherName) ?> 🌱</h1>
-            <div class="tp-welcome-meta">
-                <span class="tp-welcome-pill">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                    <?= e(shamsiDate($today, 'with_day')) ?>
-                </span>
-                <span class="tp-welcome-pill">
-                    <?= e($teacherRole !== '' ? $teacherRole : 'مربی مهد') ?>
-                </span>
-                <?php if ($hasClassroom): ?>
-                    <span class="tp-welcome-pill">
-                        کلاس فعال: <?= e((string) $classroom['name']) ?> (<?= e(persianNumber((string) $childCount)) ?> از <?= e(persianNumber((string) $classroom['capacity'])) ?> نفر)
-                    </span>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-
-    <?php if ($hasClassroom): ?>
-        <div class="tp-welcome-actions">
-            <a href="<?= e(url('teacher/attendance.php')) ?>" class="tp-btn-hero-primary">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-                <?= $attendanceDone ? 'مشاهده حضور و غیاب' : 'ثبت حضور امروز' ?>
-            </a>
-            <a href="<?= e(url('teacher/report.php')) ?>" class="tp-btn-hero-outline">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
-                <?= $reportsDone ? 'مشاهده گزارش‌های امروز' : 'ثبت گزارش روزانه' ?>
-            </a>
-        </div>
-    <?php endif; ?>
-</section>
-
-<!-- Access & Scope Governance Strip -->
-<section class="tp-access-strip <?= $hasClassroom ? '' : 'tp-access-strip--unassigned' ?>" aria-label="وضعیت دسترسی و کلاس مربی">
-    <div class="tp-access-info">
-        <span class="tp-access-title">
-            <?php if ($hasClassroom): ?>
-                🔒 سطح دسترسی: مربی مسئول کلاس «<?= e((string) $classroom['name']) ?>»
-                <?= count($classrooms) > 1 ? ' (دارای ' . e(persianNumber((string) count($classrooms))) . ' کلاس)' : '' ?>
-            <?php else: ?>
-                ⚠️ وضعیت حساب: فعال (در انتظار اختصاص کلاس توسط مدیریت)
-            <?php endif; ?>
-        </span>
-        <div class="tp-cap-pills">
-            <?php if ($hasClassroom): ?>
-                <span class="tp-cap-pill">✓ پرونده کودکان کلاس</span>
-                <span class="tp-cap-pill">✓ ثبت حضور و غیاب</span>
-                <span class="tp-cap-pill">✓ گزارش روزانه</span>
-                <span class="tp-cap-pill">✓ پیام به والدین کلاس</span>
-            <?php else: ?>
-                <span class="tp-cap-pill">✓ مشاهده تقویم مهد</span>
-                <span class="tp-cap-pill">✓ تکمیل پروفایل و مدارک</span>
-            <?php endif; ?>
-        </div>
-    </div>
-    <?php if (count($classrooms) > 1): ?>
-        <form method="get" action="<?= e(url('teacher/index.php')) ?>" style="display:flex;align-items:center;gap:8px;">
-            <label for="dashClassSwitch" style="font-size:0.8rem;font-weight:700;">تغییر کلاس:</label>
-            <select id="dashClassSwitch" name="classroom_id" class="tp-select" style="width:auto;padding:6px 12px;" onchange="this.form.submit()">
-                <?php foreach ($classrooms as $clOpt): ?>
-                    <option value="<?= (int) $clOpt['id'] ?>" <?= (int) $clOpt['id'] === $classroomId ? 'selected' : '' ?>>
-                        <?= e((string) $clOpt['name']) ?> (<?= e(persianNumber((string) $clOpt['active_children_count'])) ?> کودک)
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </form>
-    <?php endif; ?>
-</section>
+<?php portalWelcome('دفتر مربی · ' . ($classroom['name'] ?? 'کلاس من'), 'روز بخیر، ' . $teacherName, $hasClassroom ? 'از استقبال صبحگاهی تا گزارش روزانه؛ همراه کودکان کلاس شما.' : 'حساب شما آماده است. پس از اختصاص کلاس، کارهای روزانه اینجا نمایش داده می‌شوند.', $hasClassroom ? [['ثبت حضور امروز', 'teacher/attendance.php?classroom_id=' . $classroomId], ['گزارش روزانه', 'teacher/report.php?classroom_id=' . $classroomId]] : [['پروفایل من', 'teacher/profile.php'], ['تقویم مهد', 'teacher/schedule.php']]); ?>
 
 <?php if (!$hasClassroom): ?>
     <div class="tp-empty-state">

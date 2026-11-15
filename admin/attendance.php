@@ -13,6 +13,7 @@ require_once __DIR__ . '/../includes/sms.php';
 require_once __DIR__ . '/../includes/notifications.php';
 
 requireLogin();
+require_once __DIR__ . '/../includes/portal_rules.php';
 
 /** @var list<string> $allowedStatuses */
 $allowedStatuses = ['present', 'absent', 'late', 'excused'];
@@ -96,7 +97,7 @@ function attendanceStatusValue(array $child): string
 {
     $s = (string) ($child['attendance_status'] ?? '');
 
-    return in_array($s, ['present', 'absent', 'late', 'excused'], true) ? $s : 'present';
+    return portalAttendanceStatus($s) ?? '';
 }
 
 /** @param array<string,mixed> $child */
@@ -150,8 +151,8 @@ try {
             redirect(url('admin/attendance.php?date=' . rawurlencode($selectedDate)));
         }
 
-        if ($parsedPostDate === null) {
-            setFlash('error', 'لطفاً تاریخ معتبری انتخاب کنید.');
+        if ($parsedPostDate === null || $parsedPostDate > $today) {
+            setFlash('error', 'تاریخ حضور باید معتبر و مربوط به امروز یا روزهای گذشته باشد.');
             redirect(url('admin/attendance.php?date=' . rawurlencode($selectedDate)));
         }
 
@@ -211,10 +212,9 @@ SQL
                     continue;
                 }
 
-                $status = (string) ($fields['status'] ?? 'present');
-
-                if (!in_array($status, $allowedStatuses, true)) {
-                    $status = 'present';
+                $status = portalAttendanceStatus($fields['status'] ?? null);
+                if ($status === null) {
+                    continue;
                 }
 
                 $checkInRaw = isset($fields['check_in']) ? (string) $fields['check_in'] : '';
@@ -232,6 +232,7 @@ SQL
                 $notes = $notesRaw === '' ? null : $notesRaw;
                 $checkIn = normalizeAttendanceTime($checkInRaw);
                 $checkOut = normalizeAttendanceTime($checkOutRaw);
+                [$checkIn, $checkOut] = portalAttendanceTimes($status, $checkIn, $checkOut);
 
                 $upsert->execute([
                     ':child_id' => $childId,
@@ -272,9 +273,9 @@ SQL
                 continue;
             }
 
-            $status = (string) ($fields['status'] ?? 'present');
-            if (!in_array($status, $allowedStatuses, true)) {
-                $status = 'present';
+            $status = portalAttendanceStatus($fields['status'] ?? null);
+            if ($status === null) {
+                continue;
             }
 
             if (($previousStatuses[$childId] ?? null) !== $status) {
@@ -365,7 +366,7 @@ SQL
     error_log($exception->getMessage());
 
     if ($errorMessage === null || $errorMessage === '') {
-        $errorMessage = 'بارگذاری حضور و غیاب با مشکل مواجه شد. لطفاً بعداً دوباره تلاش کنید.';
+        $errorMessage = $exception instanceof InvalidArgumentException ? $exception->getMessage() : 'ذخیره یا بارگذاری حضور و غیاب انجام نشد. لطفاً دوباره تلاش کنید.';
     }
 }
 

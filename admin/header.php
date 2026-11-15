@@ -49,14 +49,16 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
     <meta name="color-scheme" content="light dark">
     <meta name="theme-color" content="#3D8B63" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#101713" media="(prefers-color-scheme: dark)">
-    <script>(function(){var t=localStorage.getItem('roma_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
+    <script>(function(){var saved;try{saved=localStorage.getItem('roma_theme');}catch(e){}var t=saved||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
     <title><?php echo $pageTitleValue; ?></title>
     <link rel="preload" href="<?php echo e(url('assets/fonts/Vazirmatn-Regular.woff2')); ?>" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/fonts.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/app-shell.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/admin.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/admin-responsive.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(asset('assets/css/portal-experience.css')); ?>">
     <script src="<?php echo e(asset('assets/js/app-shell.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('assets/js/portal-experience.js')); ?>" defer></script>
     <script>
     window.toggleMobileSidebar = function(evtOrState) {
         if (evtOrState && evtOrState.stopPropagation) {
@@ -87,6 +89,7 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
     </script>
 </head>
 <body class="admin-layout">
+    <a class="portal-skip" href="#adminMain">پرش به محتوای اصلی</a>
     <div class="admin-overlay" id="adminOverlay" onclick="window.toggleMobileSidebar(false)"></div>
 
     <aside class="admin-sidebar" id="adminSidebar">
@@ -100,7 +103,7 @@ $topbarTitle = isset($pageTitle) ? e(str_replace(' | ' . $siteNameValue, '', $pa
                 <span class="admin-logo-badge">مدیر</span>
             </a>
             <button type="button" class="admin-sidebar-close" id="adminSidebarClose" onclick="window.toggleMobileSidebar(false)" aria-label="بستن منو">&times;</button>
-            <button type="button" class="admin-sidebar-toggle" id="sidebarToggle" aria-label="Toggle menu">
+            <button type="button" class="admin-sidebar-toggle" id="sidebarToggle" aria-label="جمع کردن منو">
                 <span></span>
                 <span></span>
                 <span></span>
@@ -294,5 +297,5 @@ function toggleAdminSubmenu(btn, id) {
     <div class="admin-main">
         <?php require_once __DIR__ . '/../templates/app/topbar.php'; ?>
 
-        <main class="admin-content">
+        <main class="admin-content" id="adminMain">
             <!-- Default-password warning removed (hardened: no hardcoded default password exists) -->

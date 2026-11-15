@@ -129,7 +129,7 @@ try {
                m.parent_id, p.first_name, p.last_name, p.phone
         FROM messages m
         INNER JOIN parents p ON p.id = m.parent_id
-        WHERE m.sender_type = 'parent'
+        WHERE m.sender_type = 'parent' AND (m.recipient_admin_id IS NULL OR m.recipient_admin_id = {$adminId})
         ORDER BY m.is_read ASC, m.created_at DESC
         LIMIT 50
     ");
@@ -150,8 +150,8 @@ if (isPostRequest() && ($_POST['action'] ?? '') === 'mark_reply_read') {
     if (validateCsrfToken((string) ($_POST['csrf_token'] ?? ''))) {
         $replyId = filter_var($_POST['reply_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         if (is_int($replyId)) {
-            $pdo->prepare("UPDATE messages SET is_read = 1 WHERE id = :id AND sender_type = 'parent'")
-                ->execute([':id' => $replyId]);
+            $pdo->prepare("UPDATE messages SET is_read = 1 WHERE id = :id AND sender_type = 'parent' AND (recipient_admin_id IS NULL OR recipient_admin_id = :admin_id)")
+                ->execute([':id' => $replyId, ':admin_id' => $adminId]);
             setFlash('success', 'پیام والد خوانده‌شده علامت‌گذاری شد.');
         }
     }

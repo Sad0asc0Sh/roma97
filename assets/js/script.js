@@ -502,42 +502,10 @@ document.addEventListener('DOMContentLoaded', function() {
     var mobileSidebarToggle = document.getElementById('mobileSidebarToggle');
     var adminOverlay = document.getElementById('adminOverlay');
     
-    // Desktop sidebar toggle (collapse/expand)
-    if (sidebarToggle && adminSidebar) {
-        sidebarToggle.addEventListener('click', function() {
-            adminSidebar.classList.toggle('collapsed');
-            
-            // Save state to localStorage
-            if (adminSidebar.classList.contains('collapsed')) {
-                localStorage.setItem('adminSidebarCollapsed', 'true');
-            } else {
-                localStorage.setItem('adminSidebarCollapsed', 'false');
-            }
-        });
-        
-        // Restore sidebar state from localStorage
-        var sidebarCollapsed = localStorage.getItem('adminSidebarCollapsed');
-        if (sidebarCollapsed === 'true') {
-            adminSidebar.classList.add('collapsed');
-        }
-    }
-    
-    // Mobile sidebar toggle
-    if (mobileSidebarToggle && adminSidebar && adminOverlay) {
-        mobileSidebarToggle.addEventListener('click', function() {
-            adminSidebar.classList.toggle('active');
-            adminOverlay.classList.toggle('active');
-        });
-        
-        // Close sidebar when clicking overlay
-        adminOverlay.addEventListener('click', function() {
-            adminSidebar.classList.remove('active');
-            adminOverlay.classList.remove('active');
-        });
-    }
-    
+    // Sidebar state and events are owned by app-shell.js.
+
     // Admin submenu accordion — CSS uses class "open" (admin.css) 
-    var adminNavParents = document.querySelectorAll('.admin-nav-parent');
+    var adminNavParents = document.querySelectorAll('.admin-nav-parent[data-legacy-submenu]');
     adminNavParents.forEach(function(parent) {
         parent.addEventListener('click', function(e) {
             e.preventDefault();
@@ -798,12 +766,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function setTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('roma_theme', theme);
+        try { localStorage.setItem('roma_theme', theme); } catch (e) {}
         updateThemeIcon(theme);
     }
 
     var activeTheme = document.documentElement.getAttribute('data-theme') ||
-        localStorage.getItem('roma_theme') ||
         (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     updateThemeIcon(activeTheme);
 

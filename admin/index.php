@@ -1,256 +1,127 @@
 <?php
 declare(strict_types=1);
-
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/error_handler.php';
-
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/parent_children_helpers.php';
-
+require_once __DIR__ . '/../includes/portal_ui.php';
 requireLogin();
 
-// Fetch dashboard metrics
-$metrics = [
-    'active_children' => 0,
-    'total_teachers' => 0,
-    'pending_children' => 0,
-    'upcoming_events' => 0,
-    'monthly_tuition' => 0,
-    'pending_parents' => 0,
-];
-
+$can = static fn(string $page): bool => isPageAllowedForRole('admin/' . $page . '.php', currentAdminRole());
+$metrics = [];
+$tasks = [];
 $recentRegistrations = [];
 $upcomingEvents = [];
-
+$errorMessage = getFlash('error');
+$successMessage = getFlash('success');
+$today = date('Y-m-d');
 try {
     $pdo = getDb();
-    
-    // Active children count
-    $stmt = $pdo->query("SELECT COUNT(*) FROM children WHERE status = 'active'");
-    $metrics['active_children'] = (int) $stmt->fetchColumn();
-    
-    // Pending children count
-    $stmt = $pdo->query("SELECT COUNT(*) FROM children WHERE status = 'pending'");
-    $metrics['pending_children'] = (int) $stmt->fetchColumn();
-    
-    // Total teachers
-    $stmt = $pdo->query("SELECT COUNT(*) FROM teachers WHERE status = 'active'");
-    $metrics['total_teachers'] = (int) $stmt->fetchColumn();
-    
-    // Upcoming events (next 30 days)
-    $stmt = $pdo->query("SELECT COUNT(*) FROM events WHERE event_date >= CURDATE() AND event_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)");
-    $metrics['upcoming_events'] = (int) $stmt->fetchColumn();
-    
-    // This month's tuition total — keyed on the current SHAMSI month so the
-    // dashboard agrees with the tuition page and the financial report, which
-    // both group by month_year in Jalali. The old Gregorian month window
-    // showed a different number than every other financial screen.
-    require_once __DIR__ . '/../includes/functions.php';
-    [$dashJy, $dashJm] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
-    $dashMonthYear = sprintf('%04d-%02d', $dashJy, $dashJm);
-    $stmt = $pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM tuition_payments WHERE month_year = :myear');
-    $stmt->execute([':myear' => $dashMonthYear]);
-    $metrics['monthly_tuition'] = (float) $stmt->fetchColumn();
-
-    // Pending parents count
-    $stmt = $pdo->query("SELECT COUNT(*) FROM parents WHERE status = 'pending'");
-    $metrics['pending_parents'] = (int) $stmt->fetchColumn();
-    
-    // Recent registrations (last 5 children)
-    $stmt = $pdo->query("SELECT id, first_name, last_name, date_of_birth, status, created_at FROM children ORDER BY created_at DESC LIMIT 5");
-    $recentRegistrations = $stmt->fetchAll();
-    
-    // Upcoming events (next 5)
-    $stmt = $pdo->query("SELECT id, title, event_date FROM events WHERE event_date >= CURDATE() ORDER BY event_date ASC LIMIT 5");
-    $upcomingEvents = $stmt->fetchAll();
-    
+    if ($can('children')) {
+        $activeCount = (int) $pdo->query("SELECT COUNT(*) FROM children WHERE status = 'active'")->fetchColumn();
+        $pendingCount = (int) $pdo->query("SELECT COUNT(*) FROM children WHERE status = 'pending'")->fetchColumn();
+        $metrics[] = ['کودکان فعال', persianNumber((string) $activeCount), 'مشاهده پرونده‌ها', 'children.php?status=active'];
+        $tasks[] = [$pendingCount, 'ثبت‌نام‌های منتظر تأیید', 'بررسی اطلاعات و وضعیت پذیرش کودکان', 'children.php?status=pending'];
+        $recentRegistrations = $pdo->query("SELECT id, first_name, last_name, status, created_at FROM children ORDER BY created_at DESC, id DESC LIMIT 5")->fetchAll();
+    }
+    if ($can('attendance')) {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM attendance a INNER JOIN children c ON c.id = a.child_id WHERE c.status = 'active' AND a.attendance_date = ?");
+        $stmt->execute([$today]);
+        $recorded = (int) $stmt->fetchColumn();
+        $missing = max(0, $activeCount - $recorded);
+        $metrics[] = ['حضور ثبت‌شده امروز', persianNumber((string) $recorded) . ' / ' . persianNumber((string) $activeCount), 'تکمیل دفتر حضور', 'attendance.php'];
+        $tasks[] = [$missing, 'حضورهای ثبت‌نشده امروز', 'وضعیت هر کودک را پس از مشاهده ثبت کنید', 'attendance.php'];
+    }
+    if ($can('tuition')) {
+        [$jy, $jm] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
+        $month = sprintf('%04d-%02d', $jy, $jm);
+        $stmt = $pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM tuition_payments WHERE month_year = ?');
+        $stmt->execute([$month]);
+        $metrics[] = ['دریافتی شهریه این ماه', persianNumber(number_format((float) $stmt->fetchColumn())), 'تومان · ' . formatShamsiMonthYear($month), 'tuition.php'];
+    }
+    if ($can('parents')) {
+        $pendingParents = (int) $pdo->query("SELECT COUNT(*) FROM parents WHERE status = 'pending'")->fetchColumn();
+        $tasks[] = [$pendingParents, 'حساب‌های والدین منتظر تأیید', 'بررسی حساب و اطلاعات تماس خانواده‌ها', 'parents.php?status=pending'];
+    }
+    if ($can('messages')) {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM messages WHERE sender_type = 'parent' AND is_read = 0 AND (recipient_admin_id IS NULL OR recipient_admin_id = ?)");
+        $stmt->execute([(int) $_SESSION['admin_id']]);
+        $replyCount = (int) $stmt->fetchColumn();
+        $metrics[] = ['پیام تازه از خانواده‌ها', persianNumber((string) $replyCount), 'مشاهده صندوق پیام‌ها', 'messages.php'];
+        $tasks[] = [$replyCount, 'پیام‌های خوانده‌نشده خانواده‌ها', 'پاسخ‌گویی و پیگیری درخواست والدین', 'messages.php'];
+    }
+    if ($can('events')) {
+        $stmt = $pdo->prepare("SELECT title, event_date FROM events WHERE status = 'scheduled' AND event_date >= ? ORDER BY event_date, id LIMIT 4");
+        $stmt->execute([$today]);
+        $upcomingEvents = $stmt->fetchAll();
+    }
 } catch (Throwable $e) {
-    error_log($e->getMessage());
+    error_log('admin dashboard: ' . $e->getMessage());
+    $errorMessage = 'بخشی از اطلاعات بارگذاری نشد. برای دریافت وضعیت به‌روز، صفحه را دوباره باز کنید.';
 }
-
-$pageTitle = 'داشبورد مدیر | ' . e(siteName());
-require_once __DIR__ . '/header.php';
+$tasks = array_values(array_filter($tasks, static fn(array $task): bool => $task[0] > 0));
+$quickLinks = [
+    ['attendance', 'ثبت حضور امروز'], ['add-child', 'ثبت‌نام کودک'],
+    ['tuition', 'ثبت پرداخت شهریه'], ['messages', 'پیام به خانواده‌ها'],
+    ['classrooms', 'مدیریت کلاس‌ها'], ['teachers', 'مربیان مهد'],
+    ['expenses', 'ثبت هزینه'], ['reports', 'گزارش مالی'],
+    ['salary', 'حقوق مربیان'], ['events', 'تقویم مهد'],
+];
+$quickLinks = array_values(array_filter($quickLinks, static fn(array $link): bool => $can($link[0])));
+$pageTitle = 'امروز در مهد | ' . siteName();
+require __DIR__ . '/header.php';
 ?>
-
-<div class="admin-dashboard">
-    <!-- Page Header -->
-    <div class="admin-page-header">
-        <h1>داشبورد مدیریت</h1>
-        <p>خلاصه وضعیت مهد کودک <?= e(siteName()) ?></p>
-    </div>
-
-    <!-- Metrics Grid -->
-    <div class="metrics-grid">
-        <div class="metric-card metric-primary">
-            <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg></div>
-            <div class="metric-content">
-                <div class="metric-value" data-count="<?= (int) $metrics['active_children'] ?>"><?= e(persianNumber((string) $metrics['active_children'])) ?></div>
-                <div class="metric-label">کودکان فعال</div>
-            </div>
-            <a href="<?= e(url('admin/children.php?status=active')) ?>" class="metric-link">مشاهده همه ←</a>
+<?php if ($errorMessage): ?><div class="alert" role="alert"><?= e($errorMessage) ?></div><?php endif; ?>
+<?php if ($successMessage): ?><div class="notice" role="status"><?= e($successMessage) ?></div><?php endif; ?>
+<?php portalWelcome(
+    'دفتر مدیریت · ' . siteName(),
+    'یک روز خوب، از اینجا شروع می‌شود.',
+    'وضعیت امروز مهد و کارهایی که به توجه شما نیاز دارند، در یک نگاه.',
+    $can('attendance') ? [['ثبت حضور امروز', 'admin/attendance.php'], ['ثبت‌نام کودک', 'admin/add-child.php']] : [['ثبت پرداخت شهریه', 'admin/tuition.php'], ['گزارش مالی', 'admin/reports.php']]
+); ?>
+<section class="portal-metrics" aria-label="وضعیت مهد">
+    <?php foreach ($metrics as [$label, $value, $hint, $path]): ?>
+        <a class="portal-metric" href="<?= e(url('admin/' . $path)) ?>">
+            <span><?= e($label) ?></span><strong><?= e($value) ?></strong><small><?= e($hint) ?> ←</small>
+        </a>
+    <?php endforeach; ?>
+</section>
+<div class="portal-columns">
+    <section class="portal-panel">
+        <div class="portal-section-heading"><h2>نیازمند پیگیری</h2><span class="badge badge-warning"><?= e(persianNumber((string) count($tasks))) ?> مورد</span></div>
+        <?php if ($tasks === []): ?>
+            <div class="portal-empty"><?= $errorMessage ? 'اطلاعات پیگیری فعلاً در دسترس نیست.' : ($can('children') ? 'در بخش‌های قابل دسترسی شما، موردی برای پیگیری باقی نمانده است.' : 'برای ثبت دریافت‌ها، هزینه‌ها و بررسی حساب‌ها از دسترسی‌های سریع استفاده کنید.') ?></div>
+        <?php endif; ?>
+        <?php foreach ($tasks as [$count, $title, $hint, $path]): ?>
+            <a class="portal-task" href="<?= e(url('admin/' . $path)) ?>"><span class="portal-task-count"><?= e(persianNumber((string) $count)) ?></span><span class="portal-task-copy"><strong><?= e($title) ?></strong><span><?= e($hint) ?></span></span><span class="portal-task-arrow" aria-hidden="true">←</span></a>
+        <?php endforeach; ?>
+    </section>
+    <section class="portal-panel">
+        <div class="portal-section-heading"><h2>دسترسی‌های سریع</h2></div>
+        <div class="portal-shortcuts">
+            <?php foreach ($quickLinks as [$page, $label]): ?><a href="<?= e(url('admin/' . $page . '.php')) ?>"><?= e($label) ?> <span aria-hidden="true">←</span></a><?php endforeach; ?>
         </div>
-
-        <div class="metric-card metric-secondary">
-            <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-            <div class="metric-content">
-                <div class="metric-value" data-count="<?= (int) $metrics['total_teachers'] ?>"><?= e(persianNumber((string) $metrics['total_teachers'])) ?></div>
-                <div class="metric-label">معلمان</div>
-            </div>
-            <a href="<?= e(url('admin/teachers.php')) ?>" class="metric-link">مدیریت ←</a>
-        </div>
-
-        <div class="metric-card metric-accent">
-            <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
-            <div class="metric-content">
-                <div class="metric-value" data-count="<?= (int) $metrics['monthly_tuition'] ?>" data-suffix=" تومان"><?= e(persianNumber(number_format($metrics['monthly_tuition'], 0))) ?> تومان</div>
-                <div class="metric-label">شهریه این ماه</div>
-            </div>
-            <a href="<?= e(url('admin/tuition.php')) ?>" class="metric-link">مشاهده جزئیات ←</a>
-        </div>
-
-        <div class="metric-card metric-info">
-            <div class="metric-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></div>
-            <div class="metric-content">
-                <div class="metric-value" data-count="<?= (int) $metrics['upcoming_events'] ?>"><?= e(persianNumber((string) $metrics['upcoming_events'])) ?></div>
-                <div class="metric-label">رویدادهای پیش‌رو</div>
-            </div>
-            <a href="<?= e(url('admin/events.php')) ?>" class="metric-link">مشاهده تقویم ←</a>
-        </div>
-    </div>
-
-    <?php if ($metrics['pending_parents'] > 0): ?>
-    <div class="alert alert-warning" role="alert">
-        <span class="alert-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></span>
-        <div>
-            <strong>ثبت نام جدید والدین:</strong> <?= e(persianNumber((string) $metrics['pending_parents'])) ?> والد در انتظار تأیید هویت هستند.
-            <a href="<?= e(url('admin/parents.php')) ?>" class="alert-link">بررسی و تأیید ←</a>
-        </div>
-    </div>
-    <?php endif; ?>
-
-    <?php if ($metrics['pending_children'] > 0): ?>
-    <div class="alert alert-warning" role="alert">
-        <span class="alert-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></span>
-        <div>
-            <strong>اقدام لازم:</strong> <?= e(persianNumber((string) $metrics['pending_children'])) ?> ثبت‌نام در انتظار تأیید است.
-            <a href="<?= e(url('admin/children.php?status=pending')) ?>" class="alert-link">بررسی ←</a>
-        </div>
-    </div>
-    <?php endif; ?>
-
-    <!-- Quick Actions -->
-    <div class="admin-section">
-        <div class="admin-section-header">
-            <h2 class="admin-section-title">اقدامات سریع</h2>
-        </div>
-        <div class="quick-actions-grid">
-            <a href="<?= e(url('admin/children.php')) ?>" class="quick-action">
-                <span class="quick-action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg></span>
-                <span class="quick-action-text">مدیریت کودکان</span>
-            </a>
-            <a href="<?= e(url('admin/attendance.php')) ?>" class="quick-action">
-                <span class="quick-action-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span>
-                <span class="quick-action-text">ثبت حضور و غیاب</span>
-            </a>
-            <a href="<?= e(url('admin/events.php')) ?>" class="quick-action">
-                <span class="quick-action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></span>
-                <span class="quick-action-text">افزودن رویداد</span>
-            </a>
-            <a href="<?= e(url('admin/news.php')) ?>" class="quick-action">
-                <span class="quick-action-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"/></svg></span>
-                <span class="quick-action-text">ارسال خبر</span>
-            </a>
-            <a href="<?= e(url('admin/teachers.php')) ?>" class="quick-action">
-                <span class="quick-action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-                <span class="quick-action-text">مدیریت معلمان</span>
-            </a>
-            <a href="<?= e(url('admin/classrooms.php')) ?>" class="quick-action">
-                <span class="quick-action-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
-                <span class="quick-action-text">کلاس‌ها</span>
-            </a>
-        </div>
-    </div>
-
-    <!-- Two Column Layout -->
-    <div class="admin-two-column">
-        <!-- Recent Registrations -->
-        <div class="admin-section">
-            <div class="admin-section-header">
-                <h2 class="admin-section-title">ثبت‌نام‌های اخیر</h2>
-                <a href="<?= e(url('admin/children.php')) ?>" class="btn btn-outline btn-sm">مشاهده همه</a>
-            </div>
-            <?php if (empty($recentRegistrations)): ?>
-                <div class="empty-state empty-state-sm">
-                    <div class="empty-state-icon"><svg width="24" height="24" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-file-text')) ?>"/></svg></div>
-                    <p>ثبت‌نام اخیری وجود ندارد.</p>
-                </div>
-            <?php else: ?>
-                <div class="quick-list">
-                    <?php foreach ($recentRegistrations as $child): ?>
-                        <div class="quick-list-item">
-                            <div class="quick-list-avatar"><svg width="22" height="22" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-user')) ?>"/></svg></div>
-                            <div class="quick-list-content">
-                                <div class="quick-list-title">
-                                    <a href="<?= e(url('admin/child-detail.php?id=' . $child['id'])) ?>">
-                                        <?= e($child['first_name'] . ' ' . $child['last_name']) ?>
-                                    </a>
-                                </div>
-                                <div class="quick-list-meta">
-                                    <?php
-                                    $statusClass = match($child['status']) {
-                                        'active' => 'badge-success',
-                                        'pending' => 'badge-warning',
-                                        'graduated' => 'badge-graduated',
-                                        'withdrawn' => 'badge-withdrawn',
-                                        'inactive' => 'badge-danger',
-                                        default => 'badge-info'
-                                    };
-                                    ?>
-                                    <span class="badge <?= $statusClass ?>"><?= e(parentChildEnrollmentLabel((string) $child['status'])) ?></span>
-                                    <span class="text-muted">• <?= e(shamsiDate((string) $child['created_at'])) ?></span>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </div>
-
-        <!-- Upcoming Events -->
-        <div class="admin-section">
-            <div class="admin-section-header">
-                <h2 class="admin-section-title">رویدادهای پیش‌رو</h2>
-                <a href="<?= e(url('admin/events.php')) ?>" class="btn btn-outline btn-sm">مشاهده همه</a>
-            </div>
-            <?php if (empty($upcomingEvents)): ?>
-                <div class="empty-state empty-state-sm">
-                    <div class="empty-state-icon"><svg width="24" height="24" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-calendar')) ?>"/></svg></div>
-                    <p>هیچ رویداد آینده‌ای برنامه‌ریزی نشده است.</p>
-                </div>
-            <?php else: ?>
-                <div class="quick-list">
-                    <?php foreach ($upcomingEvents as $event): ?>
-                        <div class="quick-list-item">
-                            <div class="quick-list-avatar"><svg width="22" height="22" aria-hidden="true"><use href="<?= e(asset('assets/img/icons.svg#icon-calendar')) ?>"/></svg></div>
-                            <div class="quick-list-content">
-                                <div class="quick-list-title">
-                                    <a href="<?= e(url('admin/events.php')) ?>">
-                                        <?= e($event['title']) ?>
-                                    </a>
-                                </div>
-                                <div class="quick-list-meta">
-                                    <span class="text-muted">
-                                        <?= e(persianDayName((string) $event['event_date']) . ' ' . shamsiDate((string) $event['event_date'])) ?>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </div>
-    </div>
+    </section>
 </div>
-
-<?php require_once __DIR__ . '/footer.php'; ?>
+<div class="portal-columns">
+    <?php if ($can('children')): ?>
+    <section class="portal-panel">
+        <div class="portal-section-heading"><h2>تازه به جمع ما پیوسته‌اند</h2><a href="<?= e(url('admin/children.php')) ?>">همه کودکان ←</a></div>
+        <?php if (!$recentRegistrations): ?><p class="portal-empty">هنوز کودکی ثبت‌نام نشده است. از «ثبت‌نام کودک» شروع کنید.</p><?php endif; ?>
+        <?php foreach ($recentRegistrations as $child): ?>
+            <div class="portal-row"><span class="portal-row-avatar"><?= e(userInitial($child['first_name'])) ?></span><div><a href="<?= e(url('admin/child-detail.php?id=' . (int) $child['id'])) ?>"><?= e($child['first_name'] . ' ' . $child['last_name']) ?></a><small><?= e(shamsiDate($child['created_at'])) ?></small></div><span class="badge <?= $child['status'] === 'active' ? 'badge-success' : 'badge-warning' ?>"><?= e(parentChildEnrollmentLabel($child['status'])) ?></span></div>
+        <?php endforeach; ?>
+    </section>
+    <?php endif; ?>
+    <?php if ($can('events')): ?>
+    <section class="portal-panel">
+        <div class="portal-section-heading"><h2>روزهای پیش رو</h2><a href="<?= e(url('admin/events.php')) ?>">تقویم مهد ←</a></div>
+        <?php if (!$upcomingEvents): ?><p class="portal-empty">رویدادی برنامه‌ریزی نشده است. جشن یا برنامه بعدی مهد را به تقویم اضافه کنید.</p><?php endif; ?>
+        <?php foreach ($upcomingEvents as $event): ?>
+            <div class="portal-row"><span class="portal-row-avatar" aria-hidden="true">☀</span><div><a href="<?= e(url('admin/events.php')) ?>"><?= e($event['title']) ?></a><small><?= e(shamsiDate($event['event_date'], 'with_day')) ?></small></div></div>
+        <?php endforeach; ?>
+    </section>
+    <?php endif; ?>
+</div>
+<?php require __DIR__ . '/footer.php'; ?>

@@ -9,10 +9,8 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/csrf.php';
 
-// Force database initialization for messaging table
-initializeMessagingTable();
-
 requireParentLogin();
+initializeMessagingTable();
 
 $parentId = (int) ($_SESSION['parent_id'] ?? 0);
 $pdo = getDb();
@@ -50,13 +48,22 @@ if (isPostRequest() && ($_POST['action'] ?? '') === 'reply') {
 
         $recipientAdminId = filter_var($_POST['recipient_admin_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $recipientAdminId = is_int($recipientAdminId) ? $recipientAdminId : null;
+        if ($recipientAdminId !== null) {
+            $recipient = $pdo->prepare("SELECT id FROM admins WHERE id = ? AND role IN ('owner', 'manager', 'receptionist')");
+            $recipient->execute([$recipientAdminId]);
+            if ($recipient->fetchColumn() === false) {
+                setFlash('error', 'گیرنده پیام در دسترس نیست. مدیریت مهد را انتخاب کنید.');
+                redirect(url('parent/messages.php'));
+            }
+        }
 
         $ins = $pdo->prepare(
             "INSERT INTO messages (sender_type, sender_id, recipient_admin_id, parent_id, subject, body, is_read)
-             VALUES ('parent', :pid, :rid, :pid, :sub, :body, 0)"
+             VALUES ('parent', :sender_id, :rid, :pid, :sub, :body, 0)"
         );
         $ins->execute([
             ':pid'  => $parentId,
+            ':sender_id' => $parentId,
             ':rid'  => $recipientAdminId,
             ':sub'  => $subject,
             ':body' => $body,
@@ -79,8 +86,11 @@ if (isset($_GET['view'])) {
     // Only ever flip the read flag on a row that belongs to THIS parent.
     // Legacy broadcast rows (parent_id IS NULL) are shared by every family, so
     // marking those read would wipe the "unread" badge for all of them at once.
-    $markReadStmt = $pdo->prepare('UPDATE messages SET is_read = 1 WHERE id = ? AND parent_id = ?');
+    $markReadStmt = $pdo->prepare("UPDATE messages SET is_read = 1 WHERE id = ? AND parent_id = ? AND sender_type IN ('admin', 'teacher')");
     $markReadStmt->execute([$viewId, $parentId]);
+    $broadcastRead = $pdo->prepare("INSERT IGNORE INTO message_reads (message_id, parent_id)
+        SELECT id, ? FROM messages WHERE id = ? AND parent_id IS NULL AND sender_type IN ('admin', 'teacher')");
+    $broadcastRead->execute([$parentId, $viewId]);
 
     // Fetch message details
     $msgStmt = $pdo->prepare("
@@ -88,6 +98,7 @@ if (isset($_GET['view'])) {
                CASE
                  WHEN m.sender_type = 'admin' THEN 'مدیر سیستم'
                  WHEN m.sender_type = 'teacher' THEN (SELECT CONCAT('معلم ', first_name, ' ', last_name) FROM teachers WHERE id = m.sender_id)
+                 WHEN m.sender_type = 'parent' THEN 'شما'
                END as sender_name
         FROM messages m
         WHERE m.id = ? AND (m.parent_id IS NULL OR m.parent_id = ?)
@@ -103,6 +114,7 @@ $pagination = paginate((int) $countStmt->fetchColumn(), currentPageNumber(), 20)
 
 $messagesStmt = $pdo->prepare("
     SELECT m.*,
+           CASE WHEN m.parent_id IS NULL THEN EXISTS(SELECT 1 FROM message_reads mr WHERE mr.message_id = m.id AND mr.parent_id = {$parentId}) ELSE m.is_read END AS is_read,
            CASE
              WHEN m.sender_type = 'admin' THEN 'مدیر سیستم'
              WHEN m.sender_type = 'teacher' THEN (SELECT CONCAT('معلم ', first_name, ' ', last_name) FROM teachers WHERE id = m.sender_id)
@@ -120,7 +132,7 @@ $messages = $messagesStmt->fetchAll();
 $replyAdminOptions = [];
 try {
     $adminOptionsStmt = $pdo->query(
-        "SELECT id, username FROM admins
+        "SELECT id, username FROM admins WHERE role IN ('owner', 'manager', 'receptionist')
          ORDER BY (role = 'owner') DESC, id ASC
          LIMIT 25"
     );
@@ -202,7 +214,7 @@ require_once __DIR__ . '/header.php';
         <h2><span class="header-icon"><svg width="20" height="20" aria-hidden="true" style="vertical-align:middle;"><use href="<?= e(asset('assets/img/icons.svg#icon-message-square')) ?>"/></svg></span> ارسال پیام به مدیریت</h2>
   </div>
     <div class="parent-card-body">
-        <form method="post" action="<?= e(url('parent/messages.php')) ?>">
+        <form id="parentReplyForm" method="post" action="<?= e(url('parent/messages.php')) ?>">
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="reply">
 

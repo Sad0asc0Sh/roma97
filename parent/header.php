@@ -21,8 +21,11 @@ $unreadCount = 0;
 if (isset($_SESSION['parent_id'])) {
     try {
         $pdo = getDb();
-        $unreadStmt = $pdo->prepare("SELECT COUNT(*) FROM messages WHERE (parent_id IS NULL OR parent_id = ?) AND is_read = 0 AND sender_type <> 'parent'");
-        $unreadStmt->execute([$_SESSION['parent_id']]);
+        initializeMessagingTable();
+        $unreadStmt = $pdo->prepare("SELECT COUNT(*) FROM messages m WHERE m.sender_type IN ('admin', 'teacher') AND
+            ((m.parent_id = ? AND m.is_read = 0) OR (m.parent_id IS NULL AND NOT EXISTS
+                (SELECT 1 FROM message_reads mr WHERE mr.message_id = m.id AND mr.parent_id = ?)))");
+        $unreadStmt->execute([$_SESSION['parent_id'], $_SESSION['parent_id']]);
         $unreadCount = (int) $unreadStmt->fetchColumn();
     } catch (Throwable $e) {
         // Silently fail
@@ -48,7 +51,7 @@ $navChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php',
     <link rel="manifest" href="<?php echo e(url('manifest.webmanifest')); ?>">
     <link rel="apple-touch-icon" href="<?php echo e(url('assets/icons/icon-180.png')); ?>">
     <link rel="icon" href="<?php echo e(url('assets/icons/icon-192.png')); ?>" sizes="192x192" type="image/png">
-    <script>(function(){var t=localStorage.getItem('roma_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
+    <script>(function(){var saved;try{saved=localStorage.getItem('roma_theme');}catch(e){}var t=saved||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
     <script>window.ROMA_SW_URL = <?php echo json_encode(url('sw.js'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;</script>
     <title><?php echo e($pageTitle); ?> | <?php echo e($siteNameValue); ?></title>
     <link rel="preload" href="<?php echo e(url('assets/fonts/Vazirmatn-Regular.woff2')); ?>" as="font" type="font/woff2" crossorigin>
@@ -57,7 +60,9 @@ $navChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php',
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/app-shell.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/style.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/parent-portal.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(asset('assets/css/portal-experience.css')); ?>">
     <script src="<?php echo e(asset('assets/js/app-shell.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('assets/js/portal-experience.js')); ?>" defer></script>
     <script src="<?php echo e(asset('assets/js/pwa-install.js')); ?>" defer></script>
 </head>
 <body class="parent-portal-body">

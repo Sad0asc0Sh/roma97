@@ -13,6 +13,7 @@ require_once __DIR__ . '/../includes/sms.php';
 require_once __DIR__ . '/../includes/notifications.php';
 
 requireLogin();
+require_once __DIR__ . '/../includes/portal_rules.php';
 
 $successMessage = getFlash('success');
 $errorMessage = getFlash('error');
@@ -20,8 +21,8 @@ $errorMessage = getFlash('error');
 $selectedChildId = max(0, (int) ($_GET['child_id'] ?? 0));
 
 // Month shown in the status table (defaults to the current Shamsi month).
-$viewMonthYear = (string) ($_GET['month_year'] ?? '');
-if (!preg_match('/^\d{4}-\d{2}$/', $viewMonthYear)) {
+$viewMonthYear = portalMonthYear((string) ($_GET['month_year'] ?? ''));
+if ($viewMonthYear === null) {
     [$vJy, $vJm] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
     $viewMonthYear = sprintf('%04d-%02d', $vJy, $vJm);
 }
@@ -41,17 +42,17 @@ try {
 
         if ($formAction === 'set_plan') {
             $childId        = (int) ($_POST['plan_child_id'] ?? 0);
-            $monthYear      = (string) ($_POST['plan_month_year'] ?? date('Y-m'));
+            $monthYear      = portalMonthYear((string) ($_POST['plan_month_year'] ?? ''));
             $expectedAmount = (float) ($_POST['expected_amount'] ?? 0);
 
-            if ($childId === 0 || $expectedAmount < 0 || $expectedAmount >= 1000000000 || !preg_match('/^\d{4}-\d{2}$/', $monthYear)) {
+            if ($childId <= 0 || $expectedAmount < 0 || $expectedAmount >= 1000000000 || $monthYear === null) {
                 setFlash('error', 'لطفاً مقادیر معتبر برای تعیین شهریه مورد انتظار وارد کنید.');
                 redirect(url('admin/tuition.php'));
             }
             $planStmt = $pdo->prepare(
                 'INSERT INTO tuition_plans (child_id, month_year, expected_amount)
                  VALUES (:cid, :myear, :exp)
-                 ON DUPLICATE KEY UPDATE expected_amount = :exp'
+                 ON DUPLICATE KEY UPDATE expected_amount = VALUES(expected_amount)'
             );
             $planStmt->execute([
                 ':cid'   => $childId,
@@ -73,14 +74,14 @@ try {
         $paymentDateRaw = (string) ($_POST['payment_date'] ?? date('Y-m-d'));
         $paymentDate   = parseJalaliDate($paymentDateRaw) ?? $paymentDateRaw;
         $paymentMethod = (string) ($_POST['payment_method'] ?? 'cash');
-        $monthYear     = (string) ($_POST['month_year'] ?? date('Y-m'));
+        $monthYear     = portalMonthYear((string) ($_POST['month_year'] ?? ''));
         $notes         = trim((string) ($_POST['notes'] ?? ''));
 
         $dateTimeCheck = DateTime::createFromFormat('Y-m-d', $paymentDate);
         $isValidDate = $dateTimeCheck && $dateTimeCheck->format('Y-m-d') === $paymentDate;
 
         $validMethods = ['cash', 'bank_transfer', 'check'];
-        if ($childId === 0 || $amount <= 0 || $amount >= 1000000000 || !$isValidDate || !preg_match('/^\d{4}-\d{2}$/', $monthYear) || !in_array($paymentMethod, $validMethods, true)) {
+        if ($childId <= 0 || $amount <= 0 || $amount >= 1000000000 || !$isValidDate || $monthYear === null || !in_array($paymentMethod, $validMethods, true)) {
             setFlash('error', 'لطفاً همه فیلدهای الزامی را به‌درستی پر کنید.');
             redirect(url('admin/tuition.php'));
         }

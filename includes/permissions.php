@@ -69,7 +69,6 @@ function adminPermissionsMatrix(): array
             'admin/sms-center.php',
             'admin/contact-messages.php',
             'admin/audit.php',
-            'admin/backup.php',
             'admin/export-csv.php',
         ],
         'accountant' => [
@@ -78,7 +77,6 @@ function adminPermissionsMatrix(): array
             'admin/salary.php',
             'admin/expenses.php',
             'admin/reports.php',
-            'admin/backup.php',
             'admin/export-csv.php',
         ],
         'receptionist' => [

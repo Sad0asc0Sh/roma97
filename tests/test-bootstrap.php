@@ -37,6 +37,10 @@ $testDbHost = getenv('ROMA_TEST_DB_HOST') ?: 'localhost';
 $testDbUser = getenv('ROMA_TEST_DB_USER') ?: 'root';
 $testDbPass = getenv('ROMA_TEST_DB_PASS') ?: '';
 $testDbName = getenv('ROMA_TEST_DB_NAME') ?: 'roma97_test';
+if (preg_match('/\Aroma[a-z0-9_]*_test(?:_[a-z0-9]+)?\z/', $testDbName) !== 1) {
+    fwrite(STDERR, "Refusing to reset a database without a dedicated roma test name.\n");
+    exit(2);
+}
 
 // Point the application itself at the throwaway test database BEFORE config
 // loads (config.php reads these env vars into DB_* constants).
@@ -115,24 +119,19 @@ function testDbConnect(): PDO
     $admin->exec("DROP DATABASE IF EXISTS `{$name}`");
     $admin->exec("CREATE DATABASE `{$name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 
-    // Import schema.sql with the mysql client (handles DELIMITER blocks).
-    $mysqlBin = trim((string) shell_exec('command -v mysql'));
-    if ($mysqlBin === '') {
-        fwrite(STDERR, "mysql client not found; cannot import schema.sql\n");
-        exit(2);
-    }
+    // Use pipes rather than shell redirection, and keep passwords out of process arguments.
+    $mysqlBin = getenv('ROMA_TEST_MYSQL_BIN') ?: 'mysql';
     $schemaFile = $projectRoot . '/schema.sql';
-    $cmd = escapeshellarg($mysqlBin)
-        . ' -h ' . escapeshellarg($host)
-        . ' -u ' . escapeshellarg($user)
-        . ($pass !== '' ? ' -p' . escapeshellarg($pass) : '')
-        . ' ' . escapeshellarg($name)
-        . ' < ' . escapeshellarg($schemaFile)
-        . ' 2>&1';
-    exec($cmd, $output, $exitCode);
-    if ($exitCode !== 0) {
-        fwrite(STDERR, "schema.sql import failed:\n" . implode("\n", $output) . "\n");
-        exit(2);
+    $environment = getenv();
+    $environment['MYSQL_PWD'] = $pass;
+    $process = proc_open([$mysqlBin, '-h', $host, '-u', $user, $name],
+        [0 => ['file', $schemaFile, 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, null, $environment);
+    if (!is_resource($process)) { throw new RuntimeException('Cannot launch test database importer.'); }
+    $output = stream_get_contents($pipes[1]);
+    $errors = stream_get_contents($pipes[2]);
+    fclose($pipes[1]); fclose($pipes[2]);
+    if (proc_close($process) !== 0) {
+        throw new RuntimeException('schema.sql import failed: ' . $output . $errors);
     }
 
     // The app's own getDb() already points at this database (env was set

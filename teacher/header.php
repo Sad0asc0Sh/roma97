@@ -81,7 +81,7 @@ $navChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php']
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#2B7A56" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#0D1411" media="(prefers-color-scheme: dark)">
-    <script>(function(){var t=localStorage.getItem('roma_theme')||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
+    <script>(function(){var saved;try{saved=localStorage.getItem('roma_theme');}catch(e){}var t=saved||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);})();</script>
     <title><?php echo $pageTitleValue; ?></title>
     <link rel="preload" href="<?php echo e(url('assets/fonts/Vazirmatn-Regular.woff2')); ?>" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="<?php echo e(url('assets/fonts/BalooBhaijaan2-arabic.woff2')); ?>" as="font" type="font/woff2" crossorigin>
@@ -89,7 +89,9 @@ $navChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php']
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/app-shell.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/style.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/teacher-portal.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(asset('assets/css/portal-experience.css')); ?>">
     <script src="<?php echo e(asset('assets/js/app-shell.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('assets/js/portal-experience.js')); ?>" defer></script>
 </head>
 <body class="teacher-layout teacher-portal-body">
     <a class="skip-link" href="#teacherMain">پرش به محتوای اصلی</a>
@@ -113,7 +115,7 @@ $navChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php']
                     </a>
 
                     <?php if (count($headerClassrooms) > 1): ?>
-                        <form method="get" action="<?php echo e(url('teacher/' . $currentPage)); ?>" class="tp-class-switcher" title="تغییر کلاس فعال">
+                        <form method="get" action="<?php echo e(url('teacher/' . ($currentPage === 'child-detail.php' ? 'children.php' : $currentPage))); ?>" class="tp-class-switcher" title="تغییر کلاس فعال">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
                             <label for="headerClassroomSelect" class="sr-only">انتخاب کلاس</label>
                             <select id="headerClassroomSelect" name="classroom_id" onchange="this.form.submit()">

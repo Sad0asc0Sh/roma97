@@ -11,6 +11,7 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/parent_children_helpers.php';
 
 requireParentLogin();
+require_once __DIR__ . '/../includes/portal_rules.php';
 
 $parentId = (int) $_SESSION['parent_id'];
 $successMessage = getFlash('success');
@@ -54,25 +55,24 @@ try {
         $monthTotals['balance']  += (float) $breakdown['balance'];
     }
 
+    $monthTotals = portalTuitionTotals($monthBreakdowns);
+    $summaryStmt = $pdo->prepare('SELECT COUNT(*) AS total, COALESCE(SUM(amount), 0) AS paid FROM tuition_payments WHERE parent_id = ?');
+    $summaryStmt->execute([$parentId]);
+    $summary = $summaryStmt->fetch();
+    $totalPaid = (float) $summary['paid'];
+    $paymentsPagination = paginate((int) $summary['total'], currentPageNumber(), 24);
     $stmt = $pdo->prepare("
         SELECT tp.amount, tp.payment_date, tp.payment_method, tp.month_year, tp.notes,
                c.first_name, c.last_name
         FROM tuition_payments tp
         INNER JOIN children c ON c.id = tp.child_id
         WHERE tp.parent_id = :pid
-        ORDER BY tp.payment_date DESC, tp.created_at DESC
+        ORDER BY tp.payment_date DESC, tp.created_at DESC, tp.id DESC
+        LIMIT " . $paymentsPagination['perPage'] . " OFFSET " . $paymentsPagination['offset'] . "
     ");
     $stmt->execute([':pid' => $parentId]);
     $payments = $stmt->fetchAll();
 
-    foreach ($payments as $p) {
-        $totalPaid += (float) $p['amount'];
-    }
-
-    // Years of history must not render in one unbounded table — paginate it
-    // like every other list in the portal.
-    $paymentsPagination = paginate(count($payments), currentPageNumber(), 24);
-    $payments = array_slice($payments, $paymentsPagination['offset'], $paymentsPagination['perPage']);
 
 } catch (Throwable $e) {
     error_log($e->getMessage());
@@ -102,8 +102,8 @@ require_once __DIR__ . '/header.php';
 <?php if ($monthBreakdowns !== []): ?>
     <?php
     // Shared settle tolerance so the portal never disagrees with the office.
-    $isSettled = $monthTotals['balance'] < tuitionSettleTolerance();
-    $hasCredit = $monthTotals['balance'] < -tuitionSettleTolerance();
+    $isSettled = $monthTotals['due'] < tuitionSettleTolerance();
+    $hasCredit = $isSettled && $monthTotals['credit'] > tuitionSettleTolerance();
     ?>
     <div class="card" style="padding:18px;margin-bottom:20px;border-inline-start:5px solid <?= $isSettled ? '#2e8540' : '#c8860d' ?>;">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
@@ -133,7 +133,7 @@ require_once __DIR__ . '/header.php';
                     <?= $hasCredit ? 'اعتبار شما' : 'مانده' ?>
                 </div>
                 <div style="font-size:1.1rem;font-weight:800;color:<?= $isSettled ? '#1e632b' : '#c62828' ?>;">
-                    <?= e(persianNumber(number_format(abs($monthTotals['balance'])))) ?>
+                    <?= e(persianNumber(number_format($hasCredit ? $monthTotals['credit'] : $monthTotals['due']))) ?>
                     <span style="font-size:0.72rem;font-weight:normal;">تومان</span>
                 </div>
             </div>

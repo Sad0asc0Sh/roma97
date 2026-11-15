@@ -334,6 +334,8 @@ function requireLogin(): void
         }
     } catch (Throwable $e) {
         error_log('requireLogin role refresh failed: ' . $e->getMessage());
+        http_response_code(503);
+        exit('بررسی دسترسی در حال حاضر ممکن نیست. لطفاً چند لحظه دیگر صفحه را دوباره باز کنید.');
     }
 
     // Unknown roles fail closed: destroy the session and bounce to the login
@@ -448,6 +450,27 @@ function requireParentLogin(): void
     if (!isParentLoggedIn()) {
         redirect(url('login.php'));
     }
+    static $verifiedId = 0;
+    $parentId = (int) $_SESSION['parent_id'];
+    if ($verifiedId === $parentId) {
+        return;
+    }
+    try {
+        $stmt = getDb()->prepare('SELECT status FROM parents WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $parentId]);
+        $status = $stmt->fetchColumn();
+        if (!in_array($status, ['active', 'pending'], true)) {
+            unset($_SESSION['parent_id'], $_SESSION['parent_name'], $_SESSION['parent_first_name'], $_SESSION['parent_status']);
+            setFlash('error', 'دسترسی حساب شما تغییر کرده است. برای پیگیری با مدیریت مهد تماس بگیرید.');
+            redirect(url('login.php'));
+        }
+        $_SESSION['parent_status'] = $status;
+        $verifiedId = $parentId;
+    } catch (Throwable $e) {
+        error_log('requireParentLogin refresh failed: ' . $e->getMessage());
+        http_response_code(503);
+        exit('بررسی دسترسی در حال حاضر ممکن نیست. لطفاً چند لحظه دیگر صفحه را دوباره باز کنید.');
+    }
 }
 
 function isTeacherLoggedIn(): bool
@@ -527,6 +550,8 @@ function requireTeacherLogin(): void
         $_SESSION['teacher_has_class']  = $hasAssignedClassroom;
     } catch (Throwable $e) {
         error_log('requireTeacherLogin refresh failed: ' . $e->getMessage());
+        http_response_code(503);
+        exit('بررسی دسترسی در حال حاضر ممکن نیست. لطفاً چند لحظه دیگر صفحه را دوباره باز کنید.');
     }
 
     teacherEnforcePageMatrix($hasAssignedClassroom);
