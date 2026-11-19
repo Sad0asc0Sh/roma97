@@ -373,7 +373,7 @@ require_once __DIR__ . '/header.php';
                 <input type="hidden" name="classroom_id" value="<?= e($classroomId) ?>">
                 <label for="repDate" class="sr-only">تاریخ شمسی گزارش</label>
                 <input type="text" id="repDate" name="date" class="tp-input shamsi-datepicker"
-                    dir="ltr" inputmode="numeric" autocomplete="off" required
+                    <?= iranPickerAttributes() ?> required
                     value="<?= e(shamsiDate($selectedDate, 'numeric')) ?>"
                     data-max-date="<?= e(shamsiDate($today, 'Y-m-d')) ?>"
                     data-min-date="<?= e(shamsiDate($todayObj->modify('-7 days')->format('Y-m-d'), 'Y-m-d')) ?>">

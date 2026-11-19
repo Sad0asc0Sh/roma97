@@ -83,7 +83,7 @@ if (isPostRequest() && in_array($replyAction, ['mark_reply_read', 'save_follow_u
             $dueDate = parseIranDate($dueDateInput);
             $dueTime = is_string($dueTimeInput) ? parseIranTime($dueTimeInput) : null;
             if ($dueDate === null || $dueTime === null || iranDateTime($dueDate . ' ' . $dueTime) === null) {
-                throw new InvalidArgumentException('مهلت پاسخ را با تاریخ شمسی و ساعت ۲۴ ساعتهٔ تهران وارد کنید.');
+                throw new InvalidArgumentException('برای مهلت پاسخ، تاریخ شمسی و ساعت ۲۴ ساعتهٔ تهران را انتخاب کنید.');
             }
             if ($status !== 'open') {
                 $assignee ??= $adminId;

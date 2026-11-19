@@ -218,7 +218,7 @@ if (isPostRequest()) {
         $hireDateVal = parseIranDate($fields['hire_date']);
         if (array_key_exists('hire_date', $_POST)
             && (!is_string($_POST['hire_date']) || ($fields['hire_date'] !== '' && $hireDateVal === null))) {
-            $formErrors[] = 'تاریخ شروع همکاری را به شمسی وارد کنید، مانند ۱۴۰۵/۰۵/۱۸.';
+            $formErrors[] = 'تاریخ شروع همکاری را از تقویم شمسی انتخاب کنید.';
         }
 
         if ($fields['salary'] !== '') {
@@ -506,7 +506,7 @@ require_once __DIR__ . '/header.php';
             <div class="form-group">
                 <label for="tf_hire_date">تاریخ شمسی شروع همکاری (اختیاری)</label>
                 <input type="text" id="tf_hire_date" name="hire_date" class="form-control shamsi-datepicker"
-                       dir="ltr" inputmode="numeric" autocomplete="off" placeholder="۱۴۰۵/۰۵/۱۸"
+                       <?= iranPickerAttributes() ?> placeholder="انتخاب تاریخ"
                        value="<?= e($formData['hire_date'] ?? (empty($editTeacher['hire_date']) ? '' : shamsiDate($editTeacher['hire_date'], 'numeric'))) ?>">
             </div>
             <div class="form-group">

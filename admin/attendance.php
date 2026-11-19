@@ -153,7 +153,7 @@ $plan = ['holiday' => null, 'expected' => [], 'missing' => [], 'notices' => []];
 $successMessage = getFlash('success');
 $errorMessage = getFlash('error');
 if ($dateInput !== null && $parsedDate === null) {
-    $errorMessage ??= 'تاریخ حضور را به شمسی وارد کنید، مانند ۱۴۰۵/۰۵/۱۸.';
+    $errorMessage ??= 'تاریخ حضور را از تقویم شمسی انتخاب کنید.';
 }
 
 try {
@@ -241,7 +241,7 @@ SQL;
             $pickupChildId = $pickup === null ? null : (int) $pickup[1];
             if ($pickupChildId !== null) {
                 $fields = $attendanceData[$pickupChildId] ?? [];
-                $checkout = optionalIranTime($fields['check_out'] ?? null, 'ساعت خروج را به صورت ۲۴ ساعته وارد کنید، مانند ۱۴:۳۰.');
+                $checkout = optionalIranTime($fields['check_out'] ?? null, 'ساعت خروج را در قالب ۲۴ ساعته انتخاب کنید.');
                 $originalCheckout = optionalIranTime($fields['original_checkout'] ?? null, 'ساعت خروج ثبت‌شده معتبر نیست. صفحه را دوباره باز کنید.');
                 if ($checkout === $originalCheckout) {
                     $checkout = null;
@@ -269,8 +269,8 @@ SQL;
                 }
 
                 $notes = normalizeAttendanceNotes(is_string($fields['notes'] ?? null) ? $fields['notes'] : '');
-                $checkIn = optionalIranTime($fields['check_in'] ?? null, 'ساعت ورود را به صورت ۲۴ ساعته وارد کنید، مانند ۰۸:۳۰.');
-                $checkOut = optionalIranTime($fields['check_out'] ?? null, 'ساعت خروج را به صورت ۲۴ ساعته وارد کنید، مانند ۱۴:۳۰.');
+                $checkIn = optionalIranTime($fields['check_in'] ?? null, 'ساعت ورود را در قالب ۲۴ ساعته انتخاب کنید.');
+                $checkOut = optionalIranTime($fields['check_out'] ?? null, 'ساعت خروج را در قالب ۲۴ ساعته انتخاب کنید.');
                 [$checkIn, $checkOut] = portalAttendanceTimes($status, $checkIn, $checkOut);
 
                 $values = [
@@ -449,7 +449,7 @@ require_once __DIR__ . '/header.php';
         <?php endif; ?>
         <div class="attendance-filter-field adm-filter-field">
             <label for="attendance_date_pick" class="form-label">تاریخ شمسی</label>
-            <input type="text" id="attendance_date_pick" name="date" class="form-control shamsi-datepicker" dir="ltr" inputmode="numeric" autocomplete="off" required value="<?= e(shamsiDate($selectedDate, 'numeric')) ?>">
+            <input type="text" id="attendance_date_pick" name="date" class="form-control shamsi-datepicker" <?= iranPickerAttributes() ?> required value="<?= e(shamsiDate($selectedDate, 'numeric')) ?>">
         </div>
         <div class="attendance-filter-field adm-filter-field">
             <label for="attendance_filter" class="form-label">وضعیت</label>
@@ -569,8 +569,9 @@ require_once __DIR__ . '/header.php';
                                                 <input type="hidden" name="attendance[<?= e($cid) ?>][original_checkout]" value="<?= e($child['check_out']) ?>">
                                                 <input
                                                     class="form-control time-input"
-                                                    type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰"
+                                                    type="text" data-iran-time <?= iranPickerAttributes() ?> placeholder="انتخاب ساعت"
                                                     name="attendance[<?= e((string) $cid) ?>][check_in]"
+                                                    aria-label="ساعت ورود <?= e($fullName) ?>"
                                                     value="<?= e(iranTimeForInput($child['check_in'] ?? null)) ?>"
                                                     <?= $child['pickup_verified_by'] !== null ? 'disabled' : '' ?>
                                                     style="padding:4px 8px;"
@@ -579,8 +580,9 @@ require_once __DIR__ . '/header.php';
                                             <td>
                                                 <input
                                                     class="form-control time-input"
-                                                    type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰"
+                                                    type="text" data-iran-time <?= iranPickerAttributes() ?> placeholder="انتخاب ساعت"
                                                     name="attendance[<?= e((string) $cid) ?>][check_out]"
+                                                    aria-label="ساعت خروج <?= e($fullName) ?>"
                                                     value="<?= e(iranTimeForInput($child['check_out'] ?? null)) ?>"
                                                     <?= $child['pickup_verified_by'] !== null ? 'disabled' : '' ?>
                                                     style="padding:4px 8px;"
@@ -639,7 +641,7 @@ require_once __DIR__ . '/header.php';
                                         ورود
                                         <input
                                             class="form-control time-input"
-                                            type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰"
+                                            type="text" data-iran-time <?= iranPickerAttributes() ?> placeholder="انتخاب ساعت"
                                             name="mobile_attendance[<?= e((string) $cid) ?>][check_in]"
                                             value="<?= e(iranTimeForInput($child['check_in'] ?? null)) ?>"
                                             disabled
@@ -650,7 +652,7 @@ require_once __DIR__ . '/header.php';
                                         <input type="hidden" name="mobile_attendance[<?= e($cid) ?>][original_checkout]" value="<?= e($child['check_out']) ?>" disabled>
                                         <input
                                             class="form-control time-input"
-                                            type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰"
+                                            type="text" data-iran-time <?= iranPickerAttributes() ?> placeholder="انتخاب ساعت"
                                             name="mobile_attendance[<?= e((string) $cid) ?>][check_out]"
                                             value="<?= e(iranTimeForInput($child['check_out'] ?? null)) ?>"
                                             disabled

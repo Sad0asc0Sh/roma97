@@ -94,13 +94,13 @@
                             <label>
                                 تاریخ شمسی مهلت پاسخ
                                 <input type="text" name="response_due_date" class="form-control shamsi-datepicker"
-                                       dir="ltr" inputmode="numeric" autocomplete="off" required
+                                       <?= iranPickerAttributes() ?> required
                                        value="<?= e(shamsiDate($deadlineInput, 'numeric')) ?>">
                             </label>
                             <label>
                                 ساعت مهلت به وقت تهران
                                 <input type="text" name="response_due_time" class="form-control" data-iran-time
-                                       dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰" required
+                                       <?= iranPickerAttributes() ?> placeholder="انتخاب ساعت" required
                                        value="<?= e(iranTimeForInput(substr($deadlineInput, 11))) ?>">
                             </label>
                             <button type="submit" class="btn btn-primary" name="action" value="save_follow_up">ذخیره پیگیری</button>

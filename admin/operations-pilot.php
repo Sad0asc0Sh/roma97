@@ -256,7 +256,7 @@ require __DIR__ . '/header.php';
                     </select>
                 </label>
                 <label>روز شروع شیوهٔ جدید (شمسی)
-                    <input type="text" name="change_date" class="form-control shamsi-datepicker" dir="ltr" inputmode="numeric" autocomplete="off" required value="<?= e(shamsiDate($now->modify('+7 days')->format('Y-m-d'), 'numeric')) ?>">
+                    <input type="text" name="change_date" class="form-control shamsi-datepicker" <?= iranPickerAttributes() ?> required value="<?= e(shamsiDate($now->modify('+7 days')->format('Y-m-d'), 'numeric')) ?>">
                 </label>
                 <button type="submit" class="btn btn-primary">ثبت آزمون کلاس</button>
             </form>

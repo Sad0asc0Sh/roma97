@@ -182,7 +182,7 @@ require_once __DIR__ . '/header.php';
 
                 <div class="form-group">
                     <label for="expense_date" class="form-label">تاریخ شمسی هزینه</label>
-                    <input type="text" name="expense_date" id="expense_date" class="form-control shamsi-datepicker" dir="ltr" inputmode="numeric" autocomplete="off" value="<?= e(shamsiDate(date('Y-m-d'), 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸" required>
+                    <input type="text" name="expense_date" id="expense_date" class="form-control shamsi-datepicker" <?= iranPickerAttributes() ?> value="<?= e(shamsiDate(date('Y-m-d'), 'numeric')) ?>" placeholder="انتخاب تاریخ" required>
                 </div>
 
                 <div class="form-group">

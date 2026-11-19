@@ -187,8 +187,8 @@ $flashError = getFlash('error');
                     </div>
                     <div class="form-group">
                         <label for="date_of_birth">تاریخ شمسی تولد <span class="req">*</span></label>
-                        <input type="text" id="date_of_birth" name="date_of_birth" class="shamsi-datepicker" data-datepicker="birth" dir="ltr" inputmode="numeric" autocomplete="off"
-                               data-min-date="<?= e(shamsiDate(earliestChildBirthDate(), 'Y-m-d')) ?>" data-max-date="<?= e(shamsiDate(strtotime('yesterday'), 'Y-m-d')) ?>" placeholder="۱۳۹۹/۰۵/۱۸" value="<?= e($old['date_of_birth']) ?>" required>
+                        <input type="text" id="date_of_birth" name="date_of_birth" class="shamsi-datepicker" data-datepicker="birth" <?= iranPickerAttributes() ?>
+                               data-min-date="<?= e(shamsiDate(earliestChildBirthDate(), 'Y-m-d')) ?>" data-max-date="<?= e(shamsiDate(strtotime('yesterday'), 'Y-m-d')) ?>" placeholder="انتخاب تاریخ" value="<?= e($old['date_of_birth']) ?>" required>
                     </div>
                 </div>
                 <div class="form-grid">

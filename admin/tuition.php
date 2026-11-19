@@ -374,7 +374,7 @@ require_once __DIR__ . '/header.php';
 
                 <div class="form-group">
                     <label for="payment_date" class="form-label">تاریخ شمسی پرداخت</label>
-                    <input type="text" name="payment_date" id="payment_date" class="form-control shamsi-datepicker" dir="ltr" inputmode="numeric" autocomplete="off" value="<?= e(shamsiDate(date('Y-m-d'), 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸" required>
+                    <input type="text" name="payment_date" id="payment_date" class="form-control shamsi-datepicker" <?= iranPickerAttributes() ?> value="<?= e(shamsiDate(date('Y-m-d'), 'numeric')) ?>" placeholder="انتخاب تاریخ" required>
                 </div>
 
                 <div class="form-group">
@@ -440,7 +440,7 @@ require_once __DIR__ . '/header.php';
                     </div>
                     <div class="form-group">
                         <label for="invoice_due_date" class="form-label">سررسید پرداخت (شمسی)</label>
-                        <input type="text" name="due_date" id="invoice_due_date" class="form-control shamsi-datepicker" dir="ltr" inputmode="numeric" autocomplete="off" required
+                        <input type="text" name="due_date" id="invoice_due_date" class="form-control shamsi-datepicker" <?= iranPickerAttributes() ?> placeholder="انتخاب تاریخ" required
                                value="<?= e(empty($selectedInvoice['due_date']) ? '' : shamsiDate($selectedInvoice['due_date'], 'numeric')) ?>">
                     </div>
                     <div class="form-group">
@@ -468,7 +468,7 @@ require_once __DIR__ . '/header.php';
                             </select>
                         </label>
                         <label for="bulk_due_date">سررسید (شمسی)
-                            <input type="text" name="due_date" id="bulk_due_date" class="form-control shamsi-datepicker" dir="ltr" inputmode="numeric" autocomplete="off" required>
+                            <input type="text" name="due_date" id="bulk_due_date" class="form-control shamsi-datepicker" <?= iranPickerAttributes() ?> placeholder="انتخاب تاریخ" required>
                         </label>
                         <button type="submit" class="btn btn-secondary">ثبت سررسید گروهی</button>
                     </form>

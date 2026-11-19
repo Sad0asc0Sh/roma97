@@ -329,6 +329,12 @@ function iranTimeForInput(?string $value): string
     return $time === null ? '' : persianNumber(str_ends_with($time, ':00') ? substr($time, 0, 5) : $time);
 }
 
+/** Selection-only triggers keep their form names, values and native required validation. */
+function iranPickerAttributes(): string
+{
+    return 'dir="ltr" inputmode="none" role="combobox" aria-haspopup="dialog" aria-expanded="false" aria-readonly="true" autocomplete="off"';
+}
+
 /** The browser uses the same year starts and month lengths as the server. */
 function iranCalendarData(): string
 {

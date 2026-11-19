@@ -156,8 +156,8 @@ SQL . ' ' . PORTAL_UPDATE_UNVERIFIED_ATTENDANCE);
                         $notes = substr($notes, 0, 2000);
                     }
 
-                    $checkIn  = optionalIranTime($fields['check_in'] ?? null, 'ساعت ورود را به صورت ۲۴ ساعته وارد کنید، مانند ۰۸:۳۰.');
-                    $checkOut = optionalIranTime($fields['check_out'] ?? null, 'ساعت خروج را به صورت ۲۴ ساعته وارد کنید، مانند ۱۴:۳۰.');
+                    $checkIn  = optionalIranTime($fields['check_in'] ?? null, 'ساعت ورود را در قالب ۲۴ ساعته انتخاب کنید.');
+                    $checkOut = optionalIranTime($fields['check_out'] ?? null, 'ساعت خروج را در قالب ۲۴ ساعته انتخاب کنید.');
 
                     if ($checkIn === null && in_array($status, ['present', 'late'], true) && $postDate === $today
                         && !array_key_exists($childId, $previousStatuses)) {
@@ -311,7 +311,7 @@ require_once __DIR__ . '/header.php';
             <?php endif; ?>
             <label for="date" class="sr-only">تاریخ شمسی</label>
             <input type="text" id="date" name="date" class="tp-input shamsi-datepicker" style="width:auto;"
-                dir="ltr" inputmode="numeric" autocomplete="off" required
+                <?= iranPickerAttributes() ?> required
                 value="<?= e(shamsiDate($selectedDate, 'numeric')) ?>"
                 data-max-date="<?= e(shamsiDate($today, 'Y-m-d')) ?>"
                 data-min-date="<?= e(shamsiDate($todayObj->modify('-7 days')->format('Y-m-d'), 'Y-m-d')) ?>">
@@ -526,7 +526,7 @@ require_once __DIR__ . '/header.php';
                         <div>
                             <label for="in-<?= $childId ?>" class="tp-label">ساعت پذیرش صبح</label>
                             <div class="tp-time-input-group">
-                                <input type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰" id="in-<?= $childId ?>"
+                                <input type="text" data-iran-time <?= iranPickerAttributes() ?> placeholder="انتخاب ساعت" id="in-<?= $childId ?>"
                                     name="attendance[<?= $childId ?>][check_in]"
                                     class="tp-input"
                                     <?= $pickupVerified ? 'disabled' : '' ?>
@@ -539,7 +539,7 @@ require_once __DIR__ . '/header.php';
                         <div>
                             <label for="out-<?= $childId ?>" class="tp-label">ساعت تحویل به والد</label>
                             <div class="tp-time-input-group">
-                                <input type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰" id="out-<?= $childId ?>"
+                                <input type="text" data-iran-time <?= iranPickerAttributes() ?> placeholder="انتخاب ساعت" id="out-<?= $childId ?>"
                                     name="attendance[<?= $childId ?>][check_out]"
                                     class="tp-input"
                                     <?= $pickupVerified ? 'disabled' : '' ?>

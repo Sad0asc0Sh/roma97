@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initConfirmDialogs();
   initDrawers();
-  initShamsiDatePicker();
+  initIranPickers();
 });
 
 /* ── BFCACHE SAFEGUARD ───────────────────────────────────────
@@ -510,8 +510,8 @@ function iranLatinDigits(value) {
   return String(value).trim().replace(/[۰-۹٠-٩]/g, digit => String(digit.charCodeAt(0) & 15));
 }
 
-function initShamsiDatePicker() {
-  if (!iranCalendar) return;
+function initIranPickers() {
+  if (!iranCalendar || !window.HTMLDialogElement?.prototype.showModal) return;
 
   const { firstYear, firstDay, leapYears, monthNames } = iranCalendar;
   const dayMs = 86400000;
@@ -521,12 +521,12 @@ function initShamsiDatePicker() {
   }
   const lastYear = firstYear + leapYears.length - 1;
   const weekdays = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
-  const selector = 'input.shamsi-datepicker, input[data-jdp]';
+  const dateSelector = 'input.shamsi-datepicker, input[data-jdp]';
+  const selector = dateSelector + ', input[data-iran-time]';
   const pad = number => String(number).padStart(2, '0');
   const dateKey = ({ year, month, day }) => year + '-' + pad(month) + '-' + pad(day);
   const dateLabel = date => iranPersianDigits(dateKey(date).replace(/-/g, '/'));
   let active = null;
-  let returningFocus = false;
 
   function monthLength(year, month) {
     return month <= 6 ? 31 : (month < 12 || leapYears[year - firstYear] === '1' ? 30 : 29);
@@ -564,23 +564,113 @@ function initShamsiDatePicker() {
     return { min, max, birth };
   }
 
-  function closePicker(restoreFocus = false) {
-    if (!active) return;
-    const { input, panel } = active;
-    active = null;
-    panel.remove();
-    input.removeAttribute('aria-controls');
-    if (restoreFocus) {
-      returningFocus = true;
-      input.focus({ preventScroll: true });
-      returningFocus = false;
+  function pickerDialog(input, id, title) {
+    const dialog = document.createElement('dialog');
+    dialog.id = id;
+    dialog.className = 'shamsi-datepicker-container';
+    dialog.setAttribute('aria-label', title);
+    dialog.innerHTML = '<header class="iran-picker-heading"><strong></strong>'
+      + '<button type="button" class="sdp-nav-btn" aria-label="بستن">×</button></header>'
+      + '<div class="iran-picker-body"></div><div class="iran-picker-actions"></div>';
+    dialog.querySelector('strong').textContent = title;
+    const panel = dialog.querySelector('.iran-picker-body');
+    const actions = dialog.querySelector('.iran-picker-actions');
+    const close = () => dialog.close();
+    const commit = value => {
+      close();
+      if (input.matches(':disabled') || !input.isConnected) return;
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    function action(label, handler) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'sdp-back-btn';
+      button.textContent = label;
+      button.addEventListener('click', handler);
+      actions.appendChild(button);
     }
+    if (!input.required && input.value) action('پاک کردن', () => commit(''));
+    dialog.querySelector('header button').addEventListener('click', close);
+    dialog.addEventListener('click', event => {
+      if (event.target !== dialog) return;
+      const rect = dialog.getBoundingClientRect();
+      if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close();
+    });
+    dialog.addEventListener('close', () => {
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-controls');
+      active = null;
+      dialog.remove();
+    }, { once: true });
+    document.body.appendChild(dialog);
+    input.setAttribute('aria-controls', id);
+    input.setAttribute('aria-expanded', 'true');
+    active = dialog;
+    return { dialog, panel, action, commit };
   }
 
-  function openPicker(input) {
-    if (active?.input === input || input.readOnly || input.disabled) return;
-    closePicker();
+  function openClock(input) {
+    const title = input.getAttribute('aria-label') || input.labels?.[0]?.textContent.trim() || 'انتخاب ساعت';
+    const { dialog, panel, action, commit } = pickerDialog(input, 'iran-time-picker', title);
+    const stored = /^(\d{1,2}):(\d{2})/.exec(iranLatinDigits(input.value));
+    const label = number => iranPersianDigits(pad(number));
+    let hour = stored ? Number(stored[1]) : null;
 
+    // The shortcut belongs to today's attendance record, including across midnight.
+    const attendanceDate = input.form?.elements.namedItem('attendance_date')?.value;
+    if (attendanceDate === iranLocalNow().toISOString().slice(0, 10)) {
+      action('الان به وقت تهران', () => {
+        const now = iranLocalNow().toISOString();
+        if (attendanceDate === now.slice(0, 10)) commit(iranPersianDigits(now.slice(11, 19)));
+        else dialog.close();
+      });
+    }
+    function numberButton(number, selected) {
+      return '<button type="button" class="iran-clock-number" data-number="' + number
+        + '" aria-pressed="' + selected + '">' + label(number) + '</button>';
+    }
+    function showHours() {
+      panel.innerHTML = '<div class="iran-clock-caption">ساعت به وقت تهران</div>'
+        + '<div class="iran-clock-grid" role="group" aria-label="ساعت">'
+        + Array.from({ length: 24 }, (_, i) => numberButton(i, i === hour)).join('') + '</div>';
+      panel.querySelector('.iran-clock-grid').addEventListener('click', event => {
+        const choice = event.target.closest('[data-number]');
+        if (!choice) return;
+        hour = Number(choice.dataset.number);
+        showMinutes();
+      });
+    }
+    function showMinutes() {
+      const previousMinute = stored && Number(stored[1]) === hour ? Number(stored[2]) : null;
+      panel.innerHTML = '<div class="iran-clock-caption"><span>انتخاب دقیقه</span>'
+        + '<button type="button" class="sdp-back-btn">تغییر ساعت (' + label(hour) + ')</button></div>'
+        + '<div class="iran-clock-grid" role="group" aria-label="دقیقه">'
+        + Array.from({ length: 12 }, (_, i) => numberButton(i * 5, i * 5 === previousMinute)).join('') + '</div>'
+        + '<select class="iran-clock-exact sdp-select" aria-label="انتخاب دقیقهٔ دقیق">'
+        + '<option value="">انتخاب دقیقهٔ دقیق</option>'
+        + Array.from({ length: 60 }, (_, i) => '<option value="' + i + '">' + label(i) + '</option>').join('') + '</select>';
+      const chooseMinute = minute => commit(label(hour) + ':' + label(minute));
+      panel.querySelector('.iran-clock-grid').addEventListener('click', event => {
+        const choice = event.target.closest('[data-number]');
+        if (choice) chooseMinute(choice.dataset.number);
+      });
+      panel.querySelector('select').addEventListener('change', event => {
+        if (event.target.value !== '') chooseMinute(event.target.value);
+      });
+      panel.querySelector('.sdp-back-btn').addEventListener('click', () => {
+        showHours();
+        panel.querySelector('[aria-pressed="true"]').focus();
+      });
+      (panel.querySelector('[aria-pressed="true"]') || panel.querySelector('[data-number]')).focus();
+    }
+    showHours();
+    dialog.showModal();
+    (panel.querySelector('[aria-pressed="true"]') || panel.querySelector('[data-number]')).focus();
+  }
+
+  function openDate(input) {
     const today = todayInIran();
     const { min, max, birth } = dateLimits(input, today);
     const minKey = dateKey(min);
@@ -592,35 +682,10 @@ function initShamsiDatePicker() {
     let { year, month } = start;
     let yearPage = 0;
 
-    const panel = document.createElement('div');
-    panel.id = 'iran-date-picker';
-    panel.className = 'shamsi-datepicker-container';
-    panel.setAttribute('role', 'group');
-    panel.setAttribute('aria-label', 'تقویم هجری شمسی');
-    input.setAttribute('aria-controls', panel.id);
-    active = { input, panel, positionPicker };
-    document.body.appendChild(panel);
-
-    function positionPicker() {
-      const rect = input.getBoundingClientRect();
-      const viewport = window.visualViewport;
-      const topEdge = viewport?.offsetTop ?? 0;
-      const bottomEdge = topEdge + (viewport?.height ?? window.innerHeight);
-      const left = Math.max(8, Math.min(rect.right - panel.offsetWidth, window.innerWidth - panel.offsetWidth - 8));
-      const below = bottomEdge - rect.bottom - 8;
-      const above = rect.top - topEdge - 8;
-      const openAbove = panel.scrollHeight > below && above > below;
-      panel.style.maxHeight = Math.max(96, openAbove ? above : below) + 'px';
-      const top = openAbove ? rect.top - panel.offsetHeight - 8 : rect.bottom;
-      panel.style.left = (left + window.scrollX) + 'px';
-      panel.style.top = (top + window.scrollY) + 'px';
-    }
+    const { dialog, panel, commit } = pickerDialog(input, 'iran-date-picker', 'انتخاب تاریخ شمسی');
 
     function choose(date) {
-      input.value = dateLabel(date);
-      closePicker(true);
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
+      commit(dateLabel(date));
     }
 
     function showDays(focusSelector) {
@@ -681,7 +746,6 @@ function initShamsiDatePicker() {
         const day = Number(event.target.dataset.day);
         if (day && isAllowed({ year, month, day })) choose({ year, month, day });
       });
-      positionPicker();
       if (focusSelector) {
         (panel.querySelector(focusSelector + ':not(:disabled)') || panel.querySelector('.sdp-month-select')).focus({ preventScroll: true });
       }
@@ -715,38 +779,37 @@ function initShamsiDatePicker() {
         });
       }
       panel.querySelector('.sdp-back-btn').addEventListener('click', () => showDays('.sdp-year-btn'));
-      positionPicker();
       (panel.querySelector(focusSelector + ':not(:disabled)') || panel.querySelector('.sdp-year-cell')).focus({ preventScroll: true });
     }
 
     showDays();
+    dialog.showModal();
+    (panel.querySelector('.sdp-day-btn.selected:not(:disabled), [aria-current="date"]:not(:disabled)')
+      || panel.querySelector('.sdp-month-select')).focus();
   }
 
-  // Deliberately delegated for date inputs added to the form after page load.
-  document.addEventListener('focusin', event => {
-    if (returningFocus) return;
-    if (event.target.matches(selector)) openPicker(event.target);
-    else if (!active?.panel.contains(event.target)) closePicker();
-  });
+  function openPicker(input) {
+    if (active || input.readOnly || input.matches(':disabled')) return;
+    if (input.matches(dateSelector)) openDate(input);
+    else openClock(input);
+  }
+  // Delegation also covers fields added in drawers and multi-child forms.
   document.addEventListener('click', event => {
     if (event.target.matches(selector)) openPicker(event.target);
-    else if (!active?.panel.contains(event.target)) closePicker();
+  });
+  document.addEventListener('beforeinput', event => {
+    if (event.target.matches(selector)) event.preventDefault();
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && active) {
       event.preventDefault();
       event.stopPropagation();
-      closePicker(true);
-    } else if (event.key === 'ArrowDown' && event.target.matches(selector)) {
-      openPicker(event.target);
-      if (!active) return;
+      active.close();
+    } else if (['ArrowDown', 'Enter', ' '].includes(event.key) && event.target.matches(selector)) {
       event.preventDefault();
-      (active.panel.querySelector('.sdp-day-btn.selected:not(:disabled), .sdp-day-btn[aria-current="date"]:not(:disabled)')
-        || active.panel.querySelector('.sdp-day-btn:not(:disabled)'))?.focus({ preventScroll: true });
+      openPicker(event.target);
     }
   }, true);
-  window.addEventListener('resize', () => active?.positionPicker());
-  window.visualViewport?.addEventListener('resize', () => active?.positionPicker());
 
   function validateDate(input) {
     const date = readDate(input.value);
@@ -755,7 +818,7 @@ function initShamsiDatePicker() {
     const max = input.dataset.maxDate;
     let error = '';
     if (input.value.trim() && !date) {
-      error = 'تاریخ شمسی معتبر وارد کنید، مانند ۱۴۰۵/۰۵/۱۸.';
+      error = 'تاریخ را از تقویم شمسی انتخاب کنید.';
     } else if (key && ((min && key < min) || (max && key > max))) {
       error = 'تاریخ را از بازهٔ مجاز تقویم انتخاب کنید.';
     }
@@ -763,12 +826,12 @@ function initShamsiDatePicker() {
     return date;
   }
   document.addEventListener('input', event => {
-    if (event.target.matches(selector)) validateDate(event.target);
+    if (event.target.matches(dateSelector)) validateDate(event.target);
   });
 
   document.addEventListener('change', event => {
     const input = event.target;
-    if (input.matches(selector)) {
+    if (input.matches(dateSelector)) {
       const date = validateDate(input);
       if (date) input.value = dateLabel(date);
     } else if (input.matches('[data-iran-time]')) {

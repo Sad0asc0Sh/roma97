@@ -214,7 +214,7 @@ try {
             $eventDate = parseIranDate($_POST['event_date'] ?? null);
 
             if ($eventDate === null) {
-                setFlash('error', 'تاریخ رویداد را به شمسی وارد کنید، مانند ۱۴۰۵/۰۵/۱۸.');
+                setFlash('error', 'تاریخ رویداد را از تقویم شمسی انتخاب کنید.');
                 redirect(adminEventsRedirectFormUrl($editId, $filterCategory, $filterStatus));
             }
 
@@ -227,8 +227,8 @@ try {
             }
 
             try {
-                $startTime = optionalIranTime($_POST['start_time'] ?? null, 'ساعت شروع را به صورت ۲۴ ساعته وارد کنید، مانند ۱۴:۳۰.');
-                $endTime = optionalIranTime($_POST['end_time'] ?? null, 'ساعت پایان را به صورت ۲۴ ساعته وارد کنید، مانند ۱۵:۳۰.');
+                $startTime = optionalIranTime($_POST['start_time'] ?? null, 'ساعت شروع را در قالب ۲۴ ساعته انتخاب کنید.');
+                $endTime = optionalIranTime($_POST['end_time'] ?? null, 'ساعت پایان را در قالب ۲۴ ساعته انتخاب کنید.');
             } catch (InvalidArgumentException $exception) {
                 setFlash('error', $exception->getMessage());
                 redirect(adminEventsRedirectFormUrl($editId, $filterCategory, $filterStatus));
@@ -473,17 +473,17 @@ $showForm = ($action === 'add' || $action === 'edit');
 
                 <div class="form-group">
                     <label for="event_date" class="form-label">تاریخ شمسی رویداد</label>
-                    <input type="text" id="event_date" name="event_date" class="form-control shamsi-datepicker" dir="ltr" inputmode="numeric" autocomplete="off" value="<?= e(shamsiDate($formPreset['event_date'], 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸" required>
+                    <input type="text" id="event_date" name="event_date" class="form-control shamsi-datepicker" <?= iranPickerAttributes() ?> value="<?= e(shamsiDate($formPreset['event_date'], 'numeric')) ?>" placeholder="انتخاب تاریخ" required>
                 </div>
 
                 <div class="admin-event-times">
                     <div class="form-group">
                         <label for="start_time" class="form-label">زمان شروع (اختیاری)</label>
-                        <input type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰" id="start_time" name="start_time" class="form-control" value="<?= e($formPreset['start_time']) ?>">
+                        <input type="text" data-iran-time <?= iranPickerAttributes() ?> placeholder="انتخاب ساعت" id="start_time" name="start_time" class="form-control" value="<?= e($formPreset['start_time']) ?>">
                     </div>
                     <div class="form-group">
                         <label for="end_time" class="form-label">زمان پایان (اختیاری)</label>
-                        <input type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰" id="end_time" name="end_time" class="form-control" value="<?= e($formPreset['end_time']) ?>">
+                        <input type="text" data-iran-time <?= iranPickerAttributes() ?> placeholder="انتخاب ساعت" id="end_time" name="end_time" class="form-control" value="<?= e($formPreset['end_time']) ?>">
                     </div>
                 </div>
 

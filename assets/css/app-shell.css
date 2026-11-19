@@ -952,22 +952,79 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
 
 /* ── SHAMSI DATEPICKER COMPONENT ───────────────────────────── */
 .shamsi-datepicker-container {
-  position: absolute;
+  position: fixed;
+  inset: 0;
   z-index: 9999;
   background: var(--app-surface, #ffffff);
   border: 1px solid var(--app-border, #d7dcd9);
   border-radius: var(--app-radius-md, 10px);
   box-shadow: 0 10px 30px rgba(0,0,0,0.18);
   padding: 16px;
-  width: 290px;
+  box-sizing: border-box;
+  width: 360px;
   max-width: calc(100vw - 16px);
+  max-height: calc(100dvh - 24px);
   overflow-y: auto;
   direction: rtl;
   font-family: var(--app-font, 'Vazirmatn', sans-serif);
   color: var(--app-text, #1b2622);
-  margin-top: 4px;
+  margin: auto;
 }
 
+.shamsi-datepicker-container::backdrop { background: rgba(12, 27, 21, .48); }
+.iran-picker-heading, .iran-clock-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.iran-picker-heading { font-size: 1rem; }
+.iran-clock-caption { font-size: .875rem; }
+.iran-clock-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+.iran-clock-number {
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--app-border, #d7dcd9);
+  border-radius: 8px;
+  background: var(--app-surface, #fff);
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.iran-clock-number:hover, .iran-clock-number:focus-visible { border-color: var(--app-primary, #2e7d5b); }
+.iran-clock-number[aria-pressed="true"] {
+  background: var(--app-primary, #2e7d5b);
+  color: var(--app-on-primary, #fff);
+}
+.iran-picker-actions:not(:empty) {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+.shamsi-datepicker-container .iran-clock-exact {
+  width: 100%;
+  max-width: none;
+  min-height: 44px;
+  margin-top: 12px;
+}
+@media (max-width: 600px) {
+  .shamsi-datepicker-container {
+    width: min(100%, 440px);
+    max-width: 100%;
+    margin: auto auto 0;
+    border-radius: 18px 18px 0 0;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .shamsi-datepicker-container .sdp-day-btn { height: 42px; }
+  .shamsi-datepicker-container :is(.sdp-nav-btn, .sdp-back-btn, .sdp-today-btn) { min-height: 44px; }
+}
 [data-theme="dark"] .shamsi-datepicker-container {
   background: var(--app-surface, #182019);
   border-color: var(--app-border-strong, #324038);
@@ -1209,6 +1266,8 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
 
 [data-iran-time],
 .shamsi-datepicker {
+  cursor: pointer;
+  caret-color: transparent;
   font-variant-numeric: tabular-nums;
 }
 

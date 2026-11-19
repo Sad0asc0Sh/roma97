@@ -247,7 +247,7 @@ if (isPostRequest()) {
     $dateOfBirth = parseChildBirthDate($old['date_of_birth']);
 
     if ($dateOfBirth === null) {
-        $errors[] = 'لطفاً تاریخ تولد معتبر و قبل از امروز وارد کنید.';
+        $errors[] = 'تاریخ تولد را پیش از امروز از تقویم انتخاب کنید.';
     }
 
     if (!in_array($old['gender'], $allowedGenders, true)) {
@@ -460,8 +460,8 @@ require_once __DIR__ . '/header.php';
 
                     <div class="form-group">
                         <label for="date_of_birth">تاریخ شمسی تولد</label>
-                        <input type="text" id="date_of_birth" name="date_of_birth" class="shamsi-datepicker" data-datepicker="birth" dir="ltr" inputmode="numeric" autocomplete="off"
-                               data-year-past="100" data-max-date="<?= e(shamsiDate(strtotime('yesterday'), 'Y-m-d')) ?>" value="<?= e($old['date_of_birth']) ?>" placeholder="۱۳۹۹/۰۵/۱۸" required>
+                        <input type="text" id="date_of_birth" name="date_of_birth" class="shamsi-datepicker" data-datepicker="birth" <?= iranPickerAttributes() ?>
+                               data-year-past="100" data-max-date="<?= e(shamsiDate(strtotime('yesterday'), 'Y-m-d')) ?>" value="<?= e($old['date_of_birth']) ?>" placeholder="انتخاب تاریخ" required>
                     </div>
                 </div>
 

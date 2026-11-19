@@ -95,7 +95,7 @@ try {
                     throw new InvalidArgumentException('غیبت یا تأخیر را انتخاب کنید.');
                 }
                 $arrival = $type === 'late'
-                    ? optionalIranTime($_POST['expected_arrival'] ?? null, 'ساعت تقریبی ورود را به صورت ۲۴ ساعته وارد کنید، مانند ۱۴:۳۰.')
+                    ? optionalIranTime($_POST['expected_arrival'] ?? null, 'ساعت تقریبی ورود را در قالب ۲۴ ساعته انتخاب کنید.')
                     : null;
                 $note = $_POST['note'] ?? '';
                 if (!is_string($note) || mb_strlen($note, 'UTF-8') > 500) {
