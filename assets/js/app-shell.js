@@ -187,6 +187,18 @@ function initGlobalSearchKeybind() {
   const input = document.getElementById('appSearchInput');
   const main = document.querySelector('main');
   if (!input || !main) return;
+  document.addEventListener('keydown', event => {
+    if ((event.key === '/' || ((event.ctrlKey || event.metaKey) && event.key === 'k'))
+        && !event.target.closest?.('input,textarea,select,[contenteditable]') && input.getClientRects().length > 0) {
+      event.preventDefault();
+      input.focus();
+    }
+    if (event.key === 'Escape' && document.activeElement === input) {
+      input.value = '';
+      input.dispatchEvent(new Event('input'));
+    }
+  });
+  if (input.form?.hasAttribute('data-directory-search')) return;
   // Pages with a dedicated register filter should have only one search owner.
   const ownSearch = main.querySelector('input[type="search"], #attendanceSearch, #reportSearch, #childSearch');
   if (ownSearch) {
@@ -213,12 +225,6 @@ function initGlobalSearchKeybind() {
     });
     notice.hidden = !q || visible > 0;
     notice.textContent = 'نتیجه‌ای در این صفحه پیدا نشد. عبارت جست‌وجو را تغییر دهید.';
-  });
-  document.addEventListener('keydown', event => {
-    if((event.key === '/' || ((event.ctrlKey || event.metaKey) && event.key === 'k')) && !event.target.closest('input,textarea,select,[contenteditable]')) {
-      event.preventDefault(); input.focus();
-    }
-    if(event.key === 'Escape' && document.activeElement === input) { input.value=''; input.dispatchEvent(new Event('input')); }
   });
 }
 

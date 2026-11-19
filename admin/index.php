@@ -5,6 +5,7 @@ require_once __DIR__ . '/../includes/error_handler.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/parent_children_helpers.php';
+require_once __DIR__ . '/../includes/portal_rules.php';
 require_once __DIR__ . '/../includes/portal_ui.php';
 requireLogin();
 
@@ -26,12 +27,20 @@ try {
         $recentRegistrations = $pdo->query("SELECT id, first_name, last_name, status, created_at FROM children ORDER BY created_at DESC, id DESC LIMIT 5")->fetchAll();
     }
     if ($can('attendance')) {
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM attendance a INNER JOIN children c ON c.id = a.child_id WHERE c.status = 'active' AND a.attendance_date = ?");
+        $stmt = $pdo->prepare(
+            'SELECT COUNT(*) AS total, COUNT(a.id) AS recorded,
+                    COUNT(CASE WHEN ' . PORTAL_OPEN_CHECKOUT . ' THEN 1 END) AS open_checkouts
+             FROM children c
+             LEFT JOIN attendance a ON a.child_id = c.id AND a.attendance_date = ?
+             WHERE c.status = \'active\''
+        );
         $stmt->execute([$today]);
-        $recorded = (int) $stmt->fetchColumn();
-        $missing = max(0, $activeCount - $recorded);
-        $metrics[] = ['حضور ثبت‌شده امروز', persianNumber((string) $recorded) . ' / ' . persianNumber((string) $activeCount), 'تکمیل دفتر حضور', 'attendance.php'];
-        $tasks[] = [$missing, 'حضورهای ثبت‌نشده امروز', 'وضعیت هر کودک را پس از مشاهده ثبت کنید', 'attendance.php'];
+        $attendance = $stmt->fetch();
+        $recorded = (int) $attendance['recorded'];
+        $expected = (int) $attendance['total'];
+        $metrics[] = ['وضعیت ثبت‌شده امروز', persianNumber($recorded) . ' / ' . persianNumber($expected), 'مشاهده دفتر حضور', 'attendance.php'];
+        $tasks[] = [$expected - $recorded, 'حضورهای ثبت‌نشده امروز', 'وضعیت کودک را ثبت کنید', 'attendance.php?filter=missing'];
+        $tasks[] = [(int) $attendance['open_checkouts'], 'خروج‌های باز امروز', 'ورود ثبت شده و ساعت خروج خالی است', 'attendance.php?filter=open_checkout'];
     }
     if ($can('tuition')) {
         [$jy, $jm] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));

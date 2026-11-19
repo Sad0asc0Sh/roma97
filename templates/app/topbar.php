@@ -8,6 +8,7 @@ if (!defined('ROOMA_APP')) {
 // Breadcrumb & Page Info Calculation
 $siteNameVal = siteName();
 $currentScript = basename($_SERVER['PHP_SELF']);
+$showChildDirectorySearch = $showChildDirectorySearch ?? false;
 
 $homeUrl = url('admin/index.php');
 $messagesUrl = url('admin/messages.php');
@@ -54,7 +55,7 @@ window.toggleMobileSidebar = window.toggleMobileSidebar || function(evtOrState) 
     nav.classList.toggle('is-open', shouldOpen);
 };
 </script>
-<header class="app-topbar">
+<header class="app-topbar<?= $showChildDirectorySearch ? ' app-topbar--directory' : '' ?>">
     <div class="app-topbar-right">
         <?php if (isset($_SESSION['admin_id']) || isset($_SESSION['teacher_id']) || isset($_SESSION['parent_id'])): ?>
             <button class="admin-mobile-toggle" id="mobileSidebarToggle" type="button" onclick="window.toggleMobileSidebar(event)" aria-label="باز کردن منو">
@@ -77,10 +78,18 @@ window.toggleMobileSidebar = window.toggleMobileSidebar || function(evtOrState) 
     </div>
 
     <div class="app-topbar-center">
-        <div class="app-search-box">
-            <input type="search" id="appSearchInput" class="app-search-input" placeholder="جست‌وجوی زنده در صفحه..." aria-label="جست‌وجوی زنده">
-            <kbd class="app-search-kbd">/</kbd>
-        </div>
+        <?php if ($showChildDirectorySearch): ?>
+            <form class="app-search-box" role="search" aria-label="جست‌وجوی سراسری پرونده‌ها" data-directory-search method="get" action="<?= e(url('admin/children.php')) ?>">
+                <label for="appSearchInput" class="sr-only">نام کودک، نام والد یا شماره موبایل</label>
+                <input type="search" id="appSearchInput" name="q" class="app-search-input" maxlength="100" value="<?= e($directorySearch ?? '') ?>" placeholder="نام کودک، نام والد یا موبایل">
+                <button type="submit" class="app-directory-search-button">جست‌وجو</button>
+            </form>
+        <?php else: ?>
+            <div class="app-search-box">
+                <input type="search" id="appSearchInput" class="app-search-input" placeholder="جست‌وجوی زنده در صفحه..." aria-label="جست‌وجوی زنده">
+                <kbd class="app-search-kbd">/</kbd>
+            </div>
+        <?php endif; ?>
     </div>
 
     <div class="app-topbar-left">

@@ -94,7 +94,7 @@ SQL
                 $attendanceCounts[$status]++;
             }
 
-            if (!empty($childRow['report_id'])) {
+            if (in_array($status, ['present', 'late'], true) && !empty($childRow['report_id'])) {
                 $reportedChildren++;
             }
 
@@ -122,10 +122,11 @@ SQL
 $hasClassroom   = $classroom !== null;
 $childCount     = count($children);
 $attendanceDone = $childCount > 0 && $attendanceMissing === 0;
-$reportsDone    = $childCount > 0 && $reportedChildren >= $childCount;
+$expectedReports = $attendanceCounts['present'] + $attendanceCounts['late'];
+$reportsDone    = $expectedReports > 0 && $reportedChildren === $expectedReports;
 $recordedAtt    = max(0, $childCount - $attendanceMissing);
 $attPercent     = $childCount > 0 ? (int) round(($recordedAtt / $childCount) * 100) : 0;
-$repPercent     = $childCount > 0 ? (int) round(($reportedChildren / $childCount) * 100) : 0;
+$repPercent     = $expectedReports > 0 ? (int) round(($reportedChildren / $expectedReports) * 100) : 0;
 
 $pageTitle = 'داشبورد مربی | ' . siteName();
 require_once __DIR__ . '/header.php';
@@ -182,8 +183,8 @@ require_once __DIR__ . '/header.php';
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             </div>
             <div class="tp-stat-body">
-                <div class="tp-stat-value"><?= e(persianNumber((string) $reportedChildren)) ?> <small style="font-size:0.85rem;font-weight:600;color:var(--tp-text-muted);">از <?= e(persianNumber((string) $childCount)) ?></small></div>
-                <div class="tp-stat-label">گزارش‌های ثبت‌شده امروز</div>
+                <div class="tp-stat-value"><?= e(persianNumber($reportedChildren)) ?> <small style="font-size:0.85rem;font-weight:600;color:var(--tp-text-muted);">از <?= e(persianNumber($expectedReports)) ?></small></div>
+                <div class="tp-stat-label">گزارش امروز کودکان حاضر</div>
             </div>
         </div>
 
@@ -245,8 +246,12 @@ require_once __DIR__ . '/header.php';
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
                         گزارش روزانه کودکان
                     </h3>
-                    <span class="tp-badge <?= $reportsDone ? 'tp-badge-present' : 'tp-badge-late' ?>">
-                        <?= $reportsDone ? 'تکمیل شده ✓' : persianNumber((string) max(0, $childCount - $reportedChildren)) . ' گزارش باقی‌مانده' ?>
+                    <span class="tp-badge <?= $reportsDone ? 'tp-badge-present' : ($expectedReports === 0 ? 'tp-badge-unrecorded' : 'tp-badge-late') ?>">
+                        <?= e(match (true) {
+                            $reportsDone => 'تکمیل شده ✓',
+                            $expectedReports === 0 => 'بدون گزارش مورد انتظار',
+                            default => persianNumber($expectedReports - $reportedChildren) . ' گزارش باقی‌مانده',
+                        }) ?>
                     </span>
                 </div>
                 <div class="tp-progress-track" aria-hidden="true">
@@ -255,14 +260,18 @@ require_once __DIR__ . '/header.php';
                 <p style="margin:0;font-size:0.84rem;color:var(--tp-text-secondary);">
                     <?php if ($childCount === 0): ?>
                         هنوز کودکی در این کلاس ثبت‌نام نشده است.
+                    <?php elseif ($expectedReports === 0): ?>
+                        هنوز حضور یا تأخیر هیچ کودکی برای امروز ثبت نشده است.
                     <?php else: ?>
-                        از مجموع <strong><?= e(persianNumber((string) $childCount)) ?></strong> کودک، گزارش امروز برای
-                        <strong><?= e(persianNumber((string) $reportedChildren)) ?></strong> نفر ثبت شده است.
+                        از <strong><?= e(persianNumber($expectedReports)) ?></strong> کودک حاضر یا باتأخیر،
+                        گزارش <strong><?= e(persianNumber($reportedChildren)) ?></strong> نفر ثبت شده است.
                     <?php endif; ?>
                 </p>
                 <div class="tp-task-foot">
-                    <span style="font-size:0.78rem;color:var(--tp-text-muted);"><?= e(persianNumber((string) $repPercent)) ?>٪ تکمیل</span>
-                    <a href="<?= e(url('teacher/report.php')) ?>" class="tp-btn <?= $reportsDone ? 'tp-btn-secondary' : 'tp-btn-primary' ?> tp-btn-sm">
+                    <?php if ($expectedReports > 0): ?>
+                        <span style="font-size:0.78rem;color:var(--tp-text-muted);"><?= e(persianNumber($repPercent)) ?>٪ تکمیل</span>
+                    <?php endif; ?>
+                    <a href="<?= e(url('teacher/report.php?classroom_id=' . $classroomId)) ?>" class="tp-btn <?= $reportsDone ? 'tp-btn-secondary' : 'tp-btn-primary' ?> tp-btn-sm">
                         <?= $reportsDone ? 'مشاهده و ویرایش گزارش‌ها' : 'ثبت گزارش‌های امروز' ?>
                     </a>
                 </div>
@@ -364,9 +373,9 @@ require_once __DIR__ . '/header.php';
                             </div>
                             <div class="tp-child-status-box">
                                 <span class="tp-child-status-label">گزارش امروز</span>
-                                <?php if ($repMood !== ''): ?>
+                                <?php if (!empty($child['report_id'])): ?>
                                     <span class="tp-badge <?= e(teacherMoodBadgeClass($repMood)) ?>">
-                                        <?= e(teacherMoodLabel($repMood)) ?>
+                                        <?= e($repMood === '' ? 'گزارش ثبت شده' : teacherMoodLabel($repMood)) ?>
                                     </span>
                                 <?php else: ?>
                                     <span class="tp-badge tp-badge-unrecorded">ثبت نشده</span>

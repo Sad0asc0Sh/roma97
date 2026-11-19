@@ -53,12 +53,12 @@ testAssert(array_keys($factors) === $expectedFactors, 'factor catalog keys match
 
 $schema = (string) file_get_contents($projectRoot . '/schema.sql');
 foreach ($expectedFactors as $fKey) {
-    testAssert(isset($factors[$fKey]['default']) && array_key_exists($factors[$fKey]['default'], $factors[$fKey]['options']), "factor {$fKey} default is one of its options");
     testAssert(count($factors[$fKey]['options']) >= 3, "factor {$fKey} offers at least 3 observations");
     testAssert(str_contains($schema, $fKey), "schema.sql defines daily_reports.{$fKey}");
+    $sampleOption = array_key_first($factors[$fKey]['options']);
     testAssert(
-        teacherPsychFactorLabel($fKey, $factors[$fKey]['default']) === $factors[$fKey]['options'][$factors[$fKey]['default']],
-        "factor {$fKey} default label round-trips"
+        teacherPsychFactorLabel($fKey, $sampleOption) === $factors[$fKey]['options'][$sampleOption],
+        "factor {$fKey} option label round-trips"
     );
 }
 testAssert(teacherPsychFactorLabel('focus_level', '') === 'ثبت نشده', 'empty factor value reads as unrecorded');

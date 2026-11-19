@@ -163,7 +163,7 @@ require_once __DIR__ . '/header.php';
                         <span class="tp-child-status-label">گزارش امروز</span>
                         <?php if (!empty($child['report_id'])): ?>
                             <span class="tp-badge <?= e(teacherMoodBadgeClass($repMood !== null ? (string) $repMood : null)) ?>">
-                                <?= e(teacherMoodLabel($repMood !== null ? (string) $repMood : null)) ?>
+                                <?= e(empty($repMood) ? 'گزارش ثبت شده' : teacherMoodLabel((string) $repMood)) ?>
                             </span>
                         <?php else: ?>
                             <span class="tp-badge tp-badge-unrecorded">ثبت نشده</span>

@@ -85,14 +85,16 @@ try {
         (2,1,'آراد','احمدی','2021-03-10','active',NULL),
         (3,2,'نیلا','رضایی','2022-09-15','active',NULL),
         (4,2,'باران','رضایی','2023-02-11','pending',NULL)");
-    $pdo->exec("INSERT INTO child_classroom (child_id,classroom_id,enrollment_date) VALUES (1,1,CURDATE()),(2,1,CURDATE()),(3,2,CURDATE())");
+    $today = (new DateTimeImmutable('today', new DateTimeZone('Asia/Tehran')))->format('Y-m-d');
+    $pdo->prepare('INSERT INTO child_classroom (child_id,classroom_id,enrollment_date) VALUES (1,1,?),(2,1,?),(3,2,?)')
+        ->execute([$today, $today, $today]);
     $pdo->exec("INSERT INTO events (title,event_date,status,category) VALUES ('جشن دوستی و قصه‌گویی',DATE_ADD(CURDATE(),INTERVAL 3 DAY),'scheduled','celebration')");
     $owner = ['admin_logged_in'=>true,'admin_id'=>1,'admin_role'=>'owner','admin_username'=>'مدیر روما'];
     $accountant = ['admin_logged_in'=>true,'admin_id'=>2,'admin_role'=>'accountant','admin_username'=>'حسابدار'];
     $reception = ['admin_logged_in'=>true,'admin_id'=>3,'admin_role'=>'receptionist','admin_username'=>'پذیرش'];
     $teacher = ['teacher_id'=>1,'teacher_classroom_id'=>1,'teacher_name'=>'مریم کریمی'];
     $parent = ['parent_id'=>1,'parent_name'=>'نگار احمدی','parent_first_name'=>'نگار'];
-    $today = (new DateTimeImmutable('now', new DateTimeZone('Asia/Tehran')))->format('Y-m-d');
+    $otherParent = ['parent_id'=>2,'parent_name'=>'سارا رضایی','parent_first_name'=>'سارا'];
 
     foreach (['admin'=>$owner,'parent'=>$parent,'teacher'=>$teacher] as $portal=>$session) {
         foreach (glob($root . '/' . $portal . '/*.php') as $file) {
@@ -104,6 +106,7 @@ try {
     }
     [$html] = $request('admin/index.php', $accountant);
     $assert(!str_contains($html,'آوا') && !str_contains($html,'admin/child-detail.php'), 'Accountant dashboard does not disclose child records');
+    $assert(!str_contains($html, 'data-directory-search'), 'Global directory search is limited to roles with access to the child directory');
     [$html] = $request('admin/index.php', $reception);
     $assert(!str_contains($html,'دریافتی شهریه') && !str_contains($html,'admin/tuition.php'), 'Reception dashboard hides finance data and links');
     [,,$status] = $request('admin/export-csv.php', $reception, [], ['type'=>'salary']);
@@ -134,12 +137,89 @@ try {
     $assert($pdo->query('SELECT check_in FROM attendance WHERE child_id=1')->fetchColumn() === null, 'Absent status clears visit times');
     $request('teacher/attendance.php', $teacher, ['classroom_id'=>1,'attendance_date'=>$today,'attendance'=>[2=>['status'=>'present','check_in'=>'10:00','check_out'=>'09:00']]]);
     $assert((int) $pdo->query('SELECT COUNT(*) FROM attendance WHERE child_id=2')->fetchColumn() === 0, 'Impossible checkout rolls back attendance');
+
+    $pdo->exec("UPDATE attendance SET status='present', check_in='08:30:00' WHERE child_id=1");
+    $pdo->prepare("INSERT INTO attendance (child_id, attendance_date, status, check_in, check_out) VALUES (2, ?, 'late', '09:00', '15:00')")
+        ->execute([$today]);
+    [$html] = $request('admin/index.php', $owner);
+    $assert(str_contains($html, 'attendance.php?filter=missing') && str_contains($html, 'attendance.php?filter=open_checkout'), 'Dashboard links to both actionable attendance filters');
+    [$html] = $request('admin/attendance.php', $owner, [], ['filter'=>'open_checkout','classroom_id'=>1]);
+    $assert(str_contains($html, 'attendance[1][status]') && !str_contains($html, 'attendance[2][status]'),
+        'Open checkout includes registered arrivals and excludes completed checkouts');
+    [$html] = $request('admin/attendance.php', $owner, [], ['filter'=>'missing','classroom_id'=>2]);
+    $assert(str_contains($html, 'attendance[3][status]') && !str_contains($html, 'attendance[1][status]')
+        && str_contains($html, 'filter=missing&amp;classroom_id=2'), 'Missing attendance is scoped to the class and the form retains the filters');
+    [$html] = $request('admin/attendance.php', $owner, [], ['child_id'=>2]);
+    $assert(str_contains($html, 'attendance[2][status]') && !str_contains($html, 'attendance[1][status]'), 'Directory attendance link opens only the selected child');
+    $request('admin/attendance.php', $owner, ['attendance_date'=>$today,'attendance'=>[3=>['status'=>'absent']]], ['filter'=>'missing','classroom_id'=>1]);
+    $assert((int) $pdo->query('SELECT COUNT(*) FROM attendance WHERE child_id=3')->fetchColumn() === 0, 'A filtered attendance save respects its classroom');
+    foreach (['mobile_attendance'=>'15:10', 'attendance'=>'15:05'] as $field => $checkout) {
+        $request('admin/attendance.php', $owner, ['attendance_date'=>$today,$field=>[1=>['status'=>'present','check_in'=>'08:30','check_out'=>$checkout]]],
+            ['filter'=>'open_checkout','classroom_id'=>1]);
+    }
+    $assert($pdo->query('SELECT check_out FROM attendance WHERE child_id=1')->fetchColumn() === '15:10:00',
+        'Saving an old open-checkout list preserves a checkout already recorded');
+    foreach (['absent', 'excused'] as $attendanceStatus) {
+        $request('admin/attendance.php', $owner, ['attendance_date'=>$today,'attendance'=>[3=>['status'=>$attendanceStatus]]],
+            ['filter'=>'missing','classroom_id'=>2]);
+    }
+    $assert($pdo->query('SELECT status FROM attendance WHERE child_id=3')->fetchColumn() === 'absent',
+        'Saving an old missing-attendance list preserves a status already recorded');
+
+    $pdo->exec("UPDATE children SET status='active' WHERE id=4");
+    $pdo->prepare('INSERT INTO child_classroom (child_id,classroom_id,enrollment_date) VALUES (4,1,?)')->execute([$today]);
+    $pdo->prepare("INSERT INTO attendance (child_id, attendance_date, status) VALUES (4, ?, 'excused')")->execute([$today]);
     $request('teacher/report.php', $teacher, ['classroom_id'=>1,'report_date'=>'invalid','mood'=>[1=>'happy']]);
     $assert((int) $pdo->query('SELECT COUNT(*) FROM daily_reports')->fetchColumn() === 0, 'Invalid report date cannot silently write today');
     $request('teacher/report.php', $teacher, ['classroom_id'=>1,'report_date'=>$today,'mood'=>[1=>'normal']]);
-    $assert((int) $pdo->query("SELECT COUNT(*) FROM daily_reports WHERE child_id=1 AND mood='normal'")->fetchColumn() === 1, 'Explicit calm observation saves even with default factors');
+    $assert((int) $pdo->query("SELECT COUNT(*) FROM daily_reports WHERE child_id=1 AND mood='normal' AND nutrition_status IS NULL AND rest_energy IS NULL")->fetchColumn() === 1,
+        'An explicit mood leaves other observations unset');
     $request('teacher/report.php', $teacher, ['classroom_id'=>1,'report_date'=>$today,'mood'=>[2=>'happy']]);
     $assert($pdo->query('SELECT mood FROM daily_reports WHERE child_id=1')->fetchColumn() === 'normal', 'Partial report submit preserves omitted children');
+    $request('teacher/report.php', $teacher, ['classroom_id'=>1,'report_date'=>$today,'mood'=>[2=>''],'nutrition_status'=>[2=>'normal_appetite']]);
+    [$html] = $request('parent/child-detail.php', $parent, [], ['id'=>2]);
+    $assert($pdo->query('SELECT mood FROM daily_reports WHERE child_id=2')->fetchColumn() === null
+        && str_contains($html, 'مشاهده‌نشده') && str_contains($html, 'خوردن متناسب و بدون فشار'),
+        'An observation without mood is saved and displayed without invented observations');
+    $request('teacher/report.php', $teacher, ['classroom_id'=>1,'report_date'=>$today,'mood'=>[4=>'happy']]);
+    [$html] = $request('teacher/index.php', $teacher);
+    $assert(str_contains($html, 'تکمیل شده ✓') && str_contains($html, '>از ۲</small>') && !str_contains($html, 'گزارش باقی‌مانده'),
+        'Report progress includes present and late children and excludes the excused child even with a report');
+
+    foreach (['نقاشی گروهی', 'نقاشی گروهی و قصه‌خوانی'] as $classActivity) {
+        $request('teacher/report.php', $teacher, ['classroom_id'=>1,'report_date'=>$today,'class_activity'=>$classActivity]);
+    }
+    $assert((int) $pdo->query('SELECT COUNT(*) FROM classroom_daily_activities')->fetchColumn() === 1
+        && (int) $pdo->query('SELECT COUNT(*) FROM classroom_activity_attendance')->fetchColumn() === 2
+        && (int) $pdo->query('SELECT COUNT(*) FROM daily_reports')->fetchColumn() === 3,
+        'Editing a shared activity retains one class-day entry, its attendees and the individual reports');
+    [$html] = $request('parent/child-detail.php', $parent, [], ['id'=>2]);
+    [$absentHtml] = $request('parent/child-detail.php', $otherParent, [], ['id'=>4]);
+    $assert(str_contains($html, 'نقاشی گروهی و قصه‌خوانی') && !str_contains($absentHtml, 'نقاشی گروهی'),
+        'Shared activity is visible to families of children who attended');
+    $request('teacher/report.php', $teacher, ['classroom_id'=>1,'report_date'=>$today,'nutrition_status'=>[2=>'']]);
+    [$html] = $request('teacher/index.php', $teacher);
+    $assert(str_contains($html, '۱ گزارش باقی‌مانده'), 'Clearing the only individual observation marks that report as pending even with a shared activity');
+
+    $addChild = $pdo->prepare("INSERT INTO children (parent_id, first_name, last_name, date_of_birth, status) VALUES (2, ?, 'آزمایشی', '2022-05-01', 'active')");
+    for ($n = 1; $n <= 56; $n++) {
+        $addChild->execute(['کودک ' . $n]);
+    }
+    [$html] = $request('admin/children.php', $reception, [], ['q'=>'آوا احمدي']);
+    $assert(str_contains($html, 'admin/child-detail.php?id=1') && str_contains($html, 'admin/attendance.php?child_id=1')
+        && str_contains($html, 'admin/messages.php?parent_id=1#compose-message'),
+        'Global search finds a child outside the first page and links to profile, attendance and family messaging');
+    [$byParent] = $request('admin/children.php', $reception, [], ['q'=>'نگار احمدی']);
+    [$byPhone] = $request('admin/children.php', $reception, [], ['q'=>'+۹۸ (۹۱۲) ۰۰۰-۰۰۰۱']);
+    $assert(str_contains($byParent, 'admin/child-detail.php?id=2') && str_contains($byPhone, 'admin/child-detail.php?id=2')
+        && !str_contains($byPhone, 'admin/child-detail.php?id=3'), 'Search supports a full parent name and Persian digits in a formatted mobile number');
+    [$html] = $request('admin/children.php', $reception, [], ['q'=>'سارا','status'=>'active','p'=>3]);
+    $assert(str_contains($html, 'admin/child-detail.php?id=3') && str_contains($html, 'status=active&amp;q='),
+        'Search pagination retains the term and enrollment status');
+    [$html] = $request('admin/messages.php', $reception, [], ['parent_id'=>1]);
+    $assert(str_contains($html, '<option value="1" selected>') && !str_contains($html, '<option value="all" selected>'),
+        'The family link preselects that parent in the message composer');
+
     $request('admin/tuition.php', $owner, ['form_action'=>'set_plan','plan_child_id'=>1,'plan_month_year'=>'1405-08','expected_amount'=>3000000]);
     $request('admin/tuition.php', $owner, ['form_action'=>'set_plan','plan_child_id'=>1,'plan_month_year'=>'1405-08','expected_amount'=>3500000]);
     $assert((int) $pdo->query("SELECT expected_amount FROM tuition_plans WHERE child_id=1 AND month_year='1405-08'")->fetchColumn() === 3500000, 'Tuition plan insert and update both work with native prepares');

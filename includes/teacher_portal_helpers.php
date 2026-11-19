@@ -339,6 +339,9 @@ function teacherMoodLabel(?string $mood): string
 /** Full label for parent-facing views: label + clinical description. */
 function teacherMoodFullLabel(string $mood): string
 {
+    if ($mood === '') {
+        return 'مشاهده‌نشده';
+    }
     $catalog = teacherPsychologicalMoodCatalog();
     if (!isset($catalog[$mood])) {
         return $mood;
@@ -361,12 +364,9 @@ function teacherMoodBadgeClass(?string $mood): string
 }
 
 /**
- * The six developmental observation factors stored as columns on
- * daily_reports. Each has a neutral default that is also a valid
- * option (the report form treats "everything at default + nothing
- * written" as an untouched child and skips it).
+ * Explicit options for the six observations stored on daily_reports.
  *
- * @return array<string, array{title:string, icon:string, domain:string, default:string, options:array<string,string>}>
+ * @return array<string, array{title:string, icon:string, domain:string, options:array<string,string>}>
  */
 function teacherPsychologicalFactorsCatalog(): array
 {
@@ -375,7 +375,6 @@ function teacherPsychologicalFactorsCatalog(): array
             'title'   => 'تعامل اجتماعی و بازی با همسالان',
             'icon'    => '🧑‍🤝‍🧑',
             'domain'  => 'رشد اجتماعی',
-            'default' => 'parallel_play',
             'options' => [
                 'cooperative_play' => 'بازی مشارکتی و نوبت‌گیری با دوستان',
                 'parallel_play'    => 'بازی موازی در کنار همسالان',
@@ -387,7 +386,6 @@ function teacherPsychologicalFactorsCatalog(): array
             'title'   => 'تمرکز و کارکرد اجرایی',
             'icon'    => '🧩',
             'domain'  => 'رشد شناختی',
-            'default' => 'age_appropriate',
             'options' => [
                 'deep_focus'       => 'تمرکز عمیق و اتمام فعالیت',
                 'age_appropriate'  => 'تمرکز متناسب با سن در فعالیت‌ها',
@@ -399,7 +397,6 @@ function teacherPsychologicalFactorsCatalog(): array
             'title'   => 'ارتباط و ابراز نیازها',
             'icon'    => '💬',
             'domain'  => 'رشد زبانی',
-            'default' => 'verbal_clear',
             'options' => [
                 'expressive'   => 'پرگفتار و مشتاق گفت‌وگو و قصه‌گویی',
                 'verbal_clear' => 'نیازها را روشن و کلامی بیان می‌کند',
@@ -411,7 +408,6 @@ function teacherPsychologicalFactorsCatalog(): array
             'title'   => 'سازگاری با جدایی صبحگاهی',
             'icon'    => '🌈',
             'domain'  => 'دلبستگی ایمن',
-            'default' => 'smooth',
             'options' => [
                 'independent'   => 'جدایی مستقل و با لبخند',
                 'smooth'        => 'جدایی آرام با آیین خداحافظی کوتاه',
@@ -423,7 +419,6 @@ function teacherPsychologicalFactorsCatalog(): array
             'title'   => 'تغذیه و تجربه‌ی خوراکی',
             'icon'    => '🍎',
             'domain'  => 'سلامت جسمی',
-            'default' => 'normal_appetite',
             'options' => [
                 'good_appetite'   => 'اشتهای خوب و تجربه‌ی مثبت از وعده‌ها',
                 'normal_appetite' => 'خوردن متناسب و بدون فشار',
@@ -435,7 +430,6 @@ function teacherPsychologicalFactorsCatalog(): array
             'title'   => 'استراحت و سطح انرژی',
             'icon'    => '🔋',
             'domain'  => 'سلامت جسمی',
-            'default' => 'balanced',
             'options' => [
                 'energetic'  => 'پرانرژی و فعال در تمام روز',
                 'balanced'   => 'انرژی متعادل و استراحت کافی',
@@ -459,8 +453,7 @@ function teacherPsychFactorLabel(string $factorKey, string $value): string
 }
 
 /**
- * Activities bank, grouped by developmental domain. Clicking one in
- * the report form appends it to every child's activities field.
+ * Activities bank, grouped by developmental domain for the shared class report.
  *
  * @return array<string, list<string>>
  */

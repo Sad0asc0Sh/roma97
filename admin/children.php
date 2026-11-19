@@ -8,20 +8,24 @@ require_once __DIR__ . '/../includes/error_handler.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/sms.php';
 
 requireLogin();
 
 /** @var list<string> $allowedStatuses */
 $allowedStatuses = ['all', 'pending', 'active', 'inactive', 'graduated', 'withdrawn'];
-$statusFilter = strtolower(trim((string) ($_GET['status'] ?? '')));
-
-if ($statusFilter === '') {
-    $statusFilter = 'pending';
-}
+$searchInput = $_GET['q'] ?? null;
+$directorySearch = is_string($searchInput) ? mb_substr(trim($searchInput), 0, 100, 'UTF-8') : '';
+$statusInput = $_GET['status'] ?? null;
+$statusFilter = is_string($statusInput) ? strtolower(trim($statusInput)) : '';
 
 if (!in_array($statusFilter, $allowedStatuses, true)) {
-    $statusFilter = 'pending';
+    $statusFilter = $directorySearch === '' ? 'pending' : 'all';
 }
+$searchQuery = $directorySearch === '' ? [] : ['q' => $directorySearch];
+$listQuery = ['status' => $statusFilter] + $searchQuery;
+$canViewAttendance = isPageAllowedForRole('admin/attendance.php', currentAdminRole());
+$canMessageFamily = isPageAllowedForRole('admin/messages.php', currentAdminRole());
 
 function parseAdminChildListId(mixed $value): int
 {
@@ -86,31 +90,50 @@ SELECT
     c.photo,
     c.status,
     c.created_at,
+    p.id AS parent_id,
+    p.status AS parent_status,
     p.first_name AS parent_first_name,
     p.last_name AS parent_last_name,
     p.email AS parent_email,
     p.phone AS parent_phone
-FROM children c
-INNER JOIN parents p ON p.id = c.parent_id
 SQL;
 
-    $perPage = 20;
-    if ($statusFilter === 'all') {
-        $childTotal = (int) $pdo->query('SELECT COUNT(*) FROM children')->fetchColumn();
-        $pagination = paginate($childTotal, currentPageNumber(), $perPage);
-        $sql .= ' ORDER BY c.created_at DESC LIMIT ' . $pagination['perPage'] . ' OFFSET ' . $pagination['offset'];
-        $statement = $pdo->prepare($sql);
-        $statement->execute();
-    } else {
-        $countStmt = $pdo->prepare('SELECT COUNT(*) FROM children WHERE status = :status');
-        $countStmt->execute([':status' => $statusFilter]);
-        $childTotal = (int) $countStmt->fetchColumn();
-        $pagination = paginate($childTotal, currentPageNumber(), $perPage);
-        $sql .= ' WHERE c.status = :status ORDER BY c.created_at DESC LIMIT ' . $pagination['perPage'] . ' OFFSET ' . $pagination['offset'];
-        $statement = $pdo->prepare($sql);
-        $statement->execute([':status' => $statusFilter]);
+    $from = ' FROM children c INNER JOIN parents p ON p.id = c.parent_id';
+    $conditions = [];
+    $params = [];
+    if ($statusFilter !== 'all') {
+        $conditions[] = 'c.status = :status';
+        $params['status'] = $statusFilter;
+    }
+    if ($directorySearch !== '') {
+        $normalizedName = strtr($directorySearch, ['ي' => 'ی', 'ك' => 'ک', '‌' => ' ']);
+        $normalizedName = preg_replace('/\s+/u', ' ', trim($normalizedName)) ?? $directorySearch;
+        $namePattern = '%' . strtr($normalizedName, ['!' => '!!', '%' => '!%', '_' => '!_', ' ' => '%']) . '%';
+        $matches = [
+            "REPLACE(REPLACE(CONCAT_WS(' ', c.first_name, c.last_name), 'ي', 'ی'), 'ك', 'ک') LIKE :child_name ESCAPE '!'",
+            "REPLACE(REPLACE(CONCAT_WS(' ', p.first_name, p.last_name), 'ي', 'ی'), 'ك', 'ک') LIKE :parent_name ESCAPE '!'",
+        ];
+        $params['child_name'] = $namePattern;
+        $params['parent_name'] = $namePattern;
+        if (preg_match('/\A[\p{Nd}\s()+-]+\z/u', $directorySearch) === 1) {
+            $phone = normalizeIranianPhone($directorySearch);
+            if ($phone !== '') {
+                // A full Iranian mobile also matches a legacy record with a country prefix.
+                $phone = isValidIranianMobile($phone) ? substr($phone, 1) : $phone;
+                $matches[] = "REPLACE(REPLACE(REPLACE(REPLACE(p.phone, ' ', ''), '-', ''), '(', ''), ')', '') LIKE :phone";
+                $params['phone'] = '%' . $phone . '%';
+            }
+        }
+        $conditions[] = '(' . implode(' OR ', $matches) . ')';
     }
 
+    $where = $conditions === [] ? '' : ' WHERE ' . implode(' AND ', $conditions);
+    $countStmt = $pdo->prepare('SELECT COUNT(*)' . $from . $where);
+    $countStmt->execute($params);
+    $pagination = paginate((int) $countStmt->fetchColumn(), currentPageNumber(), 20);
+    $statement = $pdo->prepare($sql . $from . $where
+        . ' ORDER BY c.created_at DESC, c.id DESC LIMIT ' . $pagination['perPage'] . ' OFFSET ' . $pagination['offset']);
+    $statement->execute($params);
     $children = $statement->fetchAll();
 } catch (Throwable $exception) {
     error_log($exception->getMessage());
@@ -119,13 +142,13 @@ SQL;
     }
 }
 
-$listRedirect = url('admin/children.php?' . http_build_query(['status' => $statusFilter]));
+$listRedirect = url('admin/children.php?' . http_build_query($listQuery + ['p' => $pagination['page']]));
 
 $pageTitle = 'مدیریت ثبت‌نام کودکان | ' . siteName();
 require_once __DIR__ . '/header.php';
 
 $filterHref = static fn (string $value): string => url(
-    'admin/children.php?' . http_build_query(['status' => $value])
+    'admin/children.php?' . http_build_query(['status' => $value] + $searchQuery)
 );
 ?>
 
@@ -134,7 +157,9 @@ $filterHref = static fn (string $value): string => url(
         <h1 style="margin:0;">ثبت‌نام کودکان</h1>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <a href="<?= e(url('admin/add-child.php')) ?>" class="btn btn-primary">+ کودک جدید</a>
-            <a href="<?= e(url('admin/export-csv.php?' . http_build_query(['type' => 'children', 'status' => $statusFilter]))) ?>" class="btn btn-secondary">📥 دریافت خروجی CSV کودکان</a>
+            <?php if ($directorySearch === ''): ?>
+                <a href="<?= e(url('admin/export-csv.php?' . http_build_query(['type' => 'children', 'status' => $statusFilter]))) ?>" class="btn btn-secondary">📥 دریافت خروجی CSV کودکان</a>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -149,6 +174,18 @@ $filterHref = static fn (string $value): string => url(
     <?php if ($errorMessage !== null): ?>
         <div class="alert" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
+
+    <form class="admin-directory-search mb-sm" role="search" aria-label="جست‌وجوی فهرست کودکان" method="get" action="<?= e(url('admin/children.php')) ?>">
+        <?php if ($directorySearch !== ''): ?>
+            <input type="hidden" name="status" value="<?= e($statusFilter) ?>">
+        <?php endif; ?>
+        <label for="child_directory_search" class="sr-only">نام کودک، نام والد یا شماره موبایل</label>
+        <input type="search" name="q" id="child_directory_search" class="form-control" maxlength="100" value="<?= e($directorySearch) ?>" placeholder="نام کودک، نام والد یا شماره موبایل">
+        <button type="submit" class="btn btn-primary">جست‌وجو</button>
+        <?php if ($directorySearch !== ''): ?>
+            <a class="btn btn-outline" href="<?= e(url('admin/children.php?status=' . $statusFilter)) ?>">پاک کردن جست‌وجو</a>
+        <?php endif; ?>
+    </form>
 
     <nav class="filter-nav" aria-label="فیلتر بر اساس وضعیت ثبت‌نام کودکان">
         <?php foreach (['all' => 'همه', 'pending' => 'در انتظار', 'active' => 'فعال', 'graduated' => 'فارغ‌التحصیل', 'withdrawn' => 'انصراف داده', 'inactive' => 'غیرفعال'] as $value => $label): ?>
@@ -210,6 +247,9 @@ $filterHref = static fn (string $value): string => url(
                                 </p>
                                 <p class="admin-parent-line">
                                     <span><?= e($parentName !== '' ? $parentName : 'والدین') ?></span>
+                                    <?php if (!empty($child['parent_phone'])): ?>
+                                        <br><bdi><?= e(persianNumber($child['parent_phone'])) ?></bdi>
+                                    <?php endif; ?>
                                     <?php if (!empty($child['parent_email'])): ?>
                                         <br><span class="admin-parent-email"><?= e((string) $child['parent_email']) ?></span>
                                     <?php endif; ?>
@@ -255,7 +295,13 @@ $filterHref = static fn (string $value): string => url(
                                     </form>
                                 <?php endif; ?>
 
-                                <a class="btn btn-secondary" href="<?= e(url('admin/child-detail.php?id=' . $cid)) ?>">مشاهده جزئیات</a>
+                                <a class="btn btn-secondary" href="<?= e(url('admin/child-detail.php?id=' . $cid)) ?>">پرونده کودک</a>
+                                <?php if ($canViewAttendance && $cs === 'active'): ?>
+                                    <a class="btn btn-secondary" href="<?= e(url('admin/attendance.php?child_id=' . $cid)) ?>">حضور و غیاب</a>
+                                <?php endif; ?>
+                                <?php if ($canMessageFamily && $child['parent_status'] === 'active'): ?>
+                                    <a class="btn btn-secondary" href="<?= e(url('admin/messages.php?parent_id=' . (int) $child['parent_id'] . '#compose-message')) ?>">پیام به خانواده</a>
+                                <?php endif; ?>
                                 <a class="btn btn-secondary" href="<?= e(url('admin/edit-child.php?id=' . $cid)) ?>">ویرایش</a>
                             <?php endif; ?>
                         </div>
@@ -263,11 +309,11 @@ $filterHref = static fn (string $value): string => url(
                 </article>
             <?php endforeach; ?>
         </div>
-        <?php if ($pagination['total'] > $pagination['perPage']): ?>
+        <?php if ($directorySearch !== '' || $pagination['total'] > $pagination['perPage']): ?>
             <p class="pagination-summary">
                 نمایش <?= e(persianNumber($pagination['from'])) ?> تا <?= e(persianNumber($pagination['to'])) ?> از <?= e(persianNumber($pagination['total'])) ?> کودک
             </p>
-            <?= renderPagination($pagination, url('admin/children.php'), ['status' => $statusFilter]) ?>
+            <?= renderPagination($pagination, url('admin/children.php'), $listQuery) ?>
         <?php endif; ?>
     <?php endif; ?>
 </section>

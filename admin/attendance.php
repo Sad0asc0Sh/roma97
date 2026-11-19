@@ -15,9 +15,6 @@ require_once __DIR__ . '/../includes/notifications.php';
 requireLogin();
 require_once __DIR__ . '/../includes/portal_rules.php';
 
-/** @var list<string> $allowedStatuses */
-$allowedStatuses = ['present', 'absent', 'late', 'excused'];
-
 function parseAttendanceDateString(string $raw): ?string
 {
     $parsed = parseJalaliDate($raw);
@@ -101,10 +98,10 @@ function attendanceStatusValue(array $child): string
 }
 
 /** @param array<string,mixed> $child */
-function renderAttendanceRadios(array $child, int $childId, string $groupSuffix = ''): void
+function renderAttendanceRadios(array $child, int $childId, bool $mobile = false): void
 {
     $current = attendanceStatusValue($child);
-    $nameAttr = 'attendance[' . $childId . '][status]';
+    $nameAttr = ($mobile ? 'mobile_attendance' : 'attendance') . '[' . $childId . '][status]';
     $labels = [
         'present' => 'حاضر',
         'late' => 'تأخیر',
@@ -113,7 +110,7 @@ function renderAttendanceRadios(array $child, int $childId, string $groupSuffix 
     ];
 
     foreach ($labels as $value => $label) {
-        $id = 'att-' . $childId . '-' . $value . ($groupSuffix !== '' ? '-' . $groupSuffix : '');
+        $id = 'att-' . $childId . '-' . $value . ($mobile ? '-mob' : '-tbl');
         ?>
         <label class="status-radio-label" for="<?= e($id) ?>">
             <input
@@ -130,10 +127,45 @@ function renderAttendanceRadios(array $child, int $childId, string $groupSuffix 
 }
 
 $today = (new DateTimeImmutable('today'))->format('Y-m-d');
-$selectedDate = parseAttendanceDateString((string) ($_GET['date'] ?? $today)) ?? $today;
+$dateInput = $_GET['date'] ?? null;
+$selectedDate = is_string($dateInput) ? parseAttendanceDateString($dateInput) ?? $today : $today;
+$filterLabels = [
+    'all' => 'همه وضعیت‌ها',
+    'missing' => 'حضورهای ثبت‌نشده',
+    'open_checkout' => 'خروج‌های باز',
+];
+$filter = $_GET['filter'] ?? 'all';
+$filter = is_string($filter) && isset($filterLabels[$filter]) ? $filter : 'all';
+$classroomId = filter_var($_GET['classroom_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null;
+$selectedChildId = filter_var($_GET['child_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null;
+$filterQuery = array_filter([
+    'filter' => $filter === 'all' ? null : $filter,
+    'classroom_id' => $classroomId,
+    'child_id' => $selectedChildId,
+]);
+$attendanceUrl = static fn (string $date): string => url(
+    'admin/attendance.php?' . http_build_query(['date' => $date] + $filterQuery)
+);
+
+$scope = "c.status = 'active'";
+$scopeParams = [];
+if ($classroomId !== null) {
+    $scope .= ' AND cc.classroom_id = :classroom_id';
+    $scopeParams['classroom_id'] = $classroomId;
+}
+if ($selectedChildId !== null) {
+    $scope .= ' AND c.id = :child_id';
+    $scopeParams['child_id'] = $selectedChildId;
+}
+$condition = match ($filter) {
+    'missing' => ' AND a.id IS NULL',
+    'open_checkout' => ' AND ' . PORTAL_OPEN_CHECKOUT,
+    default => '',
+};
 
 $pdo = null;
 $rows = [];
+$classrooms = [];
 $successMessage = getFlash('success');
 $errorMessage = getFlash('error');
 
@@ -142,29 +174,27 @@ try {
     $pdo = getDb();
 
     if (isPostRequest()) {
-        $csrfToken = $_POST['csrf_token'] ?? '';
-        $postDate = (string) ($_POST['attendance_date'] ?? '');
-        $parsedPostDate = parseAttendanceDateString($postDate);
+        $csrfToken = $_POST['csrf_token'] ?? null;
+        $postDate = $_POST['attendance_date'] ?? null;
+        $parsedPostDate = is_string($postDate) ? parseAttendanceDateString($postDate) : null;
 
-        if (!validateCsrfToken($csrfToken)) {
+        if (!is_string($csrfToken) || !validateCsrfToken($csrfToken)) {
             setFlash('error', 'درخواست نامعتبر است. لطفاً دوباره تلاش کنید.');
-            redirect(url('admin/attendance.php?date=' . rawurlencode($selectedDate)));
+            redirect($attendanceUrl($selectedDate));
         }
 
         if ($parsedPostDate === null || $parsedPostDate > $today) {
             setFlash('error', 'تاریخ حضور باید معتبر و مربوط به امروز یا روزهای گذشته باشد.');
-            redirect(url('admin/attendance.php?date=' . rawurlencode($selectedDate)));
+            redirect($attendanceUrl($selectedDate));
         }
 
-        $activeStmt = $pdo->prepare('SELECT id FROM children WHERE status = :status');
-        $activeStmt->execute([':status' => 'active']);
-        $allowedIds = [];
+        $activeStmt = $pdo->prepare(
+            'SELECT c.id FROM children c LEFT JOIN child_classroom cc ON cc.child_id = c.id WHERE ' . $scope
+        );
+        $activeStmt->execute($scopeParams);
+        $allowedIds = array_fill_keys($activeStmt->fetchAll(PDO::FETCH_COLUMN), true);
 
-        while ($idRow = $activeStmt->fetch()) {
-            $allowedIds[(int) $idRow['id']] = true;
-        }
-
-        $attendanceData = $_POST['attendance'] ?? [];
+        $attendanceData = $_POST['attendance'] ?? $_POST['mobile_attendance'] ?? [];
 
         if (!is_array($attendanceData)) {
             $attendanceData = [];
@@ -184,17 +214,26 @@ try {
 
         // VALUES() syntax: the row-alias form ("AS new") is MySQL 8+ only and
         // fails on MariaDB (the typical shared-hosting database).
-        $upsert = $pdo->prepare(
-            <<<'SQL'
+        $insertSql = <<<'SQL'
 INSERT INTO attendance (child_id, attendance_date, status, check_in, check_out, notes)
 VALUES (:child_id, :attendance_date, :status, :check_in, :check_out, :notes)
+SQL;
+        $saveSql = match ($filter) {
+            // A filtered register can go stale while a teacher updates it.
+            'missing' => $insertSql . ' ON DUPLICATE KEY UPDATE id = id',
+            'open_checkout' => 'UPDATE attendance a
+                SET status = :status, check_in = :check_in, check_out = :check_out, notes = :notes
+                WHERE a.child_id = :child_id AND a.attendance_date = :attendance_date AND ' . PORTAL_OPEN_CHECKOUT,
+            default => $insertSql . ' ' . <<<'SQL'
 ON DUPLICATE KEY UPDATE
     status    = VALUES(status),
     check_in  = VALUES(check_in),
     check_out = VALUES(check_out),
     notes     = VALUES(notes)
-SQL
-        );
+SQL,
+        };
+        $saveAttendance = $pdo->prepare($saveSql);
+        $changedAttendance = [];
 
         // All-or-nothing: a failure halfway through a 200-child sheet must not
         // leave half the register saved and the rest lost.
@@ -234,7 +273,7 @@ SQL
                 $checkOut = normalizeAttendanceTime($checkOutRaw);
                 [$checkIn, $checkOut] = portalAttendanceTimes($status, $checkIn, $checkOut);
 
-                $upsert->execute([
+                $saveAttendance->execute([
                     ':child_id' => $childId,
                     ':attendance_date' => $parsedPostDate,
                     ':status' => $status,
@@ -242,6 +281,9 @@ SQL
                     ':check_out' => $checkOut,
                     ':notes' => $notes,
                 ]);
+                if ($saveAttendance->rowCount() > 0 && ($previousStatuses[$childId] ?? null) !== $status) {
+                    $changedAttendance[$childId] = $status;
+                }
             }
 
             $pdo->commit();
@@ -260,28 +302,6 @@ SQL
             'late'    => 'با کمی تاخیر اومد پیشمون و به جمع دوستانش پیوست ⏰',
             'excused' => 'امروز در حال استراحت در کنار شماست 🏡',
         ];
-
-        $changedAttendance = [];
-
-        foreach ($attendanceData as $childKey => $fields) {
-            if (!is_array($fields)) {
-                continue;
-            }
-
-            $childId = filter_var($childKey, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-            if (!is_int($childId) || !isset($allowedIds[$childId])) {
-                continue;
-            }
-
-            $status = portalAttendanceStatus($fields['status'] ?? null);
-            if ($status === null) {
-                continue;
-            }
-
-            if (($previousStatuses[$childId] ?? null) !== $status) {
-                $changedAttendance[$childId] = $status;
-            }
-        }
 
         $notifyResults = [];
 
@@ -333,11 +353,11 @@ SQL
         }
 
         setFlash('success', $flashMessage);
-        redirect(url('admin/attendance.php?date=' . rawurlencode($parsedPostDate)));
+        redirect($attendanceUrl($parsedPostDate));
     }
 
-    $listStmt = $pdo->prepare(
-        <<<'SQL'
+    $classrooms = $pdo->query('SELECT id, name FROM classrooms ORDER BY name, id')->fetchAll();
+    $listSql = <<<'SQL'
 SELECT
     c.id,
     c.first_name,
@@ -346,21 +366,19 @@ SELECT
     c.photo,
     p.first_name AS parent_first_name,
     p.last_name AS parent_last_name,
+    cl.name AS classroom_name,
     a.status AS attendance_status,
     a.check_in,
     a.check_out,
     a.notes AS attendance_notes
 FROM children c
 INNER JOIN parents p ON p.id = c.parent_id
+LEFT JOIN child_classroom cc ON cc.child_id = c.id
+LEFT JOIN classrooms cl ON cl.id = cc.classroom_id
 LEFT JOIN attendance a ON a.child_id = c.id AND a.attendance_date = :attendance_date
-WHERE c.status = :child_status
-ORDER BY c.last_name ASC, c.first_name ASC
-SQL
-    );
-    $listStmt->execute([
-        ':attendance_date' => $selectedDate,
-        ':child_status' => 'active',
-    ]);
+SQL;
+    $listStmt = $pdo->prepare($listSql . ' WHERE ' . $scope . $condition . ' ORDER BY c.last_name, c.first_name, c.id');
+    $listStmt->execute(['attendance_date' => $selectedDate] + $scopeParams);
     $rows = $listStmt->fetchAll();
 } catch (Throwable $exception) {
     error_log($exception->getMessage());
@@ -392,12 +410,34 @@ require_once __DIR__ . '/header.php';
 
     <div class="admin-section mb-md">
         <form class="date-selector date-selector-form attendance-filter-bar" method="get" action="<?= e(url('admin/attendance.php')) ?>">
-            <label for="attendance_date_pick" class="form-label m-0 font-bold">انتخاب تاریخ:</label>
-            <input type="text" id="attendance_date_pick" name="date" class="form-control shamsi-datepicker date-picker-compact" value="<?= e(shamsiDate($selectedDate, 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸">
-            <button type="submit" class="btn btn-secondary">بارگذاری تاریخ</button>
-            <span class="attendance-filter-date-info">
-                ثبت برای تاریخ <strong><?= e($displayDateLabel) ?></strong>
-            </span>
+            <?php if ($selectedChildId !== null): ?>
+                <input type="hidden" name="child_id" value="<?= e($selectedChildId) ?>">
+            <?php endif; ?>
+            <div class="attendance-filter-field">
+                <label for="attendance_date_pick" class="form-label">تاریخ</label>
+                <input type="text" id="attendance_date_pick" name="date" class="form-control shamsi-datepicker" value="<?= e(shamsiDate($selectedDate, 'numeric')) ?>">
+            </div>
+            <div class="attendance-filter-field">
+                <label for="attendance_filter" class="form-label">وضعیت</label>
+                <select name="filter" id="attendance_filter" class="form-control">
+                    <?php foreach ($filterLabels as $value => $label): ?>
+                        <option value="<?= e($value) ?>" <?= $filter === $value ? 'selected' : '' ?>><?= e($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="attendance-filter-field">
+                <label for="attendance_classroom" class="form-label">کلاس</label>
+                <select name="classroom_id" id="attendance_classroom" class="form-control">
+                    <option value="">همه کلاس‌ها</option>
+                    <?php foreach ($classrooms as $option): ?>
+                        <option value="<?= e($option['id']) ?>" <?= $classroomId === (int) $option['id'] ? 'selected' : '' ?>><?= e($option['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-secondary">اعمال فیلتر</button>
+            <?php if ($filterQuery !== []): ?>
+                <a href="<?= e(url('admin/attendance.php?date=' . $selectedDate)) ?>" class="btn btn-outline">نمایش همه</a>
+            <?php endif; ?>
         </form>
     </div>
 
@@ -407,17 +447,20 @@ require_once __DIR__ . '/header.php';
                 <div class="empty-state-icon">
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 </div>
-                <h3>هیچ کودک فعالی ثبت‌نام نشده است</h3>
-                <p>پس از افزودن کودکان به سیستم، می‌توانید وضعیت حضور و غیاب آن‌ها را ثبت کنید.</p>
-                <a href="<?= e(url('admin/children.php')) ?>" class="btn btn-primary btn-sm mt-sm">مدیریت کودکان</a>
+                <h3><?= e(match ($filter) {
+                    'missing' => 'مورد ثبت‌نشده‌ای در این فهرست وجود ندارد',
+                    'open_checkout' => 'خروج ثبت‌نشده‌ای در این فهرست وجود ندارد',
+                    default => 'کودکی در این فهرست یافت نشد',
+                }) ?></h3>
+                <p><?= e($displayDateLabel) ?></p>
             </div>
         <?php else: ?>
-            <form class="attendance-save-form" method="post" action="<?= e(url('admin/attendance.php')) ?>">
+            <form class="attendance-save-form" method="post" action="<?= e($attendanceUrl($selectedDate)) ?>">
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <input type="hidden" name="attendance_date" value="<?= e($selectedDate) ?>">
 
                 <div class="flex-between-center mb-md">
-                    <h2 class="admin-section-title m-0">لیست کودکان (<?= count($rows) ?>)</h2>
+                    <h2 class="admin-section-title m-0"><?= e($filter === 'all' ? 'لیست کودکان' : $filterLabels[$filter]) ?> (<?= e(persianNumber(count($rows))) ?>)</h2>
                     <button type="submit" class="btn btn-primary">ذخیره حضور و غیاب</button>
                 </div>
 
@@ -453,11 +496,16 @@ require_once __DIR__ . '/header.php';
                                                     <span class="child-photo-small child-photo-small-placeholder avatar-placeholder-circle" aria-hidden="true"><?= e($initial ?: '?') ?></span>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="font-semibold"><?= e($fullName !== '' ? $fullName : 'کودک') ?></td>
+                                            <td class="font-semibold">
+                                                <?= e($fullName !== '' ? $fullName : 'کودک') ?>
+                                                <?php if ($classroomId === null && !empty($child['classroom_name'])): ?>
+                                                    <br><small class="muted"><?= e($child['classroom_name']) ?></small>
+                                                <?php endif; ?>
+                                            </td>
                                             <td><?= e($parentName !== '' ? $parentName : '—') ?></td>
                                             <td>
                                                 <div class="status-radio-group status-radio-group-table flex-items-center gap-xs">
-                                                    <?php renderAttendanceRadios($child, $cid, 'tbl'); ?>
+                                                    <?php renderAttendanceRadios($child, $cid); ?>
                                                 </div>
                                             </td>
                                             <td>
@@ -512,14 +560,14 @@ require_once __DIR__ . '/header.php';
                                     <?php endif; ?>
                                     <div>
                                         <h2 class="attendance-card-name" style="font-size:1rem;font-weight:700;margin:0;"><?= e($fullName !== '' ? $fullName : 'کودک') ?></h2>
-                                        <p class="attendance-card-meta" style="font-size:0.8rem;color:var(--adm-text-muted);margin:2px 0 0;"><?= e(attendanceAgeFromDob((string) ($child['date_of_birth'] ?? ''))) ?> · <?= e($parentName !== '' ? $parentName : '—') ?></p>
+                                        <p class="attendance-card-meta" style="font-size:0.8rem;color:var(--adm-text-muted);margin:2px 0 0;"><?= e(attendanceAgeFromDob((string) ($child['date_of_birth'] ?? ''))) ?> · <?= e($parentName !== '' ? $parentName : '—') ?><?php if ($classroomId === null && !empty($child['classroom_name'])): ?> · <?= e($child['classroom_name']) ?><?php endif; ?></p>
                                     </div>
                                 </div>
                                 <fieldset class="attendance-fieldset" disabled data-mobile-fieldset>
                                     <legend class="sr-only">وضعیت برای <?= e($fullName) ?></legend>
                                     <p class="attendance-field-label">وضعیت</p>
                                     <div class="status-radio-group">
-                                        <?php renderAttendanceRadios($child, $cid, 'mob'); ?>
+                                        <?php renderAttendanceRadios($child, $cid, true); ?>
                                     </div>
                                 </fieldset>
                                 <div class="time-inputs">
@@ -528,7 +576,7 @@ require_once __DIR__ . '/header.php';
                                         <input
                                             class="form-control time-input"
                                             type="time"
-                                            name="attendance[<?= e((string) $cid) ?>][check_in]"
+                                            name="mobile_attendance[<?= e((string) $cid) ?>][check_in]"
                                             value="<?= e(attendanceTimeForInput($child['check_in'] ?? null)) ?>"
                                             disabled
                                         >
@@ -538,7 +586,7 @@ require_once __DIR__ . '/header.php';
                                         <input
                                             class="form-control time-input"
                                             type="time"
-                                            name="attendance[<?= e((string) $cid) ?>][check_out]"
+                                            name="mobile_attendance[<?= e((string) $cid) ?>][check_out]"
                                             value="<?= e(attendanceTimeForInput($child['check_out'] ?? null)) ?>"
                                             disabled
                                         >
@@ -548,7 +596,7 @@ require_once __DIR__ . '/header.php';
                                     یادداشت
                                     <textarea
                                         class="form-control notes-field"
-                                        name="attendance[<?= e((string) $cid) ?>][notes]"
+                                        name="mobile_attendance[<?= e((string) $cid) ?>][notes]"
                                         rows="2"
                                         maxlength="5000"
                                         disabled
@@ -580,8 +628,28 @@ require_once __DIR__ . '/header.php';
     var tableControls = tableWrap.querySelectorAll('input, textarea');
     var cardControls = cardsWrap.querySelectorAll('input, textarea');
     var mobileFieldsets = cardsWrap.querySelectorAll('[data-mobile-fieldset]');
+    var previousDesktop = null;
+
+    function controlKey(control) {
+        var field = control.name.slice(control.name.indexOf('['));
+        return control.type === 'radio' ? field + '=' + control.value : field;
+    }
+
     function apply() {
         var desktop = mq.matches;
+        if (previousDesktop !== null && desktop !== previousDesktop) {
+            var source = desktop ? cardControls : tableControls;
+            var destination = desktop ? tableControls : cardControls;
+            var edits = new Map(Array.from(source, function (control) {
+                return [controlKey(control), control];
+            }));
+            destination.forEach(function (control) {
+                var original = edits.get(controlKey(control));
+                if (!original) return;
+                if (control.type === 'radio') control.checked = original.checked;
+                else control.value = original.value;
+            });
+        }
         tableControls.forEach(function (el) {
             el.disabled = !desktop;
         });
@@ -592,6 +660,7 @@ require_once __DIR__ . '/header.php';
         mobileFieldsets.forEach(function (fs) {
             fs.disabled = desktop;
         });
+        previousDesktop = desktop;
     }
     if (typeof mq.addEventListener === 'function') {
         mq.addEventListener('change', apply);

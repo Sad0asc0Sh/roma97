@@ -503,6 +503,39 @@
     color: var(--tp-text);
 }
 
+.tp-class-activity-form {
+    border-inline-start: 4px solid var(--tp-primary);
+}
+.tp-class-activity-form .tp-card-header {
+    margin-bottom: 4px;
+}
+.tp-class-activity-help {
+    margin: 0 0 12px;
+    color: var(--tp-text-secondary);
+    font-size: .85rem;
+}
+.tp-class-activity-bank {
+    margin-block: 10px 14px;
+}
+.tp-class-activity-bank summary {
+    width: fit-content;
+    font-weight: 700;
+    cursor: pointer;
+}
+.tp-class-activity-suggestions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+    gap: 12px;
+    margin-block-start: 10px;
+    font-size: .85rem;
+}
+.tp-class-activity-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-block-start: 6px;
+}
+
 .tp-section {
     margin-bottom: 20px;
 }

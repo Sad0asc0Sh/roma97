@@ -295,6 +295,7 @@ function toggleAdminSubmenu(btn, id) {
     </aside>
 
     <div class="admin-main">
+        <?php $showChildDirectorySearch = $navCan('admin/children.php'); ?>
         <?php require_once __DIR__ . '/../templates/app/topbar.php'; ?>
 
         <main class="admin-content" id="adminMain">

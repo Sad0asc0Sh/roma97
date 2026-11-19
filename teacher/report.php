@@ -24,6 +24,7 @@ require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/sms.php';
 require_once __DIR__ . '/../includes/notifications.php';
 require_once __DIR__ . '/../includes/permissions.php';
+require_once __DIR__ . '/../includes/classroom_activities.php';
 require_once __DIR__ . '/../includes/teacher_portal_helpers.php';
 
 requireTeacherLogin();
@@ -38,10 +39,13 @@ $classroom   = null;
 $classroomId = 0;
 $children    = [];
 $reports     = [];
+$classActivity = '';
 
 $moodCatalog    = teacherPsychologicalMoodCatalog();
-$allowedMoods   = array_keys($moodCatalog);
 $factorsCatalog = teacherPsychologicalFactorsCatalog();
+$reportOptions = ['mood' => $moodCatalog] + array_map(static fn (array $factor): array => $factor['options'], $factorsCatalog);
+$textFields = ['strengths_observed' => 500, 'coping_strategy' => 500, 'activities' => null, 'notes' => null];
+$emptyReport = array_fill_keys(array_keys($reportOptions + $textFields), null);
 
 $quickMoodLabels = [
     'happy'    => '🌟 شاداب و خودانگیخته',
@@ -64,26 +68,29 @@ try {
     $classroomId = $ctx['active_id'];
 
     if ($classroom !== null) {
+        ensureClassroomActivitiesTables($pdo);
         $kidsStmt = $pdo->prepare(
             <<<'SQL'
-SELECT c.id, c.first_name, c.last_name, c.preferred_name, c.photo, c.allergies, c.medical_notes
+SELECT c.id, c.first_name, c.last_name, c.preferred_name, c.photo, c.allergies, c.medical_notes, a.status AS attendance_status
 FROM child_classroom cc
 INNER JOIN children c ON c.id = cc.child_id
+LEFT JOIN attendance a ON a.child_id = c.id AND a.attendance_date = :attendance_date
 WHERE cc.classroom_id = :cid AND c.status = 'active'
 ORDER BY c.first_name, c.last_name
 SQL
         );
-        $kidsStmt->execute([':cid' => $classroomId]);
+        $kidsStmt->execute(['cid' => $classroomId, 'attendance_date' => $selectedDate]);
         $children = $kidsStmt->fetchAll();
 
         $allowedChildIds = array_map(static fn (array $c): int => (int) $c['id'], $children);
 
         if (isPostRequest()) {
-            $postDate = teacherValidOperationalDate((string) ($_POST['report_date'] ?? ''), 7);
+            $postDateInput = $_POST['report_date'] ?? null;
+            $postDate = is_string($postDateInput) ? teacherValidOperationalDate($postDateInput, 7) : null;
             $redirectUrl = url('teacher/report.php?classroom_id=' . $classroomId . '&date=' . rawurlencode($postDate ?? $selectedDate));
 
-            $csrfToken = (string) ($_POST['csrf_token'] ?? '');
-            if (!validateCsrfToken($csrfToken)) {
+            $csrfToken = $_POST['csrf_token'] ?? null;
+            if (!is_string($csrfToken) || !validateCsrfToken($csrfToken)) {
                 setFlash('error', 'درخواست نامعتبر است. لطفاً دوباره تلاش کنید.');
                 redirect($redirectUrl);
             }
@@ -92,17 +99,13 @@ SQL
                 redirect($redirectUrl);
             }
 
-            $moods          = (array) ($_POST['mood'] ?? []);
-            $socialIn       = (array) ($_POST['social_interaction'] ?? []);
-            $focusIn        = (array) ($_POST['focus_level'] ?? []);
-            $commIn         = (array) ($_POST['communication_style'] ?? []);
-            $sepIn          = (array) ($_POST['separation_adaptation'] ?? []);
-            $nutIn          = (array) ($_POST['nutrition_status'] ?? []);
-            $restIn         = (array) ($_POST['rest_energy'] ?? []);
-            $strengthsIn    = (array) ($_POST['strengths_observed'] ?? []);
-            $copingIn       = (array) ($_POST['coping_strategy'] ?? []);
-            $activities     = (array) ($_POST['activities'] ?? []);
-            $notes          = (array) ($_POST['notes'] ?? []);
+            $activityInput = $_POST['class_activity'] ?? null;
+            $savingClassActivity = array_key_exists('class_activity', $_POST);
+            if ($savingClassActivity && (!is_string($activityInput) || mb_strlen($activityInput, 'UTF-8') > 3000)) {
+                setFlash('error', 'فعالیت مشترک کلاس باید حداکثر ۳۰۰۰ نویسه باشد.');
+                redirect($redirectUrl);
+            }
+            $submittedFields = array_filter(array_intersect_key($_POST, $emptyReport), 'is_array');
 
             $upsertSql = <<<'SQL'
 INSERT INTO daily_reports (
@@ -112,9 +115,9 @@ INSERT INTO daily_reports (
     strengths_observed, coping_strategy, activities, notes
 ) VALUES (
     :tid, :cid, :child_id, :rdate,
-    :mood, :soc, :foc, :com,
-    :sep, :nut, :rst,
-    :str, :cop, :activities, :notes
+    :mood, :social_interaction, :focus_level, :communication_style,
+    :separation_adaptation, :nutrition_status, :rest_energy,
+    :strengths_observed, :coping_strategy, :activities, :notes
 )
 ON DUPLICATE KEY UPDATE
     teacher_id            = VALUES(teacher_id),
@@ -133,6 +136,25 @@ ON DUPLICATE KEY UPDATE
 SQL;
 
             try {
+                $pdo->beginTransaction();
+                $classLock = $pdo->prepare('SELECT id FROM classrooms WHERE id = ? AND teacher_id = ? FOR UPDATE');
+                $classLock->execute([$classroomId, $teacherId]);
+                if ($classLock->fetchColumn() === false) {
+                    throw new InvalidArgumentException('این کلاس دیگر به شما اختصاص ندارد.');
+                }
+
+                if ($savingClassActivity) {
+                    $classActivity = trim($activityInput);
+                    saveClassroomActivity($pdo, $classroomId, $postDate, $classActivity);
+                    $pdo->commit();
+                    recordAudit('classroom.activity.save', 'classroom', $classroomId, [
+                        'date' => $postDate,
+                        'cleared' => $classActivity === '',
+                    ]);
+                    setFlash('success', $classActivity === '' ? 'فعالیت مشترک کلاس پاک شد.' : 'فعالیت مشترک کلاس ذخیره شد.');
+                    redirect($redirectUrl);
+                }
+
                 $existingStmt = $pdo->prepare(
                     'SELECT child_id, mood, social_interaction, focus_level, communication_style,
                             separation_adaptation, nutrition_status, rest_energy,
@@ -144,93 +166,47 @@ SQL;
 
                 $previousReports = [];
                 foreach ($existingStmt->fetchAll() as $prev) {
-                    $previousReports[(int) $prev['child_id']] = [
-                        'mood'                  => (string) ($prev['mood'] ?? ''),
-                        'social_interaction'    => (string) ($prev['social_interaction'] ?? ''),
-                        'focus_level'           => (string) ($prev['focus_level'] ?? ''),
-                        'communication_style'   => (string) ($prev['communication_style'] ?? ''),
-                        'separation_adaptation' => (string) ($prev['separation_adaptation'] ?? ''),
-                        'nutrition_status'      => (string) ($prev['nutrition_status'] ?? ''),
-                        'rest_energy'           => (string) ($prev['rest_energy'] ?? ''),
-                        'strengths_observed'    => trim((string) ($prev['strengths_observed'] ?? '')),
-                        'coping_strategy'       => trim((string) ($prev['coping_strategy'] ?? '')),
-                        'activities'            => trim((string) ($prev['activities'] ?? '')),
-                        'notes'                 => trim((string) ($prev['notes'] ?? '')),
-                    ];
+                    $previousReports[(int) $prev['child_id']] = array_replace($emptyReport, array_intersect_key($prev, $emptyReport));
                 }
 
-                $pdo->beginTransaction();
                 $uStmt = $pdo->prepare($upsertSql);
+                $clearStmt = $pdo->prepare('DELETE FROM daily_reports WHERE classroom_id = ? AND child_id = ? AND report_date = ?');
 
                 $saved = 0;
-                /** @var array<int, array{mood:string}> $changedChildren */
+                /** @var array<int, string|null> $changedChildren */
                 $changedChildren = [];
 
-                $validateFactor = static function (string $factorKey, string $rawVal) use ($factorsCatalog): string {
-                    $default = $factorsCatalog[$factorKey]['default'] ?? '';
-                    $opts    = $factorsCatalog[$factorKey]['options'] ?? [];
-                    return array_key_exists($rawVal, $opts) ? $rawVal : $default;
-                };
-
                 foreach ($allowedChildIds as $childId) {
-                    // Missing rows (including truncated POSTs) must never erase saved reports.
-                    if (!array_key_exists($childId, $moods)) {
+                    $before = $previousReports[$childId] ?? $emptyReport;
+                    $report = $before;
+                    foreach ($submittedFields as $field => $values) {
+                        // Omitted fields can come from an unchanged card or a partial submit.
+                        $value = $values[$childId] ?? null;
+                        if (!is_string($value)) {
+                            continue;
+                        }
+                        $value = trim($value);
+                        if ($value !== '' && isset($reportOptions[$field]) && !isset($reportOptions[$field][$value])) {
+                            continue;
+                        }
+                        $limit = $textFields[$field] ?? null;
+                        $report[$field] = $value === '' ? null : ($limit === null ? $value : mb_substr($value, 0, $limit, 'UTF-8'));
+                    }
+                    if ($report === $before) {
                         continue;
                     }
-                    $mood = (string) $moods[$childId];
-                    if (!in_array($mood, $allowedMoods, true)) {
+                    $saved++;
+                    if ($report === $emptyReport) {
+                        $clearStmt->execute([$classroomId, $childId, $postDate]);
                         continue;
                     }
-
-                    $socVal = $validateFactor('social_interaction', (string) ($socialIn[$childId] ?? ''));
-                    $focVal = $validateFactor('focus_level', (string) ($focusIn[$childId] ?? ''));
-                    $comVal = $validateFactor('communication_style', (string) ($commIn[$childId] ?? ''));
-                    $sepVal = $validateFactor('separation_adaptation', (string) ($sepIn[$childId] ?? ''));
-                    $nutVal = $validateFactor('nutrition_status', (string) ($nutIn[$childId] ?? ''));
-                    $rstVal = $validateFactor('rest_energy', (string) ($restIn[$childId] ?? ''));
-
-                    $strVal          = mb_substr(trim((string) ($strengthsIn[$childId] ?? '')), 0, 500, 'UTF-8');
-                    $copVal          = mb_substr(trim((string) ($copingIn[$childId] ?? '')), 0, 500, 'UTF-8');
-                    $childActivities = trim((string) ($activities[$childId] ?? ''));
-                    $childNotes      = trim((string) ($notes[$childId] ?? ''));
-
-                    $uStmt->execute([
+                    $uStmt->execute($report + [
                         ':tid'        => $teacherId,
                         ':cid'        => $classroomId,
                         ':child_id'   => $childId,
                         ':rdate'      => $postDate,
-                        ':mood'       => $mood,
-                        ':soc'        => $socVal,
-                        ':foc'        => $focVal,
-                        ':com'        => $comVal,
-                        ':sep'        => $sepVal,
-                        ':nut'        => $nutVal,
-                        ':rst'        => $rstVal,
-                        ':str'        => $strVal === '' ? null : $strVal,
-                        ':cop'        => $copVal === '' ? null : $copVal,
-                        ':activities' => $childActivities === '' ? null : $childActivities,
-                        ':notes'      => $childNotes === '' ? null : $childNotes,
                     ]);
-                    $saved++;
-
-                    $before = $previousReports[$childId] ?? null;
-                    $isNew  = $before === null;
-                    $hasChanged = $isNew
-                        || $before['mood'] !== $mood
-                        || $before['social_interaction'] !== $socVal
-                        || $before['focus_level'] !== $focVal
-                        || $before['communication_style'] !== $comVal
-                        || $before['separation_adaptation'] !== $sepVal
-                        || $before['nutrition_status'] !== $nutVal
-                        || $before['rest_energy'] !== $rstVal
-                        || $before['strengths_observed'] !== $strVal
-                        || $before['coping_strategy'] !== $copVal
-                        || $before['activities'] !== $childActivities
-                        || $before['notes'] !== $childNotes;
-
-                    if ($hasChanged) {
-                        $changedChildren[$childId] = ['mood' => $mood];
-                    }
+                    $changedChildren[$childId] = $report['mood'];
                 }
 
                 $pdo->commit();
@@ -263,8 +239,8 @@ SQL;
                     $childId   = (int) $row['child_id'];
                     $parentId  = (int) $row['parent_id'];
                     $childName = trim((string) $row['c_first'] . ' ' . (string) $row['c_last']);
-                    $mood      = (string) ($changedChildren[$childId]['mood'] ?? 'normal');
-                    $moodFa    = $moodCatalog[$mood]['sms_phrase'] ?? 'امروز روز خوبی را در مهد گذراند 🌸';
+                    $mood      = $changedChildren[$childId] ?? '';
+                    $moodFa    = $moodCatalog[$mood]['sms_phrase'] ?? 'گزارش امروز در پنل والدین در دسترس است.';
 
                     $eventKey = $detailedAll ? 'daily_report_vip' : 'daily_report_brief';
                     $args = $detailedAll
@@ -288,11 +264,11 @@ SQL;
                 'notified' => count($notifyResults),
             ]);
 
-            $flash = 'مشاهدات روان‌شناختی و گزارش روزانه برای ' . persianNumber((string) $saved) . ' کودک ذخیره شد.';
+            $flash = $saved > 0
+                ? 'گزارش روزانه ' . persianNumber($saved) . ' کودک به‌روز شد.'
+                : 'تغییری در گزارش‌ها ثبت نشد.';
 
-            if ($changedChildren === []) {
-                $flash .= ' (تغییری نسبت به ثبت قبلی نبود، پیامک تکراری ارسال نشد.)';
-            } else {
+            if ($changedChildren !== []) {
                 $summary = summarizeNotificationResults($notifyResults);
                 if ($summary !== '') {
                     $flash .= ' ' . $summary;
@@ -315,6 +291,10 @@ SQL;
         foreach ($rStmt->fetchAll() as $row) {
             $reports[(int) $row['child_id']] = $row;
         }
+
+        $activityStmt = $pdo->prepare('SELECT activity FROM classroom_daily_activities WHERE classroom_id = ? AND activity_date = ?');
+        $activityStmt->execute([$classroomId, $selectedDate]);
+        $classActivity = (string) $activityStmt->fetchColumn();
     }
 } catch (Throwable $e) {
     error_log('teacher/report failed: ' . $e->getMessage());
@@ -329,7 +309,8 @@ $nonLabelingDict      = teacherNonLabelingDictionary();
 
 $isToday       = $selectedDate === $today;
 $totalChildren = count($children);
-$reportedCount = count($reports);
+$attendingChildren = array_filter($children, static fn (array $child): bool => in_array($child['attendance_status'], ['present', 'late'], true));
+$reportedCount = count(array_filter($attendingChildren, static fn (array $child): bool => isset($reports[$child['id']])));
 
 $recentDays = [];
 $todayObj   = new DateTimeImmutable('today');
@@ -355,7 +336,7 @@ require_once __DIR__ . '/header.php';
                 کلاس <strong><?= e((string) $classroom['name']) ?></strong> ·
                 <?= e(shamsiDate($selectedDate, 'with_day')) ?>
                 <?= $isToday ? ' (امروز)' : '' ?> ·
-                تکمیل‌شده: <strong><?= e(persianNumber((string) $reportedCount)) ?></strong> از <strong><?= e(persianNumber((string) $totalChildren)) ?></strong> کودک
+                گزارش فردی <strong><?= e(persianNumber($reportedCount)) ?></strong> از <strong><?= e(persianNumber(count($attendingChildren))) ?></strong> کودک حاضر یا باتأخیر
             <?php else: ?>
                 هنوز کلاسی به شما اختصاص داده نشده است.
             <?php endif; ?>
@@ -365,6 +346,7 @@ require_once __DIR__ . '/header.php';
     <div class="tp-page-actions">
         <?php if ($classroom !== null): ?>
             <form method="get" action="<?= e(url('teacher/report.php')) ?>" style="display:flex;gap:8px;align-items:center;">
+                <input type="hidden" name="classroom_id" value="<?= e($classroomId) ?>">
                 <label for="repDate" class="sr-only">تاریخ گزارش</label>
                 <input type="date" id="repDate" name="date" class="tp-input" style="width:auto;"
                     value="<?= e($selectedDate) ?>"
@@ -372,7 +354,7 @@ require_once __DIR__ . '/header.php';
                     min="<?= e($todayObj->modify('-7 days')->format('Y-m-d')) ?>"
                     onchange="this.form.submit()">
                 <?php if (!$isToday): ?>
-                    <a href="<?= e(url('teacher/report.php')) ?>" class="tp-btn tp-btn-secondary tp-btn-sm">امروز</a>
+                    <a href="<?= e(url('teacher/report.php?classroom_id=' . $classroomId)) ?>" class="tp-btn tp-btn-secondary tp-btn-sm">امروز</a>
                 <?php endif; ?>
             </form>
         <?php endif; ?>
@@ -422,17 +404,12 @@ require_once __DIR__ . '/header.php';
         <p>برای ثبت مشاهدات روان‌شناختی و گزارش روزانه، ابتدا باید توسط مدیریت به یک کلاس اختصاص داده شوید.</p>
         <a href="<?= e(url('teacher/index.php')) ?>" class="tp-btn tp-btn-secondary">بازگشت به داشبورد</a>
     </div>
-<?php elseif ($children === []): ?>
-    <div class="tp-empty-state">
-        <h2>هنوز کودکی در این کلاس ثبت‌نام نشده است</h2>
-        <p>پس از ثبت‌نام کودکان در کلاس، می‌توانید برای هر کودک ارزیابی روزانه ثبت کنید.</p>
-    </div>
 <?php else: ?>
 
     <!-- 7-Day Quick Date Strip -->
     <nav class="tp-date-strip" aria-label="انتخاب سریع روز گزارش">
         <?php foreach ($recentDays as $dayChip): ?>
-            <a href="<?= e(url('teacher/report.php?date=' . rawurlencode($dayChip['ymd']))) ?>"
+            <a href="<?= e(url('teacher/report.php?classroom_id=' . $classroomId . '&date=' . rawurlencode($dayChip['ymd']))) ?>"
                class="tp-day-chip <?= $dayChip['ymd'] === $selectedDate ? 'active' : '' ?>">
                 <span><?= e($dayChip['label']) ?></span>
                 <strong><?= e($dayChip['date']) ?></strong>
@@ -440,6 +417,49 @@ require_once __DIR__ . '/header.php';
         <?php endforeach; ?>
     </nav>
 
+    <form method="post" action="<?= e(url('teacher/report.php?date=' . rawurlencode($selectedDate))) ?>" class="tp-card tp-class-activity-form">
+        <input type="hidden" name="classroom_id" value="<?= e($classroomId) ?>">
+        <input type="hidden" name="report_date" value="<?= e($selectedDate) ?>">
+        <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+        <div class="tp-card-header">
+            <h2><label for="class_activity">فعالیت مشترک کلاس</label></h2>
+        </div>
+        <p id="class_activity_help" class="tp-class-activity-help">پس از ثبت حضور، فعالیت را ذخیره کنید تا برای خانوادهٔ کودکان حاضر و باتأخیر نمایش داده شود.</p>
+        <textarea id="class_activity" name="class_activity" class="tp-textarea" rows="3" maxlength="3000" aria-describedby="class_activity_help"><?= e($classActivity) ?></textarea>
+        <details class="tp-class-activity-bank">
+            <summary>بانک فعالیت‌های کلاسی</summary>
+            <div class="tp-class-activity-suggestions">
+                <?php foreach ($devActivitiesCatalog as $domainTitle => $domainActs): ?>
+                    <div>
+                        <strong><?= e($domainTitle) ?></strong>
+                        <div class="tp-class-activity-options">
+                            <?php foreach ($domainActs as $actItem): ?>
+                                <button type="button" class="tp-template-chip" data-class-activity="<?= e($actItem) ?>"><?= e($actItem) ?></button>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </details>
+        <button type="submit" class="tp-btn tp-btn-primary">ذخیره فعالیت کلاس</button>
+    </form>
+    <script>
+    document.querySelector('.tp-class-activity-bank').addEventListener('click', function (event) {
+        const suggestion = event.target.closest('[data-class-activity]');
+        if (!suggestion) return;
+        const field = document.getElementById('class_activity');
+        const text = field.value.trim();
+        const activity = suggestion.dataset.classActivity;
+        if (!text.split('، ').includes(activity)) field.value = text ? text + '، ' + activity : activity;
+    });
+    </script>
+<?php endif; ?>
+
+<?php if ($classroom !== null && $children === []): ?>
+    <div class="tp-empty-state">
+        <h2>هنوز کودکی در این کلاس ثبت‌نام نشده است</h2>
+    </div>
+<?php elseif ($children !== []): ?>
     <!-- Busy-Classroom Ergonomic Mode Switcher & Filter Toolbar -->
     <div class="tp-toolbar" style="flex-direction:column;align-items:stretch;gap:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -461,42 +481,7 @@ require_once __DIR__ . '/header.php';
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                 <input type="search" id="repSearchInput" class="tp-input" style="max-width:210px;padding:7px 12px;"
                        placeholder="🔍 جستجوی نام کودک..." oninput="applyReportFilters()">
-                <button type="button" class="tp-btn tp-btn-secondary tp-btn-sm" onclick="toggleActivitiesBank()">
-                    🎨 بانک فعالیت‌های کلاسی ▾
-                </button>
             </div>
-        </div>
-    </div>
-
-    <!-- Collapsible Domain-Categorized Developmental Activities Toolbar -->
-    <div class="tp-template-bar" id="activitiesBankBox" style="display:none;">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-            <div>
-                <strong style="font-size:0.92rem;">🌱 بانک فعالیت‌های هدفمند بر اساس ساحت‌های روان‌شناسی رشد (درج برای همه کودکان کلاس):</strong>
-                <span style="font-size:0.78rem;color:var(--tp-text-muted);display:block;margin-top:2px;">
-                    با کلیک روی هر فعالیت، آن فعالیت در کارنامه همه کودکان کلاس درج می‌شود و می‌توانید برای هر کودک شخصی‌سازی کنید.
-                </span>
-            </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                <button type="button" class="tp-btn tp-btn-secondary tp-btn-sm" onclick="setAllMood('happy')">تنظیم همه: 🌟 شاداب و خودانگیخته</button>
-                <button type="button" class="tp-btn tp-btn-secondary tp-btn-sm" onclick="setAllMood('normal')">تنظیم همه: 🌿 آرام و متمرکز</button>
-            </div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;">
-            <?php foreach ($devActivitiesCatalog as $domainTitle => $domainActs): ?>
-                <div style="background:var(--tp-surface-soft);border:1px solid var(--tp-border-light);border-radius:var(--tp-radius-sm);padding:10px 12px;">
-                    <strong style="font-size:0.78rem;color:var(--tp-primary);display:block;margin-bottom:6px;">• <?= e($domainTitle) ?></strong>
-                    <div style="display:flex;flex-direction:column;gap:5px;">
-                        <?php foreach ($domainActs as $actItem): ?>
-                            <button type="button" class="tp-template-chip" style="text-align:right;border-radius:8px;padding:5px 10px;"
-                                    onclick="appendActivityToAll(<?= e(json_encode($actItem, JSON_UNESCAPED_UNICODE)) ?>)">
-                                + <?= e($actItem) ?>
-                            </button>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
         </div>
     </div>
 
@@ -518,12 +503,6 @@ require_once __DIR__ . '/header.php';
                 $cid          = (int) $child['id'];
                 $existing     = $reports[$cid] ?? null;
                 $moodCurrent  = (string) ($existing['mood'] ?? '');
-                $socCurrent   = (string) ($existing['social_interaction'] ?? $factorsCatalog['social_interaction']['default']);
-                $focCurrent   = (string) ($existing['focus_level'] ?? $factorsCatalog['focus_level']['default']);
-                $comCurrent   = (string) ($existing['communication_style'] ?? $factorsCatalog['communication_style']['default']);
-                $sepCurrent   = (string) ($existing['separation_adaptation'] ?? $factorsCatalog['separation_adaptation']['default']);
-                $nutCurrent   = (string) ($existing['nutrition_status'] ?? $factorsCatalog['nutrition_status']['default']);
-                $rstCurrent   = (string) ($existing['rest_energy'] ?? $factorsCatalog['rest_energy']['default']);
                 $strCurrent   = (string) ($existing['strengths_observed'] ?? '');
                 $copCurrent   = (string) ($existing['coping_strategy'] ?? '');
                 $actCurrent   = (string) ($existing['activities'] ?? '');
@@ -598,7 +577,7 @@ require_once __DIR__ . '/header.php';
                         <div class="tp-form-group" style="margin-bottom:2px;">
                             <label for="mood_<?= $cid ?>" class="tp-label">شرح بالینی وضعیت تنظیم هیجانی و راهبرد هم‌تنظیمی مربی</label>
                             <select id="mood_<?= $cid ?>" name="mood[<?= $cid ?>]" class="tp-select child-mood-select" onchange="selectQuickMood(<?= $cid ?>, this.value)">
-                                <option value="">هنوز مشاهده‌ای ثبت نشده</option>
+                                <option value="">مشاهده‌نشده</option>
                                 <?php foreach ($moodCatalog as $mKey => $mMeta): ?>
                                     <option value="<?= e($mKey) ?>" <?= $moodCurrent === $mKey ? 'selected' : '' ?>>
                                         <?= e($mMeta['label']) ?> — (<?= e($mMeta['clinical_desc']) ?>)
@@ -606,7 +585,7 @@ require_once __DIR__ . '/header.php';
                                 <?php endforeach; ?>
                             </select>
                             <div id="mood_tip_<?= $cid ?>" style="font-size:0.77rem;color:var(--tp-primary);background:var(--tp-primary-tint);padding:7px 12px;border-radius:8px;margin-top:4px;">
-                                💡 <strong>راهبرد هم‌تنظیمی مربی:</strong> <?= e($moodCatalog[$moodCurrent]['coach_tip'] ?? '') ?>
+                                <?= e($moodCatalog[$moodCurrent]['coach_tip'] ?? '') ?>
                             </div>
                         </div>
 
@@ -617,16 +596,8 @@ require_once __DIR__ . '/header.php';
                             </strong>
                             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;">
                                 <?php
-                                $currentFactorMap = [
-                                    'social_interaction'    => $socCurrent,
-                                    'focus_level'           => $focCurrent,
-                                    'communication_style'   => $comCurrent,
-                                    'separation_adaptation' => $sepCurrent,
-                                    'nutrition_status'      => $nutCurrent,
-                                    'rest_energy'           => $rstCurrent,
-                                ];
                                 foreach ($factorsCatalog as $fKey => $fMeta):
-                                    $selectedOpt = $currentFactorMap[$fKey] ?? $fMeta['default'];
+                                    $selectedOpt = (string) ($existing[$fKey] ?? '');
                                 ?>
                                     <div class="tp-form-group" style="margin:0;">
                                         <label for="<?= e($fKey . '_' . $cid) ?>" class="tp-label" style="font-size:0.78rem;">
@@ -634,6 +605,7 @@ require_once __DIR__ . '/header.php';
                                             <small style="color:var(--tp-text-muted);font-weight:500;">(<?= e($fMeta['domain']) ?>)</small>
                                         </label>
                                         <select id="<?= e($fKey . '_' . $cid) ?>" name="<?= e($fKey) ?>[<?= $cid ?>]" class="tp-select" style="font-size:0.81rem;padding:8px 10px;">
+                                            <option value="">مشاهده‌نشده</option>
                                             <?php foreach ($fMeta['options'] as $optVal => $optLabel): ?>
                                                 <option value="<?= e($optVal) ?>" <?= $selectedOpt === $optVal ? 'selected' : '' ?>>
                                                     <?= e($optLabel) ?>
@@ -666,8 +638,8 @@ require_once __DIR__ . '/header.php';
 
                         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;">
                             <div class="tp-form-group" style="margin:0;">
-                                <label for="activities_<?= $cid ?>" class="tp-label">۵. فعالیت‌های آموزشی، شناختی و حسی-حرکتی انجام‌شده</label>
-                                <textarea id="activities_<?= $cid ?>" name="activities[<?= $cid ?>]" class="tp-textarea child-activities-textarea" rows="2" placeholder="فعالیت‌های امروز کودک در کلاس..."><?= e($actCurrent) ?></textarea>
+                                <label for="activities_<?= $cid ?>" class="tp-label">۵. فعالیت‌های فردی کودک</label>
+                                <textarea id="activities_<?= $cid ?>" name="activities[<?= $cid ?>]" class="tp-textarea" rows="2"><?= e($actCurrent) ?></textarea>
                             </div>
 
                             <div class="tp-form-group" style="margin:0;">
@@ -694,12 +666,9 @@ require_once __DIR__ . '/header.php';
         </div>
 
         <div class="tp-sticky-save-bar">
-            <span style="font-size:0.82rem;color:var(--tp-text-secondary);">
-                🔔 تمامی شاخص‌های روان‌شناختی در پرونده رشدی کودک ذخیره شده و با ادبیات حمایتی به اطلاع والدین می‌رسد.
-            </span>
             <div style="display:flex;gap:10px;align-items:center;">
                 <a href="<?= e(url('teacher/index.php')) ?>" class="tp-btn tp-btn-secondary">انصراف</a>
-                <button type="submit" class="tp-btn tp-btn-primary">💾 ذخیره مشاهدات روان‌شناختی و گزارش‌ها</button>
+                <button type="submit" class="tp-btn tp-btn-primary">ذخیره گزارش‌های فردی</button>
             </div>
         </div>
     </form>
@@ -708,6 +677,16 @@ require_once __DIR__ . '/header.php';
     var MOOD_TIPS = <?= json_encode(array_map(static fn(array $m): string => $m['coach_tip'], $moodCatalog), JSON_UNESCAPED_UNICODE) ?>;
     var currentReportMode = 'accordion';
     var currentWizardIndex = 0;
+
+    const reportForm = document.getElementById('psychReportForm');
+    const initialReportValues = new Map(
+        Array.from(reportForm.querySelectorAll('.report-child-card [name]'), field => [field, field.value])
+    );
+    reportForm.addEventListener('formdata', function (event) {
+        for (const [field, initialValue] of initialReportValues) {
+            if (field.value === initialValue) event.formData.delete(field.name);
+        }
+    });
 
     var PSYCH_REPLACEMENTS = [
         { bad: 'لجباز', good: 'دارای نیاز به خودمختاری و نیازمند پیش‌آگهی قبل از تغییر فعالیت', reason: 'مقاومت کودک نشانه رشد خودمختاری است، نه لجبازی.' },
@@ -730,12 +709,6 @@ require_once __DIR__ . '/header.php';
 
     function togglePsychGuide() {
         var box = document.getElementById('psychGuideBox');
-        if (!box) return;
-        box.style.display = box.style.display === 'none' ? 'block' : 'none';
-    }
-
-    function toggleActivitiesBank() {
-        var box = document.getElementById('activitiesBankBox');
         if (!box) return;
         box.style.display = box.style.display === 'none' ? 'block' : 'none';
     }
@@ -764,9 +737,7 @@ require_once __DIR__ . '/header.php';
 
     function updateMoodGuidance(childId, moodVal) {
         var el = document.getElementById('mood_tip_' + childId);
-        if (el && MOOD_TIPS[moodVal]) {
-            el.innerHTML = '💡 <strong>راهبرد هم‌تنظیمی مربی:</strong> ' + MOOD_TIPS[moodVal];
-        }
+        if (el) el.textContent = MOOD_TIPS[moodVal] || '';
     }
 
     function setReportViewMode(mode) {
@@ -840,21 +811,6 @@ require_once __DIR__ . '/header.php';
         document.querySelectorAll('.report-child-card').forEach(function (card) {
             var name = (card.getAttribute('data-name') || '').toLowerCase();
             card.style.display = (!q || name.indexOf(q) !== -1) ? '' : 'none';
-        });
-    }
-
-    function appendActivityToAll(text) {
-        document.querySelectorAll('.child-activities-textarea').forEach(function (ta) {
-            var cur = ta.value.trim();
-            if (cur.indexOf(text) !== -1) return;
-            ta.value = cur === '' ? text : (cur + '، ' + text);
-        });
-    }
-
-    function setAllMood(mood) {
-        document.querySelectorAll('.child-mood-select').forEach(function (sel) {
-            var cid = sel.id.replace('mood_', '');
-            selectQuickMood(cid, mood);
         });
     }
 

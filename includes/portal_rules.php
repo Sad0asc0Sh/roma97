@@ -12,6 +12,9 @@ function portalAttendanceStatus(mixed $value): ?string
         ? $value : null;
 }
 
+/** SQL condition for a registered arrival without a checkout (attendance alias a). */
+const PORTAL_OPEN_CHECKOUT = "a.status IN ('present', 'late') AND a.check_in IS NOT NULL AND a.check_out IS NULL";
+
 /** Absent children have no visit times; invalid visit sequences must not be saved. */
 function portalAttendanceTimes(string $status, ?string $checkIn, ?string $checkOut): array
 {

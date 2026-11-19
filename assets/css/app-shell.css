@@ -232,6 +232,30 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   box-shadow: 0 0 0 3px var(--app-primary-50);
 }
 
+[data-directory-search] .app-search-input {
+  padding-inline-end: 80px;
+}
+
+.app-directory-search-button {
+  position: absolute;
+  inset-block: 4px;
+  inset-inline-end: 4px;
+  padding-inline: 10px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--app-primary-50);
+  color: var(--app-text);
+  font: inherit;
+  font-size: var(--app-text-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.app-directory-search-button:hover {
+  background: var(--app-primary);
+  color: white;
+}
+
 .app-search-kbd {
   position: absolute;
   left: 10px;
@@ -1233,6 +1257,18 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
 @media (max-width: 768px) {
   .app-topbar-center {
     display: none;
+  }
+  .app-topbar--directory {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 8px 14px;
+    gap: 8px;
+  }
+  .app-topbar--directory .app-topbar-center {
+    display: block;
+    order: 1;
+    flex: 0 0 100%;
+    max-width: none;
   }
   .app-drawer {
     max-width: 100%;

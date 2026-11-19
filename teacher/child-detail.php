@@ -76,6 +76,7 @@ SQL
             <<<'SQL'
 SELECT d.day,
        a.status AS att_status,
+       dr.id AS report_id,
        dr.mood AS report_mood
 FROM (
     SELECT :d0 AS day UNION ALL SELECT :d1 UNION ALL SELECT :d2 UNION ALL SELECT :d3
@@ -199,7 +200,7 @@ $photoUrl = !empty($child['photo']) ? url((string) $child['photo']) : '';
         <div class="tp-card-header">
             <h2>گزارش روان‌شناختی امروز</h2>
             <span class="tp-badge <?= e(teacherMoodBadgeClass((string) ($todayReport['mood'] ?? ''))) ?>">
-                <?= e(teacherMoodFullLabel((string) ($todayReport['mood'] ?? 'normal'))) ?>
+                <?= e(teacherMoodFullLabel((string) ($todayReport['mood'] ?? ''))) ?>
             </span>
         </div>
         <div class="tp-detail-grid">
@@ -233,7 +234,7 @@ $photoUrl = !empty($child['photo']) ? url((string) $child['photo']) : '';
                         حضور: <?= e(teacherAttendanceStatusLabel($day['att_status'] ?? null)) ?>
                     </span>
                     <span class="tp-badge <?= e(teacherMoodBadgeClass($day['report_mood'] ?? null)) ?>">
-                        گزارش: <?= e(teacherMoodLabel($day['report_mood'] ?? null)) ?>
+                        گزارش: <?= e($day['report_id'] !== null && empty($day['report_mood']) ? 'ثبت شده' : teacherMoodLabel($day['report_mood'] ?? null)) ?>
                     </span>
                 </span>
             </div>

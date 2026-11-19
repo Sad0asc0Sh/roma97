@@ -57,15 +57,17 @@ try {
             $headerAttPending = max(0, $headerChildCount - $recordedAtt);
 
             $repStmt = $pdoHeader->prepare(
-                "SELECT COUNT(DISTINCT dr.child_id)
-                 FROM daily_reports dr
-                 INNER JOIN child_classroom cc ON cc.child_id = dr.child_id
-                 INNER JOIN children c ON c.id = cc.child_id
-                 WHERE dr.classroom_id = :cid AND c.status = 'active' AND dr.report_date = :today"
+                "SELECT COUNT(*)
+                 FROM attendance a
+                 INNER JOIN child_classroom cc ON cc.child_id = a.child_id
+                 INNER JOIN children c ON c.id = a.child_id
+                 LEFT JOIN daily_reports dr ON dr.child_id = a.child_id AND dr.classroom_id = cc.classroom_id
+                     AND dr.report_date = a.attendance_date
+                 WHERE cc.classroom_id = :cid AND c.status = 'active' AND a.attendance_date = :today
+                   AND a.status IN ('present', 'late') AND dr.id IS NULL"
             );
             $repStmt->execute([':cid' => $headerActiveClassId, ':today' => $todayYmd]);
-            $recordedRep = (int) $repStmt->fetchColumn();
-            $headerRepPending = max(0, $headerChildCount - $recordedRep);
+            $headerRepPending = (int) $repStmt->fetchColumn();
         }
     }
 } catch (Throwable $e) {

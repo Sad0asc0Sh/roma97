@@ -7,9 +7,12 @@
 /* ── REUSABLE UTILITY & COMPONENT CLASSES ───────────────────── */
 .avatar-circle { width:36px; height:36px; border-radius:50%; object-fit:cover; }
 .avatar-placeholder-circle { width:36px; height:36px; border-radius:50%; background:var(--adm-primary-100); color:var(--adm-primary); display:inline-flex; align-items:center; justify-content:center; font-weight:700; }
-.attendance-filter-bar { display:flex; align-items:center; gap:var(--space-sm); flex-wrap:wrap; }
-.attendance-filter-date-info { margin-inline-start:auto; color:var(--adm-text-muted); font-size:0.9rem; }
-.date-picker-compact { max-width:200px; }
+.attendance-filter-bar { display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; }
+.attendance-filter-field { flex:1 1 145px; max-width:220px; min-width:0; }
+.attendance-filter-field select.form-control { background-position:left 12px center; }
+.admin-directory-search { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.admin-directory-search input[type="search"] { flex:1 1 240px; max-width:400px; min-width:0; }
+#compose-message { scroll-margin-top:120px; }
 .flex-between-center { display:flex; justify-content:space-between; align-items:center; }
 .flex-items-center { display:flex; align-items:center; }
 .gap-sm { gap:var(--space-sm); }
@@ -549,6 +552,7 @@ select.form-control{cursor:pointer;appearance:none;background-image:url("data:im
 .status-radio-label{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--adm-radius-full);font-size:0.78rem;font-weight:500;cursor:pointer;transition: color var(--adm-transition), background-color var(--adm-transition), background var(--adm-transition), border-color var(--adm-transition), box-shadow var(--adm-transition), transform var(--adm-transition), opacity var(--adm-transition);border:1px solid var(--adm-border);background:var(--adm-surface)}
 .status-radio-label:hover{border-color:var(--adm-primary-200);background:var(--adm-primary-50)}
 .status-radio-label:has(input:checked){background:var(--adm-primary-50);border-color:var(--adm-primary-200);color:var(--adm-primary-dark);font-weight:600}
+[data-theme="dark"] .status-radio-label:has(input:checked){color:var(--adm-text)}
 .status-radio-label input[type="radio"]{width:14px;height:14px;accent-color:var(--adm-primary)}
 .time-input{padding:6px 10px;border:1px solid var(--adm-border);border-radius:var(--adm-radius-xs);font-size:0.8rem;font-family:var(--adm-font)}
 .time-input:focus{outline:none;border-color:var(--adm-primary);box-shadow:0 0 0 2px var(--adm-primary-100)}

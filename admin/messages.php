@@ -24,6 +24,10 @@ $adminId = (int) $_SESSION['admin_id'];
 $pdo = getDb();
 $error = '';
 $success = '';
+$recipientSelection = isPostRequest()
+    ? ($_POST['recipient_id'] ?? '')
+    : filter_var($_GET['parent_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+$recipientSelection = is_string($recipientSelection) || is_int($recipientSelection) ? (string) $recipientSelection : '';
 
 // Handle Send Message
 if (isPostRequest() && isset($_POST['send_message'])) {
@@ -31,9 +35,9 @@ if (isPostRequest() && isset($_POST['send_message'])) {
     if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
         $error = 'توکن CSRF نامعتبر است.';
     } else {
-        $recipientRaw = (string) ($_POST['recipient_id'] ?? '');
+        $recipientRaw = $recipientSelection;
         $isBroadcast = ($recipientRaw === 'all');
-        $recipientId = $isBroadcast ? null : (int) $recipientRaw;
+        $recipientId = filter_var($recipientRaw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $subject = trim((string) ($_POST['subject'] ?? ''));
         $body = trim((string) ($_POST['body'] ?? ''));
 
@@ -224,7 +228,7 @@ $pageTitle = 'پیام‌رسانی | ' . siteName();
 require_once __DIR__ . '/header.php';
 ?>
 
-<div class="admin-card">
+<div class="admin-card" id="compose-message">
     <div class="admin-card-header">
         <h2>ارسال پیام جدید</h2>
     </div>
@@ -242,9 +246,10 @@ require_once __DIR__ . '/header.php';
             <div class="form-group">
                 <label for="recipient_id">گیرنده</label>
                 <select name="recipient_id" id="recipient_id" class="form-control" required>
-                    <option value="all">ارسال به همه والدین</option>
+                    <option value="">انتخاب گیرنده</option>
+                    <option value="all" <?= $recipientSelection === 'all' ? 'selected' : '' ?>>ارسال به همه والدین</option>
                     <?php foreach ($parents as $parent): ?>
-                        <option value="<?= e((string) $parent['id']) ?>">
+                        <option value="<?= e((string) $parent['id']) ?>" <?= $recipientSelection === (string) $parent['id'] ? 'selected' : '' ?>>
                             <?= e($parent['first_name'] . ' ' . $parent['last_name']) ?> (<?= e($parent['email']) ?>)
                         </option>
                     <?php endforeach; ?>
