@@ -201,9 +201,13 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   font-size: 11px;
 }
 
+.app-topbar-center {
+  flex: 1;
+  max-width: 360px;
+}
+
 .app-search-shell {
-  display: flex;
-  align-items: center;
+  width: 100%;
 }
 
 .app-search-shell[hidden],
@@ -211,68 +215,46 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   display: none !important;
 }
 
-.app-search-shell:not(.is-open) .app-search-box {
-  display: none;
-}
-
-.app-search-shell.is-open .app-search-toggle {
+.app-search-toggle,
+.app-search-close {
   display: none;
 }
 
 .app-search-box {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  width: min(310px, 34vw);
-  height: 38px;
-  padding: 2px 4px;
+  position: relative;
+  width: 100%;
+}
+
+.app-search-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px 0 36px;
   background: var(--app-slate-50);
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-sm);
+  font-family: var(--app-font);
+  font-size: var(--app-text-sm);
+  color: var(--app-text);
   box-sizing: border-box;
-  transition: background-color var(--app-transition), border-color var(--app-transition), box-shadow var(--app-transition);
+  transition: background-color var(--app-transition), color var(--app-transition), border-color var(--app-transition), transform var(--app-transition), box-shadow var(--app-transition);
 }
 
-.app-search-shell--directory .app-search-box {
-  width: min(360px, 38vw);
-}
-
-.app-search-box:focus-within {
+.app-search-input:focus {
+  outline: none;
   background: var(--app-surface);
   border-color: var(--app-primary);
   box-shadow: 0 0 0 3px var(--app-primary-50);
 }
 
-body:is(.admin-layout, .teacher-layout, .parent-portal-body) .app-search-box .app-search-input,
-.app-search-input {
-  flex: 1;
-  min-width: 0;
-  width: 100%;
-  height: 32px;
-  min-height: 32px;
-  padding: 0 8px;
-  background: transparent;
-  border: 0;
-  border-radius: 6px;
-  font-family: var(--app-font);
-  font-size: var(--app-text-sm);
-  color: var(--app-text);
-  box-sizing: border-box;
-  box-shadow: none;
-}
-
-body:is(.admin-layout, .teacher-layout, .parent-portal-body) .app-search-box .app-search-input:focus,
-body:is(.admin-layout, .teacher-layout, .parent-portal-body) .app-search-box .app-search-input:focus-visible,
-.app-search-input:focus,
-.app-search-input:focus-visible {
-  outline: none;
-  box-shadow: none;
+[data-directory-search] .app-search-input {
+  padding-inline-end: 80px;
 }
 
 .app-directory-search-button {
-  flex-shrink: 0;
-  height: 30px;
-  padding: 0 10px;
+  position: absolute;
+  inset-block: 4px;
+  inset-inline-end: 4px;
+  padding-inline: 10px;
   border: 0;
   border-radius: 6px;
   background: var(--app-primary-50);
@@ -281,7 +263,6 @@ body:is(.admin-layout, .teacher-layout, .parent-portal-body) .app-search-box .ap
   font-size: var(--app-text-sm);
   font-weight: 700;
   cursor: pointer;
-  transition: background-color var(--app-transition), color var(--app-transition);
 }
 
 .app-directory-search-button:hover {
@@ -290,7 +271,10 @@ body:is(.admin-layout, .teacher-layout, .parent-portal-body) .app-search-box .ap
 }
 
 .app-search-kbd {
-  flex-shrink: 0;
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
   font-size: 11px;
   background: var(--app-surface);
   border: 1px solid var(--app-border);
@@ -298,27 +282,6 @@ body:is(.admin-layout, .teacher-layout, .parent-portal-body) .app-search-box .ap
   padding: 1px 5px;
   color: var(--app-text-muted);
   pointer-events: none;
-}
-
-.app-search-close {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--app-text-muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  transition: background-color var(--app-transition), color var(--app-transition);
-}
-
-.app-search-close:hover {
-  background: var(--app-slate-100);
-  color: var(--app-text);
 }
 
 .app-topbar-left {
@@ -1306,10 +1269,38 @@ body:is(.admin-layout, .teacher-layout, .parent-portal-body) .app-search-box .ap
 }
 
 @media (max-width: 768px) {
+  .app-topbar-right {
+    flex: 1;
+    min-width: 0;
+  }
+  .app-topbar-center {
+    flex: 0 0 auto;
+    max-width: none;
+  }
+  .app-topbar-left {
+    flex-shrink: 0;
+  }
+  .app-search-shell {
+    display: flex;
+    align-items: center;
+    width: auto;
+  }
+  .app-search-toggle {
+    display: inline-flex;
+  }
+  .app-search-shell:not(.is-open) .app-search-box {
+    display: none;
+  }
+  .app-search-shell.is-open .app-search-toggle {
+    display: none;
+  }
   .app-search-shell.is-open .app-search-box {
     position: absolute;
     inset: 0;
     z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     width: 100%;
     max-width: none;
     height: 100%;
@@ -1319,9 +1310,41 @@ body:is(.admin-layout, .teacher-layout, .parent-portal-body) .app-search-box .ap
     background: var(--app-surface);
     padding: env(safe-area-inset-top, 0) 12px 0;
     box-shadow: var(--app-shadow-sm);
+    box-sizing: border-box;
   }
-  .app-search-shell.is-open .app-search-box:focus-within {
-    box-shadow: var(--app-shadow-sm);
+  body:is(.admin-layout, .teacher-layout, .parent-portal-body) .app-search-shell.is-open .app-search-input,
+  .app-search-shell.is-open .app-search-input {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    height: 38px;
+    min-height: 38px;
+    padding: 0 10px;
+  }
+  .app-search-shell.is-open .app-directory-search-button {
+    position: static;
+    inset: auto;
+    flex-shrink: 0;
+    height: 38px;
+    padding: 0 12px;
+  }
+  .app-search-close {
+    display: inline-flex;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--app-text-muted);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .app-search-close:hover {
+    background: var(--app-slate-100);
+    color: var(--app-text);
   }
   .app-search-kbd {
     display: none;

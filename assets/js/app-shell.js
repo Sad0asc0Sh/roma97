@@ -210,6 +210,11 @@ function initGlobalSearchKeybind() {
     input.placeholder = 'جست‌وجو در همین صفحه…';
   }
 
+  const isCollapsible = () => Boolean(
+    (toggleBtn && toggleBtn.getClientRects().length > 0) ||
+    (closeBtn && closeBtn.getClientRects().length > 0)
+  );
+
   const setSearchOpen = (open, { focus = false, clear = false } = {}) => {
     if (!shell) return;
     if (clear && input.value !== '') {
@@ -222,7 +227,7 @@ function initGlobalSearchKeybind() {
     }
     if (open && focus) {
       input.focus();
-    } else if (!open && focus && toggleBtn) {
+    } else if (!open && focus && toggleBtn && toggleBtn.getClientRects().length > 0) {
       toggleBtn.focus();
     }
   };
@@ -257,6 +262,12 @@ function initGlobalSearchKeybind() {
         setSearchOpen(false);
       }
     });
+
+    window.addEventListener('resize', () => {
+      if (shell.classList.contains('is-open') && !isCollapsible()) {
+        setSearchOpen(false);
+      }
+    });
   }
 
   document.addEventListener('keydown', (event) => {
@@ -264,7 +275,7 @@ function initGlobalSearchKeybind() {
     if ((event.key === '/' || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k'))
         && !event.target.closest?.('input,textarea,select,[contenteditable]') && shellVisible) {
       event.preventDefault();
-      if (shell && toggleBtn) {
+      if (isCollapsible()) {
         setSearchOpen(true, { focus: true });
       } else {
         input.focus();
@@ -272,10 +283,10 @@ function initGlobalSearchKeybind() {
       return;
     }
     if (event.key === 'Escape' && (document.activeElement === input || shell?.contains(document.activeElement))) {
-      event.preventDefault();
-      if (shell && toggleBtn) {
+      if (isCollapsible()) {
+        event.preventDefault();
         setSearchOpen(false, { focus: true, clear: true });
-      } else {
+      } else if (document.activeElement === input) {
         input.value = '';
         input.dispatchEvent(new Event('input'));
       }
