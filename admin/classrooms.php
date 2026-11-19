@@ -9,6 +9,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
+require_once __DIR__ . '/../includes/school_planning.php';
 
 requireLogin();
 
@@ -73,6 +74,24 @@ if (isPostRequest()) {
             'teacher_id'  => trim((string) ($_POST['teacher_id'] ?? '')),
         ];
         $formData = $fields;
+        $hasWorkdays = isset($_POST['workdays_form']) || array_key_exists('workdays', $_POST);
+        $daysInput = $_POST['workdays'] ?? [];
+        $workdays = [];
+        if (!is_array($daysInput)) {
+            $formErrors[] = 'روزهای کاری کلاس را انتخاب کنید.';
+        } else {
+            foreach ($daysInput as $value) {
+                $day = filter_var($value, FILTER_VALIDATE_INT);
+                if ($day === false || !isset(SCHOOL_WEEKDAYS[$day])) {
+                    $formErrors[] = 'روز کاری کلاس نامعتبر است.';
+                    break;
+                }
+                $workdays[$day] = $day;
+            }
+        }
+        if ($hasWorkdays) {
+            $formData['workdays'] = array_values($workdays);
+        }
 
         if ($fields['name'] === '') $formErrors[] = 'نام کلاس الزامی است.';
 
@@ -83,6 +102,8 @@ if (isPostRequest()) {
 
         if (empty($formErrors)) {
             try {
+                ensureSchoolPlanningTables($pdo);
+                $pdo->beginTransaction();
                 if ($postAction === 'add') {
                     $stmt = $pdo->prepare(
                         'INSERT INTO classrooms (name, description, capacity, schedule, teacher_id)
@@ -95,9 +116,13 @@ if (isPostRequest()) {
                         ':sc'  => $fields['schedule'] ?: null,
                         ':tid' => $teacherIdVal,
                     ]);
-                    recordAudit('classroom.create', 'classroom', (int) $pdo->lastInsertId());
-                    setFlash('success', 'کلاس ایجاد شد.');
+                    $classroomId = (int) $pdo->lastInsertId();
                 } else {
+                    $lock = $pdo->prepare('SELECT id FROM classrooms WHERE id = ? FOR UPDATE');
+                    $lock->execute([$classroomId]);
+                    if ($lock->fetchColumn() === false) {
+                        throw new InvalidArgumentException('این کلاس پیدا نشد.');
+                    }
                     $stmt = $pdo->prepare(
                         'UPDATE classrooms SET name = :nm, description = :ds, capacity = :cp,
                           schedule = :sc, teacher_id = :tid WHERE id = :id'
@@ -110,10 +135,17 @@ if (isPostRequest()) {
                         ':tid' => $teacherIdVal,
                         ':id'  => $classroomId,
                     ]);
-                    recordAudit('classroom.update', 'classroom', (int) $classroomId);
-                    setFlash('success', 'کلاس به‌روزرسانی شد.');
                 }
+                if ($hasWorkdays) {
+                    saveClassroomWorkdays($pdo, $classroomId, array_values($workdays));
+                }
+                $pdo->commit();
+                recordAudit($postAction === 'add' ? 'classroom.create' : 'classroom.update', 'classroom', $classroomId);
+                setFlash('success', $postAction === 'add' ? 'کلاس ایجاد شد.' : 'کلاس به‌روزرسانی شد.');
             } catch (Throwable $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
                 error_log($e->getMessage());
                 setFlash('error', 'ذخیره کلاس امکان‌پذیر نیست. لطفاً دوباره تلاش کنید.');
             }
@@ -125,11 +157,15 @@ if (isPostRequest()) {
 
 // ─── Load data ────────────────────────────────────────────────────────────────
 $editClassroom = null;
-$editId = filter_var($_GET['edit'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+$editInput = $formErrors !== [] && ($_POST['action'] ?? null) === 'edit' ? $_POST['classroom_id'] ?? null : $_GET['edit'] ?? null;
+$editId = filter_var($editInput, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+$workdaysByClass = [];
 
 try {
     initializeTeachersTables();
+    initializeClassroomWaitlist();
     $pdo = getDb();
+    $workdaysByClass = classroomWorkdays($pdo);
 
     if ($editId) {
         $eStmt = $pdo->prepare('SELECT * FROM classrooms WHERE id = :id LIMIT 1');
@@ -147,10 +183,11 @@ try {
         'SELECT cl.id, cl.name, cl.capacity, cl.schedule,
                 cl.teacher_id,
                 CONCAT(t.first_name, " ", t.last_name) AS teacher_name,
-                COUNT(cc.id) AS enrolled_count
+                COUNT(c.id) AS enrolled_count
          FROM classrooms cl
          LEFT JOIN teachers t ON t.id = cl.teacher_id
          LEFT JOIN child_classroom cc ON cc.classroom_id = cl.id
+         LEFT JOIN children c ON c.id = cc.child_id AND c.status = "active"
          GROUP BY cl.id
          ORDER BY cl.created_at DESC'
         . ' LIMIT ' . $pagination['perPage'] . ' OFFSET ' . $pagination['offset']
@@ -163,9 +200,15 @@ try {
 
     // Fetch waitlist entries grouped by classroom
     $waitlistStmt = $pdo->query(
-        "SELECT cw.id, cw.classroom_id, cw.requested_at, CONCAT(c.first_name, ' ', c.last_name) AS child_name, c.id AS child_id
+        "SELECT cw.id, cw.classroom_id, cw.requested_at, CONCAT(c.first_name, ' ', c.last_name) AS child_name,
+                c.id AS child_id, cl.name AS classroom_name
          FROM classroom_waitlist cw
          INNER JOIN children c ON c.id = cw.child_id
+         INNER JOIN classrooms cl ON cl.id = cw.classroom_id
+         WHERE cw.fulfilled_at IS NULL
+           AND NOT EXISTS (
+                SELECT 1 FROM child_classroom cc WHERE cc.child_id = cw.child_id AND cc.classroom_id = cw.classroom_id
+           )
          ORDER BY cw.requested_at ASC"
     );
     $allWaitlist = $waitlistStmt ? $waitlistStmt->fetchAll() : [];
@@ -236,10 +279,21 @@ require_once __DIR__ . '/header.php';
                     </select>
                 </div>
                 <div class="form-group form-group-full">
-                    <label for="cl_schedule">برنامه هفتگی</label>
+                    <label for="cl_schedule">توضیحات برنامه هفتگی</label>
                     <textarea id="cl_schedule" name="schedule" class="form-control" rows="4"
                               placeholder="مثال: شنبه تا چهارشنبه ۸ تا ۱۶–Fri 8:00–16:00, Lunch 12:00–13:00..."><?= e((string) ($editClassroom['schedule'] ?? $formData['schedule'] ?? '')) ?></textarea>
                 </div>
+                <fieldset class="class-workdays form-group-full">
+                    <legend>روزهای کاری کلاس</legend>
+                    <input type="hidden" name="workdays_form" value="1">
+                    <?php $selectedDays = $formData['workdays'] ?? ($workdaysByClass[(int) $editId] ?? []); ?>
+                    <div class="class-workdays-options">
+                        <?php foreach (SCHOOL_WEEKDAYS as $day => $label): ?>
+                            <label><input type="checkbox" name="workdays[]" value="<?= e($day) ?>" <?= in_array($day, $selectedDays, true) ? 'checked' : '' ?>> <?= e($label) ?></label>
+                        <?php endforeach; ?>
+                    </div>
+                    <small class="muted">فهرست کودکان مورد انتظار از این روزها و تعطیلی‌های تقویم ساخته می‌شود.</small>
+                </fieldset>
             </div>
 
             <div class="form-actions">
@@ -271,7 +325,11 @@ require_once __DIR__ . '/header.php';
                 <tbody>
                 <?php foreach ($classrooms as $cl): ?>
                     <tr>
-                        <td><strong><?= e((string) $cl['name']) ?></strong></td>
+                        <td>
+                            <strong><?= e($cl['name']) ?></strong>
+                            <?php $classDays = array_intersect_key(SCHOOL_WEEKDAYS, array_fill_keys($workdaysByClass[(int) $cl['id']] ?? [], true)); ?>
+                            <br><small class="muted"><?= e($classDays === [] ? 'روزهای کاری تعیین نشده' : implode('، ', $classDays)) ?></small>
+                        </td>
                         <td>
                             <?php if (!empty($cl['teacher_name'])): ?>
                                 <?= e((string) $cl['teacher_name']) ?>
@@ -334,12 +392,9 @@ require_once __DIR__ . '/header.php';
                     </thead>
                     <tbody>
                         <?php foreach ($allWaitlist as $w): ?>
-                            <?php
-                            $cName = $pdo->query("SELECT name FROM classrooms WHERE id = " . (int)$w['classroom_id'])->fetchColumn() ?: 'نامشخص';
-                            ?>
                             <tr>
                                 <td style="font-weight:600;"><a href="<?= e(url('admin/child-detail.php?id=' . (int)$w['child_id'])) ?>"><?= e((string)$w['child_name']) ?></a></td>
-                                <td><span class="badge badge-info"><?= e((string)$cName) ?></span></td>
+                                <td><span class="badge badge-info"><?= e($w['classroom_name']) ?></span></td>
                                 <td style="font-size:0.85rem; color:var(--adm-text-muted);"><?= e(shamsiDate((string)$w['requested_at'], 'with_time')) ?></td>
                                 <td>
                                     <a href="<?= e(url('admin/child-detail.php?id=' . (int)$w['child_id'])) ?>" class="btn btn-sm btn-primary">مشاهده و تخصیص</a>

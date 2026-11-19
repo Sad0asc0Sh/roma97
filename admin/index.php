@@ -7,6 +7,9 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/parent_children_helpers.php';
 require_once __DIR__ . '/../includes/portal_rules.php';
 require_once __DIR__ . '/../includes/portal_ui.php';
+require_once __DIR__ . '/../includes/message_follow_up.php';
+require_once __DIR__ . '/../includes/school_planning.php';
+require_once __DIR__ . '/../includes/tuition_invoices.php';
 requireLogin();
 
 $can = static fn(string $page): bool => isPageAllowedForRole('admin/' . $page . '.php', currentAdminRole());
@@ -24,23 +27,35 @@ try {
         $pendingCount = (int) $pdo->query("SELECT COUNT(*) FROM children WHERE status = 'pending'")->fetchColumn();
         $metrics[] = ['کودکان فعال', persianNumber((string) $activeCount), 'مشاهده پرونده‌ها', 'children.php?status=active'];
         $tasks[] = [$pendingCount, 'ثبت‌نام‌های منتظر تأیید', 'بررسی اطلاعات و وضعیت پذیرش کودکان', 'children.php?status=pending'];
+        $withoutClassroom = (int) $pdo->query(
+            "SELECT COUNT(*) FROM children c WHERE c.status = 'active'
+             AND NOT EXISTS (SELECT 1 FROM child_classroom cc WHERE cc.child_id = c.id)"
+        )->fetchColumn();
+        $tasks[] = [$withoutClassroom, 'کودکان فعالِ بدون کلاس', 'برای این کودکان کلاس تعیین کنید', 'children.php?status=active&classroom=unassigned'];
         $recentRegistrations = $pdo->query("SELECT id, first_name, last_name, status, created_at FROM children ORDER BY created_at DESC, id DESC LIMIT 5")->fetchAll();
     }
     if ($can('attendance')) {
+        initializeAttendanceTable();
+        $plan = dailyAttendancePlan($pdo, $today);
         $stmt = $pdo->prepare(
-            'SELECT COUNT(*) AS total, COUNT(a.id) AS recorded,
-                    COUNT(CASE WHEN ' . PORTAL_OPEN_CHECKOUT . ' THEN 1 END) AS open_checkouts
-             FROM children c
-             LEFT JOIN attendance a ON a.child_id = c.id AND a.attendance_date = ?
-             WHERE c.status = \'active\''
+            "SELECT COUNT(*) FROM attendance a INNER JOIN children c ON c.id = a.child_id AND c.status = 'active'
+             WHERE a.attendance_date = ? AND " . PORTAL_OPEN_CHECKOUT
         );
         $stmt->execute([$today]);
-        $attendance = $stmt->fetch();
-        $recorded = (int) $attendance['recorded'];
-        $expected = (int) $attendance['total'];
-        $metrics[] = ['وضعیت ثبت‌شده امروز', persianNumber($recorded) . ' / ' . persianNumber($expected), 'مشاهده دفتر حضور', 'attendance.php'];
-        $tasks[] = [$expected - $recorded, 'حضورهای ثبت‌نشده امروز', 'وضعیت کودک را ثبت کنید', 'attendance.php?filter=missing'];
-        $tasks[] = [(int) $attendance['open_checkouts'], 'خروج‌های باز امروز', 'ورود ثبت شده و ساعت خروج خالی است', 'attendance.php?filter=open_checkout'];
+        $expected = count($plan['expected']);
+        $metrics[] = ['کودکان مورد انتظار امروز', persianNumber($expected),
+            $plan['holiday'] ?? 'مشاهده فهرست بر اساس برنامه کلاس‌ها', 'attendance.php?filter=expected'];
+        $tasks[] = [count($plan['missing']), 'حضورهای ثبت‌نشده امروز', 'وضعیت کودک را ثبت کنید', 'attendance.php?filter=missing'];
+        $tasks[] = [count($plan['notices']), 'اعلام‌های غیبت و تأخیر', 'اعلام‌های امروز خانواده‌ها را ببینید', 'attendance.php?filter=notices'];
+        $tasks[] = [(int) $stmt->fetchColumn(), 'خروج‌های باز پایان روز', 'ورود ثبت شده و تحویل هنوز تأیید نشده است', 'attendance.php?filter=open_checkout'];
+        if ($can('classrooms')) {
+            $unplanned = (int) $pdo->query(
+                "SELECT COUNT(DISTINCT cc.classroom_id) FROM child_classroom cc
+                 INNER JOIN children c ON c.id = cc.child_id AND c.status = 'active'
+                 WHERE NOT EXISTS (SELECT 1 FROM classroom_workdays w WHERE w.classroom_id = cc.classroom_id)"
+            )->fetchColumn();
+            $tasks[] = [$unplanned, 'کلاس‌های بدون روز کاری', 'روزهای کاری کلاس را مشخص کنید', 'classrooms.php'];
+        }
     }
     if ($can('tuition')) {
         [$jy, $jm] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
@@ -48,17 +63,32 @@ try {
         $stmt = $pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM tuition_payments WHERE month_year = ?');
         $stmt->execute([$month]);
         $metrics[] = ['دریافتی شهریه این ماه', persianNumber(number_format((float) $stmt->fetchColumn())), 'تومان · ' . formatShamsiMonthYear($month), 'tuition.php'];
+        $billingQueue = array_filter(tuitionInvoiceRows($pdo), static fn (array $bill): bool => in_array(tuitionInvoiceState($bill, $today), ['overdue', 'discrepancy'], true));
+        $tasks[] = [count($billingQueue), 'شهریهٔ نیازمند پیگیری', 'صورتحساب‌های سررسیدگذشته و دارای مغایرت', 'tuition.php#invoiceQueue'];
     }
     if ($can('parents')) {
         $pendingParents = (int) $pdo->query("SELECT COUNT(*) FROM parents WHERE status = 'pending'")->fetchColumn();
         $tasks[] = [$pendingParents, 'حساب‌های والدین منتظر تأیید', 'بررسی حساب و اطلاعات تماس خانواده‌ها', 'parents.php?status=pending'];
     }
     if ($can('messages')) {
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM messages WHERE sender_type = 'parent' AND is_read = 0 AND (recipient_admin_id IS NULL OR recipient_admin_id = ?)");
-        $stmt->execute([(int) $_SESSION['admin_id']]);
+        initializeMessageFollowUp();
+        $adminId = (int) $_SESSION['admin_id'];
+        $parentInbox = " FROM messages m INNER JOIN parents p ON p.id = m.parent_id WHERE m.sender_type = 'parent' AND ";
+        $stmt = $pdo->prepare("SELECT COUNT(*)" . $parentInbox . "m.is_read = 0 AND m.follow_up_status <> 'resolved' AND " . MESSAGE_INBOX_SCOPE);
+        $stmt->execute([$adminId, $adminId]);
         $replyCount = (int) $stmt->fetchColumn();
-        $metrics[] = ['پیام تازه از خانواده‌ها', persianNumber((string) $replyCount), 'مشاهده صندوق پیام‌ها', 'messages.php'];
-        $tasks[] = [$replyCount, 'پیام‌های خوانده‌نشده خانواده‌ها', 'پاسخ‌گویی و پیگیری درخواست والدین', 'messages.php'];
+        $metrics[] = ['پیام تازه از خانواده‌ها', persianNumber($replyCount), 'مشاهده صندوق پیام‌ها', 'messages.php#family-inbox'];
+        if (canReviewOverdueMessages(currentAdminRole())) {
+            $overdue = $pdo->prepare('SELECT COUNT(*)' . $parentInbox . MESSAGE_FOLLOW_UP_OVERDUE);
+            $overdue->execute([date('Y-m-d H:i:s')]);
+            $tasks[] = [(int) $overdue->fetchColumn(), 'پیام‌های گذشته از مهلت', 'پیگیری درخواست‌های خانواده‌ها', 'messages.php?filter=overdue#family-inbox'];
+        } else {
+            $pending = $pdo->prepare(
+                'SELECT COUNT(*)' . $parentInbox . "m.follow_up_status <> 'resolved' AND " . MESSAGE_INBOX_SCOPE
+            );
+            $pending->execute([$adminId, $adminId]);
+            $tasks[] = [(int) $pending->fetchColumn(), 'پیام‌های در انتظار پیگیری', 'پاسخ یا نتیجه پیگیری را ثبت کنید', 'messages.php#family-inbox'];
+        }
     }
     if ($can('events')) {
         $stmt = $pdo->prepare("SELECT title, event_date FROM events WHERE status = 'scheduled' AND event_date >= ? ORDER BY event_date, id LIMIT 4");
@@ -72,10 +102,11 @@ try {
 $tasks = array_values(array_filter($tasks, static fn(array $task): bool => $task[0] > 0));
 $quickLinks = [
     ['attendance', 'ثبت حضور امروز'], ['add-child', 'ثبت‌نام کودک'],
-    ['tuition', 'ثبت پرداخت شهریه'], ['messages', 'پیام به خانواده‌ها'],
+    ['tuition', 'پیگیری شهریه'], ['messages', 'پیام به خانواده‌ها'],
     ['classrooms', 'مدیریت کلاس‌ها'], ['teachers', 'مربیان مهد'],
     ['expenses', 'ثبت هزینه'], ['reports', 'گزارش مالی'],
     ['salary', 'حقوق مربیان'], ['events', 'تقویم مهد'],
+    ['operations-pilot', 'آزمون میدانی کلاس'],
 ];
 $quickLinks = array_values(array_filter($quickLinks, static fn(array $link): bool => $can($link[0])));
 $pageTitle = 'امروز در مهد | ' . siteName();
@@ -87,7 +118,7 @@ require __DIR__ . '/header.php';
     'دفتر مدیریت · ' . siteName(),
     'یک روز خوب، از اینجا شروع می‌شود.',
     'وضعیت امروز مهد و کارهایی که به توجه شما نیاز دارند، در یک نگاه.',
-    $can('attendance') ? [['ثبت حضور امروز', 'admin/attendance.php'], ['ثبت‌نام کودک', 'admin/add-child.php']] : [['ثبت پرداخت شهریه', 'admin/tuition.php'], ['گزارش مالی', 'admin/reports.php']]
+    $can('attendance') ? [['ثبت حضور امروز', 'admin/attendance.php'], ['ثبت‌نام کودک', 'admin/add-child.php']] : [['ثبت پرداخت شهریه', 'admin/tuition.php#recordForm'], ['گزارش مالی', 'admin/reports.php']]
 ); ?>
 <section class="portal-metrics" aria-label="وضعیت مهد">
     <?php foreach ($metrics as [$label, $value, $hint, $path]): ?>

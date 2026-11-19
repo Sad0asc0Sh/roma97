@@ -4,7 +4,7 @@ declare(strict_types=1);
 /**
  * ROMA — Overdue Tuition Reminder Automation
  * ------------------------------------------------------------------
- * Sends one friendly tuition reminder per unpaid child, per tuition month.
+ * Sends one reminder per overdue, undisputed invoice.
  *
  * Installation (cPanel → Cron Jobs), once a day:
  *   php /home/USER/public_html/bin/send-overdue-reminders.php
@@ -16,9 +16,8 @@ declare(strict_types=1);
  *    unpaid month, and — worse — it silently suppressed the reminder for a
  *    *new* month if one had been sent for the previous month days earlier.
  *    The dedup key `tuition_reminder:{child}:{month}` is exact.
- *  • Balances come from a single bulk query (`activeChildrenTuitionBreakdown`)
- *    instead of three queries per child, so a 300-child daycare costs one
- *    round-trip rather than ~900.
+ *  • The default run includes earlier billing months. An explicit due date
+ *    must have passed, and the family can pay through the due date itself.
  *  • Delivery goes through `notifyParent()`, so the portal message, the parent's
  *    opt-out preference, the gateway readiness check and the SMS queue all
  *    behave exactly as they do in the admin panel.
@@ -41,6 +40,8 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/sms.php';
 require_once __DIR__ . '/../includes/notifications.php';
+require_once __DIR__ . '/../includes/portal_rules.php';
+require_once __DIR__ . '/../includes/tuition_invoices.php';
 
 /** Parse `--key=value` / `--flag` CLI arguments. */
 function reminderOption(string $name, ?string $default = null): ?string
@@ -67,119 +68,153 @@ try {
     initializeNotificationTables();
     $pdo = getDb();
 
-    // ── Target month (defaults to the current Jalali month) ──────────────
-    $monthYear = trim((string) reminderOption('month', ''));
-
-    if ($monthYear === '' || preg_match('/^\d{4}-\d{2}$/', $monthYear) !== 1) {
-        [$jy, $jm] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
-        $monthYear = sprintf('%04d-%02d', $jy, $jm);
+    $monthOption = reminderOption('month');
+    $targetMonth = $monthOption === null ? null : portalMonthYear($monthOption);
+    if ($monthOption !== null && $targetMonth === null) {
+        throw new InvalidArgumentException('Use a valid Persian billing month, for example --month=1405-08.');
     }
-
-    $monthLabel = formatShamsiMonthYear($monthYear);
     $dryRun = reminderOption('dry-run') !== null;
+    $today = date('Y-m-d');
 
     // Ignore rounding dust so a 500-Toman remainder never triggers an SMS.
     // Defaults to the shared settle tolerance used across every finance screen.
-    $minBalance = max(0.0, (float) (reminderOption('min') ?? tuitionSettleTolerance()));
+    $minBalance = max(tuitionSettleTolerance(), (float) (reminderOption('min') ?? tuitionSettleTolerance()));
 
-    cliLog("Tuition reminders for {$monthLabel} ({$monthYear})" . ($dryRun ? ' [DRY RUN]' : ''));
+    cliLog('Overdue tuition reminders for ' . ($targetMonth ?? 'all billing months') . ($dryRun ? ' [DRY RUN]' : ''));
 
     $gateway = smsGatewayStatus($pdo);
     if (!$gateway['enabled']) {
         cliLog('Note: SMS is disabled in settings — portal messages will still be created.');
     }
 
-    // ── Single bulk query for every active child's financial position ────
-    $breakdowns = activeChildrenTuitionBreakdown($pdo, $monthYear);
-
-    if ($breakdowns === []) {
-        cliLog('No active children found. Nothing to do.');
-        exit(0);
-    }
-
-    cliLog('Evaluating ' . count($breakdowns) . ' active child record(s)...');
+    $invoices = tuitionInvoiceRows($pdo, $targetMonth, $today);
+    $legacyReminder = $pdo->prepare('SELECT 1 FROM tuition_reminder_log WHERE child_id = ? AND month_year = ? LIMIT 1');
 
     $reminderLogStmt = $pdo->prepare(
         'INSERT INTO tuition_reminder_log (child_id, parent_id, month_year) VALUES (:cid, :pid, :myear)'
     );
 
     $sent = 0;
-    $skippedPaid = 0;
+    $skippedCleared = 0;
     $skippedDuplicate = 0;
     $smsQueued = 0;
     $siteNameValue = siteName();
 
-    foreach ($breakdowns as $childId => $row) {
-        $balance = (float) $row['balance'];
+    $lockInvoice = $pdo->prepare(
+        "SELECT tp.due_date, tp.discrepancy_note, tp.expected_amount,
+                CONCAT_WS(' ', c.first_name, c.last_name) AS child_name, p.id AS parent_id,
+                CONCAT_WS(' ', p.first_name, p.last_name) AS parent_name
+         FROM tuition_plans tp INNER JOIN children c ON c.id = tp.child_id AND c.status = 'active'
+         INNER JOIN parents p ON p.id = c.parent_id AND p.status = 'active'
+         WHERE tp.child_id = ? AND tp.month_year = ? FOR UPDATE"
+    );
+    $lockPayments = $pdo->prepare('SELECT amount FROM tuition_payments WHERE child_id = ? AND month_year = ? FOR UPDATE');
 
-        if ($balance < $minBalance) {
-            $skippedPaid++;
+    foreach ($invoices as $row) {
+        if (tuitionInvoiceState($row, $today) !== 'overdue' || $row['balance'] < $minBalance) {
+            $skippedCleared++;
             continue;
         }
 
-        $parentId   = (int) $row['parent_id'];
-        $childName  = (string) $row['child_name'];
-        $parentName = (string) $row['parent_name'];
-        $amountFa   = persianNumber(number_format($balance));
-
-        $subject = "یادآوری دوستانه شهریه ماه {$monthLabel} — {$childName} 🌸";
-
-        $body = "مامان و بابای مهربون «{$childName}» عزیز؛\n\n"
-            . "سلام و درود پر از مهر! 🌟\n"
-            . "ممنونیم که همراه فرشته کوچولومون در {$siteNameValue} هستید.\n\n"
-            . "— وضعیت شهریه ماه {$monthLabel} —\n"
-            . '• مبلغ ماه: ' . persianNumber(number_format((float) $row['expected'])) . " تومان\n";
-
-        $body .= '• پرداخت‌شده تا این لحظه: ' . persianNumber(number_format((float) $row['paid'])) . " تومان\n"
-            . "• مانده: {$amountFa} تومان\n\n"
-            . "خواهش می‌کنیم در فرصت مناسب نسبت به تسویه اقدام فرمایید. در صورت هرگونه پرسش یا هماهنگی، ما در خدمت شما هستیم.\n\n"
-            . "با آرزوی روزهای پرخنده،\nمدیریت و کادر {$siteNameValue} 💖";
-
-        if ($dryRun) {
-            cliLog("[dry-run] would remind {$parentName} about {$childName} — balance {$amountFa}");
-            $sent++;
-            continue;
+        $childId = (int) $row['child_id'];
+        $monthYear = $row['month_year'];
+        if (!$dryRun) {
+            $pdo->beginTransaction();
         }
 
-        // One reminder per child per tuition month, enforced in the database.
-        $result = notifyParent($parentId, 'tuition_reminder', [
-            'args'           => [$parentName, $childName, $monthLabel, $amountFa],
-            'portal_subject' => $subject,
-            'portal_body'    => $body,
-            'dedup_key'      => "tuition_reminder:{$childId}:{$monthYear}",
-            'sender_type'    => 'admin',
-            'sender_id'      => notificationSystemAdminId($pdo),
-            'priority'       => 6, // Lower priority than OTP / same-day care alerts.
-        ]);
-
-        if ($result['sms'] === 'duplicate') {
-            $skippedDuplicate++;
-            continue;
-        }
-
-        if (!$result['portal'] && $result['sms'] !== 'queued' && $result['sms'] !== 'sent') {
-            cliLog("Skipped {$childName}: " . ($result['reason'] !== '' ? $result['reason'] : 'no channel available'));
-            continue;
-        }
-
-        // Historical reporting trail (kept for backwards compatibility with the
-        // existing reminder history views).
         try {
+            if (!$dryRun) {
+                // Refresh the invoice and payments under lock before committing an outbox entry.
+                $lockInvoice->execute([$childId, $monthYear]);
+                $current = $lockInvoice->fetch();
+                if ($current === false) {
+                    $skippedCleared++;
+                    continue;
+                }
+                $lockPayments->execute([$childId, $monthYear]);
+                $row = array_replace($row, $current);
+                $row['expected'] = (float) $current['expected_amount'];
+                $row['paid'] = array_sum($lockPayments->fetchAll(PDO::FETCH_COLUMN));
+                $row['balance'] = round($row['expected'] - $row['paid'], 2);
+                if (tuitionInvoiceState($row, $today) !== 'overdue' || $row['balance'] < $minBalance) {
+                    $skippedCleared++;
+                    continue;
+                }
+            }
+
+            $balance = $row['balance'];
+            $monthLabel = formatShamsiMonthYear($monthYear);
+            $legacyReminder->execute([$childId, $monthYear]);
+            if ($legacyReminder->fetchColumn() !== false) {
+                $skippedDuplicate++;
+                continue;
+            }
+
+            $parentId   = (int) $row['parent_id'];
+            $childName  = (string) $row['child_name'];
+            $parentName = (string) $row['parent_name'];
+            $amountFa   = persianNumber(number_format($balance));
+
+            $subject = "یادآوری دوستانه شهریه ماه {$monthLabel} — {$childName} 🌸";
+
+            $body = "مامان و بابای مهربون «{$childName}» عزیز؛\n\n"
+                . "سلام و درود پر از مهر! 🌟\n"
+                . "ممنونیم که همراه فرشته کوچولومون در {$siteNameValue} هستید.\n\n"
+                . "— وضعیت شهریه ماه {$monthLabel} —\n"
+                . '• مبلغ ماه: ' . persianNumber(number_format((float) $row['expected'])) . " تومان\n";
+
+            $body .= '• پرداخت‌شده تا این لحظه: ' . persianNumber(number_format((float) $row['paid'])) . " تومان\n"
+                . '• سررسید پرداخت: ' . shamsiDate($row['due_date']) . "\n"
+                . "• مانده: {$amountFa} تومان\n\n"
+                . "خواهش می‌کنیم در فرصت مناسب نسبت به تسویه اقدام فرمایید. در صورت هرگونه پرسش یا هماهنگی، ما در خدمت شما هستیم.\n\n"
+                . "با آرزوی روزهای پرخنده،\nمدیریت و کادر {$siteNameValue} 💖";
+
+            if ($dryRun) {
+                cliLog("[dry-run] {$monthYear} — would remind {$parentName} about {$childName} — balance {$amountFa}");
+                $sent++;
+                continue;
+            }
+
+            // One reminder per child per tuition month, enforced in the database.
+            $result = notifyParent($parentId, 'tuition_reminder', [
+                'args'           => [$parentName, $childName, $monthLabel, $amountFa],
+                'portal_subject' => $subject,
+                'portal_body'    => $body,
+                'dedup_key'      => "tuition_reminder:{$childId}:{$monthYear}",
+                'sender_type'    => 'admin',
+                'sender_id'      => notificationSystemAdminId($pdo),
+                'skip_sms'       => !$gateway['enabled'],
+                'priority'       => 6, // Lower priority than OTP / same-day care alerts.
+            ]);
+
+            if ($result['sms'] === 'duplicate') {
+                $skippedDuplicate++;
+                continue;
+            }
+
+            if (!$result['portal'] && $result['sms'] !== 'queued' && $result['sms'] !== 'sent') {
+                cliLog("Skipped {$childName}: " . ($result['reason'] !== '' ? $result['reason'] : 'no channel available'));
+                continue;
+            }
+
             $reminderLogStmt->execute([
                 ':cid'   => $childId,
                 ':pid'   => $parentId,
                 ':myear' => $monthYear,
             ]);
-        } catch (Throwable $logError) {
-            error_log('tuition_reminder_log insert failed: ' . $logError->getMessage());
-        }
+            $pdo->commit();
 
-        $sent++;
-        if ($result['sms'] === 'queued' || $result['sms'] === 'sent') {
-            $smsQueued++;
-        }
+            $sent++;
+            if ($result['sms'] === 'queued' || $result['sms'] === 'sent') {
+                $smsQueued++;
+            }
 
-        cliLog("Reminded {$parentName} about {$childName} — balance {$amountFa} (sms: {$result['sms']})");
+            cliLog("Reminded {$parentName} about {$childName} — balance {$amountFa} (sms: {$result['sms']})");
+        } finally {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+        }
     }
 
     // Deliver what we queued right now instead of waiting for the next worker run.
@@ -195,17 +230,17 @@ try {
 
     if (!$dryRun) {
         recordAudit('system.tuition_reminders_cron', 'system', null, [
-            'month'              => $monthYear,
+            'month'              => $targetMonth,
             'reminders_sent'     => $sent,
-            'skipped_settled'    => $skippedPaid,
+            'skipped_cleared'    => $skippedCleared,
             'skipped_duplicate'  => $skippedDuplicate,
         ]);
     }
 
     cliLog(sprintf(
-        'Finished — reminders: %d, already settled: %d, already reminded this month: %d',
+        'Finished — reminders: %d, below threshold or requiring review: %d, already reminded for the invoice: %d',
         $sent,
-        $skippedPaid,
+        $skippedCleared,
         $skippedDuplicate
     ));
 } catch (Throwable $e) {

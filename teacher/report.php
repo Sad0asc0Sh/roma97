@@ -25,6 +25,8 @@ require_once __DIR__ . '/../includes/sms.php';
 require_once __DIR__ . '/../includes/notifications.php';
 require_once __DIR__ . '/../includes/permissions.php';
 require_once __DIR__ . '/../includes/classroom_activities.php';
+require_once __DIR__ . '/../includes/daily_report_feedback.php';
+require_once __DIR__ . '/../includes/operations_pilot.php';
 require_once __DIR__ . '/../includes/teacher_portal_helpers.php';
 
 requireTeacherLogin();
@@ -40,6 +42,7 @@ $classroomId = 0;
 $children    = [];
 $reports     = [];
 $classActivity = '';
+$reportPilotId = null;
 
 $moodCatalog    = teacherPsychologicalMoodCatalog();
 $factorsCatalog = teacherPsychologicalFactorsCatalog();
@@ -69,6 +72,11 @@ try {
 
     if ($classroom !== null) {
         ensureClassroomActivitiesTables($pdo);
+        try {
+            $reportPilotId = operationsPilotForClass($pdo, $classroomId, $today);
+        } catch (Throwable $pilotError) {
+            error_log('Teacher report pilot lookup: ' . $pilotError->getMessage());
+        }
         $kidsStmt = $pdo->prepare(
             <<<'SQL'
 SELECT c.id, c.first_name, c.last_name, c.preferred_name, c.photo, c.allergies, c.medical_notes, a.status AS attendance_status
@@ -171,6 +179,11 @@ SQL;
 
                 $uStmt = $pdo->prepare($upsertSql);
                 $clearStmt = $pdo->prepare('DELETE FROM daily_reports WHERE classroom_id = ? AND child_id = ? AND report_date = ?');
+                $pilotMetrics = $reportPilotId === null ? null : $pdo->prepare(
+                    'INSERT INTO operations_pilot_reports (report_id, pilot_id, published_at, work_ms) VALUES (?, ?, ?, ?)'
+                );
+                $workTimes = $_POST['report_work_ms'] ?? [];
+                $workTimes = is_array($workTimes) ? $workTimes : [];
 
                 $saved = 0;
                 /** @var array<int, string|null> $changedChildren */
@@ -206,6 +219,11 @@ SQL;
                         ':child_id'   => $childId,
                         ':rdate'      => $postDate,
                     ]);
+                    if ($pilotMetrics !== null && !isset($previousReports[$childId])) {
+                        $durationMs = filter_var($workTimes[$childId] ?? null, FILTER_VALIDATE_INT,
+                            ['options' => ['min_range' => 1, 'max_range' => 7200000]]);
+                        $pilotMetrics->execute([(int) $pdo->lastInsertId(), $reportPilotId, date('Y-m-d H:i:s'), $durationMs === false ? null : $durationMs]);
+                    }
                     $changedChildren[$childId] = $report['mood'];
                 }
 
@@ -280,12 +298,14 @@ SQL;
         }
 
         // Load existing reports for the selected date
+        ensureDailyReportFeedbackTable($pdo);
         $rStmt = $pdo->prepare(
-            'SELECT child_id, mood, social_interaction, focus_level, communication_style,
-                    separation_adaptation, nutrition_status, rest_energy,
-                    strengths_observed, coping_strategy, activities, notes
-             FROM daily_reports
-             WHERE classroom_id = :cid AND report_date = :rdate'
+            'SELECT dr.child_id, dr.mood, dr.social_interaction, dr.focus_level, dr.communication_style,
+                    dr.separation_adaptation, dr.nutrition_status, dr.rest_energy,
+                    dr.strengths_observed, dr.coping_strategy, dr.activities, dr.notes, rf.seen_at, rf.reaction
+             FROM daily_reports dr INNER JOIN children c ON c.id = dr.child_id
+             LEFT JOIN daily_report_feedback rf ON rf.report_id = dr.id AND rf.parent_id = c.parent_id
+             WHERE dr.classroom_id = :cid AND dr.report_date = :rdate'
         );
         $rStmt->execute([':cid' => $classroomId, ':rdate' => $selectedDate]);
         foreach ($rStmt->fetchAll() as $row) {
@@ -492,7 +512,11 @@ require_once __DIR__ . '/header.php';
         <button type="button" class="tp-btn tp-btn-primary tp-btn-sm" onclick="stepWizardChild(1)">کودک بعدی ›</button>
     </div>
 
-    <form method="post" action="<?= e(url('teacher/report.php?date=' . rawurlencode($selectedDate))) ?>" class="report-form" id="psychReportForm">
+    <?php if ($reportPilotId !== null): ?>
+        <p class="tp-day-note">زمان ثبت گزارش‌های این کلاس برای آزمون میدانی اندازه‌گیری می‌شود.</p>
+    <?php endif; ?>
+    <form method="post" action="<?= e(url('teacher/report.php?date=' . rawurlencode($selectedDate))) ?>" class="report-form" id="psychReportForm"
+          <?= $reportPilotId !== null ? 'data-pilot-report-timing' : '' ?>>
         <input type="hidden" name="classroom_id" value="<?= $classroomId ?>">
         <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
         <input type="hidden" name="report_date" value="<?= e($selectedDate) ?>">
@@ -545,6 +569,14 @@ require_once __DIR__ . '/header.php';
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                             <?php if ($existing !== null): ?>
                                 <span class="tp-badge tp-badge-present">ثبت شده ✓</span>
+                                <?php if ($existing['seen_at'] !== null): ?>
+                                    <span class="tp-badge tp-badge-present">خانواده مشاهده کرد</span>
+                                <?php endif; ?>
+                                <?php if (isset(DAILY_REPORT_REACTIONS[$existing['reaction']])): ?>
+                                    <span class="tp-badge <?= $existing['reaction'] === 'more_details' ? 'tp-badge-late' : 'tp-badge-excused' ?>">
+                                        <?= e(DAILY_REPORT_REACTIONS[$existing['reaction']]) ?>
+                                    </span>
+                                <?php endif; ?>
                             <?php else: ?>
                                 <span class="tp-badge tp-badge-unrecorded">در انتظار ثبت</span>
                             <?php endif; ?>
@@ -880,6 +912,9 @@ require_once __DIR__ . '/header.php';
         }
     });
     </script>
+    <?php if ($reportPilotId !== null): ?>
+        <script src="<?= e(asset('assets/js/operations-pilot.js')) ?>" defer></script>
+    <?php endif; ?>
 <?php endif; ?>
 
 <?php require_once __DIR__ . '/footer.php'; ?>

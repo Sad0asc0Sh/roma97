@@ -14,22 +14,37 @@ require_once __DIR__ . '/../includes/notifications.php';
 
 requireLogin();
 require_once __DIR__ . '/../includes/portal_rules.php';
+require_once __DIR__ . '/../includes/tuition_invoices.php';
 
 $successMessage = getFlash('success');
 $errorMessage = getFlash('error');
 
-$selectedChildId = max(0, (int) ($_GET['child_id'] ?? 0));
+$selectedChildId = filter_var($_GET['child_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 0;
+$invoiceFilters = ['review' => 'نیازمند پیگیری', 'needs_due_date' => 'بدون سررسید', 'all' => 'همهٔ وضعیت‌های ماه'];
+$filterInput = $_GET['filter'] ?? null;
+$invoiceFilter = is_string($filterInput) && isset($invoiceFilters[$filterInput]) ? $filterInput : 'review';
+$monthInput = $_GET['month_year'] ?? null;
+$filterMonth = is_string($monthInput) ? portalMonthYear($monthInput) : null;
+$today = date('Y-m-d');
 
 // Month shown in the status table (defaults to the current Shamsi month).
-$viewMonthYear = portalMonthYear((string) ($_GET['month_year'] ?? ''));
+$viewMonthYear = $filterMonth;
 if ($viewMonthYear === null) {
     [$vJy, $vJm] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
     $viewMonthYear = sprintf('%04d-%02d', $vJy, $vJm);
 }
+$monthChoices = getShamsiMonthYearChoices(24, 24);
+if (!in_array($viewMonthYear, array_column($monthChoices, 'value'), true)) {
+    $monthChoices[] = ['value' => $viewMonthYear, 'label' => formatShamsiMonthYear($viewMonthYear)];
+}
+$selectedInvoice = null;
+$selectedBreakdown = null;
+$selectedChild = null;
 
 try {
     initializeFinancialTables();
     $pdo = getDb();
+    ensureTuitionInvoiceColumns($pdo);
 
     if (isPostRequest()) {
         $csrfToken = $_POST['csrf_token'] ?? '';
@@ -40,33 +55,68 @@ try {
 
         $formAction = (string) ($_POST['form_action'] ?? 'record_payment');
 
-        if ($formAction === 'set_plan') {
-            $childId        = (int) ($_POST['plan_child_id'] ?? 0);
-            $monthYear      = portalMonthYear((string) ($_POST['plan_month_year'] ?? ''));
-            $expectedAmount = (float) ($_POST['expected_amount'] ?? 0);
+        if ($formAction === 'set_plan' || $formAction === 'set_missing_due_dates') {
+            $monthValue = $_POST['plan_month_year'] ?? null;
+            $monthYear = is_string($monthValue) ? portalMonthYear($monthValue) : null;
+            $dateIncluded = array_key_exists('due_date', $_POST);
+            $dateValue = $_POST['due_date'] ?? null;
+            $dueDate = is_string($dateValue) ? parseJalaliDate($dateValue) : null;
+            if ($monthYear === null || (($dateIncluded || $formAction === 'set_missing_due_dates') && $dueDate === null)) {
+                setFlash('error', 'ماه شهریه و تاریخ سررسید معتبر را انتخاب کنید.');
+                redirect(url('admin/tuition.php#invoicePlan'));
+            }
 
-            if ($childId <= 0 || $expectedAmount < 0 || $expectedAmount >= 1000000000 || $monthYear === null) {
-                setFlash('error', 'لطفاً مقادیر معتبر برای تعیین شهریه مورد انتظار وارد کنید.');
-                redirect(url('admin/tuition.php'));
+            if ($formAction === 'set_missing_due_dates') {
+                $update = $pdo->prepare(
+                    "UPDATE tuition_plans tp INNER JOIN children c ON c.id = tp.child_id AND c.status = 'active'
+                     SET tp.due_date = ? WHERE tp.month_year = ? AND tp.due_date IS NULL"
+                );
+                $update->execute([$dueDate, $monthYear]);
+                $updatedCount = $update->rowCount();
+                recordAudit('tuition_plan.set_due_dates', 'tuition_plan', null, [
+                    'month_year' => $monthYear, 'due_date' => $dueDate, 'updated_count' => $updatedCount,
+                ]);
+                setFlash('success', 'سررسید ' . persianNumber($updatedCount) . ' صورتحساب ذخیره شد.');
+                redirect(url('admin/tuition.php?filter=needs_due_date&month_year=' . $monthYear . '#invoiceQueue'));
+            }
+
+            $childId = filter_var($_POST['plan_child_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            $expectedAmount = filter_var($_POST['expected_amount'] ?? null, FILTER_VALIDATE_FLOAT);
+            $noteIncluded = array_key_exists('discrepancy_note', $_POST);
+            $noteInput = $_POST['discrepancy_note'] ?? '';
+            $note = is_string($noteInput) ? trim($noteInput) : null;
+            $editUrl = url('admin/tuition.php?' . http_build_query(['child_id' => $childId ?: null, 'month_year' => $monthYear]) . '#invoicePlan');
+
+            if ($childId === false || $expectedAmount === false || $expectedAmount < 0 || $expectedAmount >= 1000000000
+                || $note === null || mb_strlen($note, 'UTF-8') > 500) {
+                setFlash('error', 'کودک، مبلغ و یادداشت مغایرت را بررسی کنید.');
+                redirect($editUrl);
             }
             $planStmt = $pdo->prepare(
-                'INSERT INTO tuition_plans (child_id, month_year, expected_amount)
-                 VALUES (:cid, :myear, :exp)
-                 ON DUPLICATE KEY UPDATE expected_amount = VALUES(expected_amount)'
+                'INSERT INTO tuition_plans (child_id, month_year, expected_amount, due_date, discrepancy_note)
+                 VALUES (:cid, :myear, :exp, :due_date, :discrepancy)
+                 ON DUPLICATE KEY UPDATE expected_amount = VALUES(expected_amount),
+                    due_date = COALESCE(VALUES(due_date), due_date),
+                    discrepancy_note = IF(:update_discrepancy, VALUES(discrepancy_note), discrepancy_note)'
             );
             $planStmt->execute([
                 ':cid'   => $childId,
                 ':myear' => $monthYear,
                 ':exp'   => $expectedAmount,
+                ':due_date' => $dueDate,
+                ':discrepancy' => $note === '' ? null : $note,
+                ':update_discrepancy' => (int) $noteIncluded,
             ]);
 
             recordAudit('tuition_plan.set', 'child', $childId, [
                 'month_year'      => $monthYear,
                 'expected_amount' => $expectedAmount,
+                'due_date'        => $dueDate,
+                'has_discrepancy' => $note !== '',
             ]);
 
-            setFlash('success', 'مبلغ شهریه مورد انتظار با موفقیت ذخیره شد.');
-            redirect(url('admin/tuition.php?month_year=' . rawurlencode($monthYear)));
+            setFlash('success', 'صورتحساب ماهانه ذخیره شد.');
+            redirect(url('admin/tuition.php?month_year=' . $monthYear . '#invoiceQueue'));
         }
 
         $childId       = (int) ($_POST['child_id'] ?? 0);
@@ -181,46 +231,46 @@ try {
     }
 
     // Fetch children for dropdown
-    $childrenStmt = $pdo->query("
+    $childrenStmt = $pdo->prepare("
         SELECT c.id, c.first_name, c.last_name, p.first_name AS p_first, p.last_name AS p_last
         FROM children c
         INNER JOIN parents p ON p.id = c.parent_id
-        WHERE c.status = 'active'
+        WHERE c.status = 'active' OR c.id = :selected_child
         ORDER BY c.last_name, c.first_name
     ");
+    $childrenStmt->execute([':selected_child' => $selectedChildId]);
     $children = $childrenStmt->fetchAll();
+    $selectedChild = array_column($children, null, 'id')[$selectedChildId] ?? null;
 
-    // Whole-month position for every active child, computed in ONE query
-    // (previously 3 queries per child inside a render loop).
-    $breakdowns = activeChildrenTuitionBreakdown($pdo, $viewMonthYear);
-
-    // Last payment date per child for the selected month, fetched in bulk.
-    $lastPayments = [];
-    $lastPayStmt = $pdo->prepare(
-        'SELECT child_id, MAX(payment_date) AS latest_date
-         FROM tuition_payments WHERE month_year = :myear GROUP BY child_id'
-    );
-    $lastPayStmt->execute([':myear' => $viewMonthYear]);
-    foreach ($lastPayStmt->fetchAll() as $lp) {
-        $lastPayments[(int) $lp['child_id']] = (string) $lp['latest_date'];
-    }
-
-    // Month-level KPIs so the admin sees the collection position at a glance.
-    $monthTotals = ['expected' => 0.0, 'paid' => 0.0, 'outstanding' => 0.0, 'settled' => 0, 'debtors' => 0];
-    foreach ($breakdowns as $b) {
-        $monthTotals['expected'] += $b['expected'];
-        $monthTotals['paid']     += $b['paid'];
-
-        if ($b['balance'] >= tuitionSettleTolerance()) {
-            $monthTotals['outstanding'] += $b['balance'];
-            $monthTotals['debtors']++;
-        } else {
-            $monthTotals['settled']++;
+    $bills = tuitionInvoiceRows($pdo, $invoiceFilter === 'all' ? $viewMonthYear : $filterMonth);
+    $billingRows = [];
+    foreach ($bills as $bill) {
+        if ((int) $bill['child_id'] === $selectedChildId && $bill['month_year'] === $viewMonthYear) {
+            $selectedInvoice = $bill;
         }
+        $bill['state'] = tuitionInvoiceState($bill, $today);
+        $billingRows[] = $bill;
+    }
+    if ($selectedChild !== null) {
+        $selectedBreakdown = $selectedInvoice ?? childTuitionBreakdown($pdo, $selectedChildId, $viewMonthYear);
     }
 
-    $pagination = paginate(count($breakdowns), currentPageNumber(), 20);
-    $dashboardStatus = array_slice(array_values($breakdowns), $pagination['offset'], $pagination['perPage']);
+    $monthTotals = [];
+    if ($invoiceFilter === 'all') {
+        $actual = array_column($billingRows, null, 'child_id');
+        $active = activeChildrenTuitionBreakdown($pdo, $viewMonthYear);
+        foreach (array_diff_key($active, $actual) as $projection) {
+            $projection += ['month_year' => $viewMonthYear, 'due_date' => null, 'discrepancy_note' => null];
+            $projection['state'] = tuitionInvoiceState($projection, $today);
+            $billingRows[] = $projection;
+        }
+        $monthTotals = portalTuitionTotals($billingRows);
+    } else {
+        $states = $invoiceFilter === 'review' ? ['overdue', 'discrepancy'] : ['needs_due_date'];
+        $billingRows = array_values(array_filter($billingRows, static fn (array $bill): bool => in_array($bill['state'], $states, true)));
+    }
+    $pagination = paginate(count($billingRows), currentPageNumber(), 20);
+    $dashboardStatus = array_slice($billingRows, $pagination['offset'], $pagination['perPage']);
 
 } catch (Throwable $e) {
     error_log($e->getMessage());
@@ -228,10 +278,9 @@ try {
         $errorMessage = 'خطایی در بارگذاری اطلاعات شهریه رخ داد.';
     }
     $children = [];
+    $selectedChild = null;
     $dashboardStatus = [];
-    $lastPayments = [];
-    $breakdowns = [];
-    $monthTotals = ['expected' => 0.0, 'paid' => 0.0, 'outstanding' => 0.0, 'settled' => 0, 'debtors' => 0];
+    $monthTotals = [];
     $pagination = paginate(0, 1, 20);
 }
 
@@ -252,6 +301,8 @@ require_once __DIR__ . '/header.php';
     <?php if ($errorMessage !== null): ?>
         <div class="alert alert-danger" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
+
+    <?php require __DIR__ . '/partials/tuition-invoices.php'; ?>
 
     <div class="admin-two-column">
         <div class="admin-section">
@@ -278,7 +329,7 @@ require_once __DIR__ . '/header.php';
                 <div class="form-group">
                     <label for="month_year" class="form-label">ماه شهریه</label>
                     <select name="month_year" id="month_year" class="form-control" required>
-                        <?php foreach (getShamsiMonthYearChoices(24, 24) as $choice): ?>
+                        <?php foreach ($monthChoices as $choice): ?>
                             <option value="<?= e($choice['value']) ?>" <?= $choice['value'] === $viewMonthYear ? 'selected' : '' ?>>
                                 <?= e($choice['label']) ?>
                             </option>
@@ -293,11 +344,10 @@ require_once __DIR__ . '/header.php';
                     // Prefill the exact remaining balance of the selected child so
                     // the accountant can settle the month in one click instead of
                     // reading the number off the status table.
-                    $selectedBreakdown = $selectedChildId > 0 ? ($breakdowns[$selectedChildId] ?? null) : null;
                     if ($selectedBreakdown !== null && (float) $selectedBreakdown['balance'] > 0):
                     ?>
                     <div style="margin-top:6px;font-size:0.78rem;color:var(--adm-text-muted);">
-                        مانده فعلی «<?= e($selectedBreakdown['child_name']) ?>» برای این ماه:
+                        ماندهٔ این کودک برای ماه انتخاب‌شده
                         <strong style="color:var(--adm-danger);"><?= e(persianNumber(number_format((float) $selectedBreakdown['balance']))) ?> تومان</strong>
                     </div>
                     <?php endif; ?>
@@ -327,18 +377,15 @@ require_once __DIR__ . '/header.php';
                 </div>
             </form>
 
-            <!-- Dedicated Plan Setting Form -->
-            <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--adm-border-light, #e2e8f0);">
+        </div>
+        <div class="admin-section" id="invoicePlan">
                 <div class="admin-section-header">
-                    <h3 style="font-size: 1rem; font-weight: 700; margin: 0;">تعیین مبلغ مورد انتظار این کودک برای این ماه</h3>
+                    <h2 class="admin-section-title">صورتحساب ماهانه</h2>
                 </div>
-                <form method="post" action="<?= e(url('admin/tuition.php')) ?>" novalidate>
-                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                    <input type="hidden" name="form_action" value="set_plan">
-
-                    <div class="form-group">
-                        <label for="plan_child_id" class="form-label">کودک</label>
-                        <select name="plan_child_id" id="plan_child_id" class="form-control" required>
+                <form method="get" action="<?= e(url('admin/tuition.php#invoicePlan')) ?>" class="invoice-toolbar">
+                    <input type="hidden" name="filter" value="<?= e($invoiceFilter) ?>">
+                    <label for="plan_child_id">کودک
+                        <select name="child_id" id="plan_child_id" class="form-control" required>
                             <option value="">-- انتخاب کودک --</option>
                             <?php foreach ($children as $c): ?>
                                 <option value="<?= e((string) $c['id']) ?>" <?= $selectedChildId === (int) $c['id'] ? 'selected' : '' ?>>
@@ -346,140 +393,69 @@ require_once __DIR__ . '/header.php';
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                    </div>
+                    </label>
 
-                    <div class="form-group">
-                        <label for="plan_month_year" class="form-label">ماه شهریه</label>
-                        <select name="plan_month_year" id="plan_month_year" class="form-control" required>
-                            <?php foreach (getShamsiMonthYearChoices(24, 24) as $choice): ?>
+                    <label for="plan_month_year">ماه شهریه
+                        <select name="month_year" id="plan_month_year" class="form-control" required>
+                            <?php foreach ($monthChoices as $choice): ?>
                                 <option value="<?= e($choice['value']) ?>" <?= $choice['value'] === $viewMonthYear ? 'selected' : '' ?>>
                                     <?= e($choice['label']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                    </div>
+                    </label>
+                    <button type="submit" class="btn btn-secondary">نمایش صورتحساب</button>
+                </form>
 
+                <?php if ($selectedChild !== null): ?>
+                <form method="post" action="<?= e(url('admin/tuition.php')) ?>" class="invoice-edit">
+                    <h3><?= e(trim($selectedChild['first_name'] . ' ' . $selectedChild['last_name']) . ' · ' . formatShamsiMonthYear($viewMonthYear)) ?></h3>
+                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                    <input type="hidden" name="form_action" value="set_plan">
+                    <input type="hidden" name="plan_child_id" value="<?= e($selectedChildId) ?>">
+                    <input type="hidden" name="plan_month_year" value="<?= e($viewMonthYear) ?>">
                     <div class="form-group">
                         <label for="expected_amount" class="form-label">مبلغ مورد انتظار (تومان)</label>
-                        <input type="number" step="0.01" name="expected_amount" id="expected_amount" class="form-control" placeholder="۰" required min="0">
+                        <input type="number" step="0.01" name="expected_amount" id="expected_amount" class="form-control" placeholder="۰" required min="0"
+                               value="<?= e($selectedInvoice['expected_amount'] ?? $selectedBreakdown['expected'] ?? '') ?>">
+                    </div>
+                    <div class="form-group">
+                        <label for="invoice_due_date" class="form-label">سررسید پرداخت (شمسی)</label>
+                        <input type="text" name="due_date" id="invoice_due_date" class="form-control shamsi-datepicker" required
+                               value="<?= e(empty($selectedInvoice['due_date']) ? '' : shamsiDate($selectedInvoice['due_date'], 'numeric')) ?>">
+                    </div>
+                    <div class="form-group">
+                        <label for="discrepancy_note" class="form-label">یادداشت مغایرت برای حسابدار</label>
+                        <textarea name="discrepancy_note" id="discrepancy_note" class="form-control" maxlength="500" rows="2" aria-describedby="invoiceDiscrepancyHelp"><?= e($selectedInvoice['discrepancy_note'] ?? '') ?></textarea>
+                        <small class="muted" id="invoiceDiscrepancyHelp">وجود یادداشت، یادآوری خودکار این صورتحساب را متوقف می‌کند.</small>
                     </div>
 
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-secondary">ذخیره مبلغ مورد انتظار</button>
+                        <button type="submit" class="btn btn-primary">ذخیره صورتحساب</button>
                     </div>
                 </form>
-            </div>
-        </div>
-
-        <div class="admin-section">
-            <div class="admin-section-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-                <h2 class="admin-section-title" style="margin:0;">وضعیت شهریه کودکان فعال</h2>
-                <form method="get" action="<?= e(url('admin/tuition.php')) ?>" style="display:flex;gap:8px;align-items:center;">
-                    <label for="view_month_year" style="font-size:0.85rem;font-weight:600;">ماه:</label>
-                    <select name="month_year" id="view_month_year" class="form-control" onchange="this.form.submit()" style="min-width:150px;">
-                        <?php foreach (getShamsiMonthYearChoices(24, 12) as $choice): ?>
-                            <option value="<?= e($choice['value']) ?>" <?= $choice['value'] === $viewMonthYear ? 'selected' : '' ?>>
-                                <?= e($choice['label']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </form>
-            </div>
-
-            <!-- Month collection KPIs -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;">
-                <div class="card" style="padding:12px 14px;">
-                    <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">مبلغ مورد انتظار ماه</div>
-                    <div style="font-size:1.1rem;font-weight:800;"><?= e(persianNumber(number_format($monthTotals['expected']))) ?> <span style="font-size:0.75rem;font-weight:normal;">تومان</span></div>
-                </div>
-                <div class="card" style="padding:12px 14px;border-inline-start:4px solid var(--app-success, #2E7D5B);">
-                    <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">دریافت‌شده</div>
-                    <div style="font-size:1.1rem;font-weight:800;color:var(--adm-success);"><?= e(persianNumber(number_format($monthTotals['paid']))) ?> <span style="font-size:0.75rem;font-weight:normal;">تومان</span></div>
-                </div>
-                <div class="card" style="padding:12px 14px;border-inline-start:4px solid var(--adm-danger);">
-                    <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">مانده معوق</div>
-                    <div style="font-size:1.1rem;font-weight:800;color:var(--adm-danger);"><?= e(persianNumber(number_format($monthTotals['outstanding']))) ?> <span style="font-size:0.75rem;font-weight:normal;">تومان</span></div>
-                </div>
-                <div class="card" style="padding:12px 14px;">
-                    <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">تسویه‌شده / بدهکار</div>
-                    <div style="font-size:1.1rem;font-weight:800;">
-                        <span style="color:var(--adm-success);"><?= e(persianNumber((string) $monthTotals['settled'])) ?></span>
-                        <span style="color:var(--adm-text-muted);font-weight:normal;">/</span>
-                        <span style="color:var(--adm-danger);"><?= e(persianNumber((string) $monthTotals['debtors'])) ?></span>
-                    </div>
-                </div>
-            </div>
-
-            <?php if (empty($dashboardStatus)): ?>
-                <div class="empty-state empty-state-sm">
-                    <div class="empty-state-icon">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 10-16 0"/></svg>
-                    </div>
-                    <h3>هیچ ثبت نام فعالی یافت نشد</h3>
-                </div>
-            <?php else: ?>
-                <div class="admin-table-wrap">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>نام کودک</th>
-                                <th>والدین</th>
-                                <th>مبلغ مورد انتظار</th>
-                                <th>پرداخت‌شده</th>
-                                <th>مانده بدهی / تسویه</th>
-                                <th>آخرین پرداخت</th>
-                                <th>عملیات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($dashboardStatus as $s): ?>
-                                <?php
-                                $sCid = (int) $s['child_id'];
-                                $balance = (float) $s['balance'];
-                                $latestDate = $lastPayments[$sCid] ?? null;
-                                ?>
-                                <tr>
-                                    <td style="font-weight:600;"><?= e($s['child_name']) ?></td>
-                                    <td><?= e($s['parent_name']) ?></td>
-                                    <td>
-                                        <strong><?= e(persianNumber(number_format((float) $s['expected']))) ?></strong> تومان
-                                        <?php if (!$s['has_plan']): ?>
-                                            <br><small class="muted" style="font-size:0.75rem;">بر پایه شهریه پیش‌فرض</small>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <?php if ((float) $s['paid'] > 0): ?>
-                                            <strong><?= e(persianNumber(number_format((float) $s['paid']))) ?></strong> تومان
-                                        <?php else: ?>
-                                            <span class="muted">—</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <?php if ($balance > 0): ?>
-                                            <span class="badge badge-danger" style="font-weight:700;">بدهکار: <?= e(persianNumber(number_format($balance))) ?> تومان</span>
-                                        <?php elseif ($balance < 0): ?>
-                                            <span class="badge badge-info" style="font-weight:700;">بستانکار: <?= e(persianNumber(number_format(abs($balance)))) ?> تومان</span>
-                                        <?php else: ?>
-                                            <span class="badge badge-success" style="font-weight:700;">تسویه کامل</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td><?= $latestDate !== null ? e(shamsiDate($latestDate)) : '<span class="muted">—</span>' ?></td>
-                                    <td>
-                                        <a href="<?= e(url('admin/tuition.php?child_id=' . $sCid . '&month_year=' . rawurlencode($viewMonthYear) . '#recordForm')) ?>" class="btn btn-sm btn-secondary">پرداخت</a>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-                <?php if ($pagination['total'] > $pagination['perPage']): ?>
-                    <p class="pagination-summary">
-                        نمایش <?= e(persianNumber($pagination['from'])) ?> تا <?= e(persianNumber($pagination['to'])) ?> از <?= e(persianNumber($pagination['total'])) ?> کودک
-                    </p>
-                    <?= renderPagination($pagination, url('admin/tuition.php'), ['month_year' => $viewMonthYear]) ?>
                 <?php endif; ?>
-            <?php endif; ?>
+                <details class="invoice-bulk">
+                    <summary>تعیین سررسید گروهی</summary>
+                    <p class="muted">سررسید صورتحساب‌های بدون تاریخِ کودکان فعال را برای ماه انتخاب‌شده تعیین کنید.</p>
+                    <form method="post" action="<?= e(url('admin/tuition.php#invoiceQueue')) ?>" class="invoice-toolbar">
+                        <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                        <input type="hidden" name="form_action" value="set_missing_due_dates">
+                        <label for="bulk_plan_month">ماه شهریه
+                            <select name="plan_month_year" id="bulk_plan_month" class="form-control">
+                                <?php foreach ($monthChoices as $choice): ?>
+                                    <option value="<?= e($choice['value']) ?>" <?= $choice['value'] === $viewMonthYear ? 'selected' : '' ?>><?= e($choice['label']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                        <label for="bulk_due_date">سررسید (شمسی)
+                            <input type="text" name="due_date" id="bulk_due_date" class="form-control shamsi-datepicker" required>
+                        </label>
+                        <button type="submit" class="btn btn-secondary">ثبت سررسید گروهی</button>
+                    </form>
+                </details>
         </div>
+
     </div>
 </section>
 

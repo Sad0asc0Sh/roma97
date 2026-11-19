@@ -10,16 +10,11 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/sms.php';
 require_once __DIR__ . '/../includes/notifications.php';
-
-// Force database initialization for messaging table
-initializeMessagingTable();
-initializeNotificationTables();
+require_once __DIR__ . '/../includes/message_follow_up.php';
 
 requireLogin();
-
-if (!isset($_SESSION['admin_id'])) {
-    redirect(url('login.php'));
-}
+initializeMessageFollowUp();
+initializeNotificationTables();
 $adminId = (int) $_SESSION['admin_id'];
 $pdo = getDb();
 $error = '';
@@ -28,6 +23,87 @@ $recipientSelection = isPostRequest()
     ? ($_POST['recipient_id'] ?? '')
     : filter_var($_GET['parent_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 $recipientSelection = is_string($recipientSelection) || is_int($recipientSelection) ? (string) $recipientSelection : '';
+
+$canEscalate = canReviewOverdueMessages(currentAdminRole());
+$replyFilters = ['active' => 'در انتظار پیگیری', 'resolved' => 'بسته‌شده'];
+if ($canEscalate) {
+    $replyFilters = ['active' => $replyFilters['active'], 'overdue' => 'گذشته از مهلت', 'resolved' => $replyFilters['resolved']];
+}
+$replyFilter = $_GET['filter'] ?? 'active';
+$replyFilter = is_string($replyFilter) && isset($replyFilters[$replyFilter]) ? $replyFilter : 'active';
+$inboxUrl = static fn (string $filter): string => url('admin/messages.php?filter=' . $filter . '#family-inbox');
+$now = date('Y-m-d H:i:s');
+$replyScope = $replyFilter === 'overdue' ? MESSAGE_FOLLOW_UP_OVERDUE : MESSAGE_INBOX_SCOPE;
+$replyScopeParams = $replyFilter === 'overdue' ? [$now] : [$adminId, $adminId];
+$followUpStaff = $pdo->query("SELECT id, username FROM admins WHERE role IN ('owner', 'manager', 'receptionist') ORDER BY username")
+    ->fetchAll(PDO::FETCH_KEY_PAIR);
+
+$replyAction = $_POST['action'] ?? null;
+if (isPostRequest() && in_array($replyAction, ['mark_reply_read', 'save_follow_up'], true)) {
+    try {
+        if (!validateCsrfToken($_POST['csrf_token'] ?? null)) {
+            throw new InvalidArgumentException('درخواست نامعتبر است. دوباره تلاش کنید.');
+        }
+        $replyId = filter_var($_POST['reply_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare(
+            "SELECT m.recipient_admin_id, m.follow_up_status, m.follow_up_admin_id, m.response_due_at
+             FROM messages m WHERE m.id = ? AND m.sender_type = 'parent' AND " . $replyScope . ' FOR UPDATE'
+        );
+        $stmt->execute(array_merge([$replyId], $replyScopeParams));
+        $reply = $stmt->fetch();
+        if (!$reply) {
+            throw new InvalidArgumentException('این پیام در فهرست قابل دسترس شما نیست.');
+        }
+
+        if ($replyAction === 'mark_reply_read') {
+            $pdo->prepare('UPDATE messages SET is_read = 1 WHERE id = ?')->execute([$replyId]);
+            $pdo->commit();
+            setFlash('success', 'پیام خوانده‌شده علامت‌گذاری شد.');
+        } else {
+            if (!mayEditMessageFollowUp($reply, $adminId, $canEscalate, $now)) {
+                throw new InvalidArgumentException('مسئول پیگیری می‌تواند وضعیت این پیام را تغییر دهد.');
+            }
+            $status = $_POST['follow_up_status'] ?? null;
+            if (!is_string($status) || !isset(MESSAGE_FOLLOW_UP_LABELS[$status])) {
+                throw new InvalidArgumentException('وضعیت پیگیری را انتخاب کنید.');
+            }
+            $staffInput = $_POST['follow_up_admin_id'] ?? '';
+            $assignee = $staffInput === '' ? null : filter_var($staffInput, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($assignee !== null && (!is_int($assignee) || !isset($followUpStaff[$assignee]))) {
+                throw new InvalidArgumentException('مسئول پیگیری معتبر نیست.');
+            }
+            $dueInput = $_POST['response_due_at'] ?? null;
+            $deadline = is_string($dueInput) ? DateTimeImmutable::createFromFormat('!Y-m-d\TH:i', $dueInput) : false;
+            if ($deadline === false || $deadline->format('Y-m-d\TH:i') !== $dueInput || (int) $deadline->format('Y') < 1000) {
+                throw new InvalidArgumentException('مهلت پاسخ را با تاریخ و ساعت معتبر وارد کنید.');
+            }
+            if ($status !== 'open') {
+                $assignee ??= $adminId;
+            }
+            $dueAt = $deadline->format('Y-m-d H:i:s');
+            $pdo->prepare('UPDATE messages SET follow_up_status = ?, follow_up_admin_id = ?, response_due_at = ? WHERE id = ?')
+                ->execute([$status, $assignee, $dueAt, $replyId]);
+            $pdo->commit();
+            recordAudit('message.follow_up', 'message', (int) $replyId, [
+                'previous_status' => $reply['follow_up_status'],
+                'status' => $status,
+                'assignee' => $assignee,
+                'response_due_at' => $dueAt,
+            ]);
+            setFlash('success', 'پیگیری پیام به‌روزرسانی شد.');
+        }
+    } catch (Throwable $exception) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        if (!$exception instanceof InvalidArgumentException) {
+            error_log('Message follow-up: ' . $exception->getMessage());
+        }
+        setFlash('error', $exception instanceof InvalidArgumentException ? $exception->getMessage() : 'ذخیره پیگیری پیام انجام نشد.');
+    }
+    redirect($inboxUrl($replyFilter));
+}
 
 // Handle Send Message
 if (isPostRequest() && isset($_POST['send_message'])) {
@@ -122,45 +198,30 @@ if (isPostRequest() && isset($_POST['send_message'])) {
 $parentsStmt = $pdo->query("SELECT id, first_name, last_name, email FROM parents WHERE status = 'active' ORDER BY last_name, first_name");
 $parents = $parentsStmt->fetchAll();
 
-// ── Parent replies inbox ──────────────────────────────────────────────────────
-// Families can now answer from the portal (sender_type='parent'). Their
-// messages appear here, newest first, with a distinct badge and a read flag
-// independent from the outgoing messages above.
-$parentReplies = [];
-try {
-    $parentRepliesStmt = $pdo->query("
-        SELECT m.id, m.subject, m.body, m.created_at, m.is_read,
-               m.parent_id, p.first_name, p.last_name, p.phone
-        FROM messages m
-        INNER JOIN parents p ON p.id = m.parent_id
-        WHERE m.sender_type = 'parent' AND (m.recipient_admin_id IS NULL OR m.recipient_admin_id = {$adminId})
-        ORDER BY m.is_read ASC, m.created_at DESC
-        LIMIT 50
-    ");
-    $parentReplies = $parentRepliesStmt ? $parentRepliesStmt->fetchAll() : [];
-} catch (Throwable $e) {
-    error_log('parent replies query failed: ' . $e->getMessage());
-}
-
-$unreadReplyCount = 0;
-foreach ($parentReplies as $r) {
-    if ((int) $r['is_read'] === 0) {
-        $unreadReplyCount++;
-    }
-}
-
-// Marking a parent reply as read (POST — no accidental GET state change).
-if (isPostRequest() && ($_POST['action'] ?? '') === 'mark_reply_read') {
-    if (validateCsrfToken((string) ($_POST['csrf_token'] ?? ''))) {
-        $replyId = filter_var($_POST['reply_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        if (is_int($replyId)) {
-            $pdo->prepare("UPDATE messages SET is_read = 1 WHERE id = :id AND sender_type = 'parent' AND (recipient_admin_id IS NULL OR recipient_admin_id = :admin_id)")
-                ->execute([':id' => $replyId, ':admin_id' => $adminId]);
-            setFlash('success', 'پیام والد خوانده‌شده علامت‌گذاری شد.');
-        }
-    }
-    redirect(url('admin/messages.php'));
-}
+$replyWhere = " FROM messages m INNER JOIN parents p ON p.id = m.parent_id
+                WHERE m.sender_type = 'parent' AND " . $replyScope . match ($replyFilter) {
+    'active' => " AND m.follow_up_status <> 'resolved'",
+    'resolved' => " AND m.follow_up_status = 'resolved'",
+    default => '',
+};
+$replyCountStmt = $pdo->prepare('SELECT COUNT(*) AS total, SUM(m.is_read = 0) AS unread' . $replyWhere);
+$replyCountStmt->execute($replyScopeParams);
+$replyCounts = $replyCountStmt->fetch();
+$unreadReplyCount = (int) $replyCounts['unread'];
+$replyPagination = paginate((int) $replyCounts['total'], currentPageNumber('reply_page'), 20);
+$parentRepliesStmt = $pdo->prepare(
+    'SELECT m.id, m.subject, m.body, m.created_at, m.is_read, m.parent_id, m.recipient_admin_id,
+            m.follow_up_status, m.follow_up_admin_id, m.response_due_at, p.first_name, p.last_name, p.phone, p.status AS parent_status'
+    . $replyWhere . ($replyFilter === 'overdue'
+        ? ' ORDER BY m.response_due_at, m.id'
+        : ' ORDER BY m.is_read, m.created_at DESC, m.id DESC')
+    . ' LIMIT ' . $replyPagination['perPage'] . ' OFFSET ' . $replyPagination['offset']
+);
+$parentRepliesStmt->execute($replyScopeParams);
+$parentReplies = $parentRepliesStmt->fetchAll();
+$replySuccess = getFlash('success');
+$replyError = getFlash('error');
+$defaultDeadlineInput = defaultMessageResponseDeadline()->format('Y-m-d\TH:i');
 
 // Fetch sent messages, grouped so one broadcast appears as ONE row with a
 // recipient count and a read-progress figure — instead of N identical rows,
@@ -227,6 +288,8 @@ if (isset($_GET['view'])) {
 $pageTitle = 'پیام‌رسانی | ' . siteName();
 require_once __DIR__ . '/header.php';
 ?>
+
+<?php require __DIR__ . '/partials/family-message-inbox.php'; ?>
 
 <div class="admin-card" id="compose-message">
     <div class="admin-card-header">
@@ -339,63 +402,6 @@ require_once __DIR__ . '/header.php';
         <?php endif; ?>
     </div>
 </div>
-
-<?php if ($parentReplies !== []): ?>
-<div class="admin-card mt-4">
-    <div class="admin-card-header">
-        <h2>📨 پیام‌های دریافتی از والدین <?= $unreadReplyCount > 0 ? '<span class="badge badge-warning">' . e(persianNumber((string) $unreadReplyCount)) . ' خوانده‌نشده</span>' : '' ?></h2>
-    </div>
-    <div class="admin-card-body">
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>تاریخ</th>
-                        <th>والد</th>
-                        <th>تماس</th>
-                        <th>موضوع</th>
-                        <th>وضعیت</th>
-                        <th>پیام</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($parentReplies as $reply): ?>
-                        <?php
-                        $replyPhone = trim((string) ($reply['phone'] ?? ''));
-                        $replyBodyPreview = mb_substr(trim((string) $reply['body']), 0, 80, 'UTF-8');
-                        ?>
-                        <tr style="<?= (int) $reply['is_read'] === 0 ? 'font-weight:600;' : '' ?>">
-                            <td><?= e(formatPersianDate($reply['created_at'])) ?></td>
-                            <td><?= e(trim($reply['first_name'] . ' ' . $reply['last_name'])) ?></td>
-                            <td>
-                                <?php if ($replyPhone !== ''): ?>
-                                    <a href="tel:<?= e(preg_replace('/\s+/', '', $replyPhone)) ?>"><?= e($replyPhone) ?></a>
-                                <?php else: ?>
-                                    <span class="muted">—</span>
-                                <?php endif; ?>
-                            </td>
-                            <td><?= e((string) $reply['subject']) ?></td>
-                            <td>
-                                <?php if ((int) $reply['is_read'] === 0): ?>
-                                    <form method="post" action="<?= e(url('admin/messages.php')) ?>" class="inline-form">
-                                        <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                                        <input type="hidden" name="action" value="mark_reply_read">
-                                        <input type="hidden" name="reply_id" value="<?= (int) $reply['id'] ?>">
-                                        <button type="submit" class="btn btn-sm btn-primary">علامت‌گذاری خوانده‌شده</button>
-                                    </form>
-                                <?php else: ?>
-                                    <span class="badge badge-success">خوانده شد</span>
-                                <?php endif; ?>
-                            </td>
-                            <td title="<?= e((string) $reply['body']) ?>"><?= e($replyBodyPreview) ?><?= mb_strlen((string) $reply['body'], 'UTF-8') > 80 ? '…' : '' ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
 
 <?php if ($viewMessage): ?>
     <div class="modal-overlay">

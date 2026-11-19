@@ -258,7 +258,7 @@ ROMA integrates with **MeliPayamak Shared Pattern Service** to deliver instant O
 
 ## 11. Automatic Overdue Tuition Reminders (Cron Job Setup)
 
-ROMA includes an automated background script to send polite in-app message reminders and SMS pattern alerts to parents who have overdue tuition for the current Shamsi month (with built-in anti-spam logic restricting reminders to once every 7 days).
+The daily job checks issued invoices across billing months. An invoice qualifies from the day after its recorded due date while an eligible balance remains and its discrepancy field is clear. Each child and billing month can receive one reminder. Staff can set dates on earlier invoices from the «بدون سررسید» filter in tuition management.
 
 ### cPanel Cron Job Configuration:
 1. Log into your **cPanel** dashboard.
@@ -269,6 +269,8 @@ ROMA includes an automated background script to send polite in-app message remin
    php /home/username/public_html/bin/send-overdue-reminders.php >/dev/null 2>&1
    ```
    *(Replace `/home/username/public_html` with the absolute path to your site installation).*
+
+Add `--dry-run` to preview eligible invoices without delivering reminders. Add `--month=1405-08` to check one Persian billing month.
 
 ---
 

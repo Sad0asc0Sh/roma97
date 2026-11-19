@@ -55,6 +55,8 @@ function auditActionLabel(string $action): string
         'daily_report.save'      => 'ثبت گزارش روزانه',
         'attendance.save'        => 'ثبت حضور و غیاب',
         'child.assign_classroom' => 'اختصاص کلاس به کودک',
+        'attendance.pickup.verify' => 'تأیید تحویل کودک',
+        'message.follow_up' => 'به‌روزرسانی پیگیری پیام',
         'child.approve'          => 'تأیید ثبت‌نام کودک',
         'child.activate'         => 'فعال‌سازی کودک',
         'child.reject'           => 'رد ثبت‌نام کودک',

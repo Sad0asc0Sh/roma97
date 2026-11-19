@@ -17,6 +17,7 @@ require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/permissions.php';
 require_once __DIR__ . '/../includes/teacher_portal_helpers.php';
+require_once __DIR__ . '/../includes/school_planning.php';
 
 requireTeacherLogin();
 
@@ -24,6 +25,7 @@ $teacherId = (int) $_SESSION['teacher_id'];
 $today     = date('Y-m-d');
 
 $classrooms = [];
+$workdaysByClass = [];
 $events     = [];
 $error      = getFlash('error');
 
@@ -33,6 +35,7 @@ try {
 
     $ctx        = teacherResolveClassroomContext($pdo, $teacherId);
     $classrooms = $ctx['classrooms'];
+    $workdaysByClass = classroomWorkdays($pdo);
 
     $evStmt = $pdo->prepare(
         "SELECT id, title, description, event_date, start_time, end_time, category
@@ -79,10 +82,14 @@ require_once __DIR__ . '/header.php';
             <?php if (trim((string) ($cl['description'] ?? '')) !== ''): ?>
                 <p style="line-height:1.9;color:var(--tp-text-secondary);"><?= e((string) $cl['description']) ?></p>
             <?php endif; ?>
+            <?php $workdays = array_intersect_key(SCHOOL_WEEKDAYS, array_fill_keys($workdaysByClass[$cl['id']] ?? [], true)); ?>
+            <?php if ($workdays !== []): ?>
+                <p class="tp-day-note">روزهای کاری کلاس · <?= e(implode('، ', $workdays)) ?></p>
+            <?php else: ?>
+                <p style="color:var(--tp-text-muted);">روزهای کاری کلاس هنوز تعیین نشده‌اند.</p>
+            <?php endif; ?>
             <?php if (trim((string) ($cl['schedule'] ?? '')) !== ''): ?>
                 <p style="line-height:2;white-space:pre-line;"><?= e((string) $cl['schedule']) ?></p>
-            <?php else: ?>
-                <p style="color:var(--tp-text-muted);">برنامه هفتگی این کلاس هنوز توسط مدیریت ثبت نشده است.</p>
             <?php endif; ?>
         </section>
     <?php endforeach; ?>

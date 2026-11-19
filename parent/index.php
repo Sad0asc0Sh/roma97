@@ -146,7 +146,9 @@ require_once __DIR__ . '/header.php';
  </div>
 <?php endif; ?>
 
-<?php portalWelcome('دفتر خانواده · ' . siteName(), 'سلام ' . $firstName . '، خوش آمدید.', 'از حال امروز فرزندتان باخبر شوید؛ حضور، گزارش مربی و پیام‌های مهد اینجاست.', [['پرونده و گزارش فرزندان', 'parent/children.php'], ['پیام به مدیریت', 'parent/messages.php#parentReplyForm']]); ?>
+<?php portalWelcome('دفتر خانواده · ' . siteName(), 'سلام ' . $firstName . '، خوش آمدید.', 'از حال امروز فرزندتان باخبر شوید؛ حضور، گزارش مربی و پیام‌های مهد اینجاست.', [
+    ['پرونده و گزارش فرزندان', 'parent/children.php'], ['اعلام غیبت یا تأخیر', 'parent/attendance.php#attendance-notice'], ['پیام به مدیریت', 'parent/messages.php#parentReplyForm'],
+]); ?>
 
 <!-- Today's Status Summary Strip (Quick 2-second glance for busy parents) -->
 <?php if ($children !== []): ?>

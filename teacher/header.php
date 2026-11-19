@@ -11,6 +11,7 @@ require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/permissions.php';
 require_once __DIR__ . '/../includes/teacher_portal_helpers.php';
+require_once __DIR__ . '/../includes/school_planning.php';
 
 sendSecurityHeaders();
 requireTeacherLogin();
@@ -45,16 +46,8 @@ try {
         $headerChildCount = (int) ($headerActiveClassroom['active_children_count'] ?? 0);
 
         if ($headerChildCount > 0) {
-            $attStmt = $pdoHeader->prepare(
-                "SELECT COUNT(DISTINCT a.child_id)
-                 FROM attendance a
-                 INNER JOIN child_classroom cc ON cc.child_id = a.child_id
-                 INNER JOIN children c ON c.id = cc.child_id
-                 WHERE cc.classroom_id = :cid AND c.status = 'active' AND a.attendance_date = :today"
-            );
-            $attStmt->execute([':cid' => $headerActiveClassId, ':today' => $todayYmd]);
-            $recordedAtt = (int) $attStmt->fetchColumn();
-            $headerAttPending = max(0, $headerChildCount - $recordedAtt);
+            $headerAttendancePlan = dailyAttendancePlan($pdoHeader, $todayYmd, $headerActiveClassId);
+            $headerAttPending = count($headerAttendancePlan['missing']);
 
             $repStmt = $pdoHeader->prepare(
                 "SELECT COUNT(*)

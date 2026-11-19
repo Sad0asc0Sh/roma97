@@ -9,6 +9,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
+require_once __DIR__ . '/../includes/school_planning.php';
 
 requireLogin();
 
@@ -224,6 +225,7 @@ if ($action === '') {
 try {
     initializeEventTables();
     $pdo = getDb();
+    ensureSchoolPlanningTables($pdo);
 
     if (isPostRequest()) {
         $csrfToken = $_POST['csrf_token'] ?? '';
@@ -300,10 +302,12 @@ try {
                     : substr($description, 0, 65535);
             }
 
+            $pdo->beginTransaction();
             if ($editId > 0) {
-                $existing = findAdminEvent($pdo, $editId);
-
-                if ($existing === null) {
+                $lock = $pdo->prepare('SELECT id FROM events WHERE id = ? FOR UPDATE');
+                $lock->execute([$editId]);
+                if ($lock->fetchColumn() === false) {
+                    $pdo->rollBack();
                     setFlash('error', 'رویداد پیدا نشد.');
                     redirect(url('admin/events.php'));
                 }
@@ -332,8 +336,7 @@ SQL
                     ':id' => $editId,
                 ]);
 
-                recordAudit('event.update', 'event', (int) $editId);
-                setFlash('success', 'رویداد به‌روزرسانی شد.');
+                $eventId = $editId;
             } else {
                 $ins = $pdo->prepare(
                     <<<'SQL'
@@ -351,9 +354,12 @@ SQL
                     ':status' => $statusVal,
                 ]);
 
-                recordAudit('event.create', 'event', (int) $pdo->lastInsertId());
-                setFlash('success', 'رویداد ایجاد شد.');
+                $eventId = (int) $pdo->lastInsertId();
             }
+            syncSchoolHoliday($pdo, $eventId, $eventDate, $category, $statusVal);
+            $pdo->commit();
+            recordAudit($editId > 0 ? 'event.update' : 'event.create', 'event', $eventId);
+            setFlash('success', $editId > 0 ? 'رویداد به‌روزرسانی شد.' : 'رویداد ایجاد شد.');
 
             redirect(url('admin/events.php' . adminEventsBuildQuery($filterCategory, $filterStatus)));
         }
@@ -414,6 +420,9 @@ SQL
         }
     }
 } catch (Throwable $exception) {
+    if ($pdo instanceof PDO && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     error_log($exception->getMessage());
 
     if ($errorMessage === null || $errorMessage === '') {
@@ -429,7 +438,7 @@ $formPreset = [
     'event_date' => (new DateTimeImmutable('today'))->format('Y-m-d'),
     'start_time' => '',
     'end_time' => '',
-    'category' => 'general',
+    'category' => $filterCategory === 'holiday' ? 'holiday' : 'general',
     'status' => 'scheduled',
     'event_id' => 0,
 ];
@@ -522,6 +531,7 @@ $showForm = ($action === 'add' || $action === 'edit');
                             <option value="<?= e($c) ?>" <?= $formPreset['category'] === $c ? 'selected' : '' ?>><?= e(adminEventCategoryLabel($c)) ?></option>
                         <?php endforeach; ?>
                     </select>
+                    <small class="muted">«تعطیلی» تمام روز را برای همهٔ کلاس‌ها در تقویم حضور می‌بندد.</small>
                 </div>
 
                 <div class="form-group">
@@ -570,6 +580,7 @@ $showForm = ($action === 'add' || $action === 'edit');
                 $addUrl = url('admin/events.php?' . http_build_query($addQ));
                 ?>
                 <a class="btn btn-primary btn-sm" href="<?= e($addUrl) ?>">+ افزودن رویداد</a>
+                <a class="btn btn-outline btn-sm" href="<?= e(url('admin/events.php?action=add&category=holiday')) ?>">ثبت تعطیلی مهد</a>
             </div>
         </div>
 

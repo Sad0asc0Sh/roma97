@@ -130,9 +130,78 @@ function initializeChildrenTable(): void
     // Schema is created at install time via setup.php / schema.sql
 }
 
+/** Compatibility for additive columns on installations that update before importing the SQL migration. */
+function ensureDatabaseColumns(PDO $pdo, string $table, array $definitions): bool
+{
+    $existing = $pdo->query("SHOW COLUMNS FROM `{$table}`")->fetchAll(PDO::FETCH_COLUMN);
+    $added = false;
+    foreach (array_diff_key($definitions, array_fill_keys($existing, true)) as $column => $definition) {
+        try {
+            $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definition}");
+            $added = true;
+        } catch (PDOException $e) {
+            if ((int) ($e->errorInfo[1] ?? 0) !== 1060) {
+                throw $e;
+            }
+            // Another request added the column after SHOW COLUMNS.
+        }
+    }
+    return $added;
+}
+
+/** Run additive, repeatable migrations on older installations. */
+function ensureSqlMigrationTables(PDO $pdo, string $migration, array $tables): void
+{
+    $placeholders = implode(', ', array_fill(0, count($tables), '?'));
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM information_schema.TABLES
+        WHERE table_schema = DATABASE() AND table_name IN ({$placeholders})");
+    $stmt->execute($tables);
+    if ((int) $stmt->fetchColumn() === count($tables)) {
+        return;
+    }
+    $sql = file_get_contents(__DIR__ . '/../db/migrations/' . $migration);
+    if ($sql === false) {
+        throw new RuntimeException('Database migration is missing: ' . $migration);
+    }
+    foreach (explode(';', $sql) as $statement) {
+        if (trim($statement) !== '') {
+            $pdo->exec($statement);
+        }
+    }
+}
+
 function initializeAttendanceTable(): void
 {
-    // Schema is created at install time via setup.php / schema.sql
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+    ensureDatabaseColumns(getDb(), 'attendance', [
+        'picked_up_by' => 'VARCHAR(201) DEFAULT NULL',
+        'pickup_verified_by' => 'INT DEFAULT NULL',
+    ]);
+    $initialized = true;
+}
+
+function initializeClassroomWaitlist(): void
+{
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+    $pdo = getDb();
+    if (!$pdo->query("SHOW TABLES LIKE 'classroom\\_waitlist'")->fetchColumn()) {
+        initializeFinancialTables();
+    }
+    if (ensureDatabaseColumns($pdo, 'classroom_waitlist', ['fulfilled_at' => 'DATETIME DEFAULT NULL'])) {
+        $stmt = $pdo->prepare(
+            'UPDATE classroom_waitlist cw INNER JOIN child_classroom cc
+             ON cc.child_id = cw.child_id AND cc.classroom_id = cw.classroom_id
+             SET cw.fulfilled_at = ? WHERE cw.fulfilled_at IS NULL'
+        );
+        $stmt->execute([date('Y-m-d H:i:s')]);
+    }
+    $initialized = true;
 }
 
 function initializeEventTables(): void
@@ -267,6 +336,8 @@ function initializeFinancialTables(): void
                 child_id INT NOT NULL,
                 month_year VARCHAR(7) NOT NULL,
                 expected_amount DECIMAL(12,2) NOT NULL,
+                due_date DATE DEFAULT NULL,
+                discrepancy_note VARCHAR(500) DEFAULT NULL,
                 notes TEXT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE KEY unique_plan_child_month (child_id, month_year),
@@ -624,4 +695,19 @@ function initializeMessagingTable(): void
     } catch (Throwable $e) {
         error_log('initializeMessagingTable failed: ' . $e->getMessage());
     }
+}
+
+function initializeMessageFollowUp(): void
+{
+    static $initialized = false;
+    if ($initialized) {
+        return;
+    }
+    initializeMessagingTable();
+    ensureDatabaseColumns(getDb(), 'messages', [
+        'follow_up_status' => "ENUM('open','in_progress','resolved') NOT NULL DEFAULT 'open'",
+        'follow_up_admin_id' => 'INT DEFAULT NULL',
+        'response_due_at' => 'DATETIME DEFAULT NULL',
+    ]);
+    $initialized = true;
 }

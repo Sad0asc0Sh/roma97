@@ -7,6 +7,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
+require_once __DIR__ . '/../includes/classroom_enrollment.php';
 
 requireLogin();
 
@@ -301,6 +302,7 @@ if (isPostRequest()) {
 
     if ($errors === []) {
         try {
+            initializeClassroomWaitlist();
             $pdo->beginTransaction();
 
             $hasUploadedPhoto = (($_FILES['photo']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE);
@@ -353,13 +355,16 @@ if (isPostRequest()) {
             $forceOverCapacity = isset($_POST['force_over_capacity']) && (string) $_POST['force_over_capacity'] === '1';
 
             if ($old['classroom_id'] > 0 && $old['status'] === 'active') {
-                $clStmt = $pdo->prepare('SELECT capacity FROM classrooms WHERE id = :clid LIMIT 1');
+                $clStmt = $pdo->prepare('SELECT capacity FROM classrooms WHERE id = :clid FOR UPDATE');
                 $clStmt->execute([':clid' => $old['classroom_id']]);
                 $clRow = $clStmt->fetch();
 
                 if ($clRow) {
                     $capacity = (int) $clRow['capacity'];
-                    $countStmt = $pdo->prepare('SELECT COUNT(*) FROM child_classroom WHERE classroom_id = :clid AND child_id != :cid');
+                    $countStmt = $pdo->prepare(
+                        "SELECT COUNT(*) FROM child_classroom cc INNER JOIN children c ON c.id = cc.child_id
+                         WHERE cc.classroom_id = :clid AND cc.child_id != :cid AND c.status = 'active'"
+                    );
                     $countStmt->execute([':clid' => $old['classroom_id'], ':cid' => $childId]);
                     $enrolledCount = (int) $countStmt->fetchColumn();
 
@@ -369,16 +374,8 @@ if (isPostRequest()) {
                 }
             }
 
-            $delCl = $pdo->prepare('DELETE FROM child_classroom WHERE child_id = :cid');
-            $delCl->execute([':cid' => $childId]);
-
-            if ($old['classroom_id'] > 0 && $old['status'] === 'active') {
-                $insCl = $pdo->prepare(
-                    'INSERT INTO child_classroom (child_id, classroom_id, enrollment_date)
-                     VALUES (:cid, :clid, CURDATE())'
-                );
-                $insCl->execute([':cid' => $childId, ':clid' => $old['classroom_id']]);
-            }
+            $assignedClassroom = $old['classroom_id'] > 0 && $old['status'] === 'active' ? $old['classroom_id'] : null;
+            $waitlistClosed = saveClassroomEnrollment($pdo, $childId, $assignedClassroom);
 
             $pdo->commit();
 
@@ -394,6 +391,7 @@ if (isPostRequest()) {
             $auditDetails = [
                 'status' => $old['status'],
                 'classroom_id' => $old['classroom_id'],
+                'waitlist_closed' => $waitlistClosed,
             ];
 
             if ($oldAllergies !== $newAllergies) {
@@ -414,7 +412,9 @@ if (isPostRequest()) {
 
             recordAudit('child.update_admin', 'child', $childId, $auditDetails);
 
-            setFlash('success', 'اطلاعات کودک با موفقیت به‌روزرسانی شد.');
+            setFlash('success', $waitlistClosed
+                ? 'اطلاعات کودک به‌روزرسانی شد و درخواست انتظار کلاس بسته شد.'
+                : 'اطلاعات کودک به‌روزرسانی شد.');
             redirect(url('admin/child-detail.php?id=' . $childId));
         } catch (Throwable $exception) {
             if ($pdo->inTransaction()) {

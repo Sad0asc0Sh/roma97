@@ -8,6 +8,8 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/classroom_activities.php';
+require_once __DIR__ . '/../includes/daily_report_feedback.php';
+require_once __DIR__ . '/../includes/operations_pilot.php';
 require_once __DIR__ . '/../includes/parent_children_helpers.php';
 require_once __DIR__ . '/../includes/teacher_portal_helpers.php';
 
@@ -38,6 +40,7 @@ $parentRow = null;
 $todayAtt = null;
 $dailyReport = null;
 $dailyReportHistory = [];
+$pilotViewCandidates = [];
 $classActivities = [];
 $classroom = null;
 $today = new DateTimeImmutable('today');
@@ -91,6 +94,37 @@ SQL
 
     if ($row !== null) {
         $classroom = trim((string) ($row['classroom_name'] ?? ''));
+        ensureDailyReportFeedbackTable($pdo);
+
+        if (isPostRequest()) {
+            $reportId = parseParentChildId($_POST['report_id'] ?? null);
+            $reaction = $_POST['reaction'] ?? null;
+            $redirectUrl = url('parent/child-detail.php?id=' . $childId);
+            try {
+                if (!validateCsrfToken($_POST['csrf_token'] ?? null)) {
+                    throw new InvalidArgumentException('اعتبار فرم پایان یافته است. صفحه را دوباره بارگذاری کنید.');
+                }
+                if (($_POST['action'] ?? null) !== 'report_feedback' || $reportId === 0 || !is_string($reaction)
+                    || ($reaction !== 'seen' && !isset(DAILY_REPORT_REACTIONS[$reaction]))) {
+                    throw new InvalidArgumentException('گزینه بازخورد معتبر نیست.');
+                }
+
+                saveDailyReportFeedback($pdo, $parentId, $childId, $reportId, $reaction === 'seen' ? null : $reaction);
+                try {
+                    recordOperationsPilotReportView($pdo, $reportId, $parentId);
+                } catch (Throwable $pilotError) {
+                    error_log('Parent report pilot acknowledgement: ' . $pilotError->getMessage());
+                }
+                setFlash('success', $reaction === 'seen' ? 'مشاهده گزارش تأیید شد.' : 'بازخورد شما برای مربی ثبت شد.');
+                $redirectUrl .= '#report-feedback-' . $reportId;
+            } catch (InvalidArgumentException $exception) {
+                setFlash('error', $exception->getMessage());
+            } catch (Throwable $exception) {
+                error_log('parent report feedback failed: ' . $exception->getMessage());
+                setFlash('error', 'ذخیره بازخورد انجام نشد. دوباره تلاش کنید.');
+            }
+            redirect($redirectUrl);
+        }
 
         $todayStmt = $pdo->prepare(
             <<<'SQL'
@@ -111,17 +145,20 @@ SQL
         // Fetch today's per-child daily report including psychological assessment fields
         $reportStmt = $pdo->prepare(
             <<<'SQL'
-SELECT dr.mood, dr.social_interaction, dr.focus_level, dr.communication_style,
+SELECT dr.id AS report_id, dr.mood, dr.social_interaction, dr.focus_level, dr.communication_style,
        dr.separation_adaptation, dr.nutrition_status, dr.rest_energy,
        dr.strengths_observed, dr.coping_strategy,
-       dr.activities, dr.notes, t.first_name, t.last_name
+       dr.activities, dr.notes, t.first_name, t.last_name, rf.seen_at, rf.reaction
 FROM daily_reports dr
 INNER JOIN teachers t ON t.id = dr.teacher_id
+LEFT JOIN daily_report_feedback rf ON rf.report_id = dr.id AND rf.parent_id = :feedback_parent
 WHERE dr.child_id = :child_id AND dr.report_date = :today
+ORDER BY dr.id DESC
 LIMIT 1
 SQL
         );
         $reportStmt->execute([
+            ':feedback_parent' => $parentId,
             ':child_id' => $childId,
             ':today' => $todayYmd,
         ]);
@@ -130,19 +167,27 @@ SQL
         // Report history — last 4 weeks
         $historyStmt = $pdo->prepare(
             <<<'SQL'
-SELECT dr.report_date, dr.mood, dr.social_interaction, dr.focus_level, dr.communication_style,
+SELECT dr.id AS report_id, dr.report_date, dr.mood, dr.social_interaction, dr.focus_level, dr.communication_style,
        dr.separation_adaptation, dr.nutrition_status, dr.rest_energy,
        dr.strengths_observed, dr.coping_strategy,
-       dr.activities, dr.notes, t.first_name, t.last_name
+       dr.activities, dr.notes, t.first_name, t.last_name, rf.seen_at, rf.reaction
 FROM daily_reports dr
 INNER JOIN teachers t ON t.id = dr.teacher_id
+LEFT JOIN daily_report_feedback rf ON rf.report_id = dr.id AND rf.parent_id = :feedback_parent
 WHERE dr.child_id = :child_id AND dr.report_date < :today
-ORDER BY dr.report_date DESC
+ORDER BY dr.report_date DESC, dr.id DESC
 LIMIT 28
 SQL
         );
-        $historyStmt->execute([':child_id' => $childId, ':today' => $todayYmd]);
+        $historyStmt->execute([':feedback_parent' => $parentId, ':child_id' => $childId, ':today' => $todayYmd]);
         $dailyReportHistory = $historyStmt->fetchAll();
+        if ($dailyReport !== null || $dailyReportHistory !== []) {
+            try {
+                $pilotViewCandidates = operationsPilotViewCandidates($pdo, $childId);
+            } catch (Throwable $pilotError) {
+                error_log('Parent report pilot lookup: ' . $pilotError->getMessage());
+            }
+        }
         $classActivities = childClassroomActivities($pdo, $childId, $today->modify('-27 days')->format('Y-m-d'));
     }
 } catch (Throwable $exception) {
@@ -204,7 +249,9 @@ require_once __DIR__ . '/header.php';
     <div class="alert" role="alert"><?= e($errorMessage) ?></div>
 <?php endif; ?>
 
-<div class="child-detail-container">
+<div class="child-detail-container" <?php if ($pilotViewCandidates !== []): ?>
+    data-pilot-view-url="<?= e(url('parent/report-view.php')) ?>" data-pilot-view-token="<?= e(generateCsrfToken()) ?>"
+<?php endif; ?>>
     <!-- Main Info Card -->
     <div class="child-detail-card">
         <div class="child-detail-header">
@@ -223,6 +270,9 @@ require_once __DIR__ . '/header.php';
                 <span class="status-badge status-badge-<?= e($status) ?>"><?= e($statusLabel) ?></span>
                 <p style="margin-top: 0.75rem;">
                     <a class="btn btn-outline btn-sm" href="<?= e(url('parent/edit-child.php?id=' . $childId)) ?>">✏️ ویرایش اطلاعات کودک</a>
+                    <?php if ($status === 'active'): ?>
+                        <a class="btn btn-outline btn-sm" href="<?= e(url('parent/attendance.php?notice_child=' . $childId . '#attendance-notice')) ?>">اعلام غیبت یا تأخیر</a>
+                    <?php endif; ?>
                 </p>
           </div>
       </div>
@@ -285,14 +335,14 @@ require_once __DIR__ . '/header.php';
   </div>
 
     <!-- Today's Psychological & Developmental Report -->
-    <div class="child-detail-card">
+    <div class="child-detail-card" id="daily-report">
         <h2>مشاهده روان‌شناختی و گزارش روزانه امروز</h2>
         <?php foreach ($todayActivities as $activity): ?>
             <p><strong>فعالیت مشترک کلاس <?= e($activity['classroom_name']) ?></strong><br><?= nl2br(e($activity['activity'])) ?></p>
         <?php endforeach; ?>
         <?php if ($dailyReport !== null): ?>
             <div class="daily-report">
-                <p>
+                <p <?php if (isset($pilotViewCandidates[$dailyReport['report_id']])): ?>data-pilot-report-view="<?= e($dailyReport['report_id']) ?>"<?php endif; ?>>
                     <strong>وضعیت تنظیم هیجانی و آرامش کودک:</strong>
                     <?= e(teacherMoodFullLabel((string) ($dailyReport['mood'] ?? ''))) ?>
                 </p>
@@ -323,6 +373,7 @@ require_once __DIR__ . '/header.php';
                 <p class="report-teacher">
                     ثبت‌شده توسط مربی: <?= e(trim($dailyReport['first_name'] . ' ' . $dailyReport['last_name'])) ?>
                </p>
+                <?php $reportForFeedback = $dailyReport; include __DIR__ . '/partials/report-feedback.php'; ?>
         </div>
         <?php else: ?>
             <p class="muted">گزارش فردی امروز هنوز توسط مربی ثبت نشده است</p>
@@ -336,7 +387,8 @@ require_once __DIR__ . '/header.php';
         <div style="display:grid;gap:12px;">
             <?php foreach ($dailyReportHistory as $hist): ?>
                 <div style="border:1px solid var(--border, #e5e5e5);border-radius:12px;padding:12px 14px;">
-                    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:center;">
+                    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:center;"
+                         <?php if (isset($pilotViewCandidates[$hist['report_id']])): ?>data-pilot-report-view="<?= e($hist['report_id']) ?>"<?php endif; ?>>
                         <strong style="font-size:0.9rem;"><?= e(shamsiDate((string) $hist['report_date'], 'with_day')) ?></strong>
                         <span style="font-size:0.85rem;font-weight:700;color:var(--pp-primary);"><?= e(empty($hist['mood']) ? 'مشاهده‌نشده' : teacherMoodLabel($hist['mood'])) ?></span>
                     </div>
@@ -349,6 +401,7 @@ require_once __DIR__ . '/header.php';
                     <?php if (trim((string) ($hist['notes'] ?? '')) !== ''): ?>
                         <p style="margin:6px 0 0;font-size:0.85rem;line-height:1.8;"><strong>💬 یادداشت مربی:</strong> <?= nl2br(e((string) $hist['notes'])) ?></p>
                     <?php endif; ?>
+                    <?php $reportForFeedback = $hist; include __DIR__ . '/partials/report-feedback.php'; ?>
                 </div>
             <?php endforeach; ?>
         </div>
@@ -428,4 +481,7 @@ require_once __DIR__ . '/header.php';
   </div>
 </div>
 
+<?php if ($pilotViewCandidates !== []): ?>
+    <script src="<?= e(asset('assets/js/operations-pilot.js')) ?>" defer></script>
+<?php endif; ?>
 <?php require_once __DIR__ . '/footer.php'; ?>

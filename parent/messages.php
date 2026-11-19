@@ -8,6 +8,7 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/csrf.php';
+require_once __DIR__ . '/../includes/message_follow_up.php';
 
 requireParentLogin();
 initializeMessagingTable();
@@ -57,9 +58,16 @@ if (isPostRequest() && ($_POST['action'] ?? '') === 'reply') {
             }
         }
 
+        initializeMessageFollowUp();
+        $assignee = $recipientAdminId;
+        if ($assignee === null) {
+            $receptionist = $pdo->query("SELECT id FROM admins WHERE role = 'receptionist' ORDER BY id LIMIT 1")->fetchColumn();
+            $assignee = $receptionist === false ? null : (int) $receptionist;
+        }
         $ins = $pdo->prepare(
-            "INSERT INTO messages (sender_type, sender_id, recipient_admin_id, parent_id, subject, body, is_read)
-             VALUES ('parent', :sender_id, :rid, :pid, :sub, :body, 0)"
+            "INSERT INTO messages (sender_type, sender_id, recipient_admin_id, parent_id, subject, body, is_read,
+                                   follow_up_admin_id, response_due_at)
+             VALUES ('parent', :sender_id, :rid, :pid, :sub, :body, 0, :assignee, :deadline)"
         );
         $ins->execute([
             ':pid'  => $parentId,
@@ -67,6 +75,8 @@ if (isPostRequest() && ($_POST['action'] ?? '') === 'reply') {
             ':rid'  => $recipientAdminId,
             ':sub'  => $subject,
             ':body' => $body,
+            ':assignee' => $assignee,
+            ':deadline' => defaultMessageResponseDeadline()->format('Y-m-d H:i:s'),
         ]);
 
         setFlash('success', 'پیام شما برای مدیریت ارسال شد. به‌زودی پاسخ می‌دهیم. 🌸');

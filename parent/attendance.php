@@ -9,6 +9,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/parent_children_helpers.php';
+require_once __DIR__ . '/../includes/school_planning.php';
 
 requireParentLogin();
 
@@ -48,6 +49,7 @@ function renderParentAttendanceCell(?array $rec): void
 
 $parentId = (int) $_SESSION['parent_id'];
 $today = new DateTimeImmutable('today');
+$todayYmd = $today->format('Y-m-d');
 $thisMonday = parentPortalMondayOfDate($today);
 
 $weekParam = trim((string) ($_GET['week'] ?? ''));
@@ -73,19 +75,79 @@ $children = [];
 $attendanceByChildDate = [];
 /** @var list<array<string, mixed>> */
 $weekScheduledEvents = [];
+$upcomingNotices = [];
+$noticeChildren = [];
+$noticeSuccess = getFlash('success');
+$noticeError = getFlash('error');
+$noticeUrl = url('parent/attendance.php?week=' . $weekStartYmd);
 
 try {
     initializeParentTables();
     $pdo = getDb();
+    ensureSchoolPlanningTables($pdo);
+
+    if (isPostRequest()) {
+        try {
+            if (!validateCsrfToken($_POST['csrf_token'] ?? null)) {
+                throw new InvalidArgumentException('درخواست نامعتبر است. دوباره تلاش کنید.');
+            }
+            $noticeChildId = filter_var($_POST['child_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            $dateInput = $_POST['notice_date'] ?? null;
+            $noticeDate = is_string($dateInput) ? parseJalaliDate($dateInput) : null;
+            if (!is_int($noticeChildId) || $noticeDate === null || $noticeDate < $todayYmd) {
+                throw new InvalidArgumentException('کودک و تاریخ امروز یا روزهای بعد را انتخاب کنید.');
+            }
+            $action = $_POST['action'] ?? null;
+            if ($action === 'save_notice') {
+                $type = $_POST['notice_type'] ?? null;
+                if (!is_string($type) || !isset(ATTENDANCE_NOTICE_TYPES[$type])) {
+                    throw new InvalidArgumentException('غیبت یا تأخیر را انتخاب کنید.');
+                }
+                $arrival = $type === 'late' ? ($_POST['expected_arrival'] ?? '') : '';
+                if (!is_string($arrival) || ($arrival !== '' && preg_match('/\A([01]\d|2[0-3]):[0-5]\d\z/', $arrival) !== 1)) {
+                    throw new InvalidArgumentException('ساعت تقریبی ورود را بررسی کنید.');
+                }
+                $note = $_POST['note'] ?? '';
+                if (!is_string($note) || mb_strlen($note, 'UTF-8') > 500) {
+                    throw new InvalidArgumentException('یادداشت می‌تواند حداکثر ۵۰۰ نویسه باشد.');
+                }
+                saveParentAttendanceNotice($pdo, $parentId, $noticeChildId, $noticeDate, $type,
+                    $arrival === '' ? null : $arrival . ':00', trim($note) === '' ? null : trim($note));
+                setFlash('success', 'اعلام شما برای پذیرش و مربی ثبت شد.');
+            } elseif ($action === 'cancel_notice') {
+                saveParentAttendanceNotice($pdo, $parentId, $noticeChildId, $noticeDate, null, null, null);
+                setFlash('success', 'اعلام قبلی لغو شد.');
+            } else {
+                throw new InvalidArgumentException('درخواست نامعتبر است.');
+            }
+        } catch (Throwable $exception) {
+            if (!$exception instanceof InvalidArgumentException) {
+                error_log('Parent attendance notice: ' . $exception->getMessage());
+            }
+            setFlash('error', $exception instanceof InvalidArgumentException ? $exception->getMessage() : 'ذخیره اعلام انجام نشد. دوباره تلاش کنید.');
+        }
+        redirect($noticeUrl . '#attendance-notice');
+    }
 
     $childStmt = $pdo->prepare(
-        'SELECT id, first_name, last_name, photo, status
-         FROM children
-         WHERE parent_id = :parent_id
-         ORDER BY last_name ASC, first_name ASC'
+        'SELECT c.id, c.first_name, c.last_name, c.photo, c.status,
+                EXISTS (SELECT 1 FROM classroom_workdays w WHERE w.classroom_id = cc.classroom_id) AS has_workdays
+         FROM children c LEFT JOIN child_classroom cc ON cc.child_id = c.id
+         WHERE c.parent_id = :parent_id
+         ORDER BY c.last_name ASC, c.first_name ASC'
     );
     $childStmt->execute([':parent_id' => $parentId]);
     $children = $childStmt->fetchAll();
+    $noticeChildren = array_filter($children, static fn (array $row): bool => $row['status'] === 'active' && (int) $row['has_workdays'] === 1);
+    $noticeStmt = $pdo->prepare(
+        'SELECT n.*, c.first_name, c.last_name, a.id AS attendance_id FROM attendance_notices n
+         INNER JOIN children c ON c.id = n.child_id AND c.parent_id = n.parent_id
+         LEFT JOIN attendance a ON a.child_id = n.child_id AND a.attendance_date = n.notice_date
+         WHERE n.parent_id = ? AND n.notice_date >= ?
+         ORDER BY n.notice_date, n.child_id'
+    );
+    $noticeStmt->execute([$parentId, $todayYmd]);
+    $upcomingNotices = $noticeStmt->fetchAll();
 
     $attStmt = $pdo->prepare(
         <<<'SQL'
@@ -133,6 +195,19 @@ SQL
     $weekScheduledEvents = $eventStmt->fetchAll();
 } catch (Throwable $exception) {
     error_log($exception->getMessage());
+    $noticeError ??= 'بارگذاری حضور و غیاب انجام نشد.';
+}
+
+$selectedNoticeChild = (int) filter_var($_GET['notice_child'] ?? null, FILTER_VALIDATE_INT);
+$selectedNoticeDate = $_GET['notice_date'] ?? null;
+$selectedNotice = null;
+$eligibleNoticeChildIds = array_fill_keys(array_column($noticeChildren, 'id'), true);
+foreach ($upcomingNotices as $notice) {
+    if (isset($eligibleNoticeChildIds[$selectedNoticeChild]) && (int) $notice['child_id'] === $selectedNoticeChild
+        && $notice['notice_date'] === $selectedNoticeDate && $notice['attendance_id'] === null) {
+        $selectedNotice = $notice;
+        break;
+    }
 }
 
 $weekDays = [];
@@ -185,6 +260,8 @@ require_once __DIR__ . '/header.php';
     <h1>حضور و غیاب <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-left: 6px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></h1>
     <p class="page-subtitle"><?= e($weekRangeLabel)?></p>
 </div>
+
+<?php require __DIR__ . '/partials/attendance-notices.php'; ?>
 
 <!-- Weekly Summary -->
 <?php if ($children !== []): ?>

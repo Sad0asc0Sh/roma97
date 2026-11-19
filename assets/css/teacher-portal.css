@@ -506,6 +506,16 @@
 .tp-class-activity-form {
     border-inline-start: 4px solid var(--tp-primary);
 }
+.tp-day-note {
+    margin-block: 6px 0;
+    padding-inline-start: 8px;
+    border-inline-start: 2px solid var(--tp-primary);
+    color: var(--tp-text-secondary);
+    font-size: .84rem;
+    overflow-wrap: anywhere;
+}
+.tp-recent-feedback { margin: 4px 0 0; padding-inline-start: 1.2rem; }
+.tp-recent-feedback li + li { margin-block-start: 4px; }
 .tp-class-activity-form .tp-card-header {
     margin-bottom: 4px;
 }

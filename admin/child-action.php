@@ -11,6 +11,7 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/sms.php';
 require_once __DIR__ . '/../includes/notifications.php';
+require_once __DIR__ . '/../includes/classroom_enrollment.php';
 // parentChildEnrollmentLabel() is used to name the new status in notifications.
 require_once __DIR__ . '/../includes/parent_children_helpers.php';
 
@@ -104,19 +105,36 @@ if ($action === 'add_waitlist') {
 
     try {
         require_once __DIR__ . '/../includes/db.php';
-        initializeFinancialTables();
+        initializeClassroomWaitlist();
         $pdo = getDb();
+        $pdo->beginTransaction();
+        $childLock = $pdo->prepare('SELECT id FROM children WHERE id = ? FOR UPDATE');
+        $childLock->execute([$childId]);
+        if ($childLock->fetchColumn() === false) {
+            throw new InvalidArgumentException('پرونده این کودک یافت نشد.');
+        }
 
+        $assigned = $pdo->prepare('SELECT 1 FROM child_classroom WHERE child_id = ? AND classroom_id = ?');
+        $assigned->execute([$childId, $classroomId]);
+        if ($assigned->fetchColumn() !== false) {
+            throw new InvalidArgumentException('این کودک همین حالا به این کلاس اختصاص دارد.');
+        }
         $insWl = $pdo->prepare(
             'INSERT INTO classroom_waitlist (child_id, classroom_id) VALUES (:cid, :clid)
-             ON DUPLICATE KEY UPDATE requested_at = CURRENT_TIMESTAMP'
+             ON DUPLICATE KEY UPDATE
+                requested_at = IF(fulfilled_at IS NULL, requested_at, CURRENT_TIMESTAMP),
+                fulfilled_at = NULL'
         );
         $insWl->execute([':cid' => $childId, ':clid' => $classroomId]);
+        $pdo->commit();
         recordAudit('classroom.add_waitlist', 'child', (int) $childId, ['classroom_id' => $classroomId]);
         setFlash('success', 'کودک با موفقیت به لیست انتظار این کلاس اضافه شد.');
     } catch (Throwable $e) {
+        if (isset($pdo) && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         error_log($e->getMessage());
-        setFlash('error', 'افزودن به لیست انتظار با مشکل مواجه شد.');
+        setFlash('error', $e instanceof InvalidArgumentException ? $e->getMessage() : 'افزودن به لیست انتظار با مشکل مواجه شد.');
     }
     redirect($destination);
 }
@@ -136,12 +154,23 @@ if ($action === 'assign_classroom') {
     try {
         require_once __DIR__ . '/../includes/db.php';
         initializeTeachersTables();
+        initializeClassroomWaitlist();
         $pdo = getDb();
+        $pdo->beginTransaction();
+
+        $childLock = $pdo->prepare('SELECT id FROM children WHERE id = ? FOR UPDATE');
+        $childLock->execute([$childId]);
+        if ($childLock->fetchColumn() === false) {
+            throw new InvalidArgumentException('پرونده این کودک یافت نشد.');
+        }
 
         if ($classroomId > 0) {
-            // Verify classroom exists & check capacity. Only children actually
-            // attending the class (status = active) count toward capacity —
-            // graduated/withdrawn rows must not block new enrolments.
+            $capStmt = $pdo->prepare('SELECT capacity FROM classrooms WHERE id = :clid FOR UPDATE');
+            $capStmt->execute([':clid' => $classroomId]);
+            $clRow = $capStmt->fetch();
+            if (!$clRow) {
+                throw new InvalidArgumentException('کلاس انتخاب‌شده معتبر نیست.');
+            }
             $capacityRow = $pdo->prepare(
                 "SELECT COUNT(*) AS enrolled
                  FROM child_classroom cc
@@ -151,18 +180,10 @@ if ($action === 'assign_classroom') {
             $capacityRow->execute([':clid' => $classroomId, ':cid' => $childId]);
             $enrolledCount = (int) $capacityRow->fetch()['enrolled'];
 
-            $capStmt = $pdo->prepare('SELECT capacity FROM classrooms WHERE id = :clid LIMIT 1');
-            $capStmt->execute([':clid' => $classroomId]);
-            $clRow = $capStmt->fetch();
-
-            if (!$clRow) {
-                setFlash('error', 'کلاس انتخاب‌شده معتبر نیست.');
-                redirect($destination);
-            }
-
             $capacity = (int) $clRow['capacity'];
 
             if ($enrolledCount >= $capacity && !$forceOverCapacity) {
+                $pdo->rollBack();
                 $_SESSION['waitlist_offer'] = [
                     'child_id' => $childId,
                     'classroom_id' => $classroomId,
@@ -172,34 +193,22 @@ if ($action === 'assign_classroom') {
             }
         }
 
-        $pdo->beginTransaction();
-
-        $del = $pdo->prepare('DELETE FROM child_classroom WHERE child_id = :cid');
-        $del->execute([':cid' => $childId]);
-
-        if ($classroomId > 0) {
-            // enrollment_date is NOT NULL with no default — must be supplied explicitly.
-            $ins = $pdo->prepare(
-                'INSERT INTO child_classroom (child_id, classroom_id, enrollment_date)
-                 VALUES (:cid, :clid, CURDATE())'
-            );
-            $ins->execute([':cid' => $childId, ':clid' => $classroomId]);
-        }
+        $waitlistClosed = saveClassroomEnrollment($pdo, $childId, $classroomId > 0 ? $classroomId : null);
 
         $pdo->commit();
 
-        $auditDetails = ['classroom_id' => $classroomId];
+        $auditDetails = ['classroom_id' => $classroomId, 'waitlist_closed' => $waitlistClosed];
         if ($forceOverCapacity) {
             $auditDetails['over_capacity'] = true;
         }
         recordAudit('child.assign_classroom', 'child', (int) $childId, $auditDetails);
-        setFlash('success', 'اختصاص کلاس با موفقیت ذخیره شد.');
+        setFlash('success', $waitlistClosed ? 'کلاس اختصاص یافت و درخواست انتظار همان کلاس بسته شد.' : 'اختصاص کلاس ذخیره شد.');
     } catch (Throwable $exception) {
         if (isset($pdo) && $pdo->inTransaction()) {
             $pdo->rollBack();
         }
         error_log($exception->getMessage());
-        setFlash('error', 'ذخیره اختصاص کلاس امکان‌پذیر نیست. لطفاً دوباره تلاش کنید.');
+        setFlash('error', $exception instanceof InvalidArgumentException ? $exception->getMessage() : 'ذخیره اختصاص کلاس امکان‌پذیر نیست. لطفاً دوباره تلاش کنید.');
     }
 
     redirect($destination);

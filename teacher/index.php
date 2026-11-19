@@ -9,6 +9,8 @@ require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/permissions.php';
 require_once __DIR__ . '/../includes/teacher_portal_helpers.php';
+require_once __DIR__ . '/../includes/school_planning.php';
+require_once __DIR__ . '/../includes/daily_report_feedback.php';
 
 requireTeacherLogin();
 require_once __DIR__ . '/../includes/portal_ui.php';
@@ -29,8 +31,9 @@ $error            = getFlash('error');
 $successMessage   = getFlash('success');
 
 $attendanceCounts  = ['present' => 0, 'late' => 0, 'excused' => 0, 'absent' => 0];
-$attendanceMissing = 0;
+$attendancePlan    = ['holiday' => null, 'expected' => [], 'missing' => [], 'notices' => []];
 $reportedChildren  = 0;
+$recentFeedback    = [];
 $allergyChildren   = [];
 
 try {
@@ -43,6 +46,8 @@ try {
     $classroomId = $ctx['active_id'];
 
     if ($classroom !== null) {
+        $attendancePlan = dailyAttendancePlan($pdo, $today, $classroomId);
+        ensureDailyReportFeedbackTable($pdo);
         $chStmt = $pdo->prepare(
             <<<'SQL'
 SELECT
@@ -88,9 +93,7 @@ SQL
 
         foreach ($children as $childRow) {
             $status = (string) ($childRow['attendance_status'] ?? '');
-            if ($status === '') {
-                $attendanceMissing++;
-            } elseif (isset($attendanceCounts[$status])) {
+            if (isset($attendanceCounts[$status])) {
                 $attendanceCounts[$status]++;
             }
 
@@ -102,6 +105,17 @@ SQL
                 $allergyChildren[] = $childRow;
             }
         }
+
+        $feedbackStmt = $pdo->prepare(
+            "SELECT c.id, c.first_name, c.last_name, dr.report_date, rf.reaction
+             FROM daily_reports dr INNER JOIN child_classroom cc ON cc.classroom_id = dr.classroom_id AND cc.child_id = dr.child_id
+             INNER JOIN children c ON c.id = cc.child_id AND c.status = 'active'
+             INNER JOIN daily_report_feedback rf ON rf.report_id = dr.id AND rf.parent_id = c.parent_id
+             WHERE dr.classroom_id = ?
+             ORDER BY COALESCE(rf.reacted_at, rf.seen_at) DESC, dr.id DESC LIMIT 4"
+        );
+        $feedbackStmt->execute([$classroomId]);
+        $recentFeedback = $feedbackStmt->fetchAll();
     }
 
     // Fetch upcoming scheduled events (next 30 days)
@@ -121,12 +135,14 @@ SQL
 
 $hasClassroom   = $classroom !== null;
 $childCount     = count($children);
-$attendanceDone = $childCount > 0 && $attendanceMissing === 0;
+$expectedAttendance = count($attendancePlan['expected']);
+$attendanceMissing = count($attendancePlan['missing']);
+$attendanceDone = $expectedAttendance > 0 && $attendanceMissing === 0;
 $expectedReports = $attendanceCounts['present'] + $attendanceCounts['late'];
 $reportsDone    = $expectedReports > 0 && $reportedChildren === $expectedReports;
-$recordedAtt    = max(0, $childCount - $attendanceMissing);
-$attPercent     = $childCount > 0 ? (int) round(($recordedAtt / $childCount) * 100) : 0;
+$attPercent     = $expectedAttendance > 0 ? (int) round((($expectedAttendance - $attendanceMissing) / $expectedAttendance) * 100) : 0;
 $repPercent     = $expectedReports > 0 ? (int) round(($reportedChildren / $expectedReports) * 100) : 0;
+$earliestReportDate = (new DateTimeImmutable($today))->modify('-7 days')->format('Y-m-d');
 
 $pageTitle = 'داشبورد مربی | ' . siteName();
 require_once __DIR__ . '/header.php';
@@ -214,17 +230,27 @@ require_once __DIR__ . '/header.php';
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
                         لیست حضور و غیاب امروز
                     </h3>
-                    <span class="tp-badge <?= $attendanceDone ? 'tp-badge-present' : 'tp-badge-late' ?>">
-                        <?= $attendanceDone ? 'تکمیل شده ✓' : persianNumber((string) $attendanceMissing) . ' نفر ثبت‌نشده' ?>
+                    <span class="tp-badge <?= $attendanceDone ? 'tp-badge-present' : ($expectedAttendance === 0 ? 'tp-badge-unrecorded' : 'tp-badge-late') ?>">
+                        <?= e(match (true) {
+                            $attendancePlan['holiday'] !== null => 'تعطیلی مهد',
+                            $expectedAttendance === 0 => 'بدون کودک مورد انتظار',
+                            $attendanceDone => 'تکمیل شده ✓',
+                            default => persianNumber($attendanceMissing) . ' نفر ثبت‌نشده',
+                        }) ?>
                     </span>
                 </div>
-                <div class="tp-progress-track" aria-hidden="true">
-                    <div class="tp-progress-fill <?= $attendanceDone ? '' : 'tp-progress-fill--pending' ?>" style="width: <?= $attPercent ?>%;"></div>
-                </div>
+                <?php if ($expectedAttendance > 0): ?>
+                    <div class="tp-progress-track" aria-hidden="true">
+                        <div class="tp-progress-fill <?= $attendanceDone ? '' : 'tp-progress-fill--pending' ?>" style="width: <?= $attPercent ?>%;"></div>
+                    </div>
+                <?php endif; ?>
                 <p style="margin:0;font-size:0.84rem;color:var(--tp-text-secondary);">
-                    <?php if ($childCount === 0): ?>
+                    <?php if ($attendancePlan['holiday'] !== null): ?>
+                        <?= e($attendancePlan['holiday']) ?>
+                    <?php elseif ($childCount === 0): ?>
                         هنوز کودکی در این کلاس ثبت‌نام نشده است.
                     <?php else: ?>
+                        مورد انتظار: <strong><?= e(persianNumber($expectedAttendance)) ?></strong> ·
                         حاضر: <strong><?= e(persianNumber((string) $attendanceCounts['present'])) ?></strong> ·
                         با تأخیر: <strong><?= e(persianNumber((string) $attendanceCounts['late'])) ?></strong> ·
                         غیبت موجه: <strong><?= e(persianNumber((string) $attendanceCounts['excused'])) ?></strong> ·
@@ -232,9 +258,13 @@ require_once __DIR__ . '/header.php';
                     <?php endif; ?>
                 </p>
                 <div class="tp-task-foot">
-                    <span style="font-size:0.78rem;color:var(--tp-text-muted);"><?= e(persianNumber((string) $attPercent)) ?>٪ تکمیل</span>
-                    <a href="<?= e(url('teacher/attendance.php')) ?>" class="tp-btn <?= $attendanceDone ? 'tp-btn-secondary' : 'tp-btn-primary' ?> tp-btn-sm">
-                        <?= $attendanceDone ? 'مشاهده و ویرایش حضور' : 'ثبت حضور و غیاب کلاس' ?>
+                    <?php if ($attendancePlan['notices'] !== []): ?>
+                        <a href="<?= e(url('teacher/attendance.php?classroom_id=' . $classroomId . '&filter=notices')) ?>"><?= e(persianNumber(count($attendancePlan['notices']))) ?> اعلام خانواده</a>
+                    <?php elseif ($expectedAttendance > 0): ?>
+                        <span style="font-size:0.78rem;color:var(--tp-text-muted);"><?= e(persianNumber($attPercent)) ?>٪ تکمیل</span>
+                    <?php endif; ?>
+                    <a href="<?= e(url('teacher/attendance.php?classroom_id=' . $classroomId . ($attendanceMissing > 0 ? '&filter=unrecorded' : ''))) ?>" class="tp-btn <?= $attendanceMissing === 0 ? 'tp-btn-secondary' : 'tp-btn-primary' ?> tp-btn-sm">
+                        <?= $attendanceMissing === 0 ? 'مشاهده و ویرایش حضور' : 'ثبت حضور و غیاب کلاس' ?>
                     </a>
                 </div>
             </div>
@@ -267,6 +297,24 @@ require_once __DIR__ . '/header.php';
                         گزارش <strong><?= e(persianNumber($reportedChildren)) ?></strong> نفر ثبت شده است.
                     <?php endif; ?>
                 </p>
+                <?php if ($recentFeedback !== []): ?>
+                    <div class="tp-day-note">
+                        <strong>آخرین بازخوردهای خانواده‌ها</strong>
+                        <ul class="tp-recent-feedback">
+                            <?php foreach ($recentFeedback as $feedback): ?>
+                                <?php $name = trim($feedback['first_name'] . ' ' . $feedback['last_name']); ?>
+                                <li>
+                                    <?php if ($feedback['report_date'] >= $earliestReportDate): ?>
+                                        <a href="<?= e(url('teacher/report.php?classroom_id=' . $classroomId . '&date=' . $feedback['report_date'] . '#child-report-' . $feedback['id'])) ?>"><?= e($name) ?></a>
+                                    <?php else: ?>
+                                        <?= e($name) ?>
+                                    <?php endif; ?>
+                                    · <?= e(shamsiDate($feedback['report_date'])) ?> · <?= e(DAILY_REPORT_REACTIONS[$feedback['reaction'] ?? ''] ?? 'مشاهده تأیید شد') ?>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
                 <div class="tp-task-foot">
                     <?php if ($expectedReports > 0): ?>
                         <span style="font-size:0.78rem;color:var(--tp-text-muted);"><?= e(persianNumber($repPercent)) ?>٪ تکمیل</span>

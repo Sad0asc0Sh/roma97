@@ -22,8 +22,12 @@ $statusFilter = is_string($statusInput) ? strtolower(trim($statusInput)) : '';
 if (!in_array($statusFilter, $allowedStatuses, true)) {
     $statusFilter = $directorySearch === '' ? 'pending' : 'all';
 }
+$withoutClassroom = ($_GET['classroom'] ?? null) === 'unassigned';
+if ($withoutClassroom) {
+    $statusFilter = 'active';
+}
 $searchQuery = $directorySearch === '' ? [] : ['q' => $directorySearch];
-$listQuery = ['status' => $statusFilter] + $searchQuery;
+$listQuery = ['status' => $statusFilter] + ($withoutClassroom ? ['classroom' => 'unassigned'] : []) + $searchQuery;
 $canViewAttendance = isPageAllowedForRole('admin/attendance.php', currentAdminRole());
 $canMessageFamily = isPageAllowedForRole('admin/messages.php', currentAdminRole());
 
@@ -105,6 +109,9 @@ SQL;
         $conditions[] = 'c.status = :status';
         $params['status'] = $statusFilter;
     }
+    if ($withoutClassroom) {
+        $conditions[] = 'NOT EXISTS (SELECT 1 FROM child_classroom cc WHERE cc.child_id = c.id)';
+    }
     if ($directorySearch !== '') {
         $normalizedName = strtr($directorySearch, ['ي' => 'ی', 'ك' => 'ک', '‌' => ' ']);
         $normalizedName = preg_replace('/\s+/u', ' ', trim($normalizedName)) ?? $directorySearch;
@@ -147,9 +154,9 @@ $listRedirect = url('admin/children.php?' . http_build_query($listQuery + ['p' =
 $pageTitle = 'مدیریت ثبت‌نام کودکان | ' . siteName();
 require_once __DIR__ . '/header.php';
 
-$filterHref = static fn (string $value): string => url(
-    'admin/children.php?' . http_build_query(['status' => $value] + $searchQuery)
-);
+$filterHref = static fn (string $value): string => url('admin/children.php?' . http_build_query(
+    ($value === 'unassigned' ? ['status' => 'active', 'classroom' => 'unassigned'] : ['status' => $value]) + $searchQuery
+));
 ?>
 
 <section class="dashboard">
@@ -157,7 +164,7 @@ $filterHref = static fn (string $value): string => url(
         <h1 style="margin:0;">ثبت‌نام کودکان</h1>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <a href="<?= e(url('admin/add-child.php')) ?>" class="btn btn-primary">+ کودک جدید</a>
-            <?php if ($directorySearch === ''): ?>
+            <?php if ($directorySearch === '' && !$withoutClassroom): ?>
                 <a href="<?= e(url('admin/export-csv.php?' . http_build_query(['type' => 'children', 'status' => $statusFilter]))) ?>" class="btn btn-secondary">📥 دریافت خروجی CSV کودکان</a>
             <?php endif; ?>
         </div>
@@ -176,22 +183,25 @@ $filterHref = static fn (string $value): string => url(
     <?php endif; ?>
 
     <form class="admin-directory-search mb-sm" role="search" aria-label="جست‌وجوی فهرست کودکان" method="get" action="<?= e(url('admin/children.php')) ?>">
-        <?php if ($directorySearch !== ''): ?>
+        <?php if ($directorySearch !== '' || $withoutClassroom): ?>
             <input type="hidden" name="status" value="<?= e($statusFilter) ?>">
+        <?php endif; ?>
+        <?php if ($withoutClassroom): ?>
+            <input type="hidden" name="classroom" value="unassigned">
         <?php endif; ?>
         <label for="child_directory_search" class="sr-only">نام کودک، نام والد یا شماره موبایل</label>
         <input type="search" name="q" id="child_directory_search" class="form-control" maxlength="100" value="<?= e($directorySearch) ?>" placeholder="نام کودک، نام والد یا شماره موبایل">
         <button type="submit" class="btn btn-primary">جست‌وجو</button>
         <?php if ($directorySearch !== ''): ?>
-            <a class="btn btn-outline" href="<?= e(url('admin/children.php?status=' . $statusFilter)) ?>">پاک کردن جست‌وجو</a>
+            <a class="btn btn-outline" href="<?= e(url('admin/children.php?' . http_build_query(array_diff_key($listQuery, $searchQuery)))) ?>">پاک کردن جست‌وجو</a>
         <?php endif; ?>
     </form>
 
     <nav class="filter-nav" aria-label="فیلتر بر اساس وضعیت ثبت‌نام کودکان">
-        <?php foreach (['all' => 'همه', 'pending' => 'در انتظار', 'active' => 'فعال', 'graduated' => 'فارغ‌التحصیل', 'withdrawn' => 'انصراف داده', 'inactive' => 'غیرفعال'] as $value => $label): ?>
+        <?php foreach (['all' => 'همه', 'pending' => 'در انتظار', 'active' => 'فعال', 'unassigned' => 'فعالِ بدون کلاس', 'graduated' => 'فارغ‌التحصیل', 'withdrawn' => 'انصراف داده', 'inactive' => 'غیرفعال'] as $value => $label): ?>
             <a
                 href="<?= e($filterHref($value)) ?>"
-                class="<?= $statusFilter === $value ? 'is-active' : '' ?>"
+                class="<?= ($withoutClassroom ? 'unassigned' : $statusFilter) === $value ? 'is-active' : '' ?>"
             ><?= e($label) ?></a>
         <?php endforeach; ?>
     </nav>

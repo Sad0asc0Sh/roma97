@@ -11,6 +11,8 @@ require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/sms.php';
 require_once __DIR__ . '/../includes/notifications.php';
+require_once __DIR__ . '/../includes/attendance_pickup.php';
+require_once __DIR__ . '/../includes/school_planning.php';
 
 requireLogin();
 require_once __DIR__ . '/../includes/portal_rules.php';
@@ -67,6 +69,12 @@ function normalizeAttendanceTime(?string $raw): ?string
     return null;
 }
 
+function normalizeAttendanceNotes(string $notes): ?string
+{
+    $notes = mb_substr(trim($notes), 0, 5000, 'UTF-8');
+    return $notes === '' ? null : $notes;
+}
+
 function attendanceAgeFromDob(string $dateOfBirth): string
 {
     try {
@@ -119,6 +127,7 @@ function renderAttendanceRadios(array $child, int $childId, bool $mobile = false
                 name="<?= e($nameAttr) ?>"
                 value="<?= e($value) ?>"
                 <?= $current === $value ? 'checked' : '' ?>
+                <?= $child['pickup_verified_by'] !== null ? 'disabled' : '' ?>
             >
             <?= e($label) ?>
         </label>
@@ -126,12 +135,60 @@ function renderAttendanceRadios(array $child, int $childId, bool $mobile = false
     }
 }
 
+function renderFamilyAttendanceNotice(?array $notice): void
+{
+    if ($notice === null) {
+        return;
+    }
+    ?>
+    <div class="attendance-family-notice">
+        <strong><?= e(attendanceNoticeLabel($notice)) ?></strong>
+        <?php if ($notice['note'] !== null): ?><small><?= e($notice['note']) ?></small><?php endif; ?>
+    </div>
+    <?php
+}
+
+function renderPickupControls(array $child): void
+{
+    if ($child['pickup_verified_by'] !== null) {
+        ?>
+        <div class="attendance-pickup">
+            <span class="badge badge-success">تحویل تأیید شد</span>
+            <strong><?= e($child['picked_up_by']) ?></strong>
+            <small>تأییدکننده <?= e($child['pickup_verifier'] ?? ('کاربر ' . persianNumber((int) $child['pickup_verified_by']))) ?></small>
+        </div>
+        <?php
+        return;
+    }
+    if ($child['check_in'] === null || !in_array($child['attendance_status'], ['present', 'late'], true)) {
+        return;
+    }
+    ?>
+    <div class="attendance-pickup">
+        <?php if ($child['check_out'] !== null): ?>
+            <span class="badge badge-warning">در انتظار تأیید تحویل</span>
+        <?php endif; ?>
+        <?php foreach (attendancePickupGuardians($child) as $kind => $name): ?>
+            <button type="submit" name="confirm_pickup"
+                    value="<?= e((int) $child['id'] . ':' . $kind . ':' . hash('sha256', $name)) ?>"
+                    class="btn btn-sm btn-outline"
+                    aria-label="<?= e('تأیید تحویل ' . $child['first_name'] . ' به ' . $name) ?>">
+                <?= e('تحویل به ' . $name) ?>
+                <small><?= $kind === 'parent' ? 'والد' : 'سرپرست دوم' ?></small>
+            </button>
+        <?php endforeach; ?>
+    </div>
+    <?php
+}
+
 $today = (new DateTimeImmutable('today'))->format('Y-m-d');
 $dateInput = $_GET['date'] ?? null;
 $selectedDate = is_string($dateInput) ? parseAttendanceDateString($dateInput) ?? $today : $today;
 $filterLabels = [
     'all' => 'همه وضعیت‌ها',
+    'expected' => 'کودکان مورد انتظار',
     'missing' => 'حضورهای ثبت‌نشده',
+    'notices' => 'اعلام‌های خانواده',
     'open_checkout' => 'خروج‌های باز',
 ];
 $filter = $_GET['filter'] ?? 'all';
@@ -166,12 +223,14 @@ $condition = match ($filter) {
 $pdo = null;
 $rows = [];
 $classrooms = [];
+$plan = ['holiday' => null, 'expected' => [], 'missing' => [], 'notices' => []];
 $successMessage = getFlash('success');
 $errorMessage = getFlash('error');
 
 try {
-    initializeParentTables();
+    initializeAttendanceTable();
     $pdo = getDb();
+    $plan = dailyAttendancePlan($pdo, $selectedDate, $classroomId);
 
     if (isPostRequest()) {
         $csrfToken = $_POST['csrf_token'] ?? null;
@@ -193,11 +252,26 @@ try {
         );
         $activeStmt->execute($scopeParams);
         $allowedIds = array_fill_keys($activeStmt->fetchAll(PDO::FETCH_COLUMN), true);
+        $postPlan = $parsedPostDate === $selectedDate ? $plan : dailyAttendancePlan($pdo, $parsedPostDate, $classroomId);
+        $allowedIds = match ($filter) {
+            'expected', 'missing' => array_intersect_key($allowedIds, $postPlan['expected']),
+            'notices' => array_intersect_key($allowedIds, $postPlan['notices']),
+            default => $allowedIds,
+        };
 
         $attendanceData = $_POST['attendance'] ?? $_POST['mobile_attendance'] ?? [];
 
         if (!is_array($attendanceData)) {
             $attendanceData = [];
+        }
+        $pickup = null;
+        if (array_key_exists('confirm_pickup', $_POST)) {
+            $selection = $_POST['confirm_pickup'];
+            if (!is_string($selection) || preg_match('/\A([1-9]\d*):(parent|guardian):([a-f0-9]{64})\z/', $selection, $pickup) !== 1
+                || !isset($allowedIds[(int) $pickup[1]])) {
+                setFlash('error', 'تحویل‌گیرندهٔ انتخاب‌شده معتبر نیست.');
+                redirect($attendanceUrl($parsedPostDate));
+            }
         }
 
         // Snapshot the stored statuses for this date so notifications only go
@@ -223,14 +297,9 @@ SQL;
             'missing' => $insertSql . ' ON DUPLICATE KEY UPDATE id = id',
             'open_checkout' => 'UPDATE attendance a
                 SET status = :status, check_in = :check_in, check_out = :check_out, notes = :notes
-                WHERE a.child_id = :child_id AND a.attendance_date = :attendance_date AND ' . PORTAL_OPEN_CHECKOUT,
-            default => $insertSql . ' ' . <<<'SQL'
-ON DUPLICATE KEY UPDATE
-    status    = VALUES(status),
-    check_in  = VALUES(check_in),
-    check_out = VALUES(check_out),
-    notes     = VALUES(notes)
-SQL,
+                WHERE a.child_id = :child_id AND a.attendance_date = :attendance_date
+                  AND a.pickup_verified_by IS NULL AND a.check_out <=> :original_checkout AND ' . PORTAL_OPEN_CHECKOUT,
+            default => $insertSql . ' ' . PORTAL_UPDATE_UNVERIFIED_ATTENDANCE,
         };
         $saveAttendance = $pdo->prepare($saveSql);
         $changedAttendance = [];
@@ -240,6 +309,24 @@ SQL,
         $pdo->beginTransaction();
 
         try {
+            $pickupChildId = $pickup === null ? null : (int) $pickup[1];
+            if ($pickupChildId !== null) {
+                $fields = $attendanceData[$pickupChildId] ?? [];
+                $checkoutInput = is_string($fields['check_out'] ?? null) ? $fields['check_out'] : '';
+                $checkout = normalizeAttendanceTime($checkoutInput);
+                $originalCheckout = normalizeAttendanceTime(is_string($fields['original_checkout'] ?? null) ? $fields['original_checkout'] : null);
+                if ($checkoutInput !== '' && $checkout === null) {
+                    throw new InvalidArgumentException('ساعت خروج معتبر نیست.');
+                }
+                if ($checkout !== null && $originalCheckout !== null && substr($checkout, 0, 5) === substr($originalCheckout, 0, 5)) {
+                    $checkout = null;
+                }
+                $pickupNotes = $fields['notes'] ?? null;
+                $confirmedCheckout = confirmAttendancePickup(
+                    $pdo, $pickupChildId, $parsedPostDate, (int) $_SESSION['admin_id'], $pickup[2], $pickup[3], $checkout, $originalCheckout,
+                    is_string($pickupNotes), is_string($pickupNotes) ? normalizeAttendanceNotes($pickupNotes) : null
+                );
+            }
             foreach ($attendanceData as $childKey => $fields) {
                 if (!is_array($fields)) {
                     continue;
@@ -247,7 +334,7 @@ SQL,
 
                 $childId = filter_var($childKey, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 
-                if (!is_int($childId) || !isset($allowedIds[$childId])) {
+                if (!is_int($childId) || $childId === $pickupChildId || !isset($allowedIds[$childId])) {
                     continue;
                 }
 
@@ -258,29 +345,23 @@ SQL,
 
                 $checkInRaw = isset($fields['check_in']) ? (string) $fields['check_in'] : '';
                 $checkOutRaw = isset($fields['check_out']) ? (string) $fields['check_out'] : '';
-                $notesRaw = isset($fields['notes']) ? trim((string) $fields['notes']) : '';
-
-                if (function_exists('mb_strlen')) {
-                    if (mb_strlen($notesRaw, 'UTF-8') > 5000) {
-                        $notesRaw = mb_substr($notesRaw, 0, 5000, 'UTF-8');
-                    }
-                } elseif (strlen($notesRaw) > 5000) {
-                    $notesRaw = substr($notesRaw, 0, 5000);
-                }
-
-                $notes = $notesRaw === '' ? null : $notesRaw;
+                $notes = normalizeAttendanceNotes(is_string($fields['notes'] ?? null) ? $fields['notes'] : '');
                 $checkIn = normalizeAttendanceTime($checkInRaw);
                 $checkOut = normalizeAttendanceTime($checkOutRaw);
                 [$checkIn, $checkOut] = portalAttendanceTimes($status, $checkIn, $checkOut);
 
-                $saveAttendance->execute([
+                $values = [
                     ':child_id' => $childId,
                     ':attendance_date' => $parsedPostDate,
                     ':status' => $status,
                     ':check_in' => $checkIn,
                     ':check_out' => $checkOut,
                     ':notes' => $notes,
-                ]);
+                ];
+                if ($filter === 'open_checkout') {
+                    $values[':original_checkout'] = normalizeAttendanceTime(is_string($fields['original_checkout'] ?? null) ? $fields['original_checkout'] : null);
+                }
+                $saveAttendance->execute($values);
                 if ($saveAttendance->rowCount() > 0 && ($previousStatuses[$childId] ?? null) !== $status) {
                     $changedAttendance[$childId] = $status;
                 }
@@ -290,6 +371,10 @@ SQL,
         } catch (Throwable $transactionError) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
+            }
+            if ($pickup !== null && $transactionError instanceof InvalidArgumentException) {
+                setFlash('error', $transactionError->getMessage());
+                redirect($attendanceUrl($parsedPostDate));
             }
             throw $transactionError;
         }
@@ -334,17 +419,26 @@ SQL,
         }
 
         $displayFlashDate = shamsiDate($parsedPostDate);
+        if ($pickupChildId !== null) {
+            recordAudit('attendance.pickup.verify', 'child', $pickupChildId, [
+                'date' => $parsedPostDate,
+                'check_out' => $confirmedCheckout,
+                'guardian' => $pickup[2],
+            ]);
+        }
         recordAudit('attendance.save', 'attendance', null, [
             'date'     => $parsedPostDate,
             'changed'  => count($changedAttendance),
             'notified' => count($notifyResults),
         ]);
 
-        $flashMessage = 'حضور و غیاب برای تاریخ ' . $displayFlashDate . ' ذخیره شد.';
+        $flashMessage = $pickupChildId !== null
+            ? 'تحویل کودک در ساعت ' . persianNumber(substr($confirmedCheckout, 0, 5)) . ' تأیید شد.'
+            : 'حضور و غیاب برای تاریخ ' . $displayFlashDate . ' ذخیره شد.';
 
-        if ($changedAttendance === []) {
+        if ($changedAttendance === [] && $pickupChildId === null) {
             $flashMessage .= ' هیچ تغییری در وضعیت کودکان نبود، بنابراین پیامک تکراری ارسال نشد.';
-        } else {
+        } elseif ($changedAttendance !== []) {
             $flashMessage .= ' ' . persianNumber((string) count($changedAttendance)) . ' تغییر وضعیت ثبت شد.';
             $summary = summarizeNotificationResults($notifyResults);
             if ($summary !== '') {
@@ -366,20 +460,29 @@ SELECT
     c.photo,
     p.first_name AS parent_first_name,
     p.last_name AS parent_last_name,
+    c.second_guardian_name,
     cl.name AS classroom_name,
     a.status AS attendance_status,
     a.check_in,
     a.check_out,
+    a.picked_up_by,
+    a.pickup_verified_by,
+    verifier.username AS pickup_verifier,
     a.notes AS attendance_notes
 FROM children c
 INNER JOIN parents p ON p.id = c.parent_id
 LEFT JOIN child_classroom cc ON cc.child_id = c.id
 LEFT JOIN classrooms cl ON cl.id = cc.classroom_id
 LEFT JOIN attendance a ON a.child_id = c.id AND a.attendance_date = :attendance_date
+LEFT JOIN admins verifier ON verifier.id = a.pickup_verified_by
 SQL;
     $listStmt = $pdo->prepare($listSql . ' WHERE ' . $scope . $condition . ' ORDER BY c.last_name, c.first_name, c.id');
     $listStmt->execute(['attendance_date' => $selectedDate] + $scopeParams);
     $rows = $listStmt->fetchAll();
+    if (in_array($filter, ['expected', 'missing', 'notices'], true)) {
+        $visible = $plan[$filter];
+        $rows = array_values(array_filter($rows, static fn (array $row): bool => isset($visible[(int) $row['id']])));
+    }
 } catch (Throwable $exception) {
     error_log($exception->getMessage());
 
@@ -406,6 +509,9 @@ require_once __DIR__ . '/header.php';
     <?php if ($errorMessage !== null): ?>
         <script>document.addEventListener('DOMContentLoaded', () => showToast(<?= json_encode($errorMessage) ?>, 'danger'));</script>
         <div class="alert alert-error" role="alert"><?= e($errorMessage) ?></div>
+    <?php endif; ?>
+    <?php if ($plan['holiday'] !== null): ?>
+        <p class="notice" role="status">تعطیلی مهد · <?= e($plan['holiday']) ?></p>
     <?php endif; ?>
 
     <div class="admin-section mb-md">
@@ -448,11 +554,31 @@ require_once __DIR__ . '/header.php';
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 </div>
                 <h3><?= e(match ($filter) {
+                    'expected' => 'کودکی برای حضور در این روز انتظار نمی‌رود',
+                    'notices' => 'اعلامی از طرف خانواده‌ها ثبت نشده است',
                     'missing' => 'مورد ثبت‌نشده‌ای در این فهرست وجود ندارد',
-                    'open_checkout' => 'خروج ثبت‌نشده‌ای در این فهرست وجود ندارد',
+                    'open_checkout' => 'تحویل تأییدنشده‌ای در این فهرست وجود ندارد',
                     default => 'کودکی در این فهرست یافت نشد',
                 }) ?></h3>
                 <p><?= e($displayDateLabel) ?></p>
+            </div>
+        <?php elseif ($selectedDate > $today): ?>
+            <h2 class="admin-section-title"><?= e($filter === 'all' ? 'فهرست کودکان' : $filterLabels[$filter]) ?> (<?= e(persianNumber(count($rows))) ?>)</h2>
+            <p class="muted"><?= e($displayDateLabel) ?> · ثبت ورود و خروج از همان روز در دسترس است.</p>
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead><tr><th scope="col">کودک</th><th scope="col">کلاس</th><th scope="col">اعلام خانواده</th></tr></thead>
+                    <tbody>
+                        <?php foreach ($rows as $child): ?>
+                            <?php $notice = $plan['notices'][(int) $child['id']] ?? null; ?>
+                            <tr>
+                                <td><?= e(trim($child['first_name'] . ' ' . $child['last_name'])) ?></td>
+                                <td><?= e($child['classroom_name'] ?? '—') ?></td>
+                                <td><?php if ($notice !== null): ?><?php renderFamilyAttendanceNotice($notice); ?><?php else: ?>—<?php endif; ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
         <?php else: ?>
             <form class="attendance-save-form" method="post" action="<?= e($attendanceUrl($selectedDate)) ?>">
@@ -476,6 +602,7 @@ require_once __DIR__ . '/header.php';
                                         <th scope="col">وضعیت</th>
                                         <th scope="col">ورود</th>
                                         <th scope="col">خروج</th>
+                                        <th scope="col">تحویل‌گیرنده</th>
                                         <th scope="col">یادداشت</th>
                                     </tr>
                                 </thead>
@@ -488,7 +615,7 @@ require_once __DIR__ . '/header.php';
                                         $initial = userInitial((string) ($child['first_name'] ?? ''));
                                         $notesVal = (string) ($child['attendance_notes'] ?? '');
                                         ?>
-                                        <tr>
+                                        <tr <?= $child['pickup_verified_by'] !== null ? 'data-attendance-locked' : '' ?>>
                                             <td>
                                                 <?php if (!empty($child['photo'])): ?>
                                                     <img class="child-photo-small avatar-circle" src="<?= e(url((string) $child['photo'])) ?>" alt="">
@@ -501,6 +628,7 @@ require_once __DIR__ . '/header.php';
                                                 <?php if ($classroomId === null && !empty($child['classroom_name'])): ?>
                                                     <br><small class="muted"><?= e($child['classroom_name']) ?></small>
                                                 <?php endif; ?>
+                                                <?php renderFamilyAttendanceNotice($plan['notices'][$cid] ?? null); ?>
                                             </td>
                                             <td><?= e($parentName !== '' ? $parentName : '—') ?></td>
                                             <td>
@@ -509,11 +637,13 @@ require_once __DIR__ . '/header.php';
                                                 </div>
                                             </td>
                                             <td>
+                                                <input type="hidden" name="attendance[<?= e($cid) ?>][original_checkout]" value="<?= e($child['check_out']) ?>">
                                                 <input
                                                     class="form-control time-input"
                                                     type="time"
                                                     name="attendance[<?= e((string) $cid) ?>][check_in]"
                                                     value="<?= e(attendanceTimeForInput($child['check_in'] ?? null)) ?>"
+                                                    <?= $child['pickup_verified_by'] !== null ? 'disabled' : '' ?>
                                                     style="padding:4px 8px;"
                                                 >
                                             </td>
@@ -523,15 +653,18 @@ require_once __DIR__ . '/header.php';
                                                     type="time"
                                                     name="attendance[<?= e((string) $cid) ?>][check_out]"
                                                     value="<?= e(attendanceTimeForInput($child['check_out'] ?? null)) ?>"
+                                                    <?= $child['pickup_verified_by'] !== null ? 'disabled' : '' ?>
                                                     style="padding:4px 8px;"
                                                 >
                                             </td>
+                                            <td class="attendance-pickup-cell"><?php renderPickupControls($child); ?></td>
                                             <td>
                                                 <textarea
                                                     class="form-control notes-field notes-field-table"
                                                     name="attendance[<?= e((string) $cid) ?>][notes]"
                                                     rows="1"
                                                     maxlength="5000"
+                                                    <?= $child['pickup_verified_by'] !== null ? 'disabled' : '' ?>
                                                     style="min-height:36px;font-size:0.85rem;"
                                                 ><?= e($notesVal) ?></textarea>
                                             </td>
@@ -551,7 +684,7 @@ require_once __DIR__ . '/header.php';
                             $initial = userInitial((string) ($child['first_name'] ?? ''));
                             $notesVal = (string) ($child['attendance_notes'] ?? '');
                             ?>
-                            <article class="attendance-card">
+                            <article class="attendance-card" <?= $child['pickup_verified_by'] !== null ? 'data-attendance-locked' : '' ?>>
                                 <div class="attendance-card-top">
                                     <?php if (!empty($child['photo'])): ?>
                                         <img class="child-photo-small" src="<?= e(url((string) $child['photo'])) ?>" alt="">
@@ -563,6 +696,8 @@ require_once __DIR__ . '/header.php';
                                         <p class="attendance-card-meta" style="font-size:0.8rem;color:var(--adm-text-muted);margin:2px 0 0;"><?= e(attendanceAgeFromDob((string) ($child['date_of_birth'] ?? ''))) ?> · <?= e($parentName !== '' ? $parentName : '—') ?><?php if ($classroomId === null && !empty($child['classroom_name'])): ?> · <?= e($child['classroom_name']) ?><?php endif; ?></p>
                                     </div>
                                 </div>
+                                <?php renderFamilyAttendanceNotice($plan['notices'][$cid] ?? null); ?>
+                                <?php renderPickupControls($child); ?>
                                 <fieldset class="attendance-fieldset" disabled data-mobile-fieldset>
                                     <legend class="sr-only">وضعیت برای <?= e($fullName) ?></legend>
                                     <p class="attendance-field-label">وضعیت</p>
@@ -583,6 +718,7 @@ require_once __DIR__ . '/header.php';
                                     </label>
                                     <label class="time-input-label">
                                         خروج
+                                        <input type="hidden" name="mobile_attendance[<?= e($cid) ?>][original_checkout]" value="<?= e($child['check_out']) ?>" disabled>
                                         <input
                                             class="form-control time-input"
                                             type="time"
@@ -635,6 +771,30 @@ require_once __DIR__ . '/header.php';
         return control.type === 'radio' ? field + '=' + control.value : field;
     }
 
+    function controlValue(control) {
+        return control.type === 'radio' ? control.checked : control.value;
+    }
+
+    var originalValues = new Map();
+    [...tableControls, ...cardControls].forEach(function (control) {
+        originalValues.set(control, controlValue(control));
+    });
+    tableWrap.closest('form').addEventListener('formdata', function (event) {
+        var controls = previousDesktop ? tableControls : cardControls;
+        var pickup = event.formData.get('confirm_pickup');
+        var changedRows = new Set(typeof pickup === 'string' ? [pickup.split(':')[0]] : []);
+        controls.forEach(function (control) {
+            if (!control.disabled && controlValue(control) !== originalValues.get(control)) {
+                changedRows.add(control.name.match(/\[(\d+)\]/)[1]);
+            }
+        });
+        controls.forEach(function (control) {
+            if (!changedRows.has(control.name.match(/\[(\d+)\]/)[1])) {
+                event.formData.delete(control.name);
+            }
+        });
+    });
+
     function apply() {
         var desktop = mq.matches;
         if (previousDesktop !== null && desktop !== previousDesktop) {
@@ -651,14 +811,14 @@ require_once __DIR__ . '/header.php';
             });
         }
         tableControls.forEach(function (el) {
-            el.disabled = !desktop;
+            el.disabled = !desktop || el.closest('[data-attendance-locked]') !== null;
         });
         cardControls.forEach(function (el) {
-            el.disabled = desktop;
+            el.disabled = desktop || el.closest('[data-attendance-locked]') !== null;
         });
         // Toggle the fieldset disabled state so its child radios follow
         mobileFieldsets.forEach(function (fs) {
-            fs.disabled = desktop;
+            fs.disabled = desktop || fs.closest('[data-attendance-locked]') !== null;
         });
         previousDesktop = desktop;
     }

@@ -12,8 +12,18 @@ function portalAttendanceStatus(mixed $value): ?string
         ? $value : null;
 }
 
-/** SQL condition for a registered arrival without a checkout (attendance alias a). */
-const PORTAL_OPEN_CHECKOUT = "a.status IN ('present', 'late') AND a.check_in IS NOT NULL AND a.check_out IS NULL";
+/** SQL condition for an outstanding handover (attendance alias a). */
+const PORTAL_OPEN_CHECKOUT = "a.status IN ('present', 'late') AND a.check_in IS NOT NULL
+    AND (a.check_out IS NULL OR a.picked_up_by IS NULL OR a.pickup_verified_by IS NULL)";
+
+// A confirmed handover can no longer be overwritten by an ordinary attendance form.
+const PORTAL_UPDATE_UNVERIFIED_ATTENDANCE = <<<'SQL'
+ON DUPLICATE KEY UPDATE
+    status    = IF(pickup_verified_by IS NULL, VALUES(status), status),
+    check_in  = IF(pickup_verified_by IS NULL, VALUES(check_in), check_in),
+    check_out = IF(pickup_verified_by IS NULL, VALUES(check_out), check_out),
+    notes     = IF(pickup_verified_by IS NULL, VALUES(notes), notes)
+SQL;
 
 /** Absent children have no visit times; invalid visit sequences must not be saved. */
 function portalAttendanceTimes(string $status, ?string $checkIn, ?string $checkOut): array

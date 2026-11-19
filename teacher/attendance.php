@@ -22,6 +22,7 @@ require_once __DIR__ . '/../includes/sms.php';
 require_once __DIR__ . '/../includes/notifications.php';
 require_once __DIR__ . '/../includes/permissions.php';
 require_once __DIR__ . '/../includes/teacher_portal_helpers.php';
+require_once __DIR__ . '/../includes/school_planning.php';
 
 requireTeacherLogin();
 require_once __DIR__ . '/../includes/portal_rules.php';
@@ -71,11 +72,14 @@ function teacherTimeForInput(?string $sqlTime): string
 
 $today        = (new DateTimeImmutable('today'))->format('Y-m-d');
 $selectedDate = teacherAttendanceDate((string) ($_GET['date'] ?? $today)) ?? $today;
+$selectedFilter = $_GET['filter'] ?? 'all';
+$selectedFilter = in_array($selectedFilter, ['expected', 'notices', 'unrecorded'], true) ? $selectedFilter : 'all';
 
 $classrooms  = [];
 $classroom   = null;
 $classroomId = 0;
 $rows        = [];
+$attendancePlan = ['holiday' => null, 'expected' => [], 'missing' => [], 'notices' => []];
 $summary     = ['present' => 0, 'late' => 0, 'excused' => 0, 'absent' => 0, 'unset' => 0];
 
 $successMessage = getFlash('success');
@@ -83,6 +87,7 @@ $errorMessage   = getFlash('error');
 
 try {
     initializeTeachersTables();
+    initializeAttendanceTable();
     initializeNotificationTables();
     $pdo = getDb();
 
@@ -126,17 +131,10 @@ try {
                 $previousStatuses[(int) $prev['child_id']] = (string) $prev['status'];
             }
 
-            $upsert = $pdo->prepare(
-                <<<'SQL'
+            $upsert = $pdo->prepare(<<<'SQL'
 INSERT INTO attendance (child_id, attendance_date, status, check_in, check_out, notes)
 VALUES (:child_id, :adate, :status, :check_in, :check_out, :notes)
-ON DUPLICATE KEY UPDATE
-    status    = VALUES(status),
-    check_in  = VALUES(check_in),
-    check_out = VALUES(check_out),
-    notes     = VALUES(notes)
-SQL
-            );
+SQL . ' ' . PORTAL_UPDATE_UNVERIFIED_ATTENDANCE);
 
             /** @var array<int, string> $changed */
             $changed    = [];
@@ -188,7 +186,7 @@ SQL
 
                     $savedCount++;
 
-                    if (($previousStatuses[$childId] ?? null) !== $status) {
+                    if ($upsert->rowCount() > 0 && ($previousStatuses[$childId] ?? null) !== $status) {
                         $changed[$childId] = $status;
                     }
                 }
@@ -246,14 +244,15 @@ SQL
             }
 
             setFlash('success', $flash);
-            redirect(url('teacher/attendance.php?date=' . rawurlencode($postDate)));
+            redirect(url('teacher/attendance.php?classroom_id=' . $classroomId . '&date=' . rawurlencode($postDate)));
         }
 
+        $attendancePlan = dailyAttendancePlan($pdo, $selectedDate, $classroomId);
         $listStmt = $pdo->prepare(
             <<<'SQL'
 SELECT
     c.id, c.first_name, c.last_name, c.preferred_name, c.photo, c.allergies,
-    a.status, a.check_in, a.check_out, a.notes
+    a.status, a.check_in, a.check_out, a.notes, a.pickup_verified_by
 FROM child_classroom cc
 INNER JOIN children c ON c.id = cc.child_id
 LEFT JOIN attendance a
@@ -363,6 +362,15 @@ require_once __DIR__ . '/header.php';
         <?php endforeach; ?>
     </nav>
 
+    <?php if ($attendancePlan['holiday'] !== null): ?>
+        <p class="notice">تعطیلی مهد · <?= e($attendancePlan['holiday']) ?></p>
+    <?php endif; ?>
+    <p class="tp-day-note">
+        <?= e(persianNumber(count($attendancePlan['expected']))) ?> کودک مورد انتظار ·
+        <?= e(persianNumber(count($attendancePlan['missing']))) ?> ثبت‌نشده ·
+        <?= e(persianNumber(count($attendancePlan['notices']))) ?> اعلام خانواده
+    </p>
+
     <!-- Live Headcount Summary Cards -->
     <div class="tp-stat-grid">
         <div class="tp-stat-card">
@@ -410,7 +418,9 @@ require_once __DIR__ . '/header.php';
                            placeholder="🔍 جستجوی سریع نام کودک..." oninput="applyAttendanceFilters()">
                     <div class="tp-mode-switch" role="group" aria-label="فیلتر وضعیت حضور">
                         <button type="button" class="tp-mode-btn active" data-att-filter="all" onclick="setAttendanceFilter('all', this)">همه (<?= e(persianNumber((string) $totalChildren)) ?>)</button>
-                        <button type="button" class="tp-mode-btn" data-att-filter="unrecorded" onclick="setAttendanceFilter('unrecorded', this)">ثبت‌نشده‌ها</button>
+                        <button type="button" class="tp-mode-btn" data-att-filter="expected" onclick="setAttendanceFilter('expected', this)">مورد انتظار</button>
+                        <button type="button" class="tp-mode-btn" data-att-filter="unrecorded" onclick="setAttendanceFilter('unrecorded', this)">مورد انتظارِ ثبت‌نشده</button>
+                        <button type="button" class="tp-mode-btn" data-att-filter="notices" onclick="setAttendanceFilter('notices', this)">اعلام خانواده</button>
                         <button type="button" class="tp-mode-btn" data-att-filter="present" onclick="setAttendanceFilter('present', this)">حاضرین</button>
                         <button type="button" class="tp-mode-btn" data-att-filter="absent_late" onclick="setAttendanceFilter('absent_late', this)">تأخیر / غایب</button>
                     </div>
@@ -425,7 +435,7 @@ require_once __DIR__ . '/header.php';
 
             <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding-top:8px;border-top:1px dashed var(--tp-border);">
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                    <strong style="font-size:0.82rem;">ثبت یک‌جا برای کل کلاس:</strong>
+                    <strong style="font-size:0.82rem;">ثبت یک‌جا برای کودکان مورد انتظارِ نمایش‌داده‌شده</strong>
                     <?php foreach ($statusLabels as $value => $label): ?>
                         <button type="button" class="tp-btn tp-btn-secondary tp-btn-sm" onclick="setAllAttendance('<?= e($value) ?>')">
                             همه «<?= e($label) ?>»
@@ -448,19 +458,21 @@ require_once __DIR__ . '/header.php';
                     : $fullName;
                 $currentStatus = (string) ($row['status'] ?? '');
                 $hasRecord     = $currentStatus !== '';
-                if (!in_array($currentStatus, $allowedStatuses, true)) {
-                    $currentStatus = 'present';
-                }
+                $familyNotice = $attendancePlan['notices'][$childId] ?? null;
                 $photoUrl      = !empty($row['photo']) ? url((string) $row['photo']) : '';
                 $checkInShort  = teacherTimeForInput($row['check_in'] ?? null);
                 $checkOutShort = teacherTimeForInput($row['check_out'] ?? null);
                 $noteVal       = trim((string) ($row['notes'] ?? ''));
+                $pickupVerified = $row['pickup_verified_by'] !== null;
                 $hasExtraData  = $checkInShort !== '' || $checkOutShort !== '' || $noteVal !== '';
                 ?>
                 <div class="tp-att-row attendance-row <?= $hasRecord ? '' : 'tp-att-row--unrecorded' ?>"
                      data-child="<?= $childId ?>"
                      data-name="<?= e($displayName) ?>"
-                     data-recorded="<?= $hasRecord ? '1' : '0' ?>">
+                     data-recorded="<?= $hasRecord ? '1' : '0' ?>"
+                     data-expected="<?= isset($attendancePlan['expected'][$childId]) ? '1' : '0' ?>"
+                     data-family-notice="<?= $familyNotice !== null ? '1' : '0' ?>"
+                     <?= $pickupVerified ? 'data-pickup-locked' : '' ?>>
                     <div class="tp-att-row-top">
                         <div style="display:flex;align-items:center;gap:12px;">
                             <?php if ($photoUrl !== ''): ?>
@@ -476,7 +488,16 @@ require_once __DIR__ . '/header.php';
                                     <?php else: ?>
                                         <span class="tp-badge tp-badge-present" id="rec-badge-<?= $childId ?>">ثبت شده <?= $checkInShort !== '' ? '· ' . e(persianNumber($checkInShort)) : '' ?></span>
                                     <?php endif; ?>
+                                    <?php if ($pickupVerified): ?>
+                                        <span class="tp-badge tp-badge-present">تحویل در پذیرش تأیید شد</span>
+                                    <?php endif; ?>
                                 </div>
+                                <?php if ($familyNotice !== null): ?>
+                                    <div class="tp-day-note">
+                                        <?= e(attendanceNoticeLabel($familyNotice)) ?>
+                                        <?php if ($familyNotice['note'] !== null): ?> · <?= e($familyNotice['note']) ?><?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
                                 <?php if (trim((string) ($row['allergies'] ?? '')) !== ''): ?>
                                     <div style="font-size:0.76rem;color:var(--tp-absent);font-weight:700;margin-top:2px;">
                                         ⚠️ حساسیت: <?= e((string) $row['allergies']) ?>
@@ -493,6 +514,7 @@ require_once __DIR__ . '/header.php';
                                         name="attendance[<?= $childId ?>][status]"
                                         value="<?= e($value) ?>"
                                         onchange="onChildStatusChange(<?= $childId ?>, '<?= e($value) ?>')"
+                                        <?= $pickupVerified ? 'disabled' : '' ?>
                                         <?= $currentStatus === $value ? 'checked' : '' ?>>
                                     <span><?= e($label) ?></span>
                                 </label>
@@ -514,8 +536,9 @@ require_once __DIR__ . '/header.php';
                                 <input type="time" id="in-<?= $childId ?>"
                                     name="attendance[<?= $childId ?>][check_in]"
                                     class="tp-input"
+                                    <?= $pickupVerified ? 'disabled' : '' ?>
                                     value="<?= e($checkInShort) ?>">
-                                <button type="button" class="tp-now-btn" onclick="setNowTime('in-<?= $childId ?>')" title="ثبت ساعت اکنون">الان</button>
+                                <button type="button" class="tp-now-btn" <?= $pickupVerified ? 'disabled' : '' ?> onclick="setNowTime('in-<?= $childId ?>')" title="ثبت ساعت اکنون">الان</button>
                             </div>
                         </div>
                         <div>
@@ -524,8 +547,9 @@ require_once __DIR__ . '/header.php';
                                 <input type="time" id="out-<?= $childId ?>"
                                     name="attendance[<?= $childId ?>][check_out]"
                                     class="tp-input"
+                                    <?= $pickupVerified ? 'disabled' : '' ?>
                                     value="<?= e($checkOutShort) ?>">
-                                <button type="button" class="tp-now-btn" onclick="setNowTime('out-<?= $childId ?>')" title="ثبت ساعت اکنون">الان</button>
+                                <button type="button" class="tp-now-btn" <?= $pickupVerified ? 'disabled' : '' ?> onclick="setNowTime('out-<?= $childId ?>')" title="ثبت ساعت اکنون">الان</button>
                             </div>
                         </div>
                         <div>
@@ -534,6 +558,7 @@ require_once __DIR__ . '/header.php';
                                 <div style="display:flex;gap:4px;flex-wrap:wrap;">
                                     <?php foreach ($transitionNotesChips as $chipTxt): ?>
                                         <button type="button" class="tp-template-chip" style="font-size:0.68rem;padding:2px 7px;"
+                                                <?= $pickupVerified ? 'disabled' : '' ?>
                                                 onclick="setTransitionNote(<?= $childId ?>, <?= e(json_encode($chipTxt, JSON_UNESCAPED_UNICODE)) ?>)">
                                             <?= e($chipTxt) ?>
                                         </button>
@@ -543,6 +568,7 @@ require_once __DIR__ . '/header.php';
                             <input type="text" id="notes-<?= $childId ?>"
                                 name="attendance[<?= $childId ?>][notes]"
                                 class="tp-input" maxlength="2000"
+                                <?= $pickupVerified ? 'disabled' : '' ?>
                                 placeholder="توصیف نحوه جدایی از والد و ورود به جمع کلاس..."
                                 value="<?= e($noteVal) ?>">
                         </div>
@@ -560,7 +586,7 @@ require_once __DIR__ . '/header.php';
     </form>
 
     <script>
-    var currentAttFilter = 'all';
+    var currentAttFilter = <?= json_encode($selectedFilter) ?>;
     var allExtraExpanded = false;
 
     function nowHHMM() {
@@ -591,7 +617,7 @@ require_once __DIR__ . '/header.php';
     function setAllAttendance(status) {
         var timeStr = nowHHMM();
         document.querySelectorAll('.attendance-row').forEach(function (row) {
-            if (row.style.display === 'none') return;
+            if (row.style.display === 'none' || row.dataset.expected !== '1' || row.hasAttribute('data-pickup-locked')) return;
             var input = row.querySelector('input[type="radio"][value="' + status + '"]');
             if (input) { input.checked = true; }
             var cid = row.getAttribute('data-child');
@@ -634,6 +660,7 @@ require_once __DIR__ . '/header.php';
         currentAttFilter = filterKey;
         document.querySelectorAll('[data-att-filter]').forEach(function (b) {
             b.classList.toggle('active', b === btnEl);
+            b.setAttribute('aria-pressed', String(b === btnEl));
         });
         applyAttendanceFilters();
     }
@@ -646,12 +673,16 @@ require_once __DIR__ . '/header.php';
             var name = (row.getAttribute('data-name') || '').toLowerCase();
             var recorded = row.getAttribute('data-recorded') === '1';
             var checked = row.querySelector('input[type="radio"]:checked');
-            var status = checked ? checked.value : 'present';
+            var status = checked ? checked.value : '';
 
             var matchSearch = !q || name.indexOf(q) !== -1;
             var matchFilter = true;
             if (currentAttFilter === 'unrecorded') {
-                matchFilter = !recorded;
+                matchFilter = row.dataset.expected === '1' && !recorded;
+            } else if (currentAttFilter === 'expected') {
+                matchFilter = row.dataset.expected === '1';
+            } else if (currentAttFilter === 'notices') {
+                matchFilter = row.dataset.familyNotice === '1';
             } else if (currentAttFilter === 'present') {
                 matchFilter = status === 'present';
             } else if (currentAttFilter === 'absent_late') {
@@ -683,7 +714,10 @@ require_once __DIR__ . '/header.php';
         return String(value).replace(/\d/g, function (d) { return map[Number(d)]; });
     }
 
-    document.addEventListener('DOMContentLoaded', refreshAttendanceSummary);
+    document.addEventListener('DOMContentLoaded', function () {
+        setAttendanceFilter(currentAttFilter, document.querySelector('[data-att-filter="' + currentAttFilter + '"]'));
+        refreshAttendanceSummary();
+    });
     </script>
 <?php endif; ?>
 

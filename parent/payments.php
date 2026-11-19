@@ -9,6 +9,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/csrf.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/parent_children_helpers.php';
+require_once __DIR__ . '/../includes/tuition_invoices.php';
 
 requireParentLogin();
 require_once __DIR__ . '/../includes/portal_rules.php';
@@ -32,22 +33,24 @@ $monthTotals = ['expected' => 0.0, 'paid' => 0.0, 'balance' => 0.0];
 try {
     initializeFinancialTables();
     $pdo = getDb();
+    ensureTuitionInvoiceColumns($pdo);
 
     [$jy, $jm] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
     $currentMonthYear = sprintf('%04d-%02d', $jy, $jm);
 
     // Active children of this parent, with their current-month tuition position.
     $kidsStmt = $pdo->prepare(
-        "SELECT id, first_name, last_name
-         FROM children
-         WHERE parent_id = :pid AND status = 'active'
-         ORDER BY first_name, last_name"
+        "SELECT c.id, c.first_name, c.last_name, tp.due_date
+         FROM children c LEFT JOIN tuition_plans tp ON tp.child_id = c.id AND tp.month_year = :month_year
+         WHERE c.parent_id = :pid AND c.status = 'active'
+         ORDER BY c.first_name, c.last_name"
     );
-    $kidsStmt->execute([':pid' => $parentId]);
+    $kidsStmt->execute([':pid' => $parentId, ':month_year' => $currentMonthYear]);
 
     foreach ($kidsStmt->fetchAll() as $kid) {
         $breakdown = childTuitionBreakdown($pdo, (int) $kid['id'], $currentMonthYear);
         $breakdown['child_name'] = trim((string) $kid['first_name'] . ' ' . (string) $kid['last_name']);
+        $breakdown['due_date'] = $kid['due_date'];
 
         $monthBreakdowns[] = $breakdown;
         $monthTotals['expected'] += (float) $breakdown['expected'];
@@ -139,12 +142,15 @@ require_once __DIR__ . '/header.php';
             </div>
         </div>
 
-        <?php if (count($monthBreakdowns) > 1): ?>
+        <?php if (count($monthBreakdowns) > 1 || $monthBreakdowns[0]['due_date'] !== null): ?>
             <div style="border-top:1px dashed var(--border, #ddd);padding-top:12px;">
                 <?php foreach ($monthBreakdowns as $item): ?>
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;font-size:0.85rem;padding:5px 0;flex-wrap:wrap;">
                         <div>
                             <strong><?= e((string) $item['child_name']) ?></strong>
+                        <?php if ($item['due_date'] !== null): ?>
+                            <span class="muted">سررسید <?= e(shamsiDate($item['due_date'])) ?></span>
+                        <?php endif; ?>
                         </div>
                         <div style="text-align:left;">
                             <span style="color:#1e632b;"><?= e(persianNumber(number_format((float) $item['paid']))) ?></span>

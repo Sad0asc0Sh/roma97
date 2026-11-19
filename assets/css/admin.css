@@ -13,6 +13,72 @@
 .admin-directory-search { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .admin-directory-search input[type="search"] { flex:1 1 240px; max-width:400px; min-width:0; }
 #compose-message { scroll-margin-top:120px; }
+#family-inbox { scroll-margin-top:120px; }
+.family-message { border:1px solid var(--adm-border); border-radius:var(--adm-radius-md); margin-block:10px; }
+.family-message summary { padding:12px 16px; cursor:pointer; overflow-wrap:anywhere; }
+.family-message-meta { display:block; margin-block:3px 8px; color:var(--adm-text-muted); }
+.family-message-badges { display:inline-flex; flex-wrap:wrap; gap:6px; vertical-align:middle; }
+.family-message-body { padding:12px 16px; border-block-start:1px solid var(--adm-border); overflow-wrap:anywhere; }
+.family-message-actions { display:flex; flex-wrap:wrap; gap:8px; margin-block:12px; }
+.family-message-follow-up { display:flex; flex-wrap:wrap; align-items:end; gap:12px; }
+.family-message-follow-up label { flex:1 1 150px; min-width:0; font-weight:600; }
+.family-message-follow-up label:last-of-type { flex-basis:190px; }
+.family-message-follow-up select.form-control { background-position:left 12px center; }
+.attendance-pickup-cell { min-width:9.5rem; }
+.attendance-pickup { display:grid; gap:6px; justify-items:start; }
+.attendance-pickup button { display:grid; justify-items:start; white-space:normal; text-align:start; }
+.attendance-pickup small { color:var(--adm-text-muted); }
+.attendance-family-notice {
+    display:grid;
+    gap:2px;
+    margin-block-start:6px;
+    padding-inline-start:8px;
+    border-inline-start:2px solid var(--adm-border);
+    color:var(--adm-text);
+    font-size:.8rem;
+    overflow-wrap:anywhere;
+}
+.attendance-family-notice small { color:var(--adm-text-muted); }
+.class-workdays {
+    min-inline-size:0;
+    margin:0;
+    padding:10px 14px;
+    border:1px solid var(--adm-border);
+    border-radius:var(--adm-radius-md);
+}
+.class-workdays legend { padding-inline:4px; font-weight:700; }
+.class-workdays-options { display:flex; flex-wrap:wrap; gap:8px; margin-block-end:8px; }
+.class-workdays-options label { display:inline-flex; align-items:center; gap:6px; padding:6px 8px; cursor:pointer; }
+.class-workdays-options input { inline-size:16px; block-size:16px; }
+.invoice-toolbar { display:flex; align-items:end; flex-wrap:wrap; gap:10px 14px; }
+.invoice-toolbar label { display:grid; gap:4px; font-size:.85rem; font-weight:650; }
+.invoice-month-totals { display:flex; flex-wrap:wrap; gap:12px 28px; margin:12px 0 20px; }
+.invoice-month-totals dt { color:var(--adm-text-muted); font-size:.85rem; }
+.invoice-month-totals dd { margin:0; font-weight:750; }
+.invoice-discrepancy { display:block; color:var(--adm-text-muted); margin-block-start:4px; overflow-wrap:anywhere; }
+.invoice-row-actions { display:flex; flex-wrap:wrap; gap:6px; }
+.invoice-edit { margin-block-start:16px; }
+.invoice-edit h3 { font-size:.95rem; margin:0 0 12px; }
+.invoice-bulk { margin-block-start:22px; padding-block-start:14px; border-block-start:1px solid var(--adm-border); }
+.invoice-bulk summary { cursor:pointer; font-weight:700; }
+#invoiceQueue, #invoicePlan, #recordForm { scroll-margin-top:7rem; }
+.pilot-comparison { border-block-start:3px solid var(--adm-primary); scroll-margin-top:7rem; }
+.admin-table.pilot-table { table-layout:fixed; }
+.admin-table.pilot-table th, .admin-table.pilot-table td { white-space:normal; overflow-wrap:anywhere; }
+.pilot-table col:first-child { inline-size:38%; }
+.pilot-table thead small, .pilot-table tbody small { display:block; color:var(--adm-text-muted); }
+.pilot-table [data-pilot-phase="after"] { border-inline-start:1px solid var(--adm-border); }
+.pilot-days { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-block-start:10px; }
+.pilot-days strong { min-inline-size:5rem; }
+.pilot-day-form { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr)); align-items:end; gap:12px; margin-block-start:16px; }
+.pilot-day-form label { display:grid; gap:4px; }
+.pilot-day-form button { justify-self:start; }
+#pilotDay { scroll-margin-top:7rem; }
+@media (max-width:540px) {
+    .admin-table.pilot-table th, .admin-table.pilot-table td { padding:10px 7px; font-size:.75rem; }
+}
+[data-theme="dark"] .attendance-pickup .badge,
+[data-theme="dark"] .family-message-badges .badge { color:var(--adm-text); }
 .flex-between-center { display:flex; justify-content:space-between; align-items:center; }
 .flex-items-center { display:flex; align-items:center; }
 .gap-sm { gap:var(--space-sm); }

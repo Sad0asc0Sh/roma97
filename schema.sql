@@ -140,6 +140,8 @@ CREATE TABLE IF NOT EXISTS attendance (
     status ENUM('present','absent','late','excused') NOT NULL DEFAULT 'present',
     check_in TIME DEFAULT NULL,
     check_out TIME DEFAULT NULL,
+    picked_up_by VARCHAR(201) DEFAULT NULL,
+    pickup_verified_by INT DEFAULT NULL,
     notes TEXT DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -159,6 +161,35 @@ CREATE TABLE IF NOT EXISTS events (
     category VARCHAR(50) DEFAULT 'general',
     status ENUM('scheduled','cancelled','completed') DEFAULT 'scheduled',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Weekdays use ISO order, with Monday = 0 and Sunday = 6.
+CREATE TABLE IF NOT EXISTS classroom_workdays (
+    classroom_id INT NOT NULL,
+    weekday TINYINT UNSIGNED NOT NULL CHECK (weekday <= 6),
+    PRIMARY KEY (classroom_id, weekday),
+    CONSTRAINT fk_workdays_classroom FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS school_holidays (
+    event_id INT PRIMARY KEY,
+    holiday_date DATE NOT NULL,
+    INDEX idx_school_holidays_date (holiday_date),
+    CONSTRAINT fk_school_holiday_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS attendance_notices (
+    child_id INT NOT NULL,
+    notice_date DATE NOT NULL,
+    parent_id INT NOT NULL,
+    notice_type ENUM('absent','late') NOT NULL,
+    expected_arrival TIME DEFAULT NULL,
+    note VARCHAR(500) DEFAULT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (child_id, notice_date),
+    INDEX idx_attendance_notices_date (notice_date),
+    CONSTRAINT fk_attendance_notice_child FOREIGN KEY (child_id) REFERENCES children(id) ON DELETE CASCADE,
+    CONSTRAINT fk_attendance_notice_parent FOREIGN KEY (parent_id) REFERENCES parents(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS daily_reports (
@@ -191,6 +222,49 @@ CREATE TABLE IF NOT EXISTS daily_reports (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS daily_report_feedback (
+    report_id INT NOT NULL,
+    parent_id INT NOT NULL,
+    seen_at DATETIME NOT NULL,
+    reaction ENUM('helpful','more_details') DEFAULT NULL,
+    reacted_at DATETIME DEFAULT NULL,
+    PRIMARY KEY (report_id, parent_id),
+    CONSTRAINT fk_feedback_report FOREIGN KEY (report_id) REFERENCES daily_reports(id) ON DELETE CASCADE,
+    CONSTRAINT fk_feedback_parent FOREIGN KEY (parent_id) REFERENCES parents(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS operations_pilots (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    classroom_id INT NOT NULL,
+    change_date DATE NOT NULL,
+    created_at DATETIME NOT NULL,
+    UNIQUE KEY uq_pilot_class_date (classroom_id, change_date),
+    CONSTRAINT fk_pilot_class FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS operations_pilot_days (
+    pilot_id INT NOT NULL,
+    work_date DATE NOT NULL,
+    worked TINYINT(1) NOT NULL,
+    manager_minutes SMALLINT UNSIGNED NOT NULL,
+    open_cases SMALLINT UNSIGNED NOT NULL,
+    closed_cases SMALLINT UNSIGNED NOT NULL,
+    independent_cases SMALLINT UNSIGNED NOT NULL,
+    PRIMARY KEY (pilot_id, work_date),
+    CONSTRAINT fk_pilot_day FOREIGN KEY (pilot_id) REFERENCES operations_pilots(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS operations_pilot_reports (
+    report_id INT PRIMARY KEY,
+    pilot_id INT NOT NULL,
+    published_at DATETIME NOT NULL,
+    work_ms INT UNSIGNED DEFAULT NULL,
+    first_viewed_at DATETIME DEFAULT NULL,
+    INDEX idx_pilot_published (pilot_id, published_at),
+    CONSTRAINT fk_pilot_report_pilot FOREIGN KEY (pilot_id) REFERENCES operations_pilots(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pilot_report FOREIGN KEY (report_id) REFERENCES daily_reports(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS classroom_daily_activities (
     id INT AUTO_INCREMENT PRIMARY KEY,
     classroom_id INT NOT NULL,
@@ -215,6 +289,7 @@ CREATE TABLE IF NOT EXISTS classroom_waitlist (
     classroom_id INT NOT NULL,
     requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     notes TEXT NULL,
+    fulfilled_at DATETIME DEFAULT NULL,
     UNIQUE KEY unique_child_waitlist (child_id, classroom_id),
     CONSTRAINT fk_cw_child FOREIGN KEY (child_id) REFERENCES children(id) ON DELETE CASCADE,
     CONSTRAINT fk_cw_classroom FOREIGN KEY (classroom_id) REFERENCES classrooms(id) ON DELETE CASCADE
@@ -296,6 +371,8 @@ CREATE TABLE IF NOT EXISTS tuition_plans (
     child_id INT NOT NULL,
     month_year VARCHAR(7) NOT NULL,
     expected_amount DECIMAL(12,2) NOT NULL,
+    due_date DATE DEFAULT NULL,
+    discrepancy_note VARCHAR(500) DEFAULT NULL,
     notes TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY unique_plan_child_month (child_id, month_year),
@@ -349,6 +426,9 @@ CREATE TABLE IF NOT EXISTS messages (
     sender_type ENUM('admin','teacher','parent') NOT NULL,
     sender_id INT NOT NULL,
     recipient_admin_id INT NULL,
+    follow_up_status ENUM('open','in_progress','resolved') NOT NULL DEFAULT 'open',
+    follow_up_admin_id INT DEFAULT NULL,
+    response_due_at DATETIME DEFAULT NULL,
     parent_id INT NULL,
     subject VARCHAR(255) NOT NULL,
     body TEXT NOT NULL,
