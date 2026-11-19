@@ -187,28 +187,102 @@ function initGlobalSearchKeybind() {
   const input = document.getElementById('appSearchInput');
   const main = document.querySelector('main');
   if (!input || !main) return;
-  document.addEventListener('keydown', event => {
-    if ((event.key === '/' || ((event.ctrlKey || event.metaKey) && event.key === 'k'))
-        && !event.target.closest?.('input,textarea,select,[contenteditable]') && input.getClientRects().length > 0) {
-      event.preventDefault();
-      input.focus();
+
+  const shell = input.closest('[data-search-shell]') || input.closest('.app-search-box, .tp-search-wrap');
+  const toggleBtn = shell?.querySelector('[data-search-toggle]') || null;
+  const closeBtn = shell?.querySelector('[data-search-close]') || null;
+  const isDirectorySearch = Boolean(input.form?.hasAttribute('data-directory-search'));
+
+  let items = [];
+  if (!isDirectorySearch) {
+    // Pages with a dedicated register filter should have only one search owner.
+    const ownSearch = main.querySelector('input[type="search"], #attendanceSearch, #reportSearch, #childSearch');
+    if (ownSearch) {
+      shell?.setAttribute('hidden', '');
+      return;
     }
-    if (event.key === 'Escape' && document.activeElement === input) {
+    const selector = '.app-table tbody tr, .admin-table tbody tr, .payments-table tbody tr, .attendance-table tbody tr, .admin-child-card, .child-card-large, .child-list-card, .event-card, .admin-event-card, .quick-list-item, .tp-child-card, .tp-att-row, .tp-report-card, .tp-msg-item, .portal-row';
+    items = [...main.querySelectorAll(selector)];
+    if (!items.length) {
+      shell?.setAttribute('hidden', '');
+      return;
+    }
+    input.placeholder = 'جست‌وجو در همین صفحه…';
+  }
+
+  const setSearchOpen = (open, { focus = false, clear = false } = {}) => {
+    if (!shell) return;
+    if (clear && input.value !== '') {
       input.value = '';
       input.dispatchEvent(new Event('input'));
     }
-  });
-  if (input.form?.hasAttribute('data-directory-search')) return;
-  // Pages with a dedicated register filter should have only one search owner.
-  const ownSearch = main.querySelector('input[type="search"], #attendanceSearch, #reportSearch, #childSearch');
-  if (ownSearch) {
-    input.closest('.app-search-box, .tp-search-wrap')?.setAttribute('hidden', '');
-    return;
+    shell.classList.toggle('is-open', open);
+    if (toggleBtn) {
+      toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    if (open && focus) {
+      input.focus();
+    } else if (!open && focus && toggleBtn) {
+      toggleBtn.focus();
+    }
+  };
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setSearchOpen(true, { focus: true });
+    });
   }
-  const selector = '.app-table tbody tr, .admin-table tbody tr, .payments-table tbody tr, .attendance-table tbody tr, .admin-child-card, .child-card-large, .child-list-card, .event-card, .admin-event-card, .quick-list-item, .tp-child-card, .tp-att-row, .tp-report-card, .tp-msg-item, .portal-row';
-  const items = [...main.querySelectorAll(selector)];
-  if (!items.length) { input.closest('.app-search-box, .tp-search-wrap')?.setAttribute('hidden', ''); return; }
-  input.placeholder = 'جست‌وجو در همین صفحه…';
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setSearchOpen(false, { focus: true, clear: true });
+    });
+  }
+
+  if (shell) {
+    document.addEventListener('click', (event) => {
+      if (!shell.classList.contains('is-open')) return;
+      if (event.target.closest?.('[data-search-shell]') === shell) return;
+      if (input.value.trim() === '') {
+        setSearchOpen(false);
+      }
+    });
+
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted && input.value.trim() === '') {
+        setSearchOpen(false);
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    const shellVisible = shell ? !shell.hidden && shell.getClientRects().length > 0 : input.getClientRects().length > 0;
+    if ((event.key === '/' || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k'))
+        && !event.target.closest?.('input,textarea,select,[contenteditable]') && shellVisible) {
+      event.preventDefault();
+      if (shell && toggleBtn) {
+        setSearchOpen(true, { focus: true });
+      } else {
+        input.focus();
+      }
+      return;
+    }
+    if (event.key === 'Escape' && (document.activeElement === input || shell?.contains(document.activeElement))) {
+      event.preventDefault();
+      if (shell && toggleBtn) {
+        setSearchOpen(false, { focus: true, clear: true });
+      } else {
+        input.value = '';
+        input.dispatchEvent(new Event('input'));
+      }
+    }
+  });
+
+  if (isDirectorySearch) return;
   const normalize = value => value.toLowerCase().replace(/ي/g,'ی').replace(/ك/g,'ک').replace(/[\u200c\u200f]/g,' ').replace(/[۰-۹]/g,c=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(c)).replace(/\s+/g,' ').trim();
   const notice = document.createElement('p');
   notice.className = 'portal-search-empty';

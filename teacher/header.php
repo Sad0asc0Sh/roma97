@@ -135,10 +135,18 @@ $navChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php']
                 </div>
 
                 <div class="teacher-header-actions">
-                    <div class="tp-search-wrap">
-                        <svg class="tp-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        <input type="search" id="appSearchInput" placeholder="جست‌وجوی سریع کودک یا ردیف..." aria-label="جست‌وجوی سریع در صفحه">
-                        <kbd class="tp-search-kbd">/</kbd>
+                    <div class="tp-search-wrap" data-search-shell>
+                        <button type="button" class="tp-action-btn tp-search-toggle" data-search-toggle aria-expanded="false" aria-controls="tpSearchBox" aria-label="جست‌وجو در صفحه" title="جست‌وجو در صفحه (/)">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        </button>
+                        <div class="tp-search-box" id="tpSearchBox">
+                            <svg class="tp-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="search" id="appSearchInput" placeholder="جست‌وجوی سریع کودک یا ردیف..." aria-label="جست‌وجوی سریع در صفحه">
+                            <kbd class="tp-search-kbd">/</kbd>
+                            <button type="button" class="tp-search-close" data-search-close aria-label="بستن جست‌وجو" title="بستن (Esc)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        </div>
                     </div>
 
                     <a href="<?php echo e(url('teacher/messages.php')); ?>" class="tp-action-btn" aria-label="مرکز پیام‌ها" title="ارسال پیام به والدین">

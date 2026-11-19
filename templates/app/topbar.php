@@ -55,7 +55,7 @@ window.toggleMobileSidebar = window.toggleMobileSidebar || function(evtOrState) 
     nav.classList.toggle('is-open', shouldOpen);
 };
 </script>
-<header class="app-topbar<?= $showChildDirectorySearch ? ' app-topbar--directory' : '' ?>">
+<header class="app-topbar">
     <div class="app-topbar-right">
         <?php if (isset($_SESSION['admin_id']) || isset($_SESSION['teacher_id']) || isset($_SESSION['parent_id'])): ?>
             <button class="admin-mobile-toggle" id="mobileSidebarToggle" type="button" onclick="window.toggleMobileSidebar(event)" aria-label="باز کردن منو">
@@ -77,22 +77,31 @@ window.toggleMobileSidebar = window.toggleMobileSidebar || function(evtOrState) 
         </nav>
     </div>
 
-    <div class="app-topbar-center">
-        <?php if ($showChildDirectorySearch): ?>
-            <form class="app-search-box" role="search" aria-label="جست‌وجوی سراسری پرونده‌ها" data-directory-search method="get" action="<?= e(url('admin/children.php')) ?>">
-                <label for="appSearchInput" class="sr-only">نام کودک، نام والد یا شماره موبایل</label>
-                <input type="search" id="appSearchInput" name="q" class="app-search-input" maxlength="100" value="<?= e($directorySearch ?? '') ?>" placeholder="نام کودک، نام والد یا موبایل">
-                <button type="submit" class="app-directory-search-button">جست‌وجو</button>
-            </form>
-        <?php else: ?>
-            <div class="app-search-box">
-                <input type="search" id="appSearchInput" class="app-search-input" placeholder="جست‌وجوی زنده در صفحه..." aria-label="جست‌وجوی زنده">
-                <kbd class="app-search-kbd">/</kbd>
-            </div>
-        <?php endif; ?>
-    </div>
-
     <div class="app-topbar-left">
+        <div class="app-search-shell<?= $showChildDirectorySearch ? ' app-search-shell--directory' : '' ?>" data-search-shell>
+            <button type="button" class="app-topbar-btn app-search-toggle" data-search-toggle aria-expanded="false" aria-controls="appSearchBox" aria-label="<?= $showChildDirectorySearch ? 'جست‌وجوی پرونده‌ها' : 'جست‌وجو در صفحه' ?>" title="<?= $showChildDirectorySearch ? 'جست‌وجوی کودک، والد یا موبایل (/)' : 'جست‌وجو در صفحه (/)' ?>">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+            <?php if ($showChildDirectorySearch): ?>
+                <form class="app-search-box" id="appSearchBox" role="search" aria-label="جست‌وجوی سراسری پرونده‌ها" data-directory-search method="get" action="<?= e(url('admin/children.php')) ?>">
+                    <label for="appSearchInput" class="sr-only">نام کودک، نام والد یا شماره موبایل</label>
+                    <input type="search" id="appSearchInput" name="q" class="app-search-input" maxlength="100" value="<?= e($directorySearch ?? '') ?>" placeholder="نام کودک، نام والد یا موبایل">
+                    <button type="submit" class="app-directory-search-button">جست‌وجو</button>
+                    <button type="button" class="app-search-close" data-search-close aria-label="بستن جست‌وجو" title="بستن (Esc)">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </form>
+            <?php else: ?>
+                <div class="app-search-box" id="appSearchBox">
+                    <input type="search" id="appSearchInput" class="app-search-input" placeholder="جست‌وجوی زنده در صفحه..." aria-label="جست‌وجوی زنده">
+                    <kbd class="app-search-kbd">/</kbd>
+                    <button type="button" class="app-search-close" data-search-close aria-label="بستن جست‌وجو" title="بستن (Esc)">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+            <?php endif; ?>
+        </div>
+
         <button type="button" class="app-topbar-btn theme-toggle-btn" id="themeToggleBtn" aria-label="تغییر حالت شب/روز" title="تغییر حالت شب/روز">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
         </button>

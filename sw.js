@@ -1,7 +1,7 @@
 /* Roma PWA Service Worker — network-first for pages, cache-first for assets. */
 'use strict';
 
-var CACHE_VERSION = 'roma-v3';
+var CACHE_VERSION = 'roma-v4';
 var STATIC_CACHE = CACHE_VERSION + '-static';
 var PAGES_CACHE = CACHE_VERSION + '-pages';
 
