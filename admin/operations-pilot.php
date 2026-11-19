@@ -127,7 +127,12 @@ $pageTitle = 'آزمون میدانی کلاس | ' . siteName();
 require __DIR__ . '/header.php';
 ?>
 <section class="dashboard">
-    <h1>آزمون میدانی کلاس</h1>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <h1>آزمون میدانی کلاس</h1>
+            <p class="adm-page-subtitle">سنجش پیش و پس از تغییر شیوهٔ کاری کلاس‌ها با شاخص‌های خودکار و ثبت روزانه</p>
+        </div>
+    </div>
     <?php if ($errorMessage !== null): ?><p class="alert" role="alert"><?= e($errorMessage) ?></p><?php endif; ?>
     <?php if ($successMessage !== null): ?><p class="notice" role="status"><?= e($successMessage) ?></p><?php endif; ?>
 

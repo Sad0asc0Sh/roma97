@@ -129,9 +129,17 @@ $flashSuccess = getFlash('success');
 $flashError = getFlash('error');
 ?>
 <section class="dashboard">
-    <h1>ثبت دستی کودک جدید</h1>
-    <p><a href="<?= e(url('admin/children.php')) ?>">→ بازگشت به فهرست کودکان</a></p>
-    <p style="color:var(--adm-text-muted);line-height:1.9;">کودک را برای یک والد موجود مستقیم توسط مدیریت ثبت کنید. تخصیص کلاس فقط برای کودک با وضعیت «فعال» انجام می‌شود.</p>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>ثبت دستی کودک جدید</h1>
+            </div>
+            <p class="adm-page-subtitle">کودک را برای یک والد موجود مستقیم توسط مدیریت ثبت کنید. تخصیص کلاس فقط برای کودک با وضعیت «فعال» انجام می‌شود.</p>
+        </div>
+        <div class="adm-page-actions">
+            <a class="adm-back-link" href="<?= e(url('admin/children.php')) ?>">بازگشت به فهرست کودکان</a>
+        </div>
+    </div>
 
     <?php if ($flashSuccess !== null): ?><div class="notice" role="status"><?= e($flashSuccess) ?></div><?php endif; ?>
     <?php if ($flashError !== null): ?><div class="alert" role="alert"><?= e($flashError) ?></div><?php endif; ?>

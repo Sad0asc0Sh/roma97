@@ -97,9 +97,17 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
-        <h1 style="margin:0;">مدیریت حقوق</h1>
-        <a href="<?= e(url('admin/export-csv.php?type=salary')) ?>" class="btn btn-secondary">📥 دریافت خروجی CSV حقوق</a>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <h1>مدیریت حقوق مربیان</h1>
+            <p class="adm-page-subtitle">ثبت پرداخت حقوق ماهانه مربیان، سوابق تسویه و خروجی مالی</p>
+        </div>
+        <div class="adm-page-actions">
+            <a href="<?= e(url('admin/export-csv.php?type=salary')) ?>" class="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>دریافت خروجی CSV حقوق</span>
+            </a>
+        </div>
     </div>
 
     <?php if ($successMessage !== null): ?>

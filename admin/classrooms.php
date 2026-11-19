@@ -229,7 +229,15 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>مدیریت کلاس‌ها</h1>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>مدیریت کلاس‌ها</h1>
+                <span class="adm-count-pill"><?= e(persianNumber((string) ($pagination['total'] ?? count($classrooms)))) ?> کلاس</span>
+            </div>
+            <p class="adm-page-subtitle">تعریف کلاس‌ها، ظرفیت پذیرش، اختصاص مربی و برنامه‌ریزی روزهای کاری</p>
+        </div>
+    </div>
 
     <?php if ($successMessage !== null): ?>
         <div class="notice" role="status"><?= e($successMessage) ?></div>
@@ -342,7 +350,7 @@ require_once __DIR__ . '/header.php';
                             / <?= (int) $cl['capacity'] ?>
                             <?php $wlEntries = $waitlistByClassroom[(int)$cl['id']] ?? []; ?>
                             <?php if (!empty($wlEntries)): ?>
-                                <br><span class="badge badge-warning" style="font-size:0.75rem; margin-top:4px;">📋 لیست انتظار: <?= count($wlEntries) ?> کودک</span>
+                                <br><span class="badge badge-warning" style="margin-top:4px;">لیست انتظار: <?= e(persianNumber((string) count($wlEntries))) ?> کودک</span>
                             <?php endif; ?>
                         </td>
                         <td class="schedule-cell">
@@ -353,7 +361,7 @@ require_once __DIR__ . '/header.php';
                                class="btn btn-sm btn-secondary">ویرایش</a>
                             <?php $enrolled = (int) $cl['enrolled_count']; ?>
                             <form method="post" action="<?= e(url('admin/classrooms.php')) ?>" class="inline-form"
-                                  onsubmit="return confirm(<?= $enrolled > 0 ? json_encode('این کلاس ' . $enrolled . ' کودک ثبت‌شده دارد. با حذف کلاس، تخصیص همه آن‌ها هم حذف می‌شود. ادامه می‌دهید؟') : json_encode('این کلاس حذف شود؟') ?>);">
+                                  data-confirm="<?= e($enrolled > 0 ? 'این کلاس ' . $enrolled . ' کودک ثبت‌شده دارد. با حذف کلاس، تخصیص همه آن‌ها هم حذف می‌شود. ادامه می‌دهید؟' : 'آیا این کلاس حذف شود؟') ?>">
                                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="classroom_id" value="<?= (int) $cl['id'] ?>">
@@ -378,7 +386,7 @@ require_once __DIR__ . '/header.php';
     <?php if (!empty($allWaitlist)): ?>
         <div class="admin-section" style="margin-top:28px;">
             <div class="admin-section-header">
-                <h2 class="admin-section-title">📋 لیست انتظار کلاس‌ها (Waiting List)</h2>
+                <h2 class="admin-section-title">لیست انتظار کلاس‌ها</h2>
             </div>
             <div class="admin-table-wrap">
                 <table class="admin-table">

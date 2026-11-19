@@ -240,9 +240,15 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <div class="app-toolbar">
-        <h1 style="margin:0;font-size:1.5rem;font-weight:800">مدیریت صفحات</h1>
-        <div class="app-toolbar-actions">
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>مدیریت صفحات</h1>
+                <span class="adm-count-pill"><?= e(persianNumber((string) ($pagination['total'] ?? count($pages)))) ?> صفحه</span>
+            </div>
+            <p class="adm-page-subtitle">ویرایش صفحات اطلاع‌رسانی عمومی وب‌سایت مهدکودک</p>
+        </div>
+        <div class="adm-page-actions">
             <button type="button" class="app-btn app-btn-primary" onclick="openPageDrawer()">
                 + افزودن صفحه جدید
             </button>

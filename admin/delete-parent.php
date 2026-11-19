@@ -132,8 +132,16 @@ $childStatusLabels = [
 ];
 ?>
 <section class="dashboard">
-    <h1>حذف دائمی والد</h1>
-    <p><a href="<?= e(url('admin/parents.php')) ?>">→ بازگشت به مدیریت والدین</a></p>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>حذف دائمی والد</h1>
+            </div>
+        </div>
+        <div class="adm-page-actions">
+            <a class="adm-back-link" href="<?= e(url('admin/parents.php')) ?>">بازگشت به مدیریت والدین</a>
+        </div>
+    </div>
 
     <?php if ($flashSuccess !== null): ?><div class="notice" role="status"><?= e($flashSuccess) ?></div><?php endif; ?>
     <?php if ($flashError !== null): ?><div class="alert" role="alert"><?= e($flashError) ?></div><?php endif; ?>
@@ -201,8 +209,8 @@ $childStatusLabels = [
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="parent_id" value="<?= $parentId ?>">
 
-            <div class="form-card" style="border-color:var(--adm-danger);">
-                <h2 style="color:var(--adm-danger);">⚠️ حذف دائمی و غیرقابل بازگشت</h2>
+            <div class="form-card adm-danger-card">
+                <h2 style="color:var(--adm-danger);">حذف دائمی و غیرقابل بازگشت</h2>
                 <p style="color:var(--adm-danger);line-height:1.9;font-weight:600;">
                     این عملیات قابل بازگشت نیست. والد، همه کودکان او و تمام سوابق بالا (از جمله سوابق مالی شهریه) برای همیشه از پایگاه داده حذف می‌شوند.
                 </p>
@@ -222,7 +230,7 @@ $childStatusLabels = [
             </div>
 
             <div class="form-actions">
-                <button class="btn btn-danger" type="submit">🗑 حذف دائمی والد و کودکان</button>
+                <button class="btn btn-danger" type="submit">حذف دائمی والد و کودکان</button>
                 <a class="btn btn-outline" href="<?= e(url('admin/parents.php')) ?>">انصراف</a>
             </div>
         </form>

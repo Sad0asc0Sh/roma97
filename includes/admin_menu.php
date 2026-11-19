@@ -7,89 +7,45 @@ if (!defined('ROOMA_APP')) {
 
 /**
  * Shared admin navigation menu.
- * Expected variables before including: none (uses url() + generateCsrfToken()).
+ * Modern pill-based navigation bar gated by the central permissions matrix.
  */
 function renderAdminMenu(): void
 {
     $role = currentAdminRole();
+    $current = basename($_SERVER['PHP_SELF']);
+    $items = [
+        ['admin/index.php', 'داشبورد'],
+        ['admin/attendance.php', 'حضور و غیاب'],
+        ['admin/children.php', 'کودکان'],
+        ['admin/parents.php', 'والدین'],
+        ['admin/classrooms.php', 'کلاس‌ها'],
+        ['admin/teachers.php', 'معلمان'],
+        ['admin/events.php', 'رویدادها'],
+        ['admin/tuition.php', 'شهریه'],
+        ['admin/salary.php', 'حقوق'],
+        ['admin/expenses.php', 'هزینه‌ها'],
+        ['admin/reports.php', 'گزارش مالی'],
+        ['admin/messages.php', 'پیام‌ها'],
+        ['admin/sms-center.php', 'مرکز پیامک'],
+        ['admin/contact-messages.php', 'پیام‌های تماس'],
+        ['admin/slides.php', 'اسلایدها'],
+        ['admin/gallery.php', 'گالری'],
+        ['admin/news.php', 'اخبار'],
+        ['admin/pages.php', 'صفحات'],
+        ['admin/backup.php', 'پشتیبان‌گیری'],
+        ['admin/settings.php', 'تنظیمات'],
+    ];
     ?>
-    <nav class="admin-menu" aria-label="منوی مدیریت">
-        <?php if (isPageAllowedForRole('admin/index.php', $role)): ?>
-            <a href="<?= e(url('admin/index.php')) ?>">داشبورد</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/settings.php', $role)): ?>
-            <a href="<?= e(url('admin/settings.php')) ?>">تنظیمات</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/slides.php', $role)): ?>
-            <a href="<?= e(url('admin/slides.php')) ?>">اسلایدها</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/news.php', $role)): ?>
-            <a href="<?= e(url('admin/news.php')) ?>">اخبار</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/pages.php', $role)): ?>
-            <a href="<?= e(url('admin/pages.php')) ?>">صفحات</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/children.php', $role)): ?>
-            <a href="<?= e(url('admin/children.php')) ?>">کودکان</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/attendance.php', $role)): ?>
-            <a href="<?= e(url('admin/attendance.php')) ?>">حضور و غیاب</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/events.php', $role)): ?>
-            <a href="<?= e(url('admin/events.php')) ?>">رویدادها</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/teachers.php', $role)): ?>
-            <a href="<?= e(url('admin/teachers.php')) ?>">معلمان</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/classrooms.php', $role)): ?>
-            <a href="<?= e(url('admin/classrooms.php')) ?>">کلاس‌ها</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/salary.php', $role)): ?>
-            <a href="<?= e(url('admin/salary.php')) ?>">حقوق</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/tuition.php', $role)): ?>
-            <a href="<?= e(url('admin/tuition.php')) ?>">شهریه</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/expenses.php', $role)): ?>
-            <a href="<?= e(url('admin/expenses.php')) ?>">هزینه‌ها</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/reports.php', $role)): ?>
-            <a href="<?= e(url('admin/reports.php')) ?>">گزارش مالی</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/messages.php', $role)): ?>
-            <a href="<?= e(url('admin/messages.php')) ?>">پیام‌ها</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/sms-center.php', $role)): ?>
-            <a href="<?= e(url('admin/sms-center.php')) ?>">مرکز پیامک</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/contact-messages.php', $role)): ?>
-            <a href="<?= e(url('admin/contact-messages.php')) ?>">پیام‌های تماس</a>
-            <span>|</span>
-        <?php endif; ?>
-        <?php if (isPageAllowedForRole('admin/backup.php', $role)): ?>
-            <a href="<?= e(url('admin/backup.php')) ?>">پشتیبان‌گیری</a>
-            <span>|</span>
-        <?php endif; ?>
+    <nav class="admin-menu adm-segmented-nav" aria-label="منوی مدیریت">
+        <?php foreach ($items as [$path, $label]): ?>
+            <?php if (isPageAllowedForRole($path, $role)): ?>
+                <a href="<?= e(url($path)) ?>" class="<?= basename($path) === $current ? 'is-active' : '' ?>"><?= e($label) ?></a>
+            <?php endif; ?>
+        <?php endforeach; ?>
         <form method="post" action="<?= e(url('admin/logout.php')) ?>" class="form-inline">
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-            <button type="submit" class="btn-reset">خروج</button>
-       </form>
-   </nav>
+            <button type="submit" class="btn btn-sm btn-outline">خروج</button>
+        </form>
+    </nav>
     <?php
 }

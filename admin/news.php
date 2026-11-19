@@ -269,10 +269,16 @@ $pageTitle = 'مدیریت اخبار | ' . siteName();
 require_once __DIR__ . '/header.php';
 ?>
 
-<div class="admin-content">
-    <div class="app-toolbar">
-        <h1 class="m-0 font-bold">مدیریت اخبار</h1>
-        <div class="app-toolbar-actions">
+<section class="dashboard">
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>مدیریت اخبار</h1>
+                <span class="adm-count-pill"><?= e(persianNumber((string) ($pagination['total'] ?? count($newsItems)))) ?> خبر</span>
+            </div>
+            <p class="adm-page-subtitle">انتشار اخبار، اطلاعیه‌های عمومی و گزارش فعالیت‌های مهد در وب‌سایت</p>
+        </div>
+        <div class="adm-page-actions">
             <button type="button" class="app-btn app-btn-primary" onclick="openNewsDrawer()">
                 + افزودن خبر جدید
             </button>
@@ -401,7 +407,7 @@ require_once __DIR__ . '/header.php';
             <?php endif; ?>
         <?php endif; ?>
     </div>
-</div>
+</section>
 
 <script>
 function openNewsDrawer() {

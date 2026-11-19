@@ -129,8 +129,14 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>گزارش فعالیت‌ها</h1>
-    <p class="muted">سابقه‌ی تغییرات و رویدادهای مهم سیستم.</p>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>گزارش فعالیت‌ها</h1>
+            </div>
+            <p class="adm-page-subtitle">سابقه تغییرات، نشست‌ها و رویدادهای مهم سیستم</p>
+        </div>
+    </div>
 
     <?php if (!empty($errorMessage)): ?>
         <div class="alert" role="alert"><?= e($errorMessage) ?></div>

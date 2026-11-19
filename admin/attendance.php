@@ -497,8 +497,14 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="admin-page">
-    <div class="app-toolbar">
-        <h1 style="margin:0;font-size:1.5rem;font-weight:800">حضور و غیاب روزانه</h1>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>حضور و غیاب روزانه</h1>
+                <span class="adm-count-pill"><?= e($displayDateLabel) ?></span>
+            </div>
+            <p class="adm-page-subtitle">ثبت وضعیت ورود و خروج، تحویل‌گیرنده مجاز و مشاهده اعلام‌های خانواده‌ها</p>
+        </div>
     </div>
 
     <?php if ($successMessage !== null): ?>
@@ -514,38 +520,38 @@ require_once __DIR__ . '/header.php';
         <p class="notice" role="status">تعطیلی مهد · <?= e($plan['holiday']) ?></p>
     <?php endif; ?>
 
-    <div class="admin-section mb-md">
-        <form class="date-selector date-selector-form attendance-filter-bar" method="get" action="<?= e(url('admin/attendance.php')) ?>">
-            <?php if ($selectedChildId !== null): ?>
-                <input type="hidden" name="child_id" value="<?= e($selectedChildId) ?>">
-            <?php endif; ?>
-            <div class="attendance-filter-field">
-                <label for="attendance_date_pick" class="form-label">تاریخ</label>
-                <input type="text" id="attendance_date_pick" name="date" class="form-control shamsi-datepicker" value="<?= e(shamsiDate($selectedDate, 'numeric')) ?>">
-            </div>
-            <div class="attendance-filter-field">
-                <label for="attendance_filter" class="form-label">وضعیت</label>
-                <select name="filter" id="attendance_filter" class="form-control">
-                    <?php foreach ($filterLabels as $value => $label): ?>
-                        <option value="<?= e($value) ?>" <?= $filter === $value ? 'selected' : '' ?>><?= e($label) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="attendance-filter-field">
-                <label for="attendance_classroom" class="form-label">کلاس</label>
-                <select name="classroom_id" id="attendance_classroom" class="form-control">
-                    <option value="">همه کلاس‌ها</option>
-                    <?php foreach ($classrooms as $option): ?>
-                        <option value="<?= e($option['id']) ?>" <?= $classroomId === (int) $option['id'] ? 'selected' : '' ?>><?= e($option['name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
+    <form class="date-selector date-selector-form attendance-filter-bar adm-filter-panel" method="get" action="<?= e(url('admin/attendance.php')) ?>">
+        <?php if ($selectedChildId !== null): ?>
+            <input type="hidden" name="child_id" value="<?= e($selectedChildId) ?>">
+        <?php endif; ?>
+        <div class="attendance-filter-field adm-filter-field">
+            <label for="attendance_date_pick" class="form-label">تاریخ</label>
+            <input type="text" id="attendance_date_pick" name="date" class="form-control shamsi-datepicker" value="<?= e(shamsiDate($selectedDate, 'numeric')) ?>">
+        </div>
+        <div class="attendance-filter-field adm-filter-field">
+            <label for="attendance_filter" class="form-label">وضعیت</label>
+            <select name="filter" id="attendance_filter" class="form-control">
+                <?php foreach ($filterLabels as $value => $label): ?>
+                    <option value="<?= e($value) ?>" <?= $filter === $value ? 'selected' : '' ?>><?= e($label) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="attendance-filter-field adm-filter-field">
+            <label for="attendance_classroom" class="form-label">کلاس</label>
+            <select name="classroom_id" id="attendance_classroom" class="form-control">
+                <option value="">همه کلاس‌ها</option>
+                <?php foreach ($classrooms as $option): ?>
+                    <option value="<?= e($option['id']) ?>" <?= $classroomId === (int) $option['id'] ? 'selected' : '' ?>><?= e($option['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="adm-filter-actions">
             <button type="submit" class="btn btn-secondary">اعمال فیلتر</button>
             <?php if ($filterQuery !== []): ?>
                 <a href="<?= e(url('admin/attendance.php?date=' . $selectedDate)) ?>" class="btn btn-outline">نمایش همه</a>
             <?php endif; ?>
-        </form>
-    </div>
+        </div>
+    </form>
 
     <div class="admin-section">
         <?php if ($rows === []): ?>

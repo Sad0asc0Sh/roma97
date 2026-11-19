@@ -24,11 +24,26 @@
     </div>
 
     <?php if ($monthTotals !== []): ?>
-        <dl class="invoice-month-totals">
-            <?php foreach (['expected' => 'مبلغ مورد انتظار ماه', 'paid' => 'دریافتی', 'due' => 'ماندهٔ پرداخت‌نشده'] as $metric => $label): ?>
-                <div><dt><?= e($label) ?></dt><dd><?= e(persianNumber(number_format($monthTotals[$metric]))) ?> تومان</dd></div>
+        <div class="adm-kpi-grid">
+            <?php
+            $metricVariants = [
+                'expected' => 'adm-kpi-card--primary',
+                'paid' => 'adm-kpi-card--success',
+                'due' => 'adm-kpi-card--danger',
+            ];
+            $metricLabels = [
+                'expected' => 'مبلغ مورد انتظار ماه',
+                'paid' => 'دریافتی',
+                'due' => 'ماندهٔ پرداخت‌نشده',
+            ];
+            ?>
+            <?php foreach ($metricLabels as $metric => $label): ?>
+                <div class="adm-kpi-card <?= e($metricVariants[$metric] ?? '') ?>">
+                    <div class="adm-kpi-label"><?= e($label) ?></div>
+                    <div class="adm-kpi-value"><?= e(persianNumber(number_format($monthTotals[$metric]))) ?> <span class="adm-kpi-unit">تومان</span></div>
+                </div>
             <?php endforeach; ?>
-        </dl>
+        </div>
     <?php endif; ?>
 
     <?php if ($dashboardStatus === []): ?>

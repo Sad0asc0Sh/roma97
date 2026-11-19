@@ -328,20 +328,29 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:6px;">
-        <div>
-            <h1 style="margin-bottom:4px;">📱 مرکز پیامک و اعلان‌ها</h1>
-            <p class="muted" style="margin:0;">وضعیت سامانه پیامک، صف ارسال، پوشش رویدادها و گزارش کامل تحویل — همه در یک صفحه.</p>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <h1>مرکز پیامک و اعلان‌ها</h1>
+            <p class="adm-page-subtitle">وضعیت سامانه پیامک، صف ارسال، پوشش رویدادها و گزارش کامل تحویل — همه در یک صفحه</p>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <form method="post" action="<?= e(url('admin/sms-center.php')) ?>" style="display:inline;">
+        <div class="adm-page-actions">
+            <form method="post" action="<?= e(url('admin/sms-center.php')) ?>" class="inline-form">
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <input type="hidden" name="action" value="check_sms_connection">
-                <button type="submit" class="btn btn-secondary" style="font-size:0.85rem;">🔍 استعلام موجودی و بررسی اتصال</button>
+                <button type="submit" class="btn btn-secondary">استعلام موجودی و اتصال</button>
             </form>
-            <a href="<?= e(url('admin/settings.php#sms-section')) ?>" class="btn btn-primary" style="font-size:0.85rem;">⚙️ تنظیمات و الگوها</a>
+            <a href="<?= e(url('admin/settings.php#sms-section')) ?>" class="btn btn-primary">تنظیمات و الگوها</a>
         </div>
     </div>
+
+    <nav class="adm-section-nav" aria-label="بخش‌های مرکز پیامک">
+        <a href="#sms-health" class="adm-section-nav-link is-active">سلامت سامانه</a>
+        <a href="#sms-stats" class="adm-section-nav-link">آمار تحویل</a>
+        <a href="#sms-queue" class="adm-section-nav-link">صف ارسال زنده</a>
+        <a href="#sms-coverage" class="adm-section-nav-link">پوشش رویدادها</a>
+        <a href="#sms-test" class="adm-section-nav-link">تست ارسال</a>
+        <a href="#sms-log" class="adm-section-nav-link">گزارش تحویل</a>
+    </nav>
 
     <?php if ($errorMessage !== ''): ?>
         <div class="alert" role="alert"><?= e($errorMessage) ?></div>
@@ -356,122 +365,123 @@ require_once __DIR__ . '/header.php';
     <?php endif; ?>
 
     <!-- ── Gateway health ─────────────────────────────────────────── -->
-    <div class="admin-section" style="border-inline-start:5px solid <?= $gateway['ready'] ? 'var(--app-success, #2E7D5B)' : ($gateway['critical_issues'] === [] ? 'var(--adm-warning, #c8860d)' : 'var(--adm-danger, #c62828)') ?>;">
-        <div class="admin-section-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-            <h2 class="admin-section-title" style="margin:0;">سلامت سامانه پیامک</h2>
-            <span style="font-weight:800;font-size:0.95rem;color:<?= $gateway['ready'] ? 'var(--adm-success)' : 'var(--adm-danger)' ?>;">
-                <?= $gateway['ready'] ? '✅ آماده ارسال' : '⛔ ارسال پیامک انجام نمی‌شود' ?>
+    <div id="sms-health" class="admin-section" style="border-inline-start:5px solid <?= $gateway['ready'] ? 'var(--adm-success)' : ($gateway['critical_issues'] === [] ? 'var(--adm-warning)' : 'var(--adm-danger)') ?>;">
+        <div class="admin-section-header">
+            <h2 class="admin-section-title m-0">سلامت سامانه پیامک</h2>
+            <span class="badge <?= $gateway['ready'] ? 'badge-success' : 'badge-danger' ?>">
+                <?= $gateway['ready'] ? 'آماده ارسال' : 'ارسال پیامک انجام نمی‌شود' ?>
             </span>
         </div>
 
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px;">
-            <div class="card" style="padding:12px 14px;">
-                <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">کلید وب‌سرویس</div>
-                <div style="font-size:0.95rem;font-weight:800;color:<?= $gateway['api_key_set'] ? 'var(--adm-success)' : 'var(--adm-danger)' ?>;">
-                    <?= $gateway['api_key_set'] ? 'ثبت شده' : 'ثبت نشده' ?>
-                </div>
+        <div class="adm-kpi-grid">
+            <div class="adm-kpi-card <?= $gateway['api_key_set'] ? 'adm-kpi-card--success' : 'adm-kpi-card--danger' ?>">
+                <div class="adm-kpi-label">کلید وب‌سرویس</div>
+                <div class="adm-kpi-value"><?= $gateway['api_key_set'] ? 'ثبت شده' : 'ثبت نشده' ?></div>
             </div>
-            <div class="card" style="padding:12px 14px;">
-                <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">ارسال سیستمی</div>
-                <div style="font-size:0.95rem;font-weight:800;color:<?= $gateway['enabled'] ? 'var(--adm-success)' : 'var(--adm-warning)' ?>;">
-                    <?= $gateway['enabled'] ? 'فعال' : 'غیرفعال' ?>
-                </div>
+            <div class="adm-kpi-card <?= $gateway['enabled'] ? 'adm-kpi-card--success' : 'adm-kpi-card--warning' ?>">
+                <div class="adm-kpi-label">ارسال سیستمی</div>
+                <div class="adm-kpi-value"><?= $gateway['enabled'] ? 'فعال' : 'غیرفعال' ?></div>
             </div>
-            <div class="card" style="padding:12px 14px;">
-                <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">رویدادهای آماده</div>
-                <div style="font-size:0.95rem;font-weight:800;">
+            <div class="adm-kpi-card adm-kpi-card--primary">
+                <div class="adm-kpi-label">رویدادهای آماده</div>
+                <div class="adm-kpi-value">
                     <?= e(persianNumber((string) count($gateway['configured_events']))) ?>
-                    <span style="font-weight:normal;color:var(--adm-text-muted);">از <?= e(persianNumber((string) count($catalog))) ?></span>
+                    <span class="adm-kpi-unit">از <?= e(persianNumber((string) count($catalog))) ?></span>
                 </div>
             </div>
-            <div class="card" style="padding:12px 14px;">
-                <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">زمان ارسال درون‌خطی</div>
-                <div style="font-size:0.95rem;font-weight:800;">
+            <div class="adm-kpi-card adm-kpi-card--info">
+                <div class="adm-kpi-label">زمان ارسال درون‌خطی</div>
+                <div class="adm-kpi-value">
                     <?= e(persianNumber((string) smsInlineTimeBudgetSeconds())) ?>
-                    <span style="font-weight:normal;font-size:0.8rem;">ثانیه</span>
+                    <span class="adm-kpi-unit">ثانیه</span>
                 </div>
             </div>
         </div>
 
         <?php foreach ($gateway['critical_issues'] as $issue): ?>
-            <div style="background:rgba(198,40,40,0.12);border:1px solid rgba(198,40,40,0.3);color:var(--adm-danger);padding:10px 12px;border-radius:8px;margin-bottom:8px;font-size:0.88rem;line-height:1.7;">
-                ⛔ <?= e($issue) ?>
+            <div class="adm-callout adm-callout--danger">
+                <div class="adm-callout-body"><?= e($issue) ?></div>
             </div>
         <?php endforeach; ?>
 
         <?php foreach ($gateway['warnings'] as $warning): ?>
-            <div style="background:rgba(200,134,13,0.12);border:1px solid rgba(200,134,13,0.3);color:var(--adm-warning);padding:10px 12px;border-radius:8px;margin-bottom:8px;font-size:0.88rem;line-height:1.7;">
-                ⚠️ <?= e($warning) ?>
+            <div class="adm-callout adm-callout--warning">
+                <div class="adm-callout-body"><?= e($warning) ?></div>
             </div>
         <?php endforeach; ?>
 
         <?php if ($gateway['ready'] && $gateway['warnings'] === []): ?>
-            <p style="font-size:0.88rem;color:var(--adm-text-muted);margin:0;">
+            <p class="muted m-0">
                 همه الگوها تنظیم شده‌اند و سامانه آماده ارسال است. اعلان‌های پورتال والدین مستقل از پیامک همیشه ثبت می‌شوند.
             </p>
         <?php endif; ?>
     </div>
 
     <!-- ── Delivery KPIs + queue actions ──────────────────────────── -->
-    <div class="admin-section">
-        <div class="admin-section-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-            <h2 class="admin-section-title" style="margin:0;">آمار تحویل</h2>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <form method="post" action="<?= e(url('admin/sms-center.php')) ?>" style="display:inline;">
+    <div id="sms-stats" class="admin-section">
+        <div class="admin-section-header">
+            <h2 class="admin-section-title m-0">آمار تحویل</h2>
+            <div class="adm-filter-actions">
+                <form method="post" action="<?= e(url('admin/sms-center.php')) ?>" class="inline-form">
                     <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                     <input type="hidden" name="action" value="flush_queue">
-                    <button type="submit" class="btn btn-secondary" style="font-size:0.85rem;">▶️ پردازش صف الان</button>
+                    <button type="submit" class="btn btn-sm btn-secondary">پردازش صف الان</button>
                 </form>
                 <?php if ($stats['failed'] > 0): ?>
-                    <form method="post" action="<?= e(url('admin/sms-center.php')) ?>" style="display:inline;"
-                        onsubmit="return confirm('همه پیامک‌های ناموفق مجدداً ارسال شوند؟');">
+                    <form method="post" action="<?= e(url('admin/sms-center.php')) ?>" class="inline-form"
+                        data-confirm="آیا همه پیامک‌های ناموفق مجدداً ارسال شوند؟">
                         <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                         <input type="hidden" name="action" value="retry_all_failed">
-                        <button type="submit" class="btn btn-primary" style="font-size:0.85rem;">🔁 ارسال مجدد همه ناموفق‌ها</button>
+                        <button type="submit" class="btn btn-sm btn-primary">ارسال مجدد همه ناموفق‌ها</button>
                     </form>
                 <?php endif; ?>
             </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">
-            <div class="card" style="padding:12px 14px;">
-                <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">در صف ارسال</div>
-                <div style="font-size:1.3rem;font-weight:800;"><?= e(persianNumber((string) $stats['pending'])) ?></div>
+        <div class="adm-kpi-grid">
+            <div class="adm-kpi-card adm-kpi-card--warning">
+                <div class="adm-kpi-label">در صف ارسال</div>
+                <div class="adm-kpi-value"><?= e(persianNumber((string) $stats['pending'])) ?></div>
             </div>
-            <div class="card" style="padding:12px 14px;border-inline-start:4px solid var(--adm-danger, #c62828);">
-                <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">ناموفق (نیاز به بررسی)</div>
-                <div style="font-size:1.3rem;font-weight:800;color:var(--adm-danger);"><?= e(persianNumber((string) $stats['failed'])) ?></div>
+            <div class="adm-kpi-card adm-kpi-card--danger">
+                <div class="adm-kpi-label">ناموفق (نیاز به بررسی)</div>
+                <div class="adm-kpi-value"><?= e(persianNumber((string) $stats['failed'])) ?></div>
             </div>
-            <div class="card" style="padding:12px 14px;border-inline-start:4px solid var(--app-success, #2E7D5B);">
-                <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">ارسال‌شده امروز</div>
-                <div style="font-size:1.3rem;font-weight:800;color:var(--adm-success);"><?= e(persianNumber((string) $stats['sent_today'])) ?></div>
+            <div class="adm-kpi-card adm-kpi-card--success">
+                <div class="adm-kpi-label">ارسال‌شده امروز</div>
+                <div class="adm-kpi-value"><?= e(persianNumber((string) $stats['sent_today'])) ?></div>
             </div>
-            <div class="card" style="padding:12px 14px;">
-                <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">خطای امروز</div>
-                <div style="font-size:1.3rem;font-weight:800;"><?= e(persianNumber((string) $stats['failed_today'])) ?></div>
+            <div class="adm-kpi-card">
+                <div class="adm-kpi-label">خطای امروز</div>
+                <div class="adm-kpi-value"><?= e(persianNumber((string) $stats['failed_today'])) ?></div>
             </div>
-            <div class="card" style="padding:12px 14px;">
-                <div style="font-size:0.78rem;color:var(--adm-text-muted);font-weight:600;">۳۰ روز گذشته</div>
-                <div style="font-size:1.3rem;font-weight:800;"><?= e(persianNumber((string) $stats['sent_month'])) ?></div>
+            <div class="adm-kpi-card adm-kpi-card--primary">
+                <div class="adm-kpi-label">۳۰ روز گذشته</div>
+                <div class="adm-kpi-value"><?= e(persianNumber((string) $stats['sent_month'])) ?></div>
             </div>
         </div>
 
-        <p style="font-size:0.82rem;color:var(--adm-text-muted);margin:12px 0 0;line-height:1.8;">
-            💡 برای ارسال کاملاً خودکار صف، این دستور را در Cron Job هاست (هر ۵ دقیقه) قرار دهید:
-            <code dir="ltr" style="display:inline-block;direction:ltr;background:var(--surface-hover, rgba(0,0,0,0.04));padding:2px 6px;border-radius:4px;">php <?= e(dirname(__DIR__)) ?>/bin/process-sms-queue.php</code>
-        </p>
+        <div class="adm-callout adm-callout--info m-0">
+            <div class="adm-callout-body">
+                برای ارسال کاملاً خودکار صف، این دستور را در Cron Job هاست (هر ۵ دقیقه) قرار دهید:
+                <code class="adm-code-chip">php <?= e(dirname(__DIR__)) ?>/bin/process-sms-queue.php</code>
+            </div>
+        </div>
     </div>
 
     <!-- ── Live queue ─────────────────────────────────────────────── -->
-    <div class="admin-section">
+    <div id="sms-queue" class="admin-section">
         <div class="admin-section-header">
-            <h2 class="admin-section-title" style="margin:0;">صف ارسال زنده</h2>
+            <h2 class="admin-section-title m-0">صف ارسال زنده</h2>
         </div>
 
         <?php if ($queueRows === []): ?>
-            <p style="color:var(--adm-text-muted);font-size:0.9rem;background:var(--surface-hover, rgba(0,0,0,0.02));padding:14px;border-radius:8px;text-align:center;margin:0;">
-                ✅ صف خالی است — همه پیامک‌ها تحویل داده شده‌اند.
-            </p>
+            <div class="empty-state empty-state-sm">
+                <div class="empty-state-icon">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <h3>صف خالی است — همه پیامک‌ها تحویل داده شده‌اند</h3>
+            </div>
         <?php else: ?>
             <div class="admin-table-wrap">
                 <table class="admin-table">
@@ -492,10 +502,10 @@ require_once __DIR__ . '/header.php';
                             <?php
                             $qStatus = (string) $row['status'];
                             $statusMeta = match ($qStatus) {
-                                'pending' => ['⏳ در انتظار', 'var(--adm-warning)'],
-                                'sending' => ['📤 در حال ارسال', 'var(--adm-info)'],
-                                'failed'  => ['❌ ناموفق', 'var(--adm-danger)'],
-                                default   => [$qStatus, 'var(--adm-text-muted)'],
+                                'pending' => ['در انتظار', 'badge-warning'],
+                                'sending' => ['در حال ارسال', 'badge-info'],
+                                'failed'  => ['ناموفق', 'badge-danger'],
+                                default   => [$qStatus, 'badge-secondary'],
                             };
                             $eventLabel = (string) ($catalog[(string) $row['event_type']]['label'] ?? $row['event_type']);
                             ?>
@@ -504,32 +514,32 @@ require_once __DIR__ . '/header.php';
                                 <td dir="ltr" style="text-align:right;font-family:monospace;"><?= e((string) $row['recipient_phone']) ?></td>
                                 <td>
                                     <?php $pName = trim((string) ($row['p_first'] ?? '') . ' ' . (string) ($row['p_last'] ?? '')); ?>
-                                    <?= $pName !== '' ? e($pName) : '<span style="color:var(--adm-text-muted);">—</span>' ?>
+                                    <?= $pName !== '' ? e($pName) : '<span class="muted">—</span>' ?>
                                 </td>
-                                <td style="font-size:0.83rem;"><?= e($eventLabel) ?></td>
-                                <td style="font-weight:700;color:<?= e($statusMeta[1]) ?>;font-size:0.85rem;"><?= e($statusMeta[0]) ?></td>
+                                <td><?= e($eventLabel) ?></td>
+                                <td><span class="badge <?= e($statusMeta[1]) ?>"><?= e($statusMeta[0]) ?></span></td>
                                 <td><?= e(persianNumber((string) $row['attempts'])) ?></td>
-                                <td style="font-size:0.78rem;color:var(--adm-danger);max-width:220px;">
-                                    <?= $row['last_error'] !== null && $row['last_error'] !== '' ? e((string) $row['last_error']) : '<span style="color:var(--adm-text-muted);">—</span>' ?>
+                                <td class="muted" style="color:var(--adm-danger);max-width:220px;">
+                                    <?= $row['last_error'] !== null && $row['last_error'] !== '' ? e((string) $row['last_error']) : '<span class="muted">—</span>' ?>
                                 </td>
                                 <td>
-                                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                                        <form method="post" action="<?= e(url('admin/sms-center.php')) ?>" style="display:inline;">
+                                    <div class="adm-row-actions">
+                                        <form method="post" action="<?= e(url('admin/sms-center.php')) ?>" class="inline-form">
                                             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                             <input type="hidden" name="action" value="retry_one">
                                             <input type="hidden" name="queue_id" value="<?= e((string) $row['id']) ?>">
                                             <input type="hidden" name="return_status" value="<?= e($statusFilter) ?>">
                                             <input type="hidden" name="return_event" value="<?= e($eventFilter) ?>">
-                                            <button type="submit" class="btn btn-secondary" style="font-size:0.75rem;padding:4px 10px;">🔁 ارسال</button>
+                                            <button type="submit" class="btn btn-xs btn-secondary">ارسال</button>
                                         </form>
-                                        <form method="post" action="<?= e(url('admin/sms-center.php')) ?>" style="display:inline;"
-                                            onsubmit="return confirm('این پیامک از صف حذف شود؟');">
+                                        <form method="post" action="<?= e(url('admin/sms-center.php')) ?>" class="inline-form"
+                                            data-confirm="آیا این پیامک از صف ارسال حذف شود؟">
                                             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                             <input type="hidden" name="action" value="cancel_one">
                                             <input type="hidden" name="queue_id" value="<?= e((string) $row['id']) ?>">
                                             <input type="hidden" name="return_status" value="<?= e($statusFilter) ?>">
                                             <input type="hidden" name="return_event" value="<?= e($eventFilter) ?>">
-                                            <button type="submit" class="btn btn-secondary" style="font-size:0.75rem;padding:4px 10px;color:var(--adm-danger);">✕ لغو</button>
+                                            <button type="submit" class="btn btn-xs btn-reject">لغو</button>
                                         </form>
                                     </div>
                                 </td>
@@ -542,11 +552,11 @@ require_once __DIR__ . '/header.php';
     </div>
 
     <!-- ── Event coverage ─────────────────────────────────────────── -->
-    <div class="admin-section">
+    <div id="sms-coverage" class="admin-section">
         <div class="admin-section-header">
-            <h2 class="admin-section-title" style="margin:0;">پوشش رویدادهای اعلان</h2>
+            <h2 class="admin-section-title m-0">پوشش رویدادهای اعلان</h2>
         </div>
-        <p style="font-size:0.85rem;color:var(--adm-text-muted);margin:0 0 14px;line-height:1.8;">
+        <p class="muted mb-md">
             هر رویداد بدون «شناسه الگو» به‌صورت خودکار غیرفعال است و والدین آن اعلان را با پیامک دریافت نمی‌کنند (پیام پورتال همچنان ثبت می‌شود).
         </p>
 
@@ -571,34 +581,34 @@ require_once __DIR__ . '/header.php';
                         ?>
                         <tr>
                             <td>
-                                <strong style="font-size:0.88rem;"><?= e($event['label']) ?></strong>
-                                <div style="font-size:0.76rem;color:var(--adm-text-muted);line-height:1.7;margin-top:2px;"><?= e($event['description']) ?></div>
+                                <strong><?= e($event['label']) ?></strong>
+                                <div class="muted" style="font-size:0.76rem;margin-top:2px;"><?= e($event['description']) ?></div>
                             </td>
-                            <td style="font-size:0.82rem;"><?= e($event['group']) ?></td>
+                            <td><?= e($event['group']) ?></td>
                             <td dir="ltr" style="text-align:right;font-family:monospace;">
-                                <?= $bodyId > 0 ? e((string) $bodyId) : '<span style="color:var(--adm-text-muted);">—</span>' ?>
+                                <?= $bodyId > 0 ? e((string) $bodyId) : '<span class="muted">—</span>' ?>
                             </td>
-                            <td style="font-size:0.83rem;font-weight:700;">
+                            <td>
                                 <?php if (!$gateway['enabled']): ?>
-                                    <span style="color:var(--adm-warning);">⚪ پیامک غیرفعال</span>
+                                    <span class="badge badge-warning">پیامک غیرفعال</span>
                                 <?php elseif ($bodyId > 0): ?>
-                                    <span style="color:var(--adm-success);">✅ فعال</span>
+                                    <span class="badge badge-success">فعال</span>
                                 <?php else: ?>
-                                    <span style="color:var(--adm-danger);">⛔ الگو تنظیم نشده</span>
+                                    <span class="badge badge-danger">الگو تنظیم نشده</span>
                                 <?php endif; ?>
                             </td>
-                            <td style="font-size:0.82rem;">
+                            <td>
                                 <?= $event['pref_column'] === null
-                                    ? '<span style="color:var(--adm-text-muted);">خیر (پیام ضروری)</span>'
+                                    ? '<span class="muted">خیر (پیام ضروری)</span>'
                                     : 'بله' ?>
                             </td>
-                            <td style="font-size:0.83rem;">
+                            <td>
                                 <span style="color:var(--adm-success);font-weight:700;"><?= e(persianNumber((string) $vol['sent'])) ?></span>
                                 <?php if ($vol['failed'] > 0): ?>
                                     <span style="color:var(--adm-danger);"> / <?= e(persianNumber((string) $vol['failed'])) ?> خطا</span>
                                 <?php endif; ?>
                             </td>
-                            <td style="font-size:0.76rem;color:var(--adm-text-muted);">
+                            <td class="muted" style="font-size:0.76rem;">
                                 <?php foreach ($event['args'] as $i => $argLabel): ?>
                                     <code dir="ltr">{<?= (int) $i ?>}</code>=<?= e($argLabel) ?><?= $i < count($event['args']) - 1 ? '، ' : '' ?>
                                 <?php endforeach; ?>
@@ -612,25 +622,25 @@ require_once __DIR__ . '/header.php';
     </div>
 
     <!-- ── Live test ──────────────────────────────────────────────── -->
-    <div class="admin-section">
+    <div id="sms-test" class="admin-section">
         <div class="admin-section-header">
-            <h2 class="admin-section-title" style="margin:0;">🧪 تست زنده ارسال</h2>
+            <h2 class="admin-section-title m-0">تست زنده ارسال</h2>
         </div>
-        <p style="font-size:0.85rem;color:var(--adm-text-muted);margin:0 0 14px;">
+        <p class="muted mb-md">
             رویداد را انتخاب کنید؛ سیستم شناسه الگوی همان رویداد را از تنظیمات می‌خواند و پیامک آزمایشی می‌فرستد.
         </p>
 
-        <form method="post" action="<?= e(url('admin/sms-center.php')) ?>" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+        <form method="post" action="<?= e(url('admin/sms-center.php')) ?>" class="sms-test-form">
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="send_test">
 
-            <div style="flex:1;min-width:180px;">
-                <label for="test_phone" class="form-label" style="font-size:0.82rem;">شماره گیرنده</label>
+            <div class="sms-test-field sms-test-field--phone">
+                <label for="test_phone" class="form-label">شماره گیرنده</label>
                 <input type="text" id="test_phone" name="test_phone" class="form-control" dir="ltr" placeholder="09123456789" required>
             </div>
 
-            <div style="flex:1;min-width:220px;">
-                <label for="test_event" class="form-label" style="font-size:0.82rem;">رویداد</label>
+            <div class="sms-test-field" style="flex:1.4 1 220px;">
+                <label for="test_event" class="form-label">رویداد</label>
                 <select id="test_event" name="test_event" class="form-control" required>
                     <?php foreach ($catalog as $key => $event): ?>
                         <?php $bodyId = (int) ($settings[$event['pattern_key']] ?? 0); ?>
@@ -641,53 +651,51 @@ require_once __DIR__ . '/header.php';
                 </select>
             </div>
 
-            <div style="flex:1;min-width:130px;">
-                <label for="test_arg_0" class="form-label" style="font-size:0.82rem;">متغیر اول ({0})</label>
+            <div class="sms-test-field">
+                <label for="test_arg_0" class="form-label">متغیر اول ({0})</label>
                 <input type="text" id="test_arg_0" name="test_arg_0" class="form-control" placeholder="خالی = پیش‌فرض">
             </div>
 
-            <div style="flex:1;min-width:130px;">
-                <label for="test_arg_1" class="form-label" style="font-size:0.82rem;">متغیر دوم ({1})</label>
+            <div class="sms-test-field">
+                <label for="test_arg_1" class="form-label">متغیر دوم ({1})</label>
                 <input type="text" id="test_arg_1" name="test_arg_1" class="form-control" placeholder="اختیاری">
             </div>
 
-            <div style="flex:1;min-width:130px;">
-                <label for="test_arg_2" class="form-label" style="font-size:0.82rem;">متغیر سوم ({2})</label>
+            <div class="sms-test-field">
+                <label for="test_arg_2" class="form-label">متغیر سوم ({2})</label>
                 <input type="text" id="test_arg_2" name="test_arg_2" class="form-control" placeholder="اختیاری">
             </div>
 
-            <div style="flex:1;min-width:130px;">
-                <label for="test_arg_3" class="form-label" style="font-size:0.82rem;">متغیر چهارم ({3})</label>
+            <div class="sms-test-field">
+                <label for="test_arg_3" class="form-label">متغیر چهارم ({3})</label>
                 <input type="text" id="test_arg_3" name="test_arg_3" class="form-control" placeholder="اختیاری">
             </div>
 
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                <button type="submit" class="btn btn-primary">🚀 ارسال تست با الگو</button>
-                <button type="submit" name="action" value="test_otp_fast" class="btn" style="background:#e67e22;color:#fff;border:1px solid #d35400;" title="ارسال کد از طریق خط مستقیم اختصاصی در ۲ تا ۵ ثانیه">⚡ تست سریع OTP</button>
+            <div class="adm-filter-actions">
+                <button type="submit" class="btn btn-primary">ارسال تست با الگو</button>
+                <button type="submit" name="action" value="test_otp_fast" class="btn adm-btn-fast" title="ارسال کد از طریق خط مستقیم اختصاصی در ۲ تا ۵ ثانیه">تست سریع OTP</button>
             </div>
         </form>
     </div>
 
     <!-- ── Full delivery log ──────────────────────────────────────── -->
-    <div class="admin-section">
-        <div class="admin-section-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-            <h2 class="admin-section-title" style="margin:0;">گزارش کامل تحویل پیامک</h2>
-            <span style="font-size:0.82rem;color:var(--adm-text-muted);">
-                <?= e(persianNumber((string) $logPagination['total'])) ?> رکورد
-            </span>
+    <div id="sms-log" class="admin-section">
+        <div class="admin-section-header">
+            <h2 class="admin-section-title m-0">گزارش کامل تحویل پیامک</h2>
+            <span class="adm-count-pill"><?= e(persianNumber((string) $logPagination['total'])) ?> رکورد</span>
         </div>
 
-        <form method="get" action="<?= e(url('admin/sms-center.php')) ?>" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;">
-            <div style="min-width:150px;">
-                <label for="filter_status" class="form-label" style="font-size:0.8rem;">وضعیت</label>
+        <form method="get" action="<?= e(url('admin/sms-center.php')) ?>" class="adm-filter-panel">
+            <div class="adm-filter-field">
+                <label for="filter_status" class="form-label">وضعیت</label>
                 <select id="filter_status" name="status" class="form-control" onchange="this.form.submit()">
                     <option value="">همه</option>
                     <option value="sent" <?= $statusFilter === 'sent' ? 'selected' : '' ?>>موفق</option>
                     <option value="failed" <?= $statusFilter === 'failed' ? 'selected' : '' ?>>ناموفق</option>
                 </select>
             </div>
-            <div style="min-width:190px;">
-                <label for="filter_event" class="form-label" style="font-size:0.8rem;">نوع رویداد</label>
+            <div class="adm-filter-field">
+                <label for="filter_event" class="form-label">نوع رویداد</label>
                 <select id="filter_event" name="event" class="form-control" onchange="this.form.submit()">
                     <option value="">همه</option>
                     <?php foreach ($logEventTypes as $type): ?>
@@ -698,14 +706,16 @@ require_once __DIR__ . '/header.php';
                 </select>
             </div>
             <?php if ($filterQuery !== []): ?>
-                <a href="<?= e(url('admin/sms-center.php')) ?>" class="btn btn-secondary" style="font-size:0.82rem;">حذف فیلترها</a>
+                <div class="adm-filter-actions">
+                    <a href="<?= e(url('admin/sms-center.php')) ?>" class="btn btn-secondary">حذف فیلترها</a>
+                </div>
             <?php endif; ?>
         </form>
 
         <?php if ($logRows === []): ?>
-            <p style="color:var(--adm-text-muted);font-size:0.9rem;background:var(--surface-hover, rgba(0,0,0,0.02));padding:14px;border-radius:8px;text-align:center;margin:0;">
-                هیچ رکوردی با این فیلترها یافت نشد.
-            </p>
+            <div class="empty-state empty-state-sm">
+                <h3>هیچ رکوردی با این فیلترها یافت نشد</h3>
+            </div>
         <?php else: ?>
             <div class="admin-table-wrap">
                 <table class="admin-table">
@@ -728,23 +738,23 @@ require_once __DIR__ . '/header.php';
                                 <td dir="ltr" style="text-align:right;font-family:monospace;"><?= e((string) $log['recipient_phone']) ?></td>
                                 <td>
                                     <?php $pName = trim((string) ($log['p_first'] ?? '') . ' ' . (string) ($log['p_last'] ?? '')); ?>
-                                    <?= $pName !== '' ? e($pName) : '<span style="color:var(--adm-text-muted);">—</span>' ?>
+                                    <?= $pName !== '' ? e($pName) : '<span class="muted">—</span>' ?>
                                 </td>
-                                <td style="font-size:0.82rem;">
+                                <td>
                                     <?= e((string) ($catalog[(string) $log['message_type']]['label'] ?? $log['message_type'])) ?>
                                 </td>
                                 <td dir="ltr" style="text-align:right;"><?= e((string) ($log['pattern_body_id'] ?? '—')) ?></td>
                                 <td dir="ltr" style="text-align:right;font-family:monospace;font-size:0.8rem;"><?= e((string) ($log['rec_id'] ?? '—')) ?></td>
-                                <td style="font-size:0.83rem;">
+                                <td>
                                     <?php if ((string) ($log['status'] ?? '') === 'sent'): ?>
-                                        <span style="color:var(--adm-success);font-weight:700;">✅ موفق</span>
+                                        <span class="badge badge-success">موفق</span>
                                     <?php else: ?>
-                                        <span style="color:var(--adm-danger);font-weight:700;" title="<?= e((string) ($log['error_message'] ?? '')) ?>">
-                                            ❌ <?= e((string) ($log['error_message'] ?: ($log['status'] ?? 'ناموفق'))) ?>
+                                        <span class="badge badge-danger" title="<?= e((string) ($log['error_message'] ?? '')) ?>">
+                                            <?= e((string) ($log['error_message'] ?: ($log['status'] ?? 'ناموفق'))) ?>
                                         </span>
                                     <?php endif; ?>
                                 </td>
-                                <td style="font-size:0.78rem;color:var(--adm-text-muted);white-space:nowrap;">
+                                <td class="muted" style="white-space:nowrap;">
                                     <?= e(shamsiDate((string) $log['created_at'], 'with_time')) ?>
                                 </td>
                             </tr>

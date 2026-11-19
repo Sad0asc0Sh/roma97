@@ -9,9 +9,9 @@ $cbStatus = (string) ($child['status'] ?? 'active');
 $cbGender = (string) ($child['gender'] ?? '');
 $cbClassroom = (int) ($child['classroom_id'] ?? 0);
 ?>
-<div class="form-card" data-child-block style="border:1px dashed var(--border,#ccc);margin-bottom:16px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
-        <h3 data-child-title style="margin:0;">کودک</h3>
+<div class="form-card adm-panel-muted" data-child-block>
+    <div class="admin-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0 0 12px 0;margin-bottom:14px;">
+        <h3 data-child-title style="margin:0;font-size:0.98rem;font-weight:700;">کودک</h3>
         <button type="button" class="btn btn-sm btn-reject" data-remove-child>حذف این کودک</button>
     </div>
     <div class="form-grid">

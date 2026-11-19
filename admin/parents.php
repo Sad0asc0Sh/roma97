@@ -106,39 +106,44 @@ if($sf!=='all'){$stmt->execute([':s'=>$sf]);}else{$stmt->execute();}
 $parents=$stmt->fetchAll();
 $pagi=['current'=>$cp,'totalPages'=>$tp,'total'=>$total,'perPage'=>$pp,'from'=>$total>0?$off+1:0,'to'=>min($off+$pp,$total)];
 
-$pageTitle='parents | '.siteName();
+$pageTitle = 'مدیریت والدین | ' . siteName();
 require_once __DIR__.'/header.php';
 $fHref=static fn(string $v):string=>url('admin/parents.php?'.http_build_query(['status'=>$v]));
 $fe=getFlash('error');$fs=getFlash('success');$resetLinkUrl=getFlash('reset_link_url');
 ?>
 <section class="dashboard">
-    <div class="app-toolbar">
-        <h1 class="m-0 font-bold">مدیریت والدین</h1>
-        <div class="app-toolbar-actions">
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>مدیریت والدین</h1>
+                <span class="adm-count-pill"><?= e(persianNumber((string) $pagi['total'])) ?> خانواده</span>
+            </div>
+            <p class="adm-page-subtitle">مدیریت حساب کاربری والدین، تأیید ثبت‌نام‌ها، بازیابی رمز و ثبت کودک جدید</p>
+        </div>
+        <div class="adm-page-actions">
             <a href="<?=e(url('admin/add-parent.php'))?>" class="app-btn app-btn-primary">+ والد جدید</a>
         </div>
     </div>
 
     <?php if(!empty($resetLinkUrl)):?>
-        <div class="card" style="padding:16px; margin-bottom:20px; border-right:4px solid var(--adm-primary,#3182ce);">
-            <div style="font-weight:700; margin-bottom:8px;">🔑 لینک بازیابی رمز عبور تولید شد (اعتبار: ۱ ساعت):</div>
-            <div style="display:flex; gap:10px; align-items:center;">
+        <div class="adm-reset-banner">
+            <div class="font-bold">لینک بازیابی رمز عبور تولید شد (اعتبار: ۱ ساعت):</div>
+            <div class="adm-reset-banner-row">
                 <input type="text" value="<?=e($resetLinkUrl)?>" readonly onclick="this.select()" class="form-control" style="flex:1; font-family:monospace; direction:ltr;">
-                <button type="button" class="btn btn-secondary" onclick="navigator.clipboard.writeText('<?=e($resetLinkUrl)?>'); alert('لینک در حافظه کپی شد.');">کپی لینک</button>
+                <button type="button" class="btn btn-secondary" onclick="navigator.clipboard.writeText('<?=e($resetLinkUrl)?>').then(()=>{if(window.showToast)showToast('لینک در حافظه کپی شد.','success');});">کپی لینک</button>
             </div>
         </div>
     <?php endif;?>
 
-    <?php if(!empty($fe)):?><div class="alert alert-error" style="margin-bottom:16px;"><?=e($fe)?></div><?php endif;?>
-    <?php if(!empty($fs)):?><div class="alert alert-success" style="margin-bottom:16px;"><?=e($fs)?></div><?php endif;?>
+    <?php if(!empty($fe)):?><div class="alert alert-error" role="alert"><?=e($fe)?></div><?php endif;?>
+    <?php if(!empty($fs)):?><div class="notice" role="status"><?=e($fs)?></div><?php endif;?>
 
-    <div class="teacher-filters" style="margin-bottom:20px;">
-        <strong>فیلتر:</strong>
-        <a href="<?=$fHref('all')?>" class="filter-chip <?=$sf==='all'?'active':''?>">همه</a>
-        <a href="<?=$fHref('pending')?>" class="filter-chip <?=$sf==='pending'?'active':''?>">در انتظار</a>
-        <a href="<?=$fHref('active')?>" class="filter-chip <?=$sf==='active'?'active':''?>">فعال</a>
-        <a href="<?=$fHref('suspended')?>" class="filter-chip <?=$sf==='suspended'?'active':''?>">مسدود</a>
-    </div>
+    <nav class="filter-nav" aria-label="فیلتر بر اساس وضعیت والدین">
+        <a href="<?=$fHref('all')?>" class="<?=$sf==='all'?'is-active':''?>">همه</a>
+        <a href="<?=$fHref('pending')?>" class="<?=$sf==='pending'?'is-active':''?>">در انتظار</a>
+        <a href="<?=$fHref('active')?>" class="<?=$sf==='active'?'is-active':''?>">فعال</a>
+        <a href="<?=$fHref('suspended')?>" class="<?=$sf==='suspended'?'is-active':''?>">مسدود</a>
+    </nav>
     <?php if($parents===[]):?>
         <div class="empty-state empty-state-sm">
             <div class="empty-state-icon">
@@ -151,29 +156,71 @@ $fe=getFlash('error');$fs=getFlash('success');$resetLinkUrl=getFlash('reset_link
         <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>نام و نام خانوادگی</th><th>شماره موبایل</th><th>ایمیل</th><th>وضعیت</th><th>تاریخ ثبت</th><th>عملیات</th></tr></thead><tbody>
         <?php foreach($parents as $p):?>
             <tr>
-                <td style="font-weight:600"><?=e($p['first_name'].' '.$p['last_name'])?></td>
+                <td class="font-semibold"><?=e($p['first_name'].' '.$p['last_name'])?></td>
                 <td dir="ltr" style="text-align:right;font-family:monospace;">
                     <?= !empty($p['phone']) ? e(persianNumber($p['phone'])) : '—' ?>
-                    <?php if((int)($p['phone_verified']??0)===1):?><span title="تایید پیامکی شده" style="color:#2e8540;">✓</span><?php endif;?>
+                    <?php if((int)($p['phone_verified']??0)===1):?><span title="تأیید پیامکی شده" style="color:var(--adm-success);">✓</span><?php endif;?>
                 </td>
-                <td style="font-size:0.85rem;color:var(--muted)"><?= !empty($p['email']) ? e($p['email']) : '<span style="opacity:0.5;">—</span>' ?></td>
+                <td class="muted"><?= !empty($p['email']) ? e($p['email']) : '—' ?></td>
                 <td><?php $bc=match($p['status']){'active'=>'badge-success','pending'=>'badge-warning','suspended'=>'badge-danger',default=>'badge-info'};$sl=match($p['status']){'active'=>'فعال','pending'=>'در انتظار تأیید','suspended'=>'مسدود',default=>$p['status']};?><span class="badge <?=$bc?>"><?=$sl?></span></td>
-                <td style="font-size:0.85rem;color:var(--muted)"><?=e(shamsiDate((string)$p['created_at']))?></td>
+                <td class="muted"><?=e(shamsiDate((string)$p['created_at']))?></td>
                 <td>
-                    <?php if($p['status']==='pending'):?>
-                        <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="approve"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-success">تأیید</button></form>
-                        <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline" onsubmit="return confirm('رد شود؟')"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="reject"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-reject">رد</button></form>
-                    <?php elseif($p['status']==='active'):?>
-                        <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline" onsubmit="return confirm('مسدود شود؟')"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="suspend"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-muted">مسدود</button></form>
-                    <?php else:?>
-                        <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="activate"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-success">فعال‌سازی</button></form>
-                    <?php endif;?>
-                    <form method="post" action="<?=e(url('admin/parents.php'))?>" style="display:inline"><input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>"><input type="hidden" name="action" value="generate_reset_link"><input type="hidden" name="parent_id" value="<?=$p['id']?>"><button type="submit" class="btn btn-sm btn-secondary" title="ساخت لینک بازیابی رمز عبور">🔑 بازیابی رمز</button></form>
-                    <a href="<?=e(url('admin/edit-parent.php?id='.(int)$p['id']))?>" class="btn btn-sm btn-secondary">ویرایش</a>
-                    <a href="<?=e(url('admin/add-child.php?parent_id='.(int)$p['id']))?>" class="btn btn-sm btn-secondary">افزودن کودک</a>
-                    <?php if(in_array(currentAdminRole(),['owner','manager'],true)):?>
-                        <a href="<?=e(url('admin/delete-parent.php?id='.(int)$p['id']))?>" class="btn btn-sm btn-reject">حذف</a>
-                    <?php endif;?>
+                    <div class="adm-row-actions">
+                        <?php if($p['status']==='pending'):?>
+                            <form method="post" action="<?=e(url('admin/parents.php'))?>" class="inline-form">
+                                <input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>">
+                                <input type="hidden" name="action" value="approve">
+                                <input type="hidden" name="parent_id" value="<?=$p['id']?>">
+                                <button type="submit" class="btn btn-sm btn-success">تأیید</button>
+                            </form>
+                        <?php else:?>
+                            <a href="<?=e(url('admin/edit-parent.php?id='.(int)$p['id']))?>" class="btn btn-sm btn-secondary">ویرایش</a>
+                        <?php endif;?>
+
+                        <div class="adm-action-menu">
+                            <button type="button" class="adm-action-trigger" aria-haspopup="menu" aria-expanded="false" aria-label="سایر عملیات برای <?=e($p['first_name'].' '.$p['last_name'])?>">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+                            </button>
+                            <div class="adm-action-popover" role="menu">
+                                <?php if($p['status']==='pending'):?>
+                                    <a href="<?=e(url('admin/edit-parent.php?id='.(int)$p['id']))?>" class="adm-action-item" role="menuitem">ویرایش مشخصات</a>
+                                <?php endif;?>
+                                <a href="<?=e(url('admin/add-child.php?parent_id='.(int)$p['id']))?>" class="adm-action-item" role="menuitem">افزودن کودک</a>
+                                <form method="post" action="<?=e(url('admin/parents.php'))?>">
+                                    <input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>">
+                                    <input type="hidden" name="action" value="generate_reset_link">
+                                    <input type="hidden" name="parent_id" value="<?=$p['id']?>">
+                                    <button type="submit" class="adm-action-item" role="menuitem">ساخت لینک بازیابی رمز</button>
+                                </form>
+                                <div class="adm-action-divider"></div>
+                                <?php if($p['status']==='pending'):?>
+                                    <form method="post" action="<?=e(url('admin/parents.php'))?>" data-confirm="آیا این درخواست ثبت‌نام رد شود؟">
+                                        <input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>">
+                                        <input type="hidden" name="action" value="reject">
+                                        <input type="hidden" name="parent_id" value="<?=$p['id']?>">
+                                        <button type="submit" class="adm-action-item adm-action-item--danger" role="menuitem">رد ثبت‌نام</button>
+                                    </form>
+                                <?php elseif($p['status']==='active'):?>
+                                    <form method="post" action="<?=e(url('admin/parents.php'))?>" data-confirm="آیا حساب این والد مسدود شود؟">
+                                        <input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>">
+                                        <input type="hidden" name="action" value="suspend">
+                                        <input type="hidden" name="parent_id" value="<?=$p['id']?>">
+                                        <button type="submit" class="adm-action-item" role="menuitem">مسدودسازی حساب</button>
+                                    </form>
+                                <?php else:?>
+                                    <form method="post" action="<?=e(url('admin/parents.php'))?>">
+                                        <input type="hidden" name="csrf_token" value="<?=e(generateCsrfToken())?>">
+                                        <input type="hidden" name="action" value="activate">
+                                        <input type="hidden" name="parent_id" value="<?=$p['id']?>">
+                                        <button type="submit" class="adm-action-item" role="menuitem">فعال‌سازی حساب</button>
+                                    </form>
+                                <?php endif;?>
+                                <?php if(in_array(currentAdminRole(),['owner','manager'],true)):?>
+                                    <a href="<?=e(url('admin/delete-parent.php?id='.(int)$p['id']))?>" class="adm-action-item adm-action-item--danger" role="menuitem">حذف دائمی والد</a>
+                                <?php endif;?>
+                            </div>
+                        </div>
+                    </div>
                 </td>
             </tr>
         <?php endforeach;?>

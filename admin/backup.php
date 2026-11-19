@@ -133,9 +133,13 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <div class="admin-page-header" style="margin-bottom: 24px;">
-        <h1 style="font-size: 1.5rem; font-weight: 700; margin: 0 0 4px 0;">پشتیبان‌گیری کامل دیتابیس (SQL) 💾</h1>
-        <p class="muted" style="margin: 0;">دریافت نسخه پشتیبان کامل از تمامی اطلاعات و جداول سیستم</p>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>پشتیبان‌گیری کامل دیتابیس (SQL)</h1>
+            </div>
+            <p class="adm-page-subtitle">دریافت نسخه پشتیبان کامل از تمامی اطلاعات و جداول سیستم</p>
+        </div>
     </div>
 
     <?php if ($successMessage !== null): ?>
@@ -146,32 +150,36 @@ require_once __DIR__ . '/header.php';
         <div class="alert alert-danger" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
 
-    <div class="card" style="padding: 24px; max-width: 800px;">
-        <div style="display: flex; gap: 16px; align-items: flex-start; margin-bottom: 20px; padding: 16px; background: rgba(221,107,32,0.08); border-right: 4px solid #dd6b20; border-radius: 8px;">
-            <div style="font-size: 1.5rem; line-height: 1;">⚠️</div>
-            <div style="font-size: 0.92rem; line-height: 1.6; color: var(--adm-text);">
-                <strong>هشدار ایمنی مهم:</strong><br>
-                توصیه می‌شود این پشتیبان را حداقل هفته‌ای یک‌بار دانلود کرده و در جایی امن خارج از سرور (مانند گوگل درایو، هارد اکسترنال یا لپ‌تاپ شخصی) ذخیره نمایید تا در صورت بروز هرگونه مشکل برای هاست یا دیتابیس، اطلاعات مهدکودک قابل بازیابی باشد.
+    <div class="card" style="max-width: 820px;">
+        <div class="card-body">
+            <div class="adm-callout adm-callout--warning">
+                <span class="adm-callout-icon" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </span>
+                <div class="adm-callout-body">
+                    <strong>هشدار ایمنی مهم:</strong><br>
+                    توصیه می‌شود این پشتیبان را حداقل هفته‌ای یک‌بار دانلود کرده و در جایی امن خارج از سرور (مانند گوگل درایو، هارد اکسترنال یا لپ‌تاپ شخصی) ذخیره نمایید تا در صورت بروز هرگونه مشکل برای هاست یا دیتابیس، اطلاعات مهدکودک قابل بازیابی باشد.
+                </div>
             </div>
+
+            <form method="post" action="<?= e(url('admin/backup.php')) ?>">
+                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                <input type="hidden" name="action" value="download_backup">
+
+                <div style="margin-bottom: 20px;">
+                    <h3 style="font-size: 1.02rem; font-weight: 700; margin-bottom: 8px;">مشخصات نسخه پشتیبان:</h3>
+                    <ul style="font-size: 0.9rem; color: var(--adm-text-muted); line-height: 1.8; margin: 0; padding-inline-start: 20px;">
+                        <li>فرمت فایل: SQL (شامل ساختار کامل CREATE TABLE و تمام داده‌ها INSERT INTO)</li>
+                        <li>روش تولید: Streaming ردیف‌به‌ردیف جهت جلوگیری از کمبود حافظه سرور</li>
+                        <li>قابل بازیابی از طریق: cPanel phpMyAdmin یا دستور CLI مای‌اس‌کیوال</li>
+                    </ul>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    دانلود نسخه پشتیبان کامل (SQL)
+                </button>
+            </form>
         </div>
-
-        <form method="post" action="<?= e(url('admin/backup.php')) ?>">
-            <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-            <input type="hidden" name="action" value="download_backup">
-
-            <div style="margin-bottom: 20px;">
-                <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 8px;">مشخصات نسخه پشتیبان:</h3>
-                <ul style="font-size: 0.9rem; color: var(--adm-text-muted); line-height: 1.8; margin: 0; padding-right: 20px;">
-                    <li>فرمت فایل: SQL (شامل ساختار کامل CREATE TABLE و تمام داده‌ها INSERT INTO)</li>
-                    <li>روش تولید: Streaming ردیف‌به‌ردیف جهت جلوگیری از کمبود حافظه سرور</li>
-                    <li>قابل بازیابی از طریق: cPanel phpMyAdmin یا دستور CLI مای‌اس‌کیوال</li>
-                </ul>
-            </div>
-
-            <button type="submit" class="btn btn-primary" style="font-size: 1rem; padding: 12px 24px;">
-                📥 دانلود نسخه پشتیبان کامل (SQL)
-            </button>
-        </form>
     </div>
 </section>
 

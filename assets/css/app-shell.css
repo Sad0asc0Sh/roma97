@@ -151,16 +151,11 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   padding: 0 20px;
   position: sticky;
   top: 0;
-  z-index: 99;
+  z-index: var(--z-topbar, 100);
   gap: 16px;
-  /* PERF: isolate the sticky bar from the scrolling body — but `paint`
-     containment is deliberately NOT used: it clips descendants at the
-     bar's box, and the user dropdown (.app-dropdown-menu) hangs below
-     the bar, so with paint containment it was open in the DOM yet
-     painted invisible and unclickable on desktop and mobile alike. */
+  /* PERF: isolate the sticky bar from the scrolling body without creating a
+     transform stacking context or clipping .app-dropdown-menu. */
   contain: layout style;
-  transform: translateZ(0);
-  backface-visibility: hidden;
 }
 
 .app-topbar-right {
@@ -384,7 +379,7 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   display: none;
   flex-direction: column;
   gap: 2px;
-  z-index: 1000;
+  z-index: var(--z-dropdown, 1000);
 }
 
 .app-dropdown-menu.show {
@@ -429,8 +424,8 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
 
 /* Panel Logo Badge Colors */
 .admin-logo-badge {
-  background: var(--app-sidebar-active-bg) !important;
-  color: #FFFFFF !important;
+  background: var(--app-sidebar-active-bg);
+  color: #FFFFFF;
   border: 1px solid rgba(255,255,255,0.1);
 }
 .teacher-logo-badge {

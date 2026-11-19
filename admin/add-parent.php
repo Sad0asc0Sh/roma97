@@ -177,9 +177,17 @@ $childStatusOptions = [
 ];
 ?>
 <section class="dashboard">
-    <h1>ثبت دستی والد جدید</h1>
-    <p><a href="<?= e(url('admin/parents.php')) ?>">→ بازگشت به مدیریت والدین</a></p>
-    <p style="color:var(--adm-text-muted);line-height:1.9;">والد را مستقیم توسط مدیریت ثبت کنید؛ نیازی به ثبت‌نام و کد پیامکی توسط خود والد نیست. در همین فرم می‌توانید یک یا چند کودک او را هم‌زمان ثبت و به کلاس اختصاص دهید — والد و همه کودکان در یک تراکنش ذخیره می‌شوند و اگر خطایی رخ دهد هیچ‌کدام ثبت نمی‌شوند. عکس کودک را بعداً از صفحه «ویرایش کودک» می‌توانید اضافه کنید.</p>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>ثبت دستی والد جدید</h1>
+            </div>
+            <p class="adm-page-subtitle">والد را مستقیم توسط مدیریت ثبت کنید؛ نیازی به ثبت‌نام و کد پیامکی توسط خود والد نیست. در همین فرم می‌توانید یک یا چند کودک او را هم‌زمان ثبت و به کلاس اختصاص دهید — والد و همه کودکان در یک تراکنش ذخیره می‌شوند و اگر خطایی رخ دهد هیچ‌کدام ثبت نمی‌شوند. عکس کودک را بعداً از صفحه «ویرایش کودک» می‌توانید اضافه کنید.</p>
+        </div>
+        <div class="adm-page-actions">
+            <a class="adm-back-link" href="<?= e(url('admin/parents.php')) ?>">بازگشت به مدیریت والدین</a>
+        </div>
+    </div>
 
     <?php if ($flashSuccess !== null): ?><div class="notice" role="status"><?= e($flashSuccess) ?></div><?php endif; ?>
     <?php if ($flashError !== null): ?><div class="alert" role="alert"><?= e($flashError) ?></div><?php endif; ?>

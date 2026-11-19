@@ -155,8 +155,16 @@ $flashSuccess = getFlash('success');
 $flashError = getFlash('error');
 ?>
 <section class="dashboard">
-    <h1>ویرایش والد</h1>
-    <p><a href="<?= e(url('admin/parents.php')) ?>">→ بازگشت به مدیریت والدین</a></p>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>ویرایش والد</h1>
+            </div>
+        </div>
+        <div class="adm-page-actions">
+            <a class="adm-back-link" href="<?= e(url('admin/parents.php')) ?>">بازگشت به مدیریت والدین</a>
+        </div>
+    </div>
 
     <?php if ($flashSuccess !== null): ?><div class="notice" role="status"><?= e($flashSuccess) ?></div><?php endif; ?>
     <?php if ($flashError !== null): ?><div class="alert" role="alert"><?= e($flashError) ?></div><?php endif; ?>

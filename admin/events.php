@@ -463,7 +463,32 @@ $showForm = ($action === 'add' || $action === 'edit');
 ?>
 
 <section class="dashboard admin-events-dashboard">
-    <h1>رویدادها</h1>
+    <?php
+    $addQ = adminEventFilterQueryParts($filterCategory, $filterStatus);
+    $addQ['action'] = 'add';
+    $addUrl = url('admin/events.php?' . http_build_query($addQ));
+    ?>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>رویدادها و تقویم مهد</h1>
+                <?php if (!$showForm && isset($pagination['total'])): ?>
+                    <span class="adm-count-pill"><?= e(persianNumber((string) $pagination['total'])) ?> رویداد</span>
+                <?php endif; ?>
+            </div>
+            <p class="adm-page-subtitle">برنامه‌ریزی جشن‌ها، اردوهای آموزشی، جلسات والدین و تعطیلات رسمی مهد</p>
+        </div>
+        <?php if ($showForm): ?>
+            <div class="adm-page-actions">
+                <a href="<?= e($listUrl) ?>" class="adm-back-link">→ بازگشت به فهرست رویدادها</a>
+            </div>
+        <?php else: ?>
+            <div class="adm-page-actions">
+                <a class="btn btn-outline" href="<?= e(url('admin/events.php?action=add&category=holiday')) ?>">ثبت تعطیلی مهد</a>
+                <a class="btn btn-primary" href="<?= e($addUrl) ?>">+ افزودن رویداد</a>
+            </div>
+        <?php endif; ?>
+    </div>
 
     <?php if ($successMessage !== null): ?>
         <div class="notice" role="status"><?= e($successMessage) ?></div>
@@ -551,38 +576,32 @@ $showForm = ($action === 'add' || $action === 'edit');
         </div>
     <?php else: ?>
 
-        <div class="admin-section">
-            <div class="admin-section-header">
-                <h2 class="admin-section-title">فیلتر رویدادها</h2>
+        <form class="adm-filter-panel events-filter-form" method="get" action="<?= e(url('admin/events.php')) ?>">
+            <div class="adm-filter-field">
+                <label for="filter_category" class="form-label">دسته‌بندی</label>
+                <select id="filter_category" name="category" class="form-control" onchange="this.form.submit()">
+                    <option value="all" <?= $filterCategory === 'all' ? 'selected' : '' ?>>همه</option>
+                    <?php foreach (adminEventCategories() as $c): ?>
+                        <option value="<?= e($c) ?>" <?= $filterCategory === $c ? 'selected' : '' ?>><?= e(adminEventCategoryLabel($c)) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
-            <div class="admin-events-toolbar" style="display:flex;align-items:center;gap:var(--space-sm);flex-wrap:wrap;">
-                <form class="events-filter-form" method="get" action="<?= e(url('admin/events.php')) ?>" style="display:flex;align-items:center;gap:var(--space-sm);flex-wrap:wrap;">
-                    <label for="filter_category" style="font-weight:600;font-size:0.9rem;">دستهبندی:</label>
-                    <select id="filter_category" name="category" class="form-control" style="max-width:150px;" onchange="this.form.submit()">
-                        <option value="all" <?= $filterCategory === 'all' ? 'selected' : '' ?>>همه</option>
-                        <?php foreach (adminEventCategories() as $c): ?>
-                            <option value="<?= e($c) ?>" <?= $filterCategory === $c ? 'selected' : '' ?>><?= e(adminEventCategoryLabel($c)) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-
-                    <label for="filter_status" style="font-weight:600;font-size:0.9rem;">وضعیت:</label>
-                    <select id="filter_status" name="status" class="form-control" style="max-width:150px;" onchange="this.form.submit()">
-                        <option value="all" <?= $filterStatus === 'all' ? 'selected' : '' ?>>همه</option>
-                        <?php foreach (adminEventStatuses() as $s): ?>
-                            <option value="<?= e($s) ?>" <?= $filterStatus === $s ? 'selected' : '' ?>><?= e(adminEventStatusLabel($s)) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <noscript><button type="submit" class="btn btn-secondary btn-sm">اعمال فیلتر</button></noscript>
-                </form>
-                <?php
-                $addQ = adminEventFilterQueryParts($filterCategory, $filterStatus);
-                $addQ['action'] = 'add';
-                $addUrl = url('admin/events.php?' . http_build_query($addQ));
-                ?>
-                <a class="btn btn-primary btn-sm" href="<?= e($addUrl) ?>">+ افزودن رویداد</a>
-                <a class="btn btn-outline btn-sm" href="<?= e(url('admin/events.php?action=add&category=holiday')) ?>">ثبت تعطیلی مهد</a>
+            <div class="adm-filter-field">
+                <label for="filter_status" class="form-label">وضعیت</label>
+                <select id="filter_status" name="status" class="form-control" onchange="this.form.submit()">
+                    <option value="all" <?= $filterStatus === 'all' ? 'selected' : '' ?>>همه</option>
+                    <?php foreach (adminEventStatuses() as $s): ?>
+                        <option value="<?= e($s) ?>" <?= $filterStatus === $s ? 'selected' : '' ?>><?= e(adminEventStatusLabel($s)) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
-        </div>
+            <div class="adm-filter-actions">
+                <noscript><button type="submit" class="btn btn-secondary">اعمال فیلتر</button></noscript>
+                <?php if ($filterCategory !== 'all' || $filterStatus !== 'all'): ?>
+                    <a href="<?= e(url('admin/events.php')) ?>" class="btn btn-outline">نمایش همه</a>
+                <?php endif; ?>
+            </div>
+        </form>
 
         <?php if ($listEvents === []): ?>
             <div class="empty-state empty-state-sm">
@@ -661,7 +680,7 @@ $showForm = ($action === 'add' || $action === 'edit');
                     ?>
                     <article class="event-card admin-event-card">
                         <header class="event-card-header">
-                            <p class="event-card-date"><?= e((string) $ev['event_date']) ?></p>
+                            <p class="event-card-date"><?= e(shamsiDate((string) $ev['event_date'])) ?></p>
                             <?php $stLabel = adminEventStatusLabel((string) ($ev['status'] ?? '')); ?>
                             <span class="event-card-status <?= e(($ev['status'] ?? '') === 'cancelled' ? 'muted' : '') ?>"><?= e($stLabel) ?></span>
                         </header>

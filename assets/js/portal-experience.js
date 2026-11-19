@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // A single owner controls the drawer; keep keyboard focus inside on mobile.
   const sidebar = document.getElementById('adminSidebar');
   const toggle = document.getElementById('mobileSidebarToggle');
-  if (sidebar && toggle && window.toggleMobileSidebar) {
+  if (sidebar && !sidebar.hasAttribute('data-modern-sidebar') && toggle && window.toggleMobileSidebar) {
     const originalToggle = window.toggleMobileSidebar;
     toggle.setAttribute('aria-controls', 'adminSidebar');
     toggle.setAttribute('aria-expanded', 'false');

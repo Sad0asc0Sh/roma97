@@ -159,43 +159,51 @@ try {
     $assignedClass = null;
 }
 
+$statusLabel = match ($status) {
+    'active' => 'فعال',
+    'inactive' => 'غیرفعال',
+    'graduated' => 'فارغ‌التحصیل',
+    'withdrawn' => 'انصراف‌داده',
+    default => 'در انتظار تأیید',
+};
 $sgName = trim((string) ($row['second_guardian_name'] ?? ''));
 $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
 ?>
 
-<div class="admin-page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
-    <div>
-        <h1 class="admin-page-title" style="font-size: 1.5rem; font-weight: 700; margin: 0 0 4px 0;">جزئیات ثبت‌نام کودک</h1>
-        <p class="admin-page-subtitle" style="color: var(--adm-text-muted); font-size: 0.88rem; margin: 0;">مشاهده پرونده کامل، اطلاعات سرپرست و مدیریت اختصاص کلاس</p>
+<div class="adm-page-head">
+    <div class="adm-page-head-main">
+        <div class="adm-page-title-row">
+            <h1>جزئیات ثبت‌نام کودک</h1>
+            <span class="badge <?= e($badgeClass) ?>"><?= e($statusLabel) ?></span>
+        </div>
+        <p class="adm-page-subtitle">مشاهده پرونده کامل، اطلاعات سرپرست و مدیریت اختصاص کلاس</p>
     </div>
-    <div class="admin-page-actions" style="display: flex; gap: 10px;">
-        <a href="<?= e(url('admin/children.php')) ?>" class="btn btn-secondary">→ بازگشت به لیست کودکان</a>
-        <a href="<?= e(url('admin/edit-child.php?id=' . $childId)) ?>" class="btn btn-primary">✏️ ویرایش اطلاعات</a>
+    <div class="adm-page-actions">
+        <a href="<?= e(url('admin/children.php')) ?>" class="adm-back-link">→ بازگشت به لیست کودکان</a>
+        <a href="<?= e(url('admin/edit-child.php?id=' . $childId)) ?>" class="btn btn-primary">ویرایش اطلاعات</a>
     </div>
 </div>
 
 <?php if ($successMessage !== null): ?>
-    <div class="notice" role="status" style="margin-bottom: 20px;"><?= e($successMessage) ?></div>
+    <div class="notice" role="status"><?= e($successMessage) ?></div>
 <?php endif; ?>
 
 <?php if ($errorMessage !== null): ?>
-    <div class="alert" role="alert" style="margin-bottom: 20px;"><?= e($errorMessage) ?></div>
+    <div class="alert" role="alert"><?= e($errorMessage) ?></div>
 <?php endif; ?>
 
 <?php if (isset($_SESSION['waitlist_offer']) && (int)($_SESSION['waitlist_offer']['child_id'] ?? 0) === $childId): ?>
     <?php $wlClassId = (int) $_SESSION['waitlist_offer']['classroom_id']; unset($_SESSION['waitlist_offer']); ?>
-    <div class="alert alert-warning" style="margin-bottom:20px; border-inline-start-width:4px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; width:100%;">
-            <div style="font-size:0.9rem; font-weight:600;">
-                ظرفیت کلاس انتخابی تکمیل است. آیا مایلید این کودک به لیست انتظار این کلاس اضافه شود؟
-            </div>
-            <form method="post" action="<?= e(url('admin/child-action.php')) ?>" style="margin:0;">
+    <div class="adm-callout adm-callout--warning">
+        <div class="adm-callout-body" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>ظرفیت کلاس انتخابی تکمیل است. آیا مایلید این کودک به لیست انتظار این کلاس اضافه شود؟</div>
+            <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form">
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <input type="hidden" name="action" value="add_waitlist">
                 <input type="hidden" name="child_id" value="<?= e($childId) ?>">
                 <input type="hidden" name="classroom_id" value="<?= e($wlClassId) ?>">
                 <input type="hidden" name="redirect" value="<?= e($detailRedirect) ?>">
-                <button type="submit" class="btn btn-primary btn-sm">📋 افزودن به لیست انتظار این کلاس</button>
+                <button type="submit" class="btn btn-primary btn-sm">افزودن به لیست انتظار</button>
             </form>
         </div>
     </div>
@@ -212,56 +220,56 @@ $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
             <?php endif; ?>
         </div>
 
-        <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0 0 6px 0;"><?= e($fullName !== '' ? $fullName : 'کودک بدون نام') ?></h2>
+        <h2 style="font-size: 1.2rem; font-weight: 800; margin: 0 0 6px 0;"><?= e($fullName !== '' ? $fullName : 'کودک بدون نام') ?></h2>
         <?php if (!empty($row['preferred_name'])): ?>
-            <p style="color: var(--adm-text-muted); font-size: 0.85rem; margin: 0 0 10px 0;">نام مستعار: <strong><?= e((string) $row['preferred_name']) ?></strong></p>
+            <p class="muted" style="margin: 0 0 10px 0;">نام مستعار: <strong><?= e((string) $row['preferred_name']) ?></strong></p>
         <?php endif; ?>
 
-        <div style="margin: 10px 0 16px 0;">
-            <span class="badge <?= e($badgeClass) ?>" style="font-size: 0.85rem; padding: 4px 12px;"><?= e(ucfirst($status)) ?></span>
+        <div class="mb-sm">
+            <span class="badge <?= e($badgeClass) ?>"><?= e($statusLabel) ?></span>
         </div>
 
-        <div class="sidebar-info-list" style="text-align: right; font-size: 0.88rem; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--adm-border-light, #e2e8f0); padding-top: 16px; margin-top: 16px;">
-            <div style="display: flex; justify-content: space-between;"><span style="color: var(--adm-text-muted);">جنسیت:</span> <strong><?= e(adminDetailGenderLabel(($row['gender'] ?? '') !== '' ? (string) $row['gender'] : null)) ?></strong></div>
-            <div style="display: flex; justify-content: space-between;"><span style="color: var(--adm-text-muted);">رده سنی:</span> <strong><?= e(adminDetailChildAge((string) ($row['date_of_birth'] ?? ''))) ?></strong></div>
-            <div style="display: flex; justify-content: space-between;"><span style="color: var(--adm-text-muted);">تاریخ تولد:</span> <strong><?= e(shamsiDate((string) ($row['date_of_birth'] ?? ''))) ?></strong></div>
-            <div style="display: flex; justify-content: space-between;"><span style="color: var(--adm-text-muted);">تاریخ ثبت‌نام:</span> <strong><?= e(formatAdminEnrollmentDate((string) ($row['created_at'] ?? ''))) ?></strong></div>
+        <div class="adm-profile-meta">
+            <div class="adm-profile-row"><span>جنسیت:</span> <strong><?= e(adminDetailGenderLabel(($row['gender'] ?? '') !== '' ? (string) $row['gender'] : null)) ?></strong></div>
+            <div class="adm-profile-row"><span>رده سنی:</span> <strong><?= e(adminDetailChildAge((string) ($row['date_of_birth'] ?? ''))) ?></strong></div>
+            <div class="adm-profile-row"><span>تاریخ تولد:</span> <strong><?= e(shamsiDate((string) ($row['date_of_birth'] ?? ''))) ?></strong></div>
+            <div class="adm-profile-row"><span>تاریخ ثبت‌نام:</span> <strong><?= e(formatAdminEnrollmentDate((string) ($row['created_at'] ?? ''))) ?></strong></div>
         </div>
 
-        <div class="admin-child-actions-sidebar" style="margin-top: 24px; border-top: 1px solid var(--adm-border-light, #e2e8f0); padding-top: 16px; display: flex; flex-direction: column; gap: 10px;">
+        <div class="admin-child-actions-sidebar">
             <?php if ($status !== 'active'): ?>
-                <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form" onsubmit="return confirm('ثبت‌نام این کودک تأیید شود؟');">
+                <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form" data-confirm="آیا ثبت‌نام این کودک تأیید و فعال شود؟">
                     <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                     <input type="hidden" name="child_id" value="<?= e($childId) ?>">
                     <input type="hidden" name="action" value="approve">
                     <input type="hidden" name="redirect" value="<?= e($detailRedirect) ?>">
-                    <button type="submit" class="btn btn-approve" style="width: 100%; justify-content: center;">✅ تأیید ثبت‌نام / فعال‌سازی</button>
+                    <button type="submit" class="btn btn-approve btn-block">تأیید ثبت‌نام / فعال‌سازی</button>
                 </form>
             <?php endif; ?>
 
             <?php if ($status === 'active'): ?>
-                <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form" onsubmit="return confirm('این کودک فارغ‌التحصیل شود؟');">
+                <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form" data-confirm="آیا وضعیت این کودک به فارغ‌التحصیل تغییر یابد؟">
                     <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                     <input type="hidden" name="child_id" value="<?= e($childId) ?>">
                     <input type="hidden" name="action" value="graduate">
                     <input type="hidden" name="redirect" value="<?= e($detailRedirect) ?>">
-                    <button type="submit" class="btn btn-secondary btn-graduate" style="width: 100%; justify-content: center;">🎓 تغییر به فارغ‌التحصیل</button>
+                    <button type="submit" class="btn btn-secondary btn-graduate btn-block">تغییر به فارغ‌التحصیل</button>
                 </form>
 
-                <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form" onsubmit="return confirm('ثبت انصراف این کودک انجام شود؟');">
+                <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form" data-confirm="آیا ثبت انصراف برای این کودک انجام شود؟">
                     <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                     <input type="hidden" name="child_id" value="<?= e($childId) ?>">
                     <input type="hidden" name="action" value="withdraw">
                     <input type="hidden" name="redirect" value="<?= e($detailRedirect) ?>">
-                    <button type="submit" class="btn btn-secondary" style="width: 100%; justify-content: center;">🚪 ثبت انصراف</button>
+                    <button type="submit" class="btn btn-secondary btn-block">ثبت انصراف</button>
                 </form>
 
-                <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form" onsubmit="return confirm('ثبت‌نام این کودک غیرفعال شود؟');">
+                <form method="post" action="<?= e(url('admin/child-action.php')) ?>" class="inline-form" data-confirm="آیا ثبت‌نام این کودک غیرفعال شود؟">
                     <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                     <input type="hidden" name="child_id" value="<?= e($childId) ?>">
                     <input type="hidden" name="action" value="deactivate">
                     <input type="hidden" name="redirect" value="<?= e($detailRedirect) ?>">
-                    <button type="submit" class="btn btn-secondary" style="width: 100%; justify-content: center;">⏸️ غیرفعال‌سازی</button>
+                    <button type="submit" class="btn btn-secondary btn-block">غیرفعال‌سازی</button>
                 </form>
             <?php endif; ?>
         </div>
@@ -272,10 +280,10 @@ $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
         <!-- Parent & Guardian Card -->
         <div class="card">
             <div class="card-header">
-                <h3 style="font-size: 1.05rem; font-weight: 700; margin: 0;">👨‍👩‍👧 اطلاعات سرپرست و والدین</h3>
+                <h3 class="m-0 font-bold">اطلاعات سرپرست و والدین</h3>
             </div>
             <div class="card-body">
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+                <div class="adm-detail-grid">
                     <div>
                         <span class="detail-label">والد اصلی:</span>
                         <div class="detail-val"><strong><?= e($parentName !== '' ? $parentName : 'والدین') ?></strong></div>
@@ -288,9 +296,9 @@ $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
                         <span class="detail-label">شماره تلفن والد:</span>
                         <div class="detail-val">
                             <?php if (trim((string) ($row['parent_phone'] ?? '')) !== ''): ?>
-                                <a href="tel:<?= e(preg_replace('/\s+/', '', (string) $row['parent_phone'])) ?>"><?= e((string) $row['parent_phone']) ?></a>
+                                <a href="tel:<?= e(preg_replace('/\s+/', '', (string) $row['parent_phone'])) ?>" dir="ltr"><?= e((string) $row['parent_phone']) ?></a>
                             <?php else: ?>
-                                <span style="color: var(--adm-text-muted);">ثبت نشده</span>
+                                <span class="muted">ثبت نشده</span>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -300,10 +308,10 @@ $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
                             <?php if ($sgName !== '' || $sgPhone !== ''): ?>
                                 <strong><?= e($sgName !== '' ? $sgName : 'والد دوم') ?></strong>
                                 <?php if ($sgPhone !== ''): ?>
-                                    <br><a href="tel:<?= e(preg_replace('/\s+/', '', $sgPhone)) ?>"><?= e($sgPhone) ?></a>
+                                    <br><a href="tel:<?= e(preg_replace('/\s+/', '', $sgPhone)) ?>" dir="ltr"><?= e($sgPhone) ?></a>
                                 <?php endif; ?>
                             <?php else: ?>
-                                <span style="color: var(--adm-text-muted);">ثبت نشده است</span>
+                                <span class="muted">ثبت نشده است</span>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -314,28 +322,28 @@ $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
         <!-- Health & Medical Card -->
         <div class="card">
             <div class="card-header">
-                <h3 style="font-size: 1.05rem; font-weight: 700; margin: 0;">🏥 وضعیت سلامت و حساسیت‌ها</h3>
+                <h3 class="m-0 font-bold">وضعیت سلامت و حساسیت‌ها</h3>
             </div>
-            <div class="card-body" style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="card-body adm-stack">
                 <div>
-                    <span class="detail-label" style="color: #e53e3e; font-weight: 700;">⚠️ حساسیت‌ها و آلرژی‌ها:</span>
+                    <span class="detail-label" style="color: var(--adm-danger);">حساسیت‌ها و آلرژی‌ها:</span>
                     <?php if ($allergiesText !== ''): ?>
-                        <div style="margin-top: 6px; padding: 12px 16px; background: rgba(229,62,62,0.08); border-right: 4px solid #e53e3e; border-radius: 6px; color: var(--adm-text); font-size: 0.92rem; line-height: 1.6;">
+                        <div class="adm-note-box adm-note-box--alert">
                             <?= nl2br(e($allergiesText)) ?>
                         </div>
                     <?php else: ?>
-                        <p style="color: var(--adm-text-muted); font-size: 0.9rem; margin: 4px 0 0 0;">هیچ‌گونه حساسیتی گزارش نشده است.</p>
+                        <p class="muted m-0">هیچ‌گونه حساسیتی گزارش نشده است.</p>
                     <?php endif; ?>
                 </div>
 
                 <div>
-                    <span class="detail-label">📋 نکات و ملاحظات پزشکی:</span>
+                    <span class="detail-label">نکات و ملاحظات پزشکی:</span>
                     <?php if (trim((string) ($row['medical_notes'] ?? '')) !== ''): ?>
-                        <div style="margin-top: 6px; padding: 12px 16px; background: var(--adm-bg, #f8fafc); border: 1px solid var(--adm-border, #e2e8f0); border-radius: 6px; color: var(--adm-text); font-size: 0.92rem; line-height: 1.6;">
+                        <div class="adm-note-box">
                             <?= nl2br(e((string) $row['medical_notes'])) ?>
                         </div>
                     <?php else: ?>
-                        <p style="color: var(--adm-text-muted); font-size: 0.9rem; margin: 4px 0 0 0;">نکته پزشکی خاصی ثبت نشده است.</p>
+                        <p class="muted m-0">نکته پزشکی خاصی ثبت نشده است.</p>
                     <?php endif; ?>
                 </div>
             </div>
@@ -344,19 +352,17 @@ $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
         <!-- Classroom Assignment Card -->
         <div class="card">
             <div class="card-header">
-                <h3 style="font-size: 1.05rem; font-weight: 700; margin: 0;">🏫 اختصاص به کلاس</h3>
+                <h3 class="m-0 font-bold">اختصاص به کلاس</h3>
             </div>
             <div class="card-body">
-                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                <div class="flex-between-center" style="flex-wrap: wrap; gap: 16px;">
                     <div>
                         <span class="detail-label">کلاس اختصاص یافته:</span>
-                        <div class="detail-val" style="font-size: 1.1rem; font-weight: 700; margin-top: 4px;">
+                        <div class="detail-val font-bold" style="margin-top: 4px;">
                             <?php if ($assignedClass !== null): ?>
-                                <span style="color: var(--adm-primary); display: inline-flex; align-items: center; gap: 6px;">
-                                    <span>🏫</span> <?= e((string) $assignedClass['classroom_name']) ?>
-                                </span>
+                                <span style="color: var(--adm-primary);"><?= e((string) $assignedClass['classroom_name']) ?></span>
                             <?php else: ?>
-                                <span style="color: var(--adm-text-muted); font-weight: normal; font-size: 0.95rem;">به هیچ کلاسی اختصاص داده نشده است</span>
+                                <span class="muted">به هیچ کلاسی اختصاص داده نشده است</span>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -367,7 +373,7 @@ $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
                             <input type="hidden" name="action" value="assign_classroom">
                             <input type="hidden" name="child_id" value="<?= e((string) $childId) ?>">
                             <input type="hidden" name="redirect" value="<?= e($detailRedirect) ?>">
-                            <select name="classroom_id" class="form-control child-detail-select" style="min-width: 220px; padding: 8px 12px;">
+                            <select name="classroom_id" class="form-control child-detail-select" style="min-width: 220px;">
                                 <option value="0">— بدون کلاس —</option>
                                 <?php foreach ($allClassrooms as $cl): ?>
                                     <option value="<?= (int) $cl['id'] ?>"
@@ -377,9 +383,9 @@ $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                            <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; cursor: pointer; color: var(--adm-text-muted);">
+                            <label class="form-check">
                                 <input type="checkbox" name="force_over_capacity" value="1">
-                                تخصیص خارج از ظرفیت (نیاز فوری)
+                                <span class="form-check-label">تخصیص خارج از ظرفیت (نیاز فوری)</span>
                             </label>
                             <button type="submit" class="btn btn-secondary">ذخیره تغییرات</button>
                         </form>

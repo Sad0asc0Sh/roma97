@@ -418,19 +418,25 @@ require_once __DIR__ . '/header.php';
 <?php endif; ?>
 
 <?php if ($resetLinkUrl !== null): ?>
-<div class="card" style="padding:16px; margin-bottom:20px; border-right:4px solid var(--adm-primary,#3182ce);">
-    <div style="font-weight:700; margin-bottom:8px;">🔑 لینک بازیابی رمز عبور معلم تولید شد (اعتبار: ۱ ساعت):</div>
-    <div style="display:flex; gap:10px; align-items:center;">
+<div class="adm-reset-banner">
+    <div class="font-bold">لینک بازیابی رمز عبور معلم تولید شد (اعتبار: ۱ ساعت):</div>
+    <div class="adm-reset-banner-row">
         <input type="text" value="<?= e($resetLinkUrl) ?>" readonly onclick="this.select()" class="form-control" style="flex:1; font-family:monospace; direction:ltr;">
-        <button type="button" class="btn btn-secondary" onclick="navigator.clipboard.writeText('<?= e($resetLinkUrl) ?>'); alert('لینک در حافظه کپی شد.');">کپی لینک</button>
+        <button type="button" class="btn btn-secondary" onclick="navigator.clipboard.writeText('<?= e($resetLinkUrl) ?>').then(()=>{if(window.showToast)showToast('لینک در حافظه کپی شد.','success');});">کپی لینک</button>
     </div>
 </div>
 <?php endif; ?>
 
 <section class="dashboard">
-    <div class="app-toolbar">
-        <h1 class="m-0 font-bold">مدیریت معلمان</h1>
-        <div class="app-toolbar-actions">
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>مدیریت معلمان</h1>
+                <span class="adm-count-pill"><?= e(persianNumber((string) ($pagination['total'] ?? count($teachers)))) ?> مربی</span>
+            </div>
+            <p class="adm-page-subtitle">ثبت و ویرایش مربیان، وضعیت همکاری، نمایش در وب‌سایت و دسترسی به پنل مربیان</p>
+        </div>
+        <div class="adm-page-actions">
             <button type="button" class="app-btn app-btn-primary" onclick="openTeacherDrawer()">
                 + افزودن معلم جدید
             </button>
@@ -586,6 +592,11 @@ require_once __DIR__ . '/header.php';
                         'inactive' => 'badge-inactive',
                         default    => 'badge-pending',
                     };
+                    $tStatusLabel = match ($tStatus) {
+                        'active'   => 'فعال',
+                        'inactive' => 'غیرفعال',
+                        default    => 'در انتظار',
+                    };
                     $inTeam    = (int) ($t['show_in_team'] ?? 1) === 1;
                     $isEditing = $editId === (int) $t['id'];
                     ?>
@@ -601,72 +612,73 @@ require_once __DIR__ . '/header.php';
                         <td><strong><?= e($fullName) ?></strong></td>
                         <td><?= e((string) ($t['role_title'] ?? '—')) ?></td>
                         <td><?= e((string) ($t['email'] ?? '—')) ?></td>
-                        <td><?= e((string) ($t['phone'] ?? '—')) ?></td>
+                        <td dir="ltr" style="text-align:right;font-family:monospace;"><?= e((string) ($t['phone'] ?? '—')) ?></td>
                         <td>
                             <span class="badge <?= $inTeam ? 'badge-active' : 'badge-inactive' ?>">
                                 <?= $inTeam ? 'بله' : 'خیر' ?>
                             </span>
                         </td>
-                        <td><span class="badge <?= e($badgeClass) ?>"><?= ucfirst($tStatus) ?></span></td>
+                        <td><span class="badge <?= e($badgeClass) ?>"><?= e($tStatusLabel) ?></span></td>
                         <td class="teacher-actions-cell">
-                            <a href="<?= e(url('admin/teachers.php?edit=' . (int) $t['id'])) ?>"
-                               class="btn btn-sm btn-secondary">ویرایش</a>
+                            <div class="adm-row-actions">
+                                <a href="<?= e(url('admin/teachers.php?edit=' . (int) $t['id'])) ?>"
+                                   class="btn btn-sm btn-secondary">ویرایش</a>
 
-                            <?php if ($tStatus === 'pending'): ?>
-                                <form method="post" action="<?= e(url('admin/teachers.php')) ?>" class="inline-form">
-                                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                                    <input type="hidden" name="action" value="approve">
-                                    <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
-                                    <button type="submit" class="btn btn-sm btn-approve">تأیید</button>
-                                </form>
-                            <?php endif; ?>
+                                <?php if ($tStatus === 'pending'): ?>
+                                    <form method="post" action="<?= e(url('admin/teachers.php')) ?>" class="inline-form">
+                                        <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                                        <input type="hidden" name="action" value="approve">
+                                        <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
+                                        <button type="submit" class="btn btn-sm btn-approve">تأیید</button>
+                                    </form>
+                                <?php endif; ?>
 
-                            <?php if ($tStatus === 'inactive'): ?>
-                                <form method="post" action="<?= e(url('admin/teachers.php')) ?>" class="inline-form">
-                                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                                    <input type="hidden" name="action" value="activate">
-                                    <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
-                                    <button type="submit" class="btn btn-sm btn-approve">فعال‌سازی</button>
-                                </form>
-                            <?php endif; ?>
-
-                            <?php if ($tStatus === 'active'): ?>
-                                <form method="post" action="<?= e(url('admin/teachers.php')) ?>" class="inline-form">
-                                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                                    <input type="hidden" name="action" value="deactivate">
-                                    <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
-                                    <button type="submit" class="btn btn-sm btn-secondary">غیرفعال‌سازی</button>
-                                </form>
-
-                                <!-- Generate Password Reset Link -->
-                                <form method="post" action="<?= e(url('admin/teachers.php')) ?>" class="inline-form">
-                                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                                    <input type="hidden" name="action" value="generate_reset_link">
-                                    <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
-                                    <button type="submit" class="btn btn-sm btn-secondary" title="ساخت لینک بازیابی رمز عبور معلم">
-                                        🔑 بازیابی رمز
+                                <div class="adm-action-menu">
+                                    <button type="button" class="adm-action-trigger" aria-haspopup="menu" aria-expanded="false" aria-label="سایر عملیات برای <?= e($fullName) ?>">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
                                     </button>
-                                </form>
+                                    <div class="adm-action-popover" role="menu">
+                                        <?php if ($tStatus === 'inactive'): ?>
+                                            <form method="post" action="<?= e(url('admin/teachers.php')) ?>">
+                                                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                                                <input type="hidden" name="action" value="activate">
+                                                <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
+                                                <button type="submit" class="adm-action-item" role="menuitem">فعال‌سازی حساب</button>
+                                            </form>
+                                        <?php endif; ?>
 
-                                <!-- Login As Teacher -->
-                                <form method="post" action="<?= e(url('admin/teachers.php')) ?>" class="inline-form">
-                                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                                    <input type="hidden" name="action" value="login_as">
-                                    <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
-                                    <button type="submit" class="btn btn-sm btn-login-as"
-                                            title="ایجاد لینک ورود یکباره ۱۵ دقیقه‌ای برای این معلم">
-                                        <svg width="14" height="14" aria-hidden="true" style="vertical-align:middle;margin-inline-end:4px;"><use href="<?= e(asset('assets/img/icons.svg#icon-key')) ?>"/></svg> ورود به‌عنوان معلم
-                                    </button>
-                                </form>
-                            <?php endif; ?>
+                                        <?php if ($tStatus === 'active'): ?>
+                                            <form method="post" action="<?= e(url('admin/teachers.php')) ?>">
+                                                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                                                <input type="hidden" name="action" value="login_as">
+                                                <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
+                                                <button type="submit" class="adm-action-item" role="menuitem">ورود به‌عنوان معلم</button>
+                                            </form>
+                                            <form method="post" action="<?= e(url('admin/teachers.php')) ?>">
+                                                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                                                <input type="hidden" name="action" value="generate_reset_link">
+                                                <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
+                                                <button type="submit" class="adm-action-item" role="menuitem">ساخت لینک بازیابی رمز</button>
+                                            </form>
+                                            <form method="post" action="<?= e(url('admin/teachers.php')) ?>">
+                                                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                                                <input type="hidden" name="action" value="deactivate">
+                                                <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
+                                                <button type="submit" class="adm-action-item" role="menuitem">غیرفعال‌سازی</button>
+                                            </form>
+                                        <?php endif; ?>
 
-                            <form method="post" action="<?= e(url('admin/teachers.php')) ?>" class="inline-form"
-                                  data-confirm="آیا از حذف معلم «<?= e($fullName) ?>» اطمینان دارید؟ این عملیات قابل بازگشت نیست.">
-                                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                                <input type="hidden" name="action" value="delete">
-                                <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
-                                <button type="submit" class="btn btn-sm btn-reject">حذف</button>
-                            </form>
+                                        <div class="adm-action-divider"></div>
+                                        <form method="post" action="<?= e(url('admin/teachers.php')) ?>"
+                                              data-confirm="آیا از حذف معلم «<?= e($fullName) ?>» اطمینان دارید؟ این عملیات قابل بازگشت نیست.">
+                                            <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="teacher_id" value="<?= (int) $t['id'] ?>">
+                                            <button type="submit" class="adm-action-item adm-action-item--danger" role="menuitem">حذف دائمی</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -686,6 +698,11 @@ require_once __DIR__ . '/header.php';
                     'inactive' => 'badge-inactive',
                     default    => 'badge-pending',
                 };
+                $tStatusLabel = match ($tStatus) {
+                    'active'   => 'فعال',
+                    'inactive' => 'غیرفعال',
+                    default    => 'در انتظار',
+                };
                 $isEditing  = $editId === (int) $t['id'];
                 ?>
                 <div class="teacher-mobile-card<?= $isEditing ? ' tr-editing' : '' ?>">
@@ -698,7 +715,7 @@ require_once __DIR__ . '/header.php';
                         <?php endif; ?>
                         <div>
                             <strong><?= e($fullName) ?></strong>
-                            <span class="badge <?= e($badgeClass) ?>"><?= ucfirst($tStatus) ?></span>
+                            <span class="badge <?= e($badgeClass) ?>"><?= e($tStatusLabel) ?></span>
                         </div>
                     </div>
                     <?php if (!empty($t['email'])): ?><p><?= e((string) $t['email']) ?></p><?php endif; ?>

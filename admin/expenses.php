@@ -136,7 +136,12 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>مدیریت هزینه‌های عمومی مهد</h1>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <h1>مدیریت هزینه‌های عمومی مهد</h1>
+            <p class="adm-page-subtitle">ثبت و پیگیری هزینه‌های جاری (اجاره، قبوض، تغذیه، نگهداری و ملزومات)</p>
+        </div>
+    </div>
 
     <?php if ($successMessage !== null): ?>
         <div class="notice" role="status"><?= e($successMessage) ?></div>
@@ -238,7 +243,7 @@ require_once __DIR__ . '/header.php';
                                     <td class="amount-highlight"><?= e(persianNumber(number_format((float) $exp['amount']))) ?> تومان</td>
                                     <td><?= e(match((string) $exp['payment_method']) { 'cash' => 'نقدی', 'bank_transfer' => 'کارت/حساب', 'check' => 'چک', default => $exp['payment_method'] }) ?></td>
                                     <td>
-                                        <form method="post" action="<?= e(url('admin/expenses.php')) ?>" class="inline-form" onsubmit="return confirm('آیا از حذف این هزینه اطمینان دارید؟');">
+                                        <form method="post" action="<?= e(url('admin/expenses.php')) ?>" class="inline-form" data-confirm="آیا از حذف این هزینه اطمینان دارید؟">
                                             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="expense_id" value="<?= (int) $exp['id'] ?>">

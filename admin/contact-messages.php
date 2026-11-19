@@ -70,10 +70,15 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="admin-dashboard">
-    <div class="admin-dash-top" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-        <div>
-            <h1>پیام‌های فرم تماس</h1>
-            <p class="muted">پيام‌های ارسالی از فرم «تماس با ما» سایت عمومی — <?= e(persianNumber((string) count($rows))) ?> پیام اخیر، <?= e(persianNumber((string) $unreadCount)) ?> خوانده‌نشده</p>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>پیام‌های فرم تماس</h1>
+                <?php if ($unreadCount > 0): ?>
+                    <span class="adm-count-pill"><?= e(persianNumber((string) $unreadCount)) ?> خوانده‌نشده</span>
+                <?php endif; ?>
+            </div>
+            <p class="adm-page-subtitle">پیام‌های ارسالی از فرم «تماس با ما» سایت عمومی — <?= e(persianNumber((string) count($rows))) ?> پیام اخیر</p>
         </div>
     </div>
 
@@ -109,8 +114,8 @@ require_once __DIR__ . '/header.php';
                     $isRead = ((int) $row['is_read']) === 1;
                     $subjectLabel = $subjectLabels[$row['subject']] ?? (string) $row['subject'];
                     ?>
-                    <tr style="<?= $isRead ? '' : 'background:var(--adm-primary-faint,#f0f7f4);font-weight:600;' ?>">
-                        <td><?= $isRead ? '<span class="badge" style="background:var(--adm-border-light,#e2e8f0);color:var(--adm-text-muted,#64748b);">خوانده</span>' : '<span class="badge badge-success">جدید</span>' ?></td>
+                    <tr<?= $isRead ? '' : ' class="adm-row-unread"' ?>>
+                        <td><?= $isRead ? '<span class="badge badge-secondary">خوانده</span>' : '<span class="badge badge-success">جدید</span>' ?></td>
                         <td><?= e($row['name']) ?></td>
                         <td style="white-space:nowrap;">
                             <a href="tel:<?= e($row['phone']) ?>" dir="ltr"><?= e(persianNumber((string) $row['phone'])) ?></a>
@@ -120,18 +125,20 @@ require_once __DIR__ . '/header.php';
                         <td style="max-width:340px;white-space:normal;line-height:1.7;"><?= nl2br(e($row['message'])) ?></td>
                         <td style="white-space:nowrap;"><?= e(shamsiDate((string) $row['created_at'])) ?></td>
                         <td style="white-space:nowrap;">
-                            <form method="post" action="<?= e(url('admin/contact-messages.php')) ?>" style="display:inline">
-                                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                                <input type="hidden" name="action" value="toggle_read">
-                                <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
-                                <button type="submit" class="btn btn-sm btn-outline"><?= $isRead ? 'علامت جدید' : 'خوانده شد' ?></button>
-                            </form>
-                            <form method="post" action="<?= e(url('admin/contact-messages.php')) ?>" style="display:inline;margin-inline-start:6px;" onsubmit="return confirm('این پیام حذف شود؟');">
-                                <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
-                                <input type="hidden" name="action" value="delete">
-                                <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
-                                <button type="submit" class="btn btn-sm btn-danger">حذف</button>
-                            </form>
+                            <div class="adm-row-actions">
+                                <form method="post" action="<?= e(url('admin/contact-messages.php')) ?>" class="inline-form">
+                                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                                    <input type="hidden" name="action" value="toggle_read">
+                                    <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
+                                    <button type="submit" class="btn btn-sm btn-outline"><?= $isRead ? 'علامت جدید' : 'خوانده شد' ?></button>
+                                </form>
+                                <form method="post" action="<?= e(url('admin/contact-messages.php')) ?>" class="inline-form" data-confirm="آیا این پیام حذف شود؟">
+                                    <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
+                                    <button type="submit" class="btn btn-sm btn-danger">حذف</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>

@@ -36,6 +36,9 @@ window.addEventListener('pageshow', (e) => {
 /* ── SIDEBAR TOGGLE & COLLAPSE ─────────────────────────────── */
 function initSidebarToggle() {
   const sidebar = document.getElementById('adminSidebar');
+  if (sidebar && sidebar.hasAttribute('data-modern-sidebar')) {
+    return;
+  }
   const sidebarToggle = document.getElementById('sidebarToggle');
   const mobileToggle = document.getElementById('mobileSidebarToggle');
   const overlay = document.getElementById('adminOverlay');
@@ -342,6 +345,7 @@ function initTabs() {
 
 /* ── CUSTOM CONFIRM DIALOG ─────────────────────────────────── */
 let activeConfirmForm = null;
+let activeConfirmSubmitter = null;
 
 function initConfirmDialogs() {
   const dialogOverlay = document.getElementById('appConfirmOverlay');
@@ -360,8 +364,16 @@ function initConfirmDialogs() {
 
   proceedBtn.addEventListener('click', () => {
     if (activeConfirmForm) {
+      if (activeConfirmSubmitter && activeConfirmSubmitter.name) {
+        const clone = document.createElement('input');
+        clone.type = 'hidden';
+        clone.name = activeConfirmSubmitter.name;
+        clone.value = activeConfirmSubmitter.value || '';
+        activeConfirmForm.appendChild(clone);
+      }
       activeConfirmForm.submit();
       activeConfirmForm = null;
+      activeConfirmSubmitter = null;
     }
     closeConfirmModal();
   });
@@ -372,7 +384,7 @@ function initConfirmDialogs() {
     const confirmMsg = form.dataset.confirm;
     if (confirmMsg) {
       e.preventDefault();
-      openConfirmModal(form, confirmMsg);
+      openConfirmModal(form, confirmMsg, e.submitter || null);
     }
   });
 }
@@ -382,12 +394,13 @@ window.confirmAction = function(formOrElement, message, itemName) {
   openConfirmModal(formOrElement, finalMsg);
 };
 
-function openConfirmModal(formOrElement, message) {
+function openConfirmModal(formOrElement, message, submitter = null) {
   const dialogOverlay = document.getElementById('appConfirmOverlay');
   const msgEl = document.getElementById('appConfirmMessage');
   if (!dialogOverlay || !msgEl) return;
 
   activeConfirmForm = formOrElement;
+  activeConfirmSubmitter = submitter;
   msgEl.textContent = message || 'آیا از انجام این عملیات اطمینان دارید؟';
   dialogOverlay.classList.add('active');
 }
@@ -396,6 +409,7 @@ function closeConfirmModal() {
   const dialogOverlay = document.getElementById('appConfirmOverlay');
   if (dialogOverlay) dialogOverlay.classList.remove('active');
   activeConfirmForm = null;
+  activeConfirmSubmitter = null;
 }
 
 /* ── DRAWER COMPONENT ─────────────────────────────────────── */

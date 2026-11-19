@@ -160,19 +160,25 @@ $filterHref = static fn (string $value): string => url('admin/children.php?' . h
 ?>
 
 <section class="dashboard">
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:12px;">
-        <h1 style="margin:0;">ثبت‌نام کودکان</h1>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <a href="<?= e(url('admin/add-child.php')) ?>" class="btn btn-primary">+ کودک جدید</a>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>ثبت‌نام کودکان</h1>
+                <span class="adm-count-pill"><?= e(persianNumber((string) $pagination['total'])) ?> کودک</span>
+            </div>
+            <p class="adm-page-subtitle">مدیریت پرونده کودکان، وضعیت ثبت‌نام، تخصیص کلاس و ارتباط سریع با خانواده‌ها</p>
+        </div>
+        <div class="adm-page-actions">
+            <a href="<?= e(url('admin/attendance.php')) ?>" class="btn btn-outline">حضور و غیاب امروز</a>
             <?php if ($directorySearch === '' && !$withoutClassroom): ?>
-                <a href="<?= e(url('admin/export-csv.php?' . http_build_query(['type' => 'children', 'status' => $statusFilter]))) ?>" class="btn btn-secondary">📥 دریافت خروجی CSV کودکان</a>
+                <a href="<?= e(url('admin/export-csv.php?' . http_build_query(['type' => 'children', 'status' => $statusFilter]))) ?>" class="btn btn-secondary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>خروجی CSV</span>
+                </a>
             <?php endif; ?>
+            <a href="<?= e(url('admin/add-child.php')) ?>" class="btn btn-primary">+ کودک جدید</a>
         </div>
     </div>
-
-    <p class="admin-attendance-quick">
-        <a href="<?= e(url('admin/attendance.php')) ?>">حضور و غیاب امروز</a>
-    </p>
 
     <?php if ($successMessage !== null): ?>
         <div class="notice" role="status"><?= e($successMessage) ?></div>
@@ -182,19 +188,23 @@ $filterHref = static fn (string $value): string => url('admin/children.php?' . h
         <div class="alert" role="alert"><?= e($errorMessage) ?></div>
     <?php endif; ?>
 
-    <form class="admin-directory-search mb-sm" role="search" aria-label="جست‌وجوی فهرست کودکان" method="get" action="<?= e(url('admin/children.php')) ?>">
+    <form class="admin-directory-search adm-filter-panel" role="search" aria-label="جست‌وجوی فهرست کودکان" method="get" action="<?= e(url('admin/children.php')) ?>">
         <?php if ($directorySearch !== '' || $withoutClassroom): ?>
             <input type="hidden" name="status" value="<?= e($statusFilter) ?>">
         <?php endif; ?>
         <?php if ($withoutClassroom): ?>
             <input type="hidden" name="classroom" value="unassigned">
         <?php endif; ?>
-        <label for="child_directory_search" class="sr-only">نام کودک، نام والد یا شماره موبایل</label>
-        <input type="search" name="q" id="child_directory_search" class="form-control" maxlength="100" value="<?= e($directorySearch) ?>" placeholder="نام کودک، نام والد یا شماره موبایل">
-        <button type="submit" class="btn btn-primary">جست‌وجو</button>
-        <?php if ($directorySearch !== ''): ?>
-            <a class="btn btn-outline" href="<?= e(url('admin/children.php?' . http_build_query(array_diff_key($listQuery, $searchQuery)))) ?>">پاک کردن جست‌وجو</a>
-        <?php endif; ?>
+        <div class="adm-filter-field adm-filter-field--wide">
+            <label for="child_directory_search" class="sr-only">نام کودک، نام والد یا شماره موبایل</label>
+            <input type="search" name="q" id="child_directory_search" class="form-control" maxlength="100" value="<?= e($directorySearch) ?>" placeholder="جست‌وجو بر اساس نام کودک، نام والد یا شماره موبایل...">
+        </div>
+        <div class="adm-filter-actions">
+            <button type="submit" class="btn btn-primary">جست‌وجو</button>
+            <?php if ($directorySearch !== ''): ?>
+                <a class="btn btn-outline" href="<?= e(url('admin/children.php?' . http_build_query(array_diff_key($listQuery, $searchQuery)))) ?>">پاک کردن جست‌وجو</a>
+            <?php endif; ?>
+        </div>
     </form>
 
     <nav class="filter-nav" aria-label="فیلتر بر اساس وضعیت ثبت‌نام کودکان">
@@ -280,7 +290,7 @@ $filterHref = static fn (string $value): string => url('admin/children.php?' . h
                                         method="post"
                                         action="<?= e(url('admin/child-action.php')) ?>"
                                         class="inline-form"
-                                        onsubmit="return confirm('ثبت‌نام این کودک تأیید شود؟');"
+                                        data-confirm="آیا از تأیید ثبت‌نام این کودک اطمینان دارید؟"
                                     >
                                         <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                         <input type="hidden" name="child_id" value="<?= e($cid) ?>">
@@ -295,7 +305,7 @@ $filterHref = static fn (string $value): string => url('admin/children.php?' . h
                                         method="post"
                                         action="<?= e(url('admin/child-action.php')) ?>"
                                         class="inline-form"
-                                        onsubmit="return confirm('این ثبت‌نام غیرفعال (رد) شود؟');"
+                                        data-confirm="آیا این ثبت‌نام غیرفعال (رد) شود؟"
                                     >
                                         <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                                         <input type="hidden" name="child_id" value="<?= e($cid) ?>">

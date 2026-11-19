@@ -440,9 +440,16 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>ویرایش اطلاعات کودک</h1>
-
-    <p><a class="back-to-children" href="<?= e(url('admin/child-detail.php?id=' . $childId)) ?>">→ بازگشت به جزئیات کودک</a></p>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>ویرایش اطلاعات کودک</h1>
+            </div>
+        </div>
+        <div class="adm-page-actions">
+            <a class="adm-back-link back-to-children" href="<?= e(url('admin/child-detail.php?id=' . $childId)) ?>">بازگشت به جزئیات کودک</a>
+        </div>
+    </div>
 
     <?php if ($errors !== []): ?>
         <div class="alert" role="alert">

@@ -289,6 +289,28 @@ $pageTitle = 'پیام‌رسانی | ' . siteName();
 require_once __DIR__ . '/header.php';
 ?>
 
+<section class="dashboard">
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>پیام‌رسانی و پیگیری خانواده‌ها</h1>
+                <?php if ($unreadReplyCount > 0): ?>
+                    <span class="adm-count-pill"><?= e(persianNumber((string) $unreadReplyCount)) ?> پیام خوانده‌نشده</span>
+                <?php endif; ?>
+            </div>
+            <p class="adm-page-subtitle">مدیریت پاسخ‌های والدین، تخصیص مسئول پیگیری، ارسال پیام جدید و گزارش پیام‌های ارسالی</p>
+        </div>
+        <div class="adm-page-actions">
+            <a href="#compose-message" class="btn btn-primary">+ ارسال پیام جدید</a>
+        </div>
+    </div>
+
+    <nav class="adm-section-nav" aria-label="بخش‌های پیام‌رسانی">
+        <a href="#family-inbox" class="adm-section-nav-link is-active">پیگیری پیام خانواده‌ها</a>
+        <a href="#compose-message" class="adm-section-nav-link">ارسال پیام جدید</a>
+        <a href="#sent-messages" class="adm-section-nav-link">پیام‌های ارسال‌شده</a>
+    </nav>
+
 <?php require __DIR__ . '/partials/family-message-inbox.php'; ?>
 
 <div class="admin-card" id="compose-message">
@@ -307,7 +329,7 @@ require_once __DIR__ . '/header.php';
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             
             <div class="form-group">
-                <label for="recipient_id">گیرنده</label>
+                <label for="recipient_id" class="form-label">گیرنده</label>
                 <select name="recipient_id" id="recipient_id" class="form-control" required>
                     <option value="">انتخاب گیرنده</option>
                     <option value="all" <?= $recipientSelection === 'all' ? 'selected' : '' ?>>ارسال به همه والدین</option>
@@ -320,12 +342,12 @@ require_once __DIR__ . '/header.php';
             </div>
 
             <div class="form-group">
-                <label for="subject">موضوع</label>
+                <label for="subject" class="form-label">موضوع</label>
                 <input type="text" name="subject" id="subject" class="form-control" required>
             </div>
 
             <div class="form-group">
-                <label for="body">متن پیام</label>
+                <label for="body" class="form-label">متن پیام</label>
                 <textarea name="body" id="body" class="form-control" rows="5" required></textarea>
             </div>
 
@@ -334,16 +356,16 @@ require_once __DIR__ . '/header.php';
     </div>
 </div>
 
-<div class="admin-card mt-4">
+<div class="admin-card mt-4" id="sent-messages">
     <div class="admin-card-header">
         <h2>پیام‌های ارسال‌شده</h2>
     </div>
     <div class="admin-card-body">
         <?php if (empty($sentMessages)): ?>
-            <p>هنوز پیامی ارسال نشده است.</p>
+            <p class="muted m-0">هنوز پیامی ارسال نشده است.</p>
         <?php else: ?>
-            <div class="table-responsive">
-                <table class="table">
+            <div class="admin-table-wrap">
+                <table class="admin-table">
                     <thead>
                         <tr>
                             <th>تاریخ</th>
@@ -402,6 +424,7 @@ require_once __DIR__ . '/header.php';
         <?php endif; ?>
     </div>
 </div>
+</section>
 
 <?php if ($viewMessage): ?>
     <div class="modal-overlay">

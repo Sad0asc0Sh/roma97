@@ -554,15 +554,16 @@ $pageTitle = 'مدیریت اسلایدها | ' . siteName();
 require_once __DIR__ . '/header.php';
 ?>
 
-<div class="admin-content">
-    <div class="app-toolbar">
-        <div style="display:flex;align-items:center;gap:12px;">
-            <h1 class="m-0 font-bold" style="font-size:1.5rem;color:var(--adm-text);">مدیریت اسلایدها</h1>
-            <span style="background:var(--adm-bg);padding:4px 12px;border-radius:20px;border:1px solid var(--adm-border);font-size:0.8rem;font-weight:600;color:var(--adm-text-secondary);">
-                <?= persianNumber((string) countSlides($pdo)) ?> اسلاید
-            </span>
+<section class="dashboard">
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>مدیریت اسلایدها</h1>
+                <span class="adm-count-pill"><?= persianNumber((string) countSlides($pdo)) ?> اسلاید</span>
+            </div>
+            <p class="adm-page-subtitle">مدیریت بنرهای صفحه اصلی برای دسکتاپ و موبایل با قابلیت مرتب‌سازی کشیدن و رها کردن</p>
         </div>
-        <div class="app-toolbar-actions">
+        <div class="adm-page-actions">
             <button type="button" class="app-btn app-btn-primary" onclick="openSlideDrawer()">
                 + افزودن اسلاید جدید
             </button>
@@ -859,7 +860,7 @@ require_once __DIR__ . '/header.php';
             <?php endif; ?>
         <?php endif; ?>
     </div>
-</div>
+</section>
 
 <script>
 function openSlideDrawer() {

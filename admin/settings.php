@@ -612,7 +612,22 @@ require_once __DIR__ . '/header.php';
 ?>
 
 <section class="dashboard">
-    <h1>&#9881; تنظیمات</h1>
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>تنظیمات سیستم</h1>
+            </div>
+            <p class="adm-page-subtitle">پیکربندی عمومی وب‌سایت، امنیت حساب مدیران و اتصال وب‌سرویس پیامک</p>
+        </div>
+    </div>
+
+    <nav class="adm-section-nav" aria-label="بخش‌های تنظیمات">
+        <a href="#settings-general" class="adm-section-nav-link is-active">تنظیمات عمومی</a>
+        <a href="#settings-security" class="adm-section-nav-link">امنیت و رمز عبور</a>
+        <a href="#sms-section" class="adm-section-nav-link">پنل پیامک و الگوها</a>
+        <a href="#sms-test" class="adm-section-nav-link">تست زنده ارسال</a>
+        <a href="#sms-logs" class="adm-section-nav-link">لاگ پیامک‌ها</a>
+    </nav>
 
     <?php if ($successMessage !== null): ?>
         <div class="notice" role="status"><?= e($successMessage) ?></div>
@@ -623,7 +638,7 @@ require_once __DIR__ . '/header.php';
     <?php endif; ?>
 
     <div class="admin-settings-grid">
-        <div class="admin-section">
+        <div class="admin-section" id="settings-general">
             <div class="admin-section-header">
                 <h2 class="admin-section-title">تنظیمات عمومی سایت</h2>
             </div>
@@ -774,7 +789,7 @@ require_once __DIR__ . '/header.php';
             </form>
         </div>
 
-        <div class="admin-section">
+        <div class="admin-section" id="settings-security">
             <div class="admin-section-header">
                 <h2 class="admin-section-title">تغییر رمز عبور</h2>
             </div>
@@ -851,60 +866,60 @@ require_once __DIR__ . '/header.php';
         <!-- SMS Gateway Section -->
         <div class="admin-section admin-section--full" id="sms-section">
             <div class="admin-section-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-                <h2 class="admin-section-title">📱 تنظیمات پنل پیامک ملی‌پیامک (خط خدماتی اشتراکی / الگو)</h2>
-                <span class="badge <?= ($settings['sms_enabled'] ?? '0') === '1' ? 'badge-success' : 'badge-secondary' ?>" style="font-size:0.85rem;padding:4px 10px;border-radius:20px;">
-                    <?= ($settings['sms_enabled'] ?? '0') === '1' ? '✅ پیامک فعال است' : '⚪ پیامک غیرفعال است' ?>
+                <h2 class="admin-section-title">تنظیمات پنل پیامک ملی‌پیامک (خط خدماتی اشتراکی / الگو)</h2>
+                <span class="badge <?= ($settings['sms_enabled'] ?? '0') === '1' ? 'badge-success' : 'badge-secondary' ?>">
+                    <?= ($settings['sms_enabled'] ?? '0') === '1' ? 'پیامک فعال است' : 'پیامک غیرفعال است' ?>
                 </span>
             </div>
-            <p style="color:var(--muted);margin-bottom:var(--space-md);font-size:0.9rem;line-height:1.8;">
-                با اتصال به وب‌سرویس ملی‌پیامک، کدهای ورود/ثبت‌نام (OTP) و اعلانات مهدکودک (گزارش روزانه کودک، حضور و غیاب، یادآوری بدهی شهریه و اطلاعیه‌ها) از طریق خط خدماتی اشتراکی حتی برای شماره‌های بلک‌لیست (تبلیغات مسدود) به صورت آنی ارسال می‌شوند.
+            <p class="adm-page-subtitle" style="margin-bottom:18px;">
+                با اتصال به وب‌سرویس ملی‌پیامک، کدهای ورود/ثبت‌نام (OTP) و اعلانات مهدکودک (گزارش روزانه کودک، حضور و غیاب، یادآوری بدهی شهریه و اطلاعیه‌ها) از طریق خط خدماتی اشتراکی حتی برای شماره‌های بلک‌لیست به صورت آنی ارسال می‌شوند.
             </p>
 
-            <form method="post" action="<?= e(url('admin/settings.php#sms-section')) ?>" novalidate style="margin-bottom:var(--space-xl);">
+            <form method="post" action="<?= e(url('admin/settings.php#sms-section')) ?>" novalidate style="margin-bottom:28px;">
                 <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
                 <input type="hidden" name="action" value="update_sms_settings">
 
-                <div style="background:var(--surface-hover, rgba(0,0,0,0.02));padding:16px;border-radius:var(--radius-md);border:1px solid var(--border);margin-bottom:var(--space-lg);">
-                    <div class="form-group" style="margin-bottom:12px;">
-                        <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:bold;">
+                <div class="adm-panel-muted">
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;">
                             <input type="checkbox" name="sms_enabled" value="1" style="width:18px;height:18px;cursor:pointer;"
                                 <?= ($settings['sms_enabled'] ?? '0') === '1' ? 'checked' : '' ?>>
                             فعال‌سازی ارسال پیامک‌های سیستمی
                         </label>
-                        <small style="color:var(--muted);font-size:0.85rem;">در صورت غیرفعال بودن، پیام‌ها فقط به صورت نوتیفیکیشن درون پورتال ذخیره می‌شوند.</small>
+                        <small style="color:var(--muted);font-size:0.84rem;">در صورت غیرفعال بودن، پیام‌ها فقط به صورت نوتیفیکیشن درون پورتال ذخیره می‌شوند.</small>
                     </div>
 
                     <!-- Provider Choice -->
                     <div class="form-group" style="margin-bottom:16px;">
-                        <label class="form-label" style="font-weight:700;font-size:0.95rem;">نوع سامانه و پنل ملی‌پیامک:</label>
-                        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:6px;">
-                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.88rem;">
+                        <label class="form-label" style="font-weight:700;font-size:0.94rem;">نوع سامانه و پنل ملی‌پیامک:</label>
+                        <div class="adm-provider-grid">
+                            <label class="adm-provider-option">
                                 <input type="radio" name="sms_provider" value="melipayamak_main" onchange="toggleProviderFields(this.value);"
                                     <?= ($settings['sms_provider'] ?? 'melipayamak_main') === 'melipayamak_main' ? 'checked' : '' ?>>
-                                <span>🌐 <b>پنل اصلی ملی‌پیامک (login.melipayamak.com)</b> — ورود با نام کاربری و رمز</span>
+                                <span><b>پنل اصلی ملی‌پیامک (<span dir="ltr">login.melipayamak.com</span>)</b> — ورود با نام کاربری و رمز</span>
                             </label>
-                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.88rem;">
+                            <label class="adm-provider-option">
                                 <input type="radio" name="sms_provider" value="melipayamak_console" onchange="toggleProviderFields(this.value);"
                                     <?= ($settings['sms_provider'] ?? 'melipayamak_main') === 'melipayamak_console' ? 'checked' : '' ?>>
-                                <span>⚡ <b>کنسول ملی‌پیامک (console.melipayamak.com)</b> — ورود با کلید API</span>
+                                <span><b>کنسول ملی‌پیامک (<span dir="ltr">console.melipayamak.com</span>)</b> — ورود با کلید API</span>
                             </label>
                         </div>
                     </div>
 
                     <!-- FIELDS FOR MAIN PANEL (login.melipayamak.com) -->
-                    <div id="provider_main_fields" style="display:<?= ($settings['sms_provider'] ?? 'melipayamak_main') === 'melipayamak_main' ? 'block' : 'none' ?>;margin-bottom:16px;background:rgba(46,133,64,0.05);border:1px solid var(--adm-border);border-radius:6px;padding:14px;">
+                    <div id="provider_main_fields" class="adm-provider-box" style="display:<?= ($settings['sms_provider'] ?? 'melipayamak_main') === 'melipayamak_main' ? 'block' : 'none' ?>;">
                         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
                             <div class="form-group" style="margin:0;">
-                                <label for="sms_username" class="form-label" style="font-weight:600;font-size:0.88rem;">
-                                    👤 نام کاربری پنل اصلی (login.melipayamak.com) <span class="req">*</span>
+                                <label for="sms_username" class="form-label">
+                                    نام کاربری پنل اصلی (login.melipayamak.com) <span class="req">*</span>
                                 </label>
                                 <input type="text" id="sms_username" name="sms_username" class="form-control" dir="ltr"
                                     placeholder="شماره موبایل یا یوزرنیم پنل"
                                     value="<?= e($settings['sms_username'] ?? '') ?>">
                             </div>
                             <div class="form-group" style="margin:0;">
-                                <label for="sms_password" class="form-label" style="font-weight:600;font-size:0.88rem;">
-                                    🔒 کلمه عبور پنل اصلی <span class="req">*</span>
+                                <label for="sms_password" class="form-label">
+                                    کلمه عبور پنل اصلی <span class="req">*</span>
                                 </label>
                                 <input type="password" id="sms_password" name="sms_password" class="form-control" dir="ltr"
                                     placeholder="<?= !empty($settings['sms_password']) ? '•••••••• (رمز قبلاً ذخیره شده)' : 'رمز عبور ورود به پنل' ?>"
@@ -917,10 +932,10 @@ require_once __DIR__ . '/header.php';
                     </div>
 
                     <!-- FIELDS FOR CONSOLE (console.melipayamak.com) -->
-                    <div id="provider_console_fields" style="display:<?= ($settings['sms_provider'] ?? 'melipayamak_main') === 'melipayamak_console' ? 'block' : 'none' ?>;margin-bottom:16px;">
+                    <div id="provider_console_fields" class="adm-provider-box" style="display:<?= ($settings['sms_provider'] ?? 'melipayamak_main') === 'melipayamak_console' ? 'block' : 'none' ?>;">
                         <div class="form-group" style="margin-bottom:12px;">
-                            <label for="sms_api_key" class="form-label" style="font-weight:700;font-size:0.92rem;">
-                                🔑 کلید وب‌سرویس کنسول (Console API Key) <span class="req">*</span>
+                            <label for="sms_api_key" class="form-label" style="font-weight:700;">
+                                کلید وب‌سرویس کنسول (Console API Key) <span class="req">*</span>
                             </label>
                             <input type="text" id="sms_api_key" name="sms_api_key" class="form-control" dir="ltr" style="font-family:monospace;"
                                 placeholder="کپی از کنسول ملی‌پیامک (مثال: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)"
@@ -930,8 +945,8 @@ require_once __DIR__ . '/header.php';
                             </small>
                         </div>
 
-                        <details style="margin-bottom:10px;background:rgba(0,0,0,0.02);border:1px dashed var(--border);border-radius:6px;padding:8px 12px;">
-                            <summary style="cursor:pointer;font-size:0.82rem;color:var(--muted);font-weight:600;">⚙️ تنظیمات پیشرفته کنسول (کلید اختصاصی یکبارمصرف)</summary>
+                        <details style="margin-bottom:4px;background:var(--adm-surface-subtle);border:1px dashed var(--adm-border);border-radius:var(--adm-radius-xs);padding:8px 12px;">
+                            <summary style="cursor:pointer;font-size:0.82rem;color:var(--muted);font-weight:600;">تنظیمات پیشرفته کنسول (کلید اختصاصی یکبارمصرف)</summary>
                             <div style="margin-top:8px;">
                                 <label for="sms_api_key_otp" class="form-label" style="font-size:0.8rem;">کلید اختصاصی یکبارمصرف کنسول</label>
                                 <input type="text" id="sms_api_key_otp" name="sms_api_key_otp" class="form-control" dir="ltr"
@@ -942,39 +957,39 @@ require_once __DIR__ . '/header.php';
                     </div>
 
                     <div class="form-group" style="margin-bottom:0;">
-                        <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:bold;">
+                        <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;">
                             <input type="checkbox" name="sms_detailed_report_enabled" value="1" style="width:18px;height:18px;cursor:pointer;"
                                 <?= ($settings['sms_detailed_report_enabled'] ?? '0') === '1' ? 'checked' : '' ?>>
                             گزارش روزانه تفصیلی برای همه (حالت کلی)
                         </label>
-                        <small style="color:var(--muted);font-size:0.85rem;">خاموش = همه والدین پیامک خلاصه ارجاع به پنل می‌گیرند. روشن = همه والدین پیامک تفصیلی می‌گیرند. هزینه پیامک از جیب مهد است و به شهریه اضافه نمی‌شود؛ در گزارش مالی بخش خدمات جانبی ثبت می‌شود.</small>
+                        <small style="color:var(--muted);font-size:0.84rem;">خاموش = همه والدین پیامک خلاصه ارجاع به پنل می‌گیرند. روشن = همه والدین پیامک تفصیلی می‌گیرند. هزینه پیامک از جیب مهد است و به شهریه اضافه نمی‌شود؛ در گزارش مالی بخش خدمات جانبی ثبت می‌شود.</small>
                     </div>
                 </div>
 
-                <h3 style="font-size:1.05rem;margin-bottom:var(--space-md);color:var(--adm-text);border-bottom:1px dashed var(--adm-border);padding-bottom:8px;">
-                    📋 شناسه‌های الگوهای متنی تایید شده در ملی‌پیامک (با لحن گرم و کودک‌محور)
+                <h3 style="font-size:1.05rem;margin-bottom:16px;color:var(--adm-text);border-bottom:1px dashed var(--adm-border);padding-bottom:8px;">
+                    شناسه‌های الگوهای متنی تایید شده در ملی‌پیامک (با لحن گرم و کودک‌محور)
                 </h3>
 
                 <div class="sms-pattern-grid">
-                    <div class="form-group" style="grid-column: 1 / -1; background: var(--adm-primary-50, rgba(46,133,64,0.05)); border: 1px solid var(--adm-border); border-radius: var(--radius-sm, 6px); padding: 14px;">
-                        <label for="sms_pattern_otp" class="form-label" style="font-weight:700; font-size: 0.95rem;">
+                    <div class="form-group adm-pattern-highlight">
+                        <label for="sms_pattern_otp" class="form-label" style="font-weight:700;font-size:0.95rem;">
                             ۱. کد تایید ورود و ثبت‌نام (OTP)
                         </label>
-                        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
                             <input type="number" id="sms_pattern_otp" name="sms_pattern_otp" class="form-control" dir="ltr" style="max-width:200px;"
                                 placeholder="کد متن تاییدشده" value="<?= e($settings['sms_pattern_otp'] ?? '') ?>">
-                            <small style="color:var(--muted);font-size:0.8rem;line-height:1.9;">کد متن تاییدشده از «ابزار ویژه ← وبسرویس خدماتی»<br>متغیر: <code dir="ltr">{0}</code>=کد تایید ۵ رقمی (فقط همین یک متغیر)<br>متن دقیقی که باید در پنل ملی‌پیامک ثبت کنید:<br><code>کد ورود شما به خانه پرمهر مهدکودک روما: {0} با آرزوی روزی شاد برای دلبندتان</code><br>⚠️ متن خوش‌آمدگویی را در این الگو ثبت نکنید؛ در غیر این صورت کد تایید با متن اشتباه ارسال می‌شود.</small>
+                            <small style="color:var(--muted);font-size:0.8rem;line-height:1.9;">کد متن تاییدشده از «ابزار ویژه ← وبسرویس خدماتی»<br>متغیر: <code dir="ltr">{0}</code>=کد تایید ۵ رقمی (فقط همین یک متغیر)<br>متن دقیقی که باید در پنل ملی‌پیامک ثبت کنید:<br><code>کد ورود شما به خانه پرمهر مهدکودک روما: {0} با آرزوی روزی شاد برای دلبندتان</code><br>توجه: متن خوش‌آمدگویی را در این الگو ثبت نکنید؛ در غیر این صورت کد تایید با متن اشتباه ارسال می‌شود.</small>
                         </div>
-                        <div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--adm-border);">
-                            <label class="form-label" style="font-weight:600;font-size:0.82rem;margin-bottom:6px;">روش ارسال پیامک کد تایید به والدین:</label>
-                            <div style="display:flex;gap:16px;flex-wrap:wrap;">
-                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.82rem;">
+                        <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--adm-border);">
+                            <label class="form-label" style="font-weight:600;font-size:0.82rem;margin-bottom:8px;">روش ارسال پیامک کد تایید به والدین:</label>
+                            <div class="adm-provider-grid">
+                                <label class="adm-provider-option">
                                     <input type="radio" name="sms_otp_type" value="pattern" <?= ($settings['sms_otp_type'] ?? 'pattern') === 'pattern' ? 'checked' : '' ?>>
-                                    <span>🎨 <b>الگوی اختصاصی مهدکودک روما</b> (با نام و لحن دلخواه مهدکودک و بدون درج نام یا لینک سایت‌های دیگر — با کد متن بالا)</span>
+                                    <span><b>الگوی اختصاصی مهدکودک روما</b> (با نام و لحن دلخواه مهدکودک و بدون درج نام یا لینک سایت‌های دیگر — با کد متن بالا)</span>
                                 </label>
-                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.82rem;">
+                                <label class="adm-provider-option">
                                     <input type="radio" name="sms_otp_type" value="fast" <?= ($settings['sms_otp_type'] ?? 'pattern') === 'fast' ? 'checked' : '' ?>>
-                                    <span>⚡ <b>سرویس فوق‌سریع ملی‌پیامک (Flash OTP)</b> (ارسال در کمتر از ۵ ثانیه — با متن پیش‌فرض پنل ملی‌پیامک شما)</span>
+                                    <span><b>سرویس فوق‌سریع ملی‌پیامک (Flash OTP)</b> (ارسال در کمتر از ۵ ثانیه — با متن پیش‌فرض پنل ملی‌پیامک شما)</span>
                                 </label>
                             </div>
                         </div>
@@ -986,12 +1001,12 @@ require_once __DIR__ . '/header.php';
                         </label>
                         <input type="number" id="sms_pattern_welcome" name="sms_pattern_welcome" class="form-control" dir="ltr"
                             placeholder="مثال: 525" value="<?= e($settings['sms_pattern_welcome'] ?? '') ?>">
-                        <small style="color:var(--muted);font-size:0.8rem;line-height:1.9;">متغیر: <code dir="ltr">{0}</code>=نام والد (نام و نام خانوادگی؛ بعد از ثبت‌نام به او نمایش داده می‌شود)<br>متن دقیقی که باید در پنل ملی‌پیامک ثبت کنید:<br><code>{0} عزیز، با عشق و افتخار به جمع پرمهر مهدکودک روما خوش آمدید.</code><br>⚠️ کد تایید در این الگو قرار نمی‌گیرد؛ این الگو فقط برای خوش‌آمدگویی است.</small>
+                        <small style="color:var(--muted);font-size:0.8rem;line-height:1.9;">متغیر: <code dir="ltr">{0}</code>=نام والد (نام و نام خانوادگی؛ بعد از ثبت‌نام به او نمایش داده می‌شود)<br>متن دقیقی که باید در پنل ملی‌پیامک ثبت کنید:<br><code>{0} عزیز، با عشق و افتخار به جمع پرمهر مهدکودک روما خوش آمدید.</code><br>توجه: کد تایید در این الگو قرار نمی‌گیرد؛ این الگو فقط برای خوش‌آمدگویی است.</small>
                     </div>
 
                     <div class="form-group">
                         <label for="sms_pattern_daily_report_brief" class="form-label">
-                            ۳. گزارش روزانه خلاصه (ارجاع به پنل) 💡
+                            ۳. گزارش روزانه خلاصه (ارجاع به پنل)
                         </label>
                         <input type="number" id="sms_pattern_daily_report_brief" name="sms_pattern_daily_report_brief" class="form-control" dir="ltr"
                             placeholder="مثال: 530" value="<?= e($settings['sms_pattern_daily_report_brief'] ?? '') ?>">
@@ -1000,7 +1015,7 @@ require_once __DIR__ . '/header.php';
 
                     <div class="form-group">
                         <label for="sms_pattern_daily_report" class="form-label">
-                            ۴. گزارش روزانه تفصیلی ⭐
+                            ۴. گزارش روزانه تفصیلی
                         </label>
                         <input type="number" id="sms_pattern_daily_report" name="sms_pattern_daily_report" class="form-control" dir="ltr"
                             placeholder="مثال: 526" value="<?= e($settings['sms_pattern_daily_report'] ?? '') ?>">
@@ -1036,7 +1051,7 @@ require_once __DIR__ . '/header.php';
 
                     <div class="form-group">
                         <label for="sms_pattern_payment_receipt" class="form-label">
-                            ۸. رسید پرداخت شهریه (اعتمادساز مالی) 🧾
+                            ۸. رسید پرداخت شهریه (اعتمادساز مالی)
                         </label>
                         <input type="number" id="sms_pattern_payment_receipt" name="sms_pattern_payment_receipt" class="form-control" dir="ltr"
                             placeholder="مثال: 531" value="<?= e($settings['sms_pattern_payment_receipt'] ?? '') ?>">
@@ -1045,7 +1060,7 @@ require_once __DIR__ . '/header.php';
 
                     <div class="form-group">
                         <label for="sms_pattern_child_status" class="form-label">
-                            ۹. تغییر وضعیت ثبت‌نام کودک 🔄
+                            ۹. تغییر وضعیت ثبت‌نام کودک
                         </label>
                         <input type="number" id="sms_pattern_child_status" name="sms_pattern_child_status" class="form-control" dir="ltr"
                             placeholder="مثال: 532" value="<?= e($settings['sms_pattern_child_status'] ?? '') ?>">
@@ -1054,7 +1069,7 @@ require_once __DIR__ . '/header.php';
 
                     <div class="form-group">
                         <label for="sms_inline_budget_seconds" class="form-label">
-                            ⏱️ حداکثر زمان ارسال درون‌خطی (ثانیه)
+                            حداکثر زمان ارسال درون‌خطی (ثانیه)
                         </label>
                         <input type="number" id="sms_inline_budget_seconds" name="sms_inline_budget_seconds" class="form-control" dir="ltr"
                             min="0" max="25" placeholder="8" value="<?= e($settings['sms_inline_budget_seconds'] ?? '8') ?>">
@@ -1065,9 +1080,9 @@ require_once __DIR__ . '/header.php';
                 </div>
 
                 <div class="form-actions" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                    <button type="submit" class="btn btn-primary">💾 ذخیره تنظیمات پیامک</button>
-                    <button type="button" class="btn btn-secondary" onclick="checkMelipayamakLive();" style="display:inline-flex;align-items:center;gap:6px;">
-                        🔍 بررسی اتصال و استعلام اعتبار پنل
+                    <button type="submit" class="btn btn-primary">ذخیره تنظیمات پیامک</button>
+                    <button type="button" class="btn btn-secondary" onclick="checkMelipayamakLive();">
+                        بررسی اتصال و استعلام اعتبار پنل
                     </button>
                 </div>
             </form>
@@ -1082,9 +1097,9 @@ require_once __DIR__ . '/header.php';
             </form>
 
             <!-- Test SMS Form -->
-            <div style="background:var(--adm-primary-50, rgba(46,133,64,0.06));border:1px solid var(--adm-border);padding:18px;border-radius:var(--radius-md);margin-bottom:var(--space-xl);">
-                <h3 style="font-size:1rem;color:var(--adm-primary,#3D8B63);margin-bottom:8px;">🧪 تست زنده ارسال پیامک خدماتی با الگو</h3>
-                <p style="font-size:0.85rem;color:var(--adm-text-muted);margin-bottom:12px;">برای اطمینان از صحت وب‌سرویس و شناسه الگو، یک پیامک تستی به شماره دلخواه ارسال کنید.</p>
+            <div class="adm-test-box" id="sms-test">
+                <h3 style="font-size:1rem;color:var(--adm-primary);margin-bottom:8px;">تست زنده ارسال پیامک خدماتی با الگو</h3>
+                <p style="font-size:0.85rem;color:var(--adm-text-muted);margin-bottom:14px;">برای اطمینان از صحت وب‌سرویس و شناسه الگو، یک پیامک تستی به شماره دلخواه ارسال کنید.</p>
                 <?php
                 $isMainMode = ($settings['sms_provider'] ?? 'melipayamak_main') === 'melipayamak_main';
                 $hasMainCreds = !empty(trim((string)($settings['sms_username'] ?? '')));
@@ -1092,12 +1107,16 @@ require_once __DIR__ . '/header.php';
                 $hasAnyCreds = $isMainMode ? $hasMainCreds : $hasConsoleCreds;
                 ?>
                 <?php if (!$hasAnyCreds): ?>
-                    <div style="background:rgba(198,40,40,0.08);border:1px solid rgba(198,40,40,0.25);color:var(--adm-danger, #c62828);padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:0.84rem;line-height:1.7;">
-                        ⚠️ <strong>اطلاعات ورود به سامانه ثبت نشده است:</strong> لطفاً ابتدا در کادر بالا <?= $isMainMode ? '«نام کاربری و کلمه عبور پنل اصلی (login.melipayamak.com)»' : '«کلید وب‌سرویس»' ?> را وارد کرده و دکمه <strong>«💾 ذخیره تنظیمات پیامک»</strong> را بزنید، سپس پیامک تست بفرستید.
+                    <div class="adm-callout adm-callout--danger">
+                        <div class="adm-callout-body">
+                            <strong>اطلاعات ورود به سامانه ثبت نشده است:</strong> لطفاً ابتدا در کادر بالا <?= $isMainMode ? '«نام کاربری و کلمه عبور پنل اصلی (login.melipayamak.com)»' : '«کلید وب‌سرویس»' ?> را وارد کرده و دکمه <strong>«ذخیره تنظیمات پیامک»</strong> را بزنید، سپس پیامک تست بفرستید.
+                        </div>
                     </div>
                 <?php elseif (($settings['sms_enabled'] ?? '0') !== '1'): ?>
-                    <div style="background:rgba(200,134,13,0.08);border:1px solid rgba(200,134,13,0.25);color:var(--adm-warning, #c8860d);padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:0.84rem;line-height:1.7;">
-                        ℹ️ <strong>ارسال پیامک‌های سیستمی غیرفعال است:</strong> شما می‌توانید تست ارسال را انجام دهید تا از صحت الگو و وب‌سرویس مطمئن شوید؛ اما برای فعال شدن ارسال خودکار پیامک‌ها به والدین و پرسنل، تیک <strong>«فعال‌سازی ارسال پیامک‌های سیستمی»</strong> را در فرم بالا بزنید و ذخیره کنید.
+                    <div class="adm-callout adm-callout--warning">
+                        <div class="adm-callout-body">
+                            <strong>ارسال پیامک‌های سیستمی غیرفعال است:</strong> شما می‌توانید تست ارسال را انجام دهید تا از صحت الگو و وب‌سرویس مطمئن شوید؛ اما برای فعال شدن ارسال خودکار پیامک‌ها به والدین و پرسنل، تیک <strong>«فعال‌سازی ارسال پیامک‌های سیستمی»</strong> را در فرم بالا بزنید و ذخیره کنید.
+                        </div>
                     </div>
                 <?php endif; ?>
 
@@ -1152,11 +1171,11 @@ require_once __DIR__ . '/header.php';
                     </div>
 
                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                        <button type="submit" class="btn btn-primary" style="padding:10px 18px;font-size:0.88rem;cursor:pointer;border-radius:var(--radius-sm);">
-                            🚀 ارسال تست با الگو
+                        <button type="submit" class="btn btn-primary">
+                            ارسال تست با الگو
                         </button>
-                        <button type="submit" name="action" value="test_otp_fast" class="btn" style="padding:10px 18px;font-size:0.88rem;cursor:pointer;border-radius:var(--radius-sm);background:#e67e22;color:#fff;border:1px solid #d35400;" title="ارسال کد از طریق خط مستقیم اختصاصی در ۲ تا ۵ ثانیه">
-                            ⚡ تست ارسال فوق‌سریع کد تایید (Flash OTP)
+                        <button type="submit" name="action" value="test_otp_fast" class="btn adm-btn-fast" title="ارسال کد از طریق خط مستقیم اختصاصی در ۲ تا ۵ ثانیه">
+                            تست ارسال فوق‌سریع کد تایید (Flash OTP)
                         </button>
                     </div>
                 </form>
@@ -1243,12 +1262,12 @@ require_once __DIR__ . '/header.php';
             </script>
 
             <!-- Recent SMS Logs Table -->
-            <h3 style="font-size:1.05rem;margin-bottom:var(--space-md);color:var(--adm-text);">
-                📜 آخرین پیامک‌های ارسالی سیستم (لاگ وضعیت)
+            <h3 id="sms-logs" style="font-size:1.05rem;margin-bottom:16px;color:var(--adm-text);">
+                آخرین پیامک‌های ارسالی سیستم (لاگ وضعیت)
             </h3>
             <?php if (!empty($recentSmsLogs)): ?>
                 <div class="sms-logs-wrap">
-                    <table class="table" style="width:100%;font-size:0.85rem;">
+                    <table class="table admin-table">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -1268,7 +1287,7 @@ require_once __DIR__ . '/header.php';
                                     <td dir="ltr" style="text-align:right;font-family:monospace;"><?= e($log['recipient_phone']) ?></td>
                                     <td><?= !empty($log['p_first']) ? e($log['p_first'] . ' ' . $log['p_last']) : '<span style="color:var(--adm-text-muted);">-</span>' ?></td>
                                     <td>
-                                        <span class="badge badge-secondary" style="font-size:0.75rem;">
+                                        <span class="badge badge-secondary">
                                             <?= e($log['message_type'] ?? 'pattern') ?>
                                         </span>
                                     </td>
@@ -1276,10 +1295,10 @@ require_once __DIR__ . '/header.php';
                                     <td dir="ltr" style="text-align:right;font-family:monospace;"><?= e($log['rec_id'] ?? '-') ?></td>
                                     <td>
                                         <?php if (($log['status'] ?? '') === 'sent'): ?>
-                                            <span style="color:var(--adm-success);font-weight:bold;">✅ موفق</span>
+                                            <span class="badge badge-success">موفق</span>
                                         <?php else: ?>
-                                            <span style="color:var(--adm-danger);font-weight:bold;" title="<?= e($log['error_message'] ?? '') ?>">
-                                                ❌ <?= e($log['error_message'] ?: ($log['status'] ?? 'ناموفق')) ?>
+                                            <span class="badge badge-danger" title="<?= e($log['error_message'] ?? '') ?>">
+                                                <?= e($log['error_message'] ?: ($log['status'] ?? 'ناموفق')) ?>
                                             </span>
                                         <?php endif; ?>
                                     </td>
@@ -1290,9 +1309,9 @@ require_once __DIR__ . '/header.php';
                     </table>
                 </div>
             <?php else: ?>
-                <p style="color:var(--muted);font-size:0.88rem;background:var(--surface-hover);padding:14px;border-radius:var(--radius-sm);text-align:center;">
+                <div class="adm-panel-muted" style="text-align:center;color:var(--muted);font-size:0.88rem;margin-bottom:0;">
                     هنوز هیچ پیامکی از طریق سیستم ارسال نشده است.
-                </p>
+                </div>
             <?php endif; ?>
         </div>
     </div>

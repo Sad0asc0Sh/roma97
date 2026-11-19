@@ -549,15 +549,16 @@ $pageTitle = 'مدیریت گالری تصاویر | ' . siteName();
 require_once __DIR__ . '/header.php';
 ?>
 
-<div class="admin-content">
-    <div class="app-toolbar">
-        <div style="display:flex;align-items:center;gap:12px;">
-            <h1 class="m-0 font-bold" style="font-size:1.5rem;color:var(--adm-text);">مدیریت گالری تصاویر</h1>
-            <span style="background:var(--adm-bg);padding:4px 12px;border-radius:20px;border:1px solid var(--adm-border);font-size:0.8rem;font-weight:600;color:var(--adm-text-secondary);">
-                <?= persianNumber((string) $total) ?> تصویر
-            </span>
+<section class="dashboard">
+    <div class="adm-page-head">
+        <div class="adm-page-head-main">
+            <div class="adm-page-title-row">
+                <h1>مدیریت گالری تصاویر</h1>
+                <span class="adm-count-pill"><?= persianNumber((string) $total) ?> تصویر</span>
+            </div>
+            <p class="adm-page-subtitle">انتشار و دسته‌بندی تصاویر فعالیت‌ها و فضای آموزشی مهدکودک</p>
         </div>
-        <div class="app-toolbar-actions">
+        <div class="adm-page-actions">
             <button type="button" class="app-btn app-btn-primary" onclick="openGalleryDrawer()">
                 + افزودن تصویر جدید
             </button>
@@ -575,17 +576,17 @@ require_once __DIR__ . '/header.php';
     <?php endif; ?>
 
     <!-- CATEGORY FILTER CHIPS -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px;flex-wrap:wrap;">
-        <a href="<?= e(url('admin/gallery.php')) ?>" class="btn btn-sm <?= $filterCat === null ? 'btn-primary' : 'btn-secondary' ?>" style="border-radius:20px;padding:5px 14px;font-size:0.8rem;">
+    <nav class="filter-nav" aria-label="فیلتر بر اساس دسته‌بندی گالری">
+        <a href="<?= e(url('admin/gallery.php')) ?>" class="<?= $filterCat === null ? 'is-active' : '' ?>">
             همه تصاویر (<?= persianNumber((string) countGalleryImages($pdo)) ?>)
         </a>
         <?php foreach (GALLERY_CATEGORIES as $key => $label): ?>
             <?php $catCount = countGalleryImages($pdo, $key); ?>
-            <a href="<?= e(url('admin/gallery.php?cat=' . urlencode($key))) ?>" class="btn btn-sm <?= $filterCat === $key ? 'btn-primary' : 'btn-secondary' ?>" style="border-radius:20px;padding:5px 14px;font-size:0.8rem;">
+            <a href="<?= e(url('admin/gallery.php?cat=' . urlencode($key))) ?>" class="<?= $filterCat === $key ? 'is-active' : '' ?>">
                 <?= e($label) ?> (<?= persianNumber((string) $catCount) ?>)
             </a>
         <?php endforeach; ?>
-    </div>
+    </nav>
 
     <template id="galleryFormTemplate">
         <form id="galleryUploadForm" method="post" enctype="multipart/form-data" action="<?= e(url('admin/gallery.php')) ?>" novalidate style="padding: 6px 0 0;">
@@ -823,14 +824,14 @@ require_once __DIR__ . '/header.php';
             <?php endif; ?>
         <?php endif; ?>
     </div>
-</div>
+</section>
 
 <!-- IMAGE LIGHTBOX PREVIEW MODAL -->
-<div id="galleryModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(10,15,12,0.85);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px;" onclick="closeImageModal()">
-    <div style="position:relative;max-width:90vw;max-height:90vh;display:flex;flex-direction:column;align-items:center;" onclick="event.stopPropagation()">
-        <button type="button" onclick="closeImageModal()" style="position:absolute;top:-40px;left:0;background:none;border:none;color:#FFFFFF;font-size:28px;cursor:pointer;line-height:1;">&times;</button>
-        <img id="galleryModalImg" src="" alt="" style="max-width:100%;max-height:80vh;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.5);">
-        <div id="galleryModalTitle" style="color:#FFFFFF;margin-top:10px;font-size:0.95rem;font-weight:700;"></div>
+<div id="galleryModal" class="adm-lightbox" onclick="closeImageModal()">
+    <div class="adm-lightbox-dialog" onclick="event.stopPropagation()">
+        <button type="button" class="adm-lightbox-close" onclick="closeImageModal()" aria-label="بستن پیش‌نمایش">&times;</button>
+        <img id="galleryModalImg" class="adm-lightbox-img" src="" alt="">
+        <div id="galleryModalTitle" class="adm-lightbox-title"></div>
     </div>
 </div>
 
@@ -1030,13 +1031,13 @@ function previewImageModal(src, title) {
     if (modal && img) {
         img.src = src;
         if (titleEl) titleEl.textContent = title || '';
-        modal.style.display = 'flex';
+        modal.classList.add('is-open');
     }
 }
 
 function closeImageModal() {
     const modal = document.getElementById('galleryModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) modal.classList.remove('is-open');
 }
 
 function toggleGalleryActive(id, btn) {
@@ -1168,7 +1169,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         const modal = document.getElementById('galleryModal');
-        if (modal && modal.style.display !== 'none') {
+        if (modal && modal.classList.contains('is-open')) {
             closeImageModal();
         }
     }

@@ -797,11 +797,11 @@ section.dashboard > h1,
 @media (max-width: 991px) {
     body.admin-layout .admin-main,
     .admin-main {
-        margin: 0 !important;
-        margin-inline-start: 0 !important;
-        margin-inline-end: 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
+        margin: 0;
+        margin-inline-start: 0;
+        margin-inline-end: 0;
+        width: 100%;
+        max-width: 100%;
     }
 }
 
