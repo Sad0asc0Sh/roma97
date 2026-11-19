@@ -58,6 +58,16 @@ function tuitionInvoiceState(array $invoice, string $today): string
     return $invoice['due_date'] < $today ? 'overdue' : 'upcoming';
 }
 
+function tuitionPeriodExists(PDO $pdo, int $childId, string $monthYear): bool
+{
+    $stmt = $pdo->prepare(
+        'SELECT EXISTS (SELECT 1 FROM tuition_plans WHERE child_id = ? AND month_year = ?)
+             OR EXISTS (SELECT 1 FROM tuition_payments WHERE child_id = ? AND month_year = ?)'
+    );
+    $stmt->execute([$childId, $monthYear, $childId, $monthYear]);
+    return (bool) $stmt->fetchColumn();
+}
+
 /** Actual plan or payment rows. Projected tuition is never treated as an issued invoice. */
 function tuitionInvoiceRows(PDO $pdo, ?string $monthYear = null, ?string $dueBefore = null): array
 {

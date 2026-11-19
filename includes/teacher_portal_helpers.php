@@ -134,91 +134,22 @@ function teacherAllowedChildIds(PDO $pdo, int $classroomId): array
  * window ($windowDays, default 7) — older corrections belong to the
  * admin panel so a register cannot be quietly rewritten weeks later.
  */
-function teacherValidOperationalDate(string $raw, int $windowDays = 7): ?string
+function teacherValidOperationalDate(mixed $raw, int $windowDays = 7): ?string
 {
-    $raw = trim($raw);
-
-    if ($raw === '') {
-        return null;
-    }
-
-    $iso = parseJalaliDate($raw);
-
-    if ($iso === null) {
-        if (preg_match('/\A\d{4}-\d{2}-\d{2}\z/', $raw) !== 1) {
-            return null;
-        }
-
-        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $raw);
-        if ($date === false || $date->format('Y-m-d') !== $raw) {
-            return null;
-        }
-
-        $iso = $raw;
-    }
-
+    $date = parseIranDate($raw);
     $today = new DateTimeImmutable('today');
-    $candidate = new DateTimeImmutable($iso);
-
-    if ($candidate > $today) {
+    if ($date === null || $date > $today->format('Y-m-d')) {
         return null;
     }
-
-    if ($windowDays >= 0 && $candidate < $today->modify('-' . $windowDays . ' days')) {
+    if ($windowDays >= 0 && $date < $today->modify('-' . $windowDays . ' days')->format('Y-m-d')) {
         return null;
     }
-
-    return $iso;
-}
-
-/** Normalise an HH:MM(:SS) time input to SQL TIME, or null. */
-function teacherNormalizeTimeInput(?string $raw): ?string
-{
-    $raw = trim((string) $raw);
-
-    if ($raw === '') {
-        return null;
-    }
-
-    if (preg_match('/\A([01]\d|2[0-3]):[0-5]\d\z/', $raw) === 1) {
-        return $raw . ':00';
-    }
-
-    if (preg_match('/\A([01]\d|2[0-3]):[0-5]\d:[0-5]\d\z/', $raw) === 1) {
-        return $raw;
-    }
-
-    return null;
-}
-
-/** Render the HH:MM portion of a stored SQL TIME for display/inputs. */
-function teacherFormatTimeShort(?string $sqlTime): string
-{
-    if ($sqlTime === null || $sqlTime === '') {
-        return '';
-    }
-
-    return preg_match('/^\d{2}:\d{2}/', $sqlTime, $m) === 1 ? $m[0] : '';
+    return $date;
 }
 
 /* ================================================================
    Child display helpers
    ================================================================ */
-
-/** Readable age for a date of birth: «۳ سال» / «۸ ماه» / '' if invalid. */
-function teacherChildDisplayAge(string $dob): string
-{
-    try {
-        $birth = new DateTimeImmutable($dob);
-        $diff  = $birth->diff(new DateTimeImmutable('today'));
-        if ($diff->y < 1) {
-            return $diff->m . ' ماه';
-        }
-        return $diff->y . ' سال';
-    } catch (Throwable) {
-        return '';
-    }
-}
 
 function teacherChildGenderLabel(mixed $gender): string
 {

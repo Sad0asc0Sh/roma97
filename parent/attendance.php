@@ -26,8 +26,8 @@ function renderParentAttendanceCell(?array $rec): void
     $status = (string) ($rec['status'] ?? '');
     $badgeClass = parentPortalAttendanceBadgeClass($status);
     $label = parentPortalAttendanceStatusLabel($status);
-    $in = parentPortalFormatTimeShort($rec['check_in'] ?? null);
-    $out = parentPortalFormatTimeShort($rec['check_out'] ?? null);
+    $in = formatIranTime($rec['check_in'] ?? null);
+    $out = formatIranTime($rec['check_out'] ?? null);
     $times = [];
 
     if ($in !== '') {
@@ -50,25 +50,17 @@ function renderParentAttendanceCell(?array $rec): void
 $parentId = (int) $_SESSION['parent_id'];
 $today = new DateTimeImmutable('today');
 $todayYmd = $today->format('Y-m-d');
-$thisMonday = parentPortalMondayOfDate($today);
-
-$weekParam = trim((string) ($_GET['week'] ?? ''));
-$parsedWeek = $weekParam === '' ? null : parentPortalParseDateYmd($weekParam);
-
-if ($parsedWeek === null) {
-    $weekStart = $thisMonday;
-} else {
-    $anchor = DateTimeImmutable::createFromFormat('!Y-m-d', $parsedWeek);
-    $weekStart = $anchor !== false ? parentPortalMondayOfDate($anchor) : $thisMonday;
-}
+$thisSaturday = iranWeekStart($today);
+$anchor = iranDateTime(parseIranDate($_GET['week'] ?? null));
+$weekStart = $anchor === null ? $thisSaturday : iranWeekStart($anchor);
 
 $weekEnd = $weekStart->modify('+6 day');
 $weekStartYmd = $weekStart->format('Y-m-d');
 $weekEndYmd = $weekEnd->format('Y-m-d');
 
-$prevMonday = $weekStart->modify('-7 day')->format('Y-m-d');
-$nextMonday = $weekStart->modify('+7 day')->format('Y-m-d');
-$thisWeekParam = $thisMonday->format('Y-m-d');
+$prevWeek = shamsiDate($weekStart->modify('-7 days')->format('Y-m-d'), 'Y-m-d');
+$nextWeek = shamsiDate($weekStart->modify('+7 days')->format('Y-m-d'), 'Y-m-d');
+$thisWeekParam = shamsiDate($thisSaturday->format('Y-m-d'), 'Y-m-d');
 
 $children = [];
 /** @var array<int, array<string, array<string, mixed>>> */
@@ -79,7 +71,7 @@ $upcomingNotices = [];
 $noticeChildren = [];
 $noticeSuccess = getFlash('success');
 $noticeError = getFlash('error');
-$noticeUrl = url('parent/attendance.php?week=' . $weekStartYmd);
+$noticeUrl = url('parent/attendance.php?week=' . shamsiDate($weekStartYmd, 'Y-m-d'));
 
 try {
     initializeParentTables();
@@ -92,8 +84,7 @@ try {
                 throw new InvalidArgumentException('درخواست نامعتبر است. دوباره تلاش کنید.');
             }
             $noticeChildId = filter_var($_POST['child_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-            $dateInput = $_POST['notice_date'] ?? null;
-            $noticeDate = is_string($dateInput) ? parseJalaliDate($dateInput) : null;
+            $noticeDate = parseIranDate($_POST['notice_date'] ?? null);
             if (!is_int($noticeChildId) || $noticeDate === null || $noticeDate < $todayYmd) {
                 throw new InvalidArgumentException('کودک و تاریخ امروز یا روزهای بعد را انتخاب کنید.');
             }
@@ -103,16 +94,15 @@ try {
                 if (!is_string($type) || !isset(ATTENDANCE_NOTICE_TYPES[$type])) {
                     throw new InvalidArgumentException('غیبت یا تأخیر را انتخاب کنید.');
                 }
-                $arrival = $type === 'late' ? ($_POST['expected_arrival'] ?? '') : '';
-                if (!is_string($arrival) || ($arrival !== '' && preg_match('/\A([01]\d|2[0-3]):[0-5]\d\z/', $arrival) !== 1)) {
-                    throw new InvalidArgumentException('ساعت تقریبی ورود را بررسی کنید.');
-                }
+                $arrival = $type === 'late'
+                    ? optionalIranTime($_POST['expected_arrival'] ?? null, 'ساعت تقریبی ورود را به صورت ۲۴ ساعته وارد کنید، مانند ۱۴:۳۰.')
+                    : null;
                 $note = $_POST['note'] ?? '';
                 if (!is_string($note) || mb_strlen($note, 'UTF-8') > 500) {
                     throw new InvalidArgumentException('یادداشت می‌تواند حداکثر ۵۰۰ نویسه باشد.');
                 }
                 saveParentAttendanceNotice($pdo, $parentId, $noticeChildId, $noticeDate, $type,
-                    $arrival === '' ? null : $arrival . ':00', trim($note) === '' ? null : trim($note));
+                    $arrival, trim($note) === '' ? null : trim($note));
                 setFlash('success', 'اعلام شما برای پذیرش و مربی ثبت شد.');
             } elseif ($action === 'cancel_notice') {
                 saveParentAttendanceNotice($pdo, $parentId, $noticeChildId, $noticeDate, null, null, null);
@@ -199,7 +189,7 @@ SQL
 }
 
 $selectedNoticeChild = (int) filter_var($_GET['notice_child'] ?? null, FILTER_VALIDATE_INT);
-$selectedNoticeDate = $_GET['notice_date'] ?? null;
+$selectedNoticeDate = parseIranDate($_GET['notice_date'] ?? null);
 $selectedNotice = null;
 $eligibleNoticeChildIds = array_fill_keys(array_column($noticeChildren, 'id'), true);
 foreach ($upcomingNotices as $notice) {
@@ -290,9 +280,9 @@ require_once __DIR__ . '/header.php';
 
 <!-- Week Navigation -->
 <nav class="week-navigation" aria-label="انتخاب هفته">
-    <a class="btn btn-outline" href="<?= e(url('parent/attendance.php?week=' . rawurlencode($prevMonday))) ?>">‹ هفته قبل</a>
+    <a class="btn btn-outline" href="<?= e(url('parent/attendance.php?week=' . rawurlencode($prevWeek))) ?>">‹ هفته قبل</a>
     <a class="btn btn-primary" href="<?= e(url('parent/attendance.php?week=' . rawurlencode($thisWeekParam))) ?>">این هفته</a>
-    <a class="btn btn-outline" href="<?= e(url('parent/attendance.php?week=' . rawurlencode($nextMonday))) ?>">هفته بعد ›</a>
+    <a class="btn btn-outline" href="<?= e(url('parent/attendance.php?week=' . rawurlencode($nextWeek))) ?>">هفته بعد ›</a>
 </nav>
 
 <?php if ($children === []): ?>
@@ -312,7 +302,7 @@ require_once __DIR__ . '/header.php';
                         <th scope="col" class="child-col">کودک</th>
                         <?php foreach ($weekDays as $day): ?>
                             <th scope="col" class="day-col">
-                                <span class="day-name"><?= e(persianDayNameShort($day->format('Y-m-d'))) ?></span>
+                                <span class="day-name"><?= e(persianDayName($day->format('Y-m-d'))) ?></span>
                                 <span class="day-date"><?= e(persianNumber($day->format('j'))) ?></span>
                            </th>
                         <?php endforeach; ?>
@@ -371,8 +361,8 @@ require_once __DIR__ . '/header.php';
                                 $status = (string) ($rec['status'] ?? '');
                                 $badgeClass = parentPortalAttendanceBadgeClass($status);
                                 $label = parentPortalAttendanceStatusLabel($status);
-                                $in = parentPortalFormatTimeShort($rec['check_in'] ?? null);
-                                $out = parentPortalFormatTimeShort($rec['check_out'] ?? null);
+                                $in = formatIranTime($rec['check_in'] ?? null);
+                                $out = formatIranTime($rec['check_out'] ?? null);
                                 ?>
                                 <span class="attendance-badge <?= e($badgeClass) ?>"><?= e($label)?></span>
                                 <?php if ($in !== '' || $out !== ''): ?>
@@ -398,8 +388,8 @@ require_once __DIR__ . '/header.php';
             <?php foreach ($weekScheduledEvents as $ev): ?>
                 <?php
                 $ecat = (string) ($ev['category'] ?: 'general');
-                $st = parentPortalFormatTimeShort($ev['start_time'] ?? null);
-                $et = parentPortalFormatTimeShort($ev['end_time'] ?? null);
+                $st = formatIranTime($ev['start_time'] ?? null);
+                $et = formatIranTime($ev['end_time'] ?? null);
                 $timeLine = $st !== '' ? $st . ($et !== '' ? ' – ' . $et : '') : ($et !== '' ? $et : '');
                 $ed = (string) $ev['event_date'];
                 $edLabel = persianDayName($ed) . ' ' . shamsiDate($ed);

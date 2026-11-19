@@ -34,7 +34,9 @@ requireTeacherLogin();
 $teacherId    = (int) $_SESSION['teacher_id'];
 $teacherName  = (string) ($_SESSION['teacher_name'] ?? 'مربی');
 $today        = date('Y-m-d');
-$selectedDate = teacherValidOperationalDate((string) ($_GET['date'] ?? $today), 7) ?? $today;
+$dateInput = $_GET['date'] ?? null;
+$parsedDate = teacherValidOperationalDate($dateInput);
+$selectedDate = $parsedDate ?? $today;
 
 $classrooms  = [];
 $classroom   = null;
@@ -59,6 +61,9 @@ $quickMoodLabels = [
 
 $successMessage = getFlash('success');
 $errorMessage   = getFlash('error');
+if ($dateInput !== null && $parsedDate === null) {
+    $errorMessage ??= 'تاریخ شمسی گزارش را از امروز تا ۷ روز گذشته انتخاب کنید.';
+}
 
 try {
     initializeTeachersTables();
@@ -93,8 +98,7 @@ SQL
         $allowedChildIds = array_map(static fn (array $c): int => (int) $c['id'], $children);
 
         if (isPostRequest()) {
-            $postDateInput = $_POST['report_date'] ?? null;
-            $postDate = is_string($postDateInput) ? teacherValidOperationalDate($postDateInput, 7) : null;
+            $postDate = teacherValidOperationalDate($_POST['report_date'] ?? null);
             $redirectUrl = url('teacher/report.php?classroom_id=' . $classroomId . '&date=' . rawurlencode($postDate ?? $selectedDate));
 
             $csrfToken = $_POST['csrf_token'] ?? null;
@@ -365,14 +369,15 @@ require_once __DIR__ . '/header.php';
 
     <div class="tp-page-actions">
         <?php if ($classroom !== null): ?>
-            <form method="get" action="<?= e(url('teacher/report.php')) ?>" style="display:flex;gap:8px;align-items:center;">
+            <form method="get" action="<?= e(url('teacher/report.php')) ?>" class="tp-page-actions">
                 <input type="hidden" name="classroom_id" value="<?= e($classroomId) ?>">
-                <label for="repDate" class="sr-only">تاریخ گزارش</label>
-                <input type="date" id="repDate" name="date" class="tp-input" style="width:auto;"
-                    value="<?= e($selectedDate) ?>"
-                    max="<?= e($today) ?>"
-                    min="<?= e($todayObj->modify('-7 days')->format('Y-m-d')) ?>"
-                    onchange="this.form.submit()">
+                <label for="repDate" class="sr-only">تاریخ شمسی گزارش</label>
+                <input type="text" id="repDate" name="date" class="tp-input shamsi-datepicker"
+                    dir="ltr" inputmode="numeric" autocomplete="off" required
+                    value="<?= e(shamsiDate($selectedDate, 'numeric')) ?>"
+                    data-max-date="<?= e(shamsiDate($today, 'Y-m-d')) ?>"
+                    data-min-date="<?= e(shamsiDate($todayObj->modify('-7 days')->format('Y-m-d'), 'Y-m-d')) ?>">
+                <button type="submit" class="tp-btn tp-btn-secondary tp-btn-sm">نمایش</button>
                 <?php if (!$isToday): ?>
                     <a href="<?= e(url('teacher/report.php?classroom_id=' . $classroomId)) ?>" class="tp-btn tp-btn-secondary tp-btn-sm">امروز</a>
                 <?php endif; ?>

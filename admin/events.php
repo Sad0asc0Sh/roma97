@@ -68,60 +68,6 @@ function parseAdminEventId(mixed $value): int
     return is_int($id) ? $id : 0;
 }
 
-function parseAdminEventDate(string $raw): ?string
-{
-    $raw = trim($raw);
-
-    $parsed = parseJalaliDate($raw);
-    if ($parsed !== null) {
-        return $parsed;
-    }
-
-    if (preg_match('/\A\d{4}-\d{2}-\d{2}\z/', $raw) !== 1) {
-        return null;
-    }
-
-    $d = DateTimeImmutable::createFromFormat('!Y-m-d', $raw);
-
-    return $d !== false && $d->format('Y-m-d') === $raw ? $raw : null;
-}
-
-function normalizeAdminEventTime(?string $raw): ?string
-{
-    if ($raw === null) {
-        return null;
-    }
-
-    $raw = trim($raw);
-
-    if ($raw === '') {
-        return null;
-    }
-
-    if (preg_match('/\A([01]\d|2[0-3]):[0-5]\d\z/', $raw) === 1) {
-        return $raw . ':00';
-    }
-
-    if (preg_match('/\A([01]\d|2[0-3]):[0-5]\d:[0-5]\d\z/', $raw) === 1) {
-        return $raw;
-    }
-
-    return null;
-}
-
-function adminEventTimeForInput(?string $sqlTime): string
-{
-    if ($sqlTime === null || $sqlTime === '') {
-        return '';
-    }
-
-    if (preg_match('/^(\d{2}:\d{2})/', $sqlTime, $matches)) {
-        return $matches[1];
-    }
-
-    return '';
-}
-
 function findAdminEvent(PDO $pdo, int $id): ?array
 {
     $statement = $pdo->prepare(
@@ -257,9 +203,6 @@ try {
             $editId = parseAdminEventId($_POST['event_id'] ?? null);
             $title = trim((string) ($_POST['title'] ?? ''));
             $description = trim((string) ($_POST['description'] ?? ''));
-            $eventDateRaw = trim((string) ($_POST['event_date'] ?? ''));
-            $startRaw = (string) ($_POST['start_time'] ?? '');
-            $endRaw = (string) ($_POST['end_time'] ?? '');
             $category = (string) ($_POST['category'] ?? 'general');
             $statusVal = (string) ($_POST['status'] ?? 'scheduled');
 
@@ -268,10 +211,10 @@ try {
                 redirect(adminEventsRedirectFormUrl($editId, $filterCategory, $filterStatus));
             }
 
-            $eventDate = parseAdminEventDate($eventDateRaw);
+            $eventDate = parseIranDate($_POST['event_date'] ?? null);
 
             if ($eventDate === null) {
-                setFlash('error', 'لطفاً تاریخ رویداد معتبر وارد کنید.');
+                setFlash('error', 'تاریخ رویداد را به شمسی وارد کنید، مانند ۱۴۰۵/۰۵/۱۸.');
                 redirect(adminEventsRedirectFormUrl($editId, $filterCategory, $filterStatus));
             }
 
@@ -283,16 +226,11 @@ try {
                 $statusVal = 'scheduled';
             }
 
-            $startTime = normalizeAdminEventTime($startRaw);
-            $endTime = normalizeAdminEventTime($endRaw);
-
-            if (trim($startRaw) !== '' && $startTime === null) {
-                setFlash('error', 'زمان شروع نامعتبر است. از قالب HH:MM استفاده کنید یا خالی بگذارید.');
-                redirect(adminEventsRedirectFormUrl($editId, $filterCategory, $filterStatus));
-            }
-
-            if (trim($endRaw) !== '' && $endTime === null) {
-                setFlash('error', 'زمان پایان نامعتبر است. از قالب HH:MM استفاده کنید یا خالی بگذارید.');
+            try {
+                $startTime = optionalIranTime($_POST['start_time'] ?? null, 'ساعت شروع را به صورت ۲۴ ساعته وارد کنید، مانند ۱۴:۳۰.');
+                $endTime = optionalIranTime($_POST['end_time'] ?? null, 'ساعت پایان را به صورت ۲۴ ساعته وارد کنید، مانند ۱۵:۳۰.');
+            } catch (InvalidArgumentException $exception) {
+                setFlash('error', $exception->getMessage());
                 redirect(adminEventsRedirectFormUrl($editId, $filterCategory, $filterStatus));
             }
 
@@ -448,8 +386,8 @@ if ($editEvent !== null) {
         'title' => (string) $editEvent['title'],
         'description' => (string) ($editEvent['description'] ?? ''),
         'event_date' => (string) $editEvent['event_date'],
-        'start_time' => adminEventTimeForInput($editEvent['start_time'] ?? null),
-        'end_time' => adminEventTimeForInput($editEvent['end_time'] ?? null),
+        'start_time' => iranTimeForInput($editEvent['start_time'] ?? null),
+        'end_time' => iranTimeForInput($editEvent['end_time'] ?? null),
         'category' => (string) ($editEvent['category'] ?: 'general'),
         'status' => (string) ($editEvent['status'] ?: 'scheduled'),
         'event_id' => (int) $editEvent['id'],
@@ -534,18 +472,18 @@ $showForm = ($action === 'add' || $action === 'edit');
                 </div>
 
                 <div class="form-group">
-                    <label for="event_date" class="form-label">تاریخ رویداد</label>
-                    <input type="text" id="event_date" name="event_date" class="form-control shamsi-datepicker" value="<?= e(shamsiDate($formPreset['event_date'], 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸" required>
+                    <label for="event_date" class="form-label">تاریخ شمسی رویداد</label>
+                    <input type="text" id="event_date" name="event_date" class="form-control shamsi-datepicker" dir="ltr" inputmode="numeric" autocomplete="off" value="<?= e(shamsiDate($formPreset['event_date'], 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸" required>
                 </div>
 
                 <div class="admin-event-times">
                     <div class="form-group">
                         <label for="start_time" class="form-label">زمان شروع (اختیاری)</label>
-                        <input type="time" id="start_time" name="start_time" class="form-control" value="<?= e($formPreset['start_time']) ?>">
+                        <input type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰" id="start_time" name="start_time" class="form-control" value="<?= e($formPreset['start_time']) ?>">
                     </div>
                     <div class="form-group">
                         <label for="end_time" class="form-label">زمان پایان (اختیاری)</label>
-                        <input type="time" id="end_time" name="end_time" class="form-control" value="<?= e($formPreset['end_time']) ?>">
+                        <input type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰" id="end_time" name="end_time" class="form-control" value="<?= e($formPreset['end_time']) ?>">
                     </div>
                 </div>
 
@@ -641,8 +579,8 @@ $showForm = ($action === 'add' || $action === 'edit');
                             <?php foreach ($listEvents as $ev): ?>
                                 <?php
                                 $eid = (int) $ev['id'];
-                                $st = adminEventTimeForInput($ev['start_time'] ?? null);
-                                $et = adminEventTimeForInput($ev['end_time'] ?? null);
+                                $st = formatIranTime($ev['start_time'] ?? null);
+                                $et = formatIranTime($ev['end_time'] ?? null);
                                 $timeStr = $st !== '' ? $st . ($et !== '' ? ' – ' . $et : '') : ($et !== '' ? $et : '—');
                                 ?>
                                 <tr>
@@ -671,8 +609,8 @@ $showForm = ($action === 'add' || $action === 'edit');
                 <?php foreach ($listEvents as $ev): ?>
                     <?php
                     $eid = (int) $ev['id'];
-                    $st = adminEventTimeForInput($ev['start_time'] ?? null);
-                    $et = adminEventTimeForInput($ev['end_time'] ?? null);
+                    $st = formatIranTime($ev['start_time'] ?? null);
+                    $et = formatIranTime($ev['end_time'] ?? null);
                     $timeStr = $st !== '' ? $st . ($et !== '' ? ' – ' . $et : '') : ($et !== '' ? $et : '');
                     $cat = (string) ($ev['category'] ?: 'general');
                     $editHref = url('admin/events.php' . $buildManageQuery(['action' => 'edit', 'id' => $eid]));

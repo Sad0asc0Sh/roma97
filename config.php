@@ -6,7 +6,7 @@ defined('ROOMA_APP') || define('ROOMA_APP', true);
 defined('ROMA_APP') || define('ROMA_APP', true);
 
 // Global application build version for cache-busting static assets on mobile and desktop
-defined('APP_BUILD') || define('APP_BUILD', '20261119_08');
+defined('APP_BUILD') || define('APP_BUILD', '20261119_09');
 
 /*
  * Environment-specific overrides.
@@ -22,10 +22,9 @@ if (is_file($localConfig)) {
 }
 
 // ─── Timezone ──────────────────────────────────────────────────────────────
-// cPanel shared hosting may default to UTC; set explicitly for correct
-// Shamsi/Persian date calculations.
-defined('APP_TIMEZONE') || define('APP_TIMEZONE', 'Asia/Tehran');
-date_default_timezone_set(APP_TIMEZONE);
+// Iranian civil dates use Tehran time even on servers configured for another region.
+const IRAN_TIMEZONE = 'Asia/Tehran';
+date_default_timezone_set(IRAN_TIMEZONE);
 
 // ─── Database configuration ────────────────────────────────────────────────
 // Hosted environments, including Wasmer Edge, provide database credentials as

@@ -110,7 +110,7 @@ function attendanceNoticeLabel(array $notice): string
 {
     $label = ATTENDANCE_NOTICE_TYPES[$notice['notice_type']] . ' اعلام‌شده از طرف خانواده';
     return $notice['expected_arrival'] === null
-        ? $label : $label . ' · ورود حدود ' . persianNumber(substr($notice['expected_arrival'], 0, 5));
+        ? $label : $label . ' · ورود حدود ' . formatIranTime($notice['expected_arrival']);
 }
 
 /** A null type cancels an existing notice. Actual attendance stays staff-owned. */

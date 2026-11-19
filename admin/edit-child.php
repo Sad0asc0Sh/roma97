@@ -32,32 +32,6 @@ function isValidAdminChildPhone(string $phone): bool
         || (adminChildStringLength($phone) <= 20 && preg_match('/\A[0-9+\-\s]{7,20}\z/', $phone) === 1);
 }
 
-function validAdminChildDateOfBirth(string $value): ?string
-{
-    $parsed = parseJalaliDate($value);
-    if ($parsed !== null) {
-        $value = $parsed;
-    }
-
-    if (preg_match('/\A\d{4}-\d{2}-\d{2}\z/', $value) !== 1) {
-        return null;
-    }
-
-    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
-
-    if (!$date || $date->format('Y-m-d') !== $value) {
-        return null;
-    }
-
-    $today = new DateTimeImmutable('today');
-
-    if ($date >= $today) {
-        return null;
-    }
-
-    return $value;
-}
-
 function uploadAdminChildPhoto(array $file): ?string
 {
     if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
@@ -224,7 +198,7 @@ $old = [
     'first_name' => (string) ($child['first_name'] ?? ''),
     'last_name' => (string) ($child['last_name'] ?? ''),
     'preferred_name' => (string) ($child['preferred_name'] ?? ''),
-    'date_of_birth' => (string) ($child['date_of_birth'] ?? '') !== '' ? shamsiDate((string) $child['date_of_birth']) : '',
+    'date_of_birth' => (string) ($child['date_of_birth'] ?? '') !== '' ? shamsiDate((string) $child['date_of_birth'], 'numeric') : '',
     'gender' => (string) ($child['gender'] ?? ''),
     'allergies' => (string) ($child['allergies'] ?? ''),
     'medical_notes' => (string) ($child['medical_notes'] ?? ''),
@@ -270,7 +244,7 @@ if (isPostRequest()) {
         $errors[] = 'لطفاً نام مستعار معتبر وارد کنید.';
     }
 
-    $dateOfBirth = validAdminChildDateOfBirth($old['date_of_birth']);
+    $dateOfBirth = parseChildBirthDate($old['date_of_birth']);
 
     if ($dateOfBirth === null) {
         $errors[] = 'لطفاً تاریخ تولد معتبر و قبل از امروز وارد کنید.';
@@ -485,8 +459,9 @@ require_once __DIR__ . '/header.php';
                     </div>
 
                     <div class="form-group">
-                        <label for="date_of_birth">تاریخ تولد</label>
-                        <input type="text" id="date_of_birth" name="date_of_birth" class="shamsi-datepicker" data-datepicker="birth" data-year-past="15" value="<?= e($old['date_of_birth']) ?>" placeholder="۱۳۹۹/۰۵/۱۸" required>
+                        <label for="date_of_birth">تاریخ شمسی تولد</label>
+                        <input type="text" id="date_of_birth" name="date_of_birth" class="shamsi-datepicker" data-datepicker="birth" dir="ltr" inputmode="numeric" autocomplete="off"
+                               data-year-past="100" data-max-date="<?= e(shamsiDate(strtotime('yesterday'), 'Y-m-d')) ?>" value="<?= e($old['date_of_birth']) ?>" placeholder="۱۳۹۹/۰۵/۱۸" required>
                     </div>
                 </div>
 

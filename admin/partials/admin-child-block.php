@@ -30,8 +30,9 @@ $cbClassroom = (int) ($child['classroom_id'] ?? 0);
             <input type="text" name="<?= e($cbPrefix . '[preferred_name]') ?>" maxlength="100" value="<?= e((string) ($child['preferred_name'] ?? '')) ?>">
         </div>
         <div class="form-group">
-            <label>تاریخ تولد (جلالی) <span class="req">*</span></label>
-            <input type="text" name="<?= e($cbPrefix . '[date_of_birth]') ?>" class="shamsi-datepicker" data-datepicker="birth" data-year-past="15" placeholder="۱۳۹۹/۰۵/۱۸" value="<?= e((string) ($child['date_of_birth'] ?? '')) ?>">
+            <label>تاریخ شمسی تولد <span class="req">*</span></label>
+            <input type="text" name="<?= e($cbPrefix . '[date_of_birth]') ?>" class="shamsi-datepicker" data-datepicker="birth" dir="ltr" inputmode="numeric" autocomplete="off"
+                               data-min-date="<?= e(shamsiDate(earliestChildBirthDate(), 'Y-m-d')) ?>" data-max-date="<?= e(shamsiDate(strtotime('yesterday'), 'Y-m-d')) ?>" placeholder="۱۳۹۹/۰۵/۱۸" value="<?= e((string) ($child['date_of_birth'] ?? '')) ?>">
         </div>
     </div>
     <div class="form-grid">

@@ -284,7 +284,7 @@ require_once __DIR__ . '/header.php';
           </div>
             <div class="detail-item">
                 <span class="detail-label">سن</span>
-                <span class="detail-value"><?= e(parentChildDisplayAge((string) ($row['date_of_birth'] ?? ''))) ?></span>
+                <span class="detail-value"><?= e(formatIranAge((string) ($row['date_of_birth'] ?? ''))) ?></span>
           </div>
             <div class="detail-item">
                 <span class="detail-label">جنسیت</span>
@@ -296,7 +296,7 @@ require_once __DIR__ . '/header.php';
           </div>
             <div class="detail-item">
                 <span class="detail-label">تاریخ ثبت‌نام</span>
-                <span class="detail-value"><?= e(parentChildDetailDateLabel((string) ($row['created_at'] ?? ''))) ?></span>
+                <span class="detail-value"><?= e(shamsiDbTimestamp($row['created_at'] ?? null)) ?></span>
           </div>
       </div>
   </div>
@@ -319,10 +319,10 @@ require_once __DIR__ . '/header.php';
                 ?>
                 <div class="attendance-times">
                     <?php if (!empty($todayAtt['check_in'])): ?>
-                        <p><strong>زمان پذیرش صبح:</strong> <?= e(parentPortalFormatTimeShort($todayAtt['check_in']))?></p>
+                        <p><strong>زمان پذیرش صبح:</strong> <?= e(formatIranTime($todayAtt['check_in']))?></p>
                     <?php endif; ?>
                     <?php if (!empty($todayAtt['check_out'])): ?>
-                        <p><strong>زمان تحویل:</strong> <?= e(parentPortalFormatTimeShort($todayAtt['check_out']))?></p>
+                        <p><strong>زمان تحویل:</strong> <?= e(formatIranTime($todayAtt['check_out']))?></p>
                     <?php endif; ?>
                     <?php if (!empty($todayAtt['notes'])): ?>
                         <p class="attendance-notes"><strong>مشاهده گذار صبحگاهی:</strong> <?= nl2br(e((string) $todayAtt['notes']))?></p>

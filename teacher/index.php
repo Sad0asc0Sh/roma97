@@ -381,7 +381,7 @@ require_once __DIR__ . '/header.php';
                     $childName  = trim((string) $child['first_name'] . ' ' . (string) $child['last_name']);
                     $prefName   = trim((string) ($child['preferred_name'] ?? ''));
                     $parentName = trim((string) $child['parent_first_name'] . ' ' . (string) $child['parent_last_name']);
-                    $age        = teacherChildDisplayAge((string) $child['date_of_birth']);
+                    $age        = formatIranAge((string) $child['date_of_birth']);
                     $hasAllergy = trim((string) ($child['allergies'] ?? '')) !== '' || trim((string) ($child['medical_notes'] ?? '')) !== '';
                     $photoUrl   = !empty($child['photo']) ? url((string) $child['photo']) : '';
                     $attStatus  = (string) ($child['attendance_status'] ?? '');
@@ -486,7 +486,7 @@ require_once __DIR__ . '/header.php';
                                 <span style="font-size:0.78rem;color:var(--tp-text-secondary);">
                                     <?= e(shamsiDate((string) $ev['event_date'], 'with_day')) ?>
                                     <?php if (!empty($ev['start_time'])): ?>
-                                        · ساعت <?= e(persianNumber(teacherFormatTimeShort((string) $ev['start_time']))) ?>
+                                        · ساعت <?= e(formatIranTime($ev['start_time'])) ?>
                                     <?php endif; ?>
                                 </span>
                             </div>

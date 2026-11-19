@@ -51,7 +51,7 @@
                     </span>
                 </summary>
                 <div class="family-message-body">
-                    <small class="muted"><?= e(shamsiDate($reply['created_at'], 'with_time')) ?></small>
+                    <small class="muted"><?= e(shamsiDbTimestamp($reply['created_at'], 'with_time')) ?></small>
                     <p><?= nl2br(e($reply['body'])) ?></p>
                     <div class="family-message-actions">
                         <?php if ($reply['parent_status'] === 'active'): ?>
@@ -90,10 +90,18 @@
                                     <?php endforeach; ?>
                                 </select>
                             </label>
+                            <?php $deadlineInput = $deadline ?? $defaultDeadlineInput; ?>
                             <label>
-                                مهلت پاسخ به وقت مهد
-                                <input type="datetime-local" name="response_due_at" class="form-control" required
-                                       value="<?= e($deadline === null ? $defaultDeadlineInput : str_replace(' ', 'T', substr($deadline, 0, 16))) ?>">
+                                تاریخ شمسی مهلت پاسخ
+                                <input type="text" name="response_due_date" class="form-control shamsi-datepicker"
+                                       dir="ltr" inputmode="numeric" autocomplete="off" required
+                                       value="<?= e(shamsiDate($deadlineInput, 'numeric')) ?>">
+                            </label>
+                            <label>
+                                ساعت مهلت به وقت تهران
+                                <input type="text" name="response_due_time" class="form-control" data-iran-time
+                                       dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰" required
+                                       value="<?= e(iranTimeForInput(substr($deadlineInput, 11))) ?>">
                             </label>
                             <button type="submit" class="btn btn-primary" name="action" value="save_follow_up">ذخیره پیگیری</button>
                         </form>

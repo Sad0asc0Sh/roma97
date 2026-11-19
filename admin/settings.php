@@ -1302,7 +1302,7 @@ require_once __DIR__ . '/header.php';
                                             </span>
                                         <?php endif; ?>
                                     </td>
-                                    <td style="font-size:0.78rem;color:var(--adm-text-muted);"><?= e(shamsiDate((string)$log['created_at'], 'with_time')) ?></td>
+                                    <td style="font-size:0.78rem;color:var(--adm-text-muted);"><?= e(shamsiDbTimestamp((string)$log['created_at'], 'with_time')) ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>

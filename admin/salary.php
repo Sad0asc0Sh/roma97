@@ -28,18 +28,16 @@ try {
 
         $teacherId     = (int) ($_POST['teacher_id'] ?? 0);
         $amount        = (float) ($_POST['amount'] ?? 0);
-        $paymentDateRaw = (string) ($_POST['payment_date'] ?? date('Y-m-d'));
-        $paymentDate   = parseJalaliDate($paymentDateRaw) ?? $paymentDateRaw;
+        $paymentDate   = parseIranDate($_POST['payment_date'] ?? date('Y-m-d'));
         $paymentMethod = (string) ($_POST['payment_method'] ?? 'bank_transfer');
-        $monthYear     = (string) ($_POST['month_year'] ?? date('Y-m'));
+        $monthInput    = $_POST['month_year'] ?? shamsiDate(time(), 'Y-m');
+        $monthYear     = is_string($monthInput) ? portalMonthYear($monthInput) : null;
         $notes         = trim((string) ($_POST['notes'] ?? ''));
 
-        $salaryDateCheck = DateTime::createFromFormat('Y-m-d', $paymentDate);
-        $isSalaryDateValid = $salaryDateCheck && $salaryDateCheck->format('Y-m-d') === $paymentDate;
         $validSalaryMethods = ['cash', 'bank_transfer', 'check'];
 
-        if ($teacherId === 0 || $amount <= 0 || $amount >= 1000000000 || !$isSalaryDateValid || !preg_match('/^\d{4}-\d{2}$/', $monthYear) || !in_array($paymentMethod, $validSalaryMethods, true)) {
-            setFlash('error', 'لطفاً همه فیلدهای الزامی را به‌درستی پر کنید (مبلغ > ۰، تاریخ و ماه معتبر).');
+        if ($teacherId === 0 || $amount <= 0 || $amount >= 1000000000 || $paymentDate === null || $monthYear === null || !in_array($paymentMethod, $validSalaryMethods, true)) {
+            setFlash('error', 'مربی، مبلغ، تاریخ شمسی پرداخت و ماه حقوق را بررسی کنید.');
             redirect(url('admin/salary.php'));
         }
 
@@ -142,7 +140,7 @@ require_once __DIR__ . '/header.php';
                 </div>
 
                 <div class="form-group">
-                    <label for="month_year" class="form-label">ماه پرداخت</label>
+                    <label for="month_year" class="form-label">ماه حقوق</label>
                     <select name="month_year" id="month_year" class="form-control" required>
                         <?php foreach (getShamsiMonthYearChoices(24, 24) as $choice): ?>
                             <option value="<?= e($choice['value']) ?>" <?= $choice['is_current'] ? 'selected' : '' ?>>
@@ -158,8 +156,8 @@ require_once __DIR__ . '/header.php';
                 </div>
 
                 <div class="form-group">
-                    <label for="payment_date" class="form-label">تاریخ پرداخت</label>
-                    <input type="text" name="payment_date" id="payment_date" class="form-control shamsi-datepicker" value="<?= e(shamsiDate(date('Y-m-d'), 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸" required>
+                    <label for="payment_date" class="form-label">تاریخ شمسی پرداخت</label>
+                    <input type="text" name="payment_date" id="payment_date" class="form-control shamsi-datepicker" dir="ltr" inputmode="numeric" autocomplete="off" value="<?= e(shamsiDate(date('Y-m-d'), 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸" required>
                 </div>
 
                 <div class="form-group">

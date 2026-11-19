@@ -91,8 +91,7 @@ SQL
         // Financial transparency on the dashboard, not buried one click away:
         // a parent should never have to phone the office to learn whether this
         // month is settled.
-        [$jy, $jm] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
-        $currentMonthYear = sprintf('%04d-%02d', $jy, $jm);
+        $currentMonthYear = shamsiDate(time(), 'Y-m');
 
         foreach ($children as $childRow) {
             if ((string) ($childRow['status'] ?? '') !== 'active') {
@@ -255,25 +254,7 @@ require_once __DIR__ . '/header.php';
                     default => 'سایر'
                 };
 
-                // Calculate age
-                $dob = (string) ($child['date_of_birth'] ?? '');
-                $age = '';
-                if ($dob !== '') {
-                    try {
-                        $dobDate = new DateTimeImmutable($dob);
-                        $now = new DateTimeImmutable('today');
-                        $diff = $now->diff($dobDate);
-                        $years = (int) $diff->y;
-                        $months = (int) $diff->m;
-                        if ($years > 0) {
-                            $age = persianNumber((string) $years) . ' سال';
-                        } else {
-                            $age = persianNumber((string) $months) . ' ماه';
-                        }
-                    } catch (Exception $e) {
-                        $age = '';
-                    }
-                }
+                $age = formatIranAge($child['date_of_birth'] ?? null);
 
                 // Today's attendance status
                 $todayStatus = $todayAttendanceByChild[$childId] ?? 'not_marked';

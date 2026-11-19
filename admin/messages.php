@@ -73,15 +73,22 @@ if (isPostRequest() && in_array($replyAction, ['mark_reply_read', 'save_follow_u
             if ($assignee !== null && (!is_int($assignee) || !isset($followUpStaff[$assignee]))) {
                 throw new InvalidArgumentException('مسئول پیگیری معتبر نیست.');
             }
-            $dueInput = $_POST['response_due_at'] ?? null;
-            $deadline = is_string($dueInput) ? DateTimeImmutable::createFromFormat('!Y-m-d\TH:i', $dueInput) : false;
-            if ($deadline === false || $deadline->format('Y-m-d\TH:i') !== $dueInput || (int) $deadline->format('Y') < 1000) {
-                throw new InvalidArgumentException('مهلت پاسخ را با تاریخ و ساعت معتبر وارد کنید.');
+            $dueDateInput = $_POST['response_due_date'] ?? null;
+            $dueTimeInput = $_POST['response_due_time'] ?? null;
+            $oldDeadline = $_POST['response_due_at'] ?? null;
+            if ($dueDateInput === null && $dueTimeInput === null && is_string($oldDeadline)) {
+                // A follow-up form opened before the update may still send a single ISO value.
+                [$dueDateInput, $dueTimeInput] = array_pad(explode('T', $oldDeadline, 2), 2, null);
+            }
+            $dueDate = parseIranDate($dueDateInput);
+            $dueTime = is_string($dueTimeInput) ? parseIranTime($dueTimeInput) : null;
+            if ($dueDate === null || $dueTime === null || iranDateTime($dueDate . ' ' . $dueTime) === null) {
+                throw new InvalidArgumentException('مهلت پاسخ را با تاریخ شمسی و ساعت ۲۴ ساعتهٔ تهران وارد کنید.');
             }
             if ($status !== 'open') {
                 $assignee ??= $adminId;
             }
-            $dueAt = $deadline->format('Y-m-d H:i:s');
+            $dueAt = $dueDate . ' ' . $dueTime;
             $pdo->prepare('UPDATE messages SET follow_up_status = ?, follow_up_admin_id = ?, response_due_at = ? WHERE id = ?')
                 ->execute([$status, $assignee, $dueAt, $replyId]);
             $pdo->commit();
@@ -221,7 +228,7 @@ $parentRepliesStmt->execute($replyScopeParams);
 $parentReplies = $parentRepliesStmt->fetchAll();
 $replySuccess = getFlash('success');
 $replyError = getFlash('error');
-$defaultDeadlineInput = defaultMessageResponseDeadline()->format('Y-m-d\TH:i');
+$defaultDeadlineInput = defaultMessageResponseDeadline()->format('Y-m-d H:i:00');
 
 // Fetch sent messages, grouped so one broadcast appears as ONE row with a
 // recipient count and a read-progress figure — instead of N identical rows,
@@ -384,7 +391,7 @@ require_once __DIR__ . '/header.php';
                             $sampleParentId = $msg['sample_parent_id'] !== null ? (int) $msg['sample_parent_id'] : 0;
                             ?>
                             <tr>
-                                <td><?= e(formatPersianDate($msg['created_at'])) ?></td>
+                                <td><?= e(shamsiDbTimestamp($msg['created_at'])) ?></td>
                                 <td>
                                     <?php if ($isGroup): ?>
                                         <strong>ارسال گروهی</strong>
@@ -435,7 +442,7 @@ require_once __DIR__ . '/header.php';
             </div>
             <div class="card-body">
                 <p><strong>گیرنده:</strong> <?= $viewMessage['parent_id'] ? e($viewMessage['first_name'] . ' ' . $viewMessage['last_name']) : 'همه والدین' ?></p>
-                <p><strong>تاریخ:</strong> <?= e(formatPersianDate($viewMessage['created_at'])) ?></p>
+                <p><strong>تاریخ:</strong> <?= e(shamsiDbTimestamp($viewMessage['created_at'])) ?></p>
                 <p><strong>موضوع:</strong> <?= e($viewMessage['subject']) ?></p>
                 <hr>
                 <div class="message-body-content">

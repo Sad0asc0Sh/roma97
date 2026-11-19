@@ -494,375 +494,290 @@ window.showToast = function(message, type = 'success') {
   }, 4000);
 };
 
-/* ── SHAMSI DATEPICKER COMPONENT ───────────────────────────── */
+/* ── IRANIAN CALENDAR AND CLOCK ───────────────────────────── */
+const iranCalendar = JSON.parse(document.documentElement.dataset.iranCalendar || 'null');
+
+function iranLocalNow() {
+  // Use the app server's Iran offset and UTC accessors, independently of device settings.
+  return new Date(Date.now() + iranCalendar.offsetSeconds * 1000);
+}
+
+function iranPersianDigits(value) {
+  return String(value).replace(/[0-9]/g, digit => '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]);
+}
+
+function iranLatinDigits(value) {
+  return String(value).trim().replace(/[۰-۹٠-٩]/g, digit => String(digit.charCodeAt(0) & 15));
+}
+
 function initShamsiDatePicker() {
-  const monthNames = [
-    'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
-    'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
-  ];
-  const faDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  if (!iranCalendar) return;
 
-  function toFa(num) {
-    return String(num).replace(/\d/g, d => faDigits[d]);
+  const { firstYear, firstDay, leapYears, monthNames } = iranCalendar;
+  const dayMs = 86400000;
+  const yearStarts = [Date.parse(firstDay + 'T00:00:00Z') / dayMs];
+  for (const leap of leapYears) {
+    yearStarts.push(yearStarts[yearStarts.length - 1] + (leap === '1' ? 366 : 365));
+  }
+  const lastYear = firstYear + leapYears.length - 1;
+  const weekdays = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
+  const selector = 'input.shamsi-datepicker, input[data-jdp]';
+  const pad = number => String(number).padStart(2, '0');
+  const dateKey = ({ year, month, day }) => year + '-' + pad(month) + '-' + pad(day);
+  const dateLabel = date => iranPersianDigits(dateKey(date).replace(/-/g, '/'));
+  let active = null;
+  let returningFocus = false;
+
+  function monthLength(year, month) {
+    return month <= 6 ? 31 : (month < 12 || leapYears[year - firstYear] === '1' ? 30 : 29);
   }
 
-  function toEn(str) {
-    return String(str).replace(/[۰-۹]/g, d => faDigits.indexOf(d));
+  function readDate(value) {
+    const text = iranLatinDigits(value || '');
+    const separated = /^(\d{4})([/-])(\d{1,2})\2(\d{1,2})$/.exec(text);
+    const digits = separated ? [separated[1], separated[3], separated[4]] : /^(\d{4})(\d{2})(\d{2})$/.exec(text)?.slice(1);
+    if (!digits) return null;
+
+    const [year, month, day] = digits.map(Number);
+    if (year < firstYear || year > lastYear || month < 1 || month > 12 || day < 1 || day > monthLength(year, month)) return null;
+    return { year, month, day };
   }
 
-  function gregorianToJalali(gy, gm, gd) {
-    const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-    let gy2 = (gm > 2) ? (gy + 1) : gy;
-    let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100)
-      + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
-    let jy = -1595 + (33 * Math.floor(days / 12053));
-    days %= 12053;
-    jy += 4 * Math.floor(days / 1461);
-    days %= 1461;
-    if (days > 365) {
-      jy += Math.floor((days - 1) / 365);
-      days = (days - 1) % 365;
-    }
-    let jm = (days < 186) ? (1 + Math.floor(days / 31)) : (7 + Math.floor((days - 186) / 30));
-    let jd = 1 + ((days < 186) ? (days % 31) : ((days - 186) % 30));
-    return [jy, jm, jd];
+  function todayInIran() {
+    const today = Math.floor(iranLocalNow().getTime() / dayMs);
+    const yearIndex = yearStarts.findIndex(start => start > today) - 1;
+    const offset = today - yearStarts[yearIndex];
+    return offset < 186
+      ? { year: firstYear + yearIndex, month: 1 + Math.floor(offset / 31), day: 1 + offset % 31 }
+      : { year: firstYear + yearIndex, month: 7 + Math.floor((offset - 186) / 30), day: 1 + (offset - 186) % 30 };
   }
 
-  function jalaliToGregorian(jy, jm, jd) {
-    jy += 1595;
-    let days = -355668 + (365 * jy) + (Math.floor(jy / 33) * 8) + Math.floor(((jy % 33) + 3) / 4) + jd
-      + ((jm < 7) ? (jm - 1) * 31 : ((jm - 7) * 30) + 186);
-    let gy = 400 * Math.floor(days / 146097);
-    days %= 146097;
-    if (days > 36524) {
-      gy += 100 * Math.floor(--days / 36524);
-      days %= 36524;
-      if (days >= 365) days++;
-    }
-    gy += 4 * Math.floor(days / 1461);
-    days %= 1461;
-    if (days > 365) {
-      gy += Math.floor((days - 1) / 365);
-      days = (days - 1) % 365;
-    }
-    let gd = days + 1;
-    let sal_a = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    let gm = 0;
-    while (gm < 13 && gd > sal_a[gm]) {
-      gd -= sal_a[gm];
-      gm++;
-    }
-    return [gy, gm, gd];
+  function dateLimits(input, today) {
+    const birth = input.dataset.datepicker === 'birth';
+    const past = Number(input.dataset.yearPast ?? (birth ? 15 : 100));
+    const future = Number(input.dataset.yearFuture ?? (birth ? 0 : 20));
+    const latestYear = Math.min(lastYear, today.year + future);
+    const min = readDate(input.dataset.minDate)
+      || { year: Math.max(firstYear, today.year - past), month: 1, day: 1 };
+    const max = readDate(input.dataset.maxDate)
+      || (birth ? today : { year: latestYear, month: 12, day: monthLength(latestYear, 12) });
+    return { min, max, birth };
   }
 
-  let activePicker = null;
-
-  function closeActivePicker() {
-    if (activePicker) {
-      activePicker.remove();
-      activePicker = null;
+  function closePicker(restoreFocus = false) {
+    if (!active) return;
+    const { input, panel } = active;
+    active = null;
+    panel.remove();
+    input.removeAttribute('aria-controls');
+    if (restoreFocus) {
+      returningFocus = true;
+      input.focus({ preventScroll: true });
+      returningFocus = false;
     }
   }
 
-  document.addEventListener('click', (e) => {
-    if (activePicker && !activePicker.contains(e.target) && !e.target.classList.contains('shamsi-datepicker') && !e.target.hasAttribute('data-jdp')) {
-      closeActivePicker();
-    }
-  });
+  function openPicker(input) {
+    if (active?.input === input || input.readOnly || input.disabled) return;
+    closePicker();
 
-  const inputs = document.querySelectorAll('.shamsi-datepicker, [data-jdp]');
-  inputs.forEach(input => {
-    input.setAttribute('autocomplete', 'off');
-
-    input.addEventListener('focus', () => renderPicker(input));
-    input.addEventListener('click', (e) => {
-      e.stopPropagation();
-      renderPicker(input);
-    });
-  });
-
-  function isJalaliLeapYear(jy) {
-    // Jalali leap years in 33-year cycle: 1, 5, 9, 13, 17, 22, 26, 30
-    const breaks = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
-    let bl = breaks.length;
-    let gy = jy + 621;
-    let leapJ = -14;
-    let jp = breaks[0];
-    let jump = 0;
-    for (let i = 1; i < bl; i++) {
-      const jm = breaks[i];
-      jump = jm - jp;
-      if (jy < jm) break;
-      leapJ += Math.floor(jump / 33) * 8 + Math.floor((jump % 33) / 4);
-      jp = jm;
-    }
-    let n = jy - jp;
-    leapJ += Math.floor(n / 33) * 8 + Math.floor(((n % 33) + 3) / 4);
-    if ((jump % 33) === 4 && (jump - n) === 4) leapJ++;
-    const leapG = Math.floor(gy / 4) - Math.floor((Math.floor(gy / 100) + 1) * 3 / 4) - 150;
-    return ((leapJ - leapG) % 4) === 0 || (((leapJ - leapG) % 33) === 0);
-  }
-
-  function getPickerConfig(input) {
-    const today = new Date();
-    const [tJy] = gregorianToJalali(today.getFullYear(), today.getMonth() + 1, today.getDate());
-    const isBirth = (
-      (input.id && input.id === 'date_of_birth') ||
-      (input.name && input.name === 'date_of_birth') ||
-      input.hasAttribute('data-birth') ||
-      input.dataset.datepicker === 'birth'
-    );
-    // Explicit overrides: data-year-min / data-year-max / data-year-past / data-year-future
-    let yearMin = parseInt(toEn(input.dataset.yearMin || ''), 10);
-    let yearMax = parseInt(toEn(input.dataset.yearMax || ''), 10);
-    const past = parseInt(toEn(input.dataset.yearPast || input.dataset.yearRangePast || ''), 10);
-    const future = parseInt(toEn(input.dataset.yearFuture || ''), 10);
-    if (!Number.isFinite(yearMin)) {
-      yearMin = Number.isFinite(past) ? (tJy - past) : (isBirth ? (tJy - 15) : (tJy - 100));
-    }
-    if (!Number.isFinite(yearMax)) {
-      yearMax = Number.isFinite(future) ? (tJy + future) : (isBirth ? tJy : (tJy + 20));
-    }
-    if (yearMin > yearMax) {
-      const tmp = yearMin;
-      yearMin = yearMax;
-      yearMax = tmp;
-    }
-    return { tJy, isBirth, yearMin, yearMax };
-  }
-
-  function renderPicker(input) {
-    closeActivePicker();
-
-    const today = new Date();
-    const [tJy, tJm, tJd] = gregorianToJalali(today.getFullYear(), today.getMonth() + 1, today.getDate());
-    const cfg = getPickerConfig(input);
-
-    let curJy = tJy;
-    let curJm = tJm;
-    let viewMode = 'days'; // 'days' | 'years'
+    const today = todayInIran();
+    const { min, max, birth } = dateLimits(input, today);
+    const minKey = dateKey(min);
+    const maxKey = dateKey(max);
+    const isAllowed = date => dateKey(date) >= minKey && dateKey(date) <= maxKey;
+    const entered = readDate(input.value);
+    const initial = entered || (birth ? { ...today, year: today.year - 4 } : today);
+    const start = dateKey(initial) < minKey ? min : dateKey(initial) > maxKey ? max : initial;
+    let { year, month } = start;
     let yearPage = 0;
 
-    let val = toEn(input.value.trim());
-    let m = val.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
-    if (m) {
-      const parsedY = parseInt(m[1], 10);
-      const parsedM = parseInt(m[2], 10);
-      if (Number.isFinite(parsedY)) curJy = Math.min(Math.max(parsedY, cfg.yearMin), cfg.yearMax);
-      if (parsedM >= 1 && parsedM <= 12) curJm = parsedM;
-    } else if (cfg.isBirth && !input.value.trim()) {
-      curJy = Math.max(cfg.yearMin, tJy - 4);
-      curJm = tJm;
+    const panel = document.createElement('div');
+    panel.id = 'iran-date-picker';
+    panel.className = 'shamsi-datepicker-container';
+    panel.setAttribute('role', 'group');
+    panel.setAttribute('aria-label', 'تقویم هجری شمسی');
+    input.setAttribute('aria-controls', panel.id);
+    active = { input, panel, positionPicker };
+    document.body.appendChild(panel);
+
+    function positionPicker() {
+      const rect = input.getBoundingClientRect();
+      const viewport = window.visualViewport;
+      const topEdge = viewport?.offsetTop ?? 0;
+      const bottomEdge = topEdge + (viewport?.height ?? window.innerHeight);
+      const left = Math.max(8, Math.min(rect.right - panel.offsetWidth, window.innerWidth - panel.offsetWidth - 8));
+      const below = bottomEdge - rect.bottom - 8;
+      const above = rect.top - topEdge - 8;
+      const openAbove = panel.scrollHeight > below && above > below;
+      panel.style.maxHeight = Math.max(96, openAbove ? above : below) + 'px';
+      const top = openAbove ? rect.top - panel.offsetHeight - 8 : rect.bottom;
+      panel.style.left = (left + window.scrollX) + 'px';
+      panel.style.top = (top + window.scrollY) + 'px';
     }
 
-    const container = document.createElement('div');
-    container.className = 'shamsi-datepicker-container';
-
-    const rect = input.getBoundingClientRect();
-    container.style.top = `${rect.bottom + window.scrollY}px`;
-    container.style.left = `${rect.left + window.scrollX}px`;
-
-    function clampYearMonth() {
-      if (curJy < cfg.yearMin) { curJy = cfg.yearMin; }
-      if (curJy > cfg.yearMax) { curJy = cfg.yearMax; }
-      if (curJm < 1) curJm = 1;
-      if (curJm > 12) curJm = 12;
+    function choose(date) {
+      input.value = dateLabel(date);
+      closePicker(true);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    function buildYearOptions(selected) {
-      let html = '';
-      for (let y = cfg.yearMax; y >= cfg.yearMin; y--) {
-        html += `<option value="${y}"${y === selected ? ' selected' : ''}>${toFa(y)}</option>`;
-      }
-      return html;
-    }
-
-    function buildMonthOptions(selected) {
-      let html = '';
-      for (let i = 1; i <= 12; i++) {
-        html += `<option value="${i}"${i === selected ? ' selected' : ''}>${monthNames[i - 1]}</option>`;
-      }
-      return html;
-    }
-
-    function updateCalendar() {
-      clampYearMonth();
-      if (viewMode === 'years') {
-        renderYearView();
-        return;
-      }
-
-      let daysInMonth = curJm <= 6 ? 31 : (curJm <= 11 ? 30 : 29);
-      if (curJm === 12 && isJalaliLeapYear(curJy)) daysInMonth = 30;
-      const [gY, gM, gD] = jalaliToGregorian(curJy, curJm, 1);
-      const firstDayOfWeek = (new Date(gY, gM - 1, gD).getDay() + 1) % 7;
-
-      container.innerHTML = `
-        <div class="sdp-header">
-          <button type="button" class="sdp-nav-btn sdp-prev" title="ماه قبل">&gt;</button>
-          <div class="sdp-selects">
-            <select class="sdp-select sdp-month-select" aria-label="انتخاب ماه">${buildMonthOptions(curJm)}</select>
-            <button type="button" class="sdp-title sdp-year-btn" title="کلیک کنید تا لیست سال‌ها باز شود">${toFa(curJy)} ▾</button>
-            <select class="sdp-select sdp-year-select" aria-label="انتخاب سال">${buildYearOptions(curJy)}</select>
-          </div>
-          <button type="button" class="sdp-nav-btn sdp-next" title="ماه بعد">&lt;</button>
-        </div>
-        ${cfg.isBirth ? `<div class="sdp-hint">از ${toFa(cfg.yearMin)} تا ${toFa(cfg.yearMax)} — برای انتخاب سریع سال، روی سال کلیک کنید</div>` : ''}
-        <div class="sdp-weekdays">
-          <div>ش</div><div>۱ش</div><div>۲ش</div><div>۳ش</div><div>۴ش</div><div>۵ش</div><div>ج</div>
-        </div>
-        <div class="sdp-days"></div>
-        <div class="sdp-footer">
-          <button type="button" class="sdp-today-btn">امروز (${toFa(tJy)}/${toFa(String(tJm).padStart(2, '0'))}/${toFa(String(tJd).padStart(2, '0'))})</button>
-        </div>
-      `;
-
-      const daysGrid = container.querySelector('.sdp-days');
-      for (let i = 0; i < firstDayOfWeek; i++) {
-        const emptyBtn = document.createElement('button');
-        emptyBtn.type = 'button';
-        emptyBtn.className = 'sdp-day-btn empty';
-        emptyBtn.tabIndex = -1;
-        daysGrid.appendChild(emptyBtn);
+    function showDays(focusSelector) {
+      const firstMonth = year === min.year ? min.month : 1;
+      const lastMonth = year === max.year ? max.month : 12;
+      month = Math.min(lastMonth, Math.max(firstMonth, month));
+      const months = monthNames.map((name, index) => {
+        const number = index + 1;
+        return '<option value="' + number + '"' + (number === month ? ' selected' : '')
+          + (number < firstMonth || number > lastMonth ? ' disabled' : '') + '>' + name + '</option>';
+      }).join('');
+      const firstOffset = month <= 6 ? (month - 1) * 31 : 186 + (month - 7) * 30;
+      const monthStart = new Date((yearStarts[year - firstYear] + firstOffset) * dayMs);
+      const firstWeekday = (monthStart.getUTCDay() + 1) % 7;
+      const previous = year === min.year && month === min.month;
+      const next = year === max.year && month === max.month;
+      const todayKey = dateKey(today);
+      const selectedKey = entered ? dateKey(entered) : null;
+      let days = '<span aria-hidden="true"></span>'.repeat(firstWeekday);
+      for (let day = 1; day <= monthLength(year, month); day++) {
+        const date = { year, month, day };
+        const selected = dateKey(date) === selectedKey;
+        const friday = (firstWeekday + day - 1) % 7 === 6;
+        days += '<button type="button" class="sdp-day-btn' + (friday ? ' sdp-friday' : '') + (selected ? ' selected' : '') + '" data-day="' + day
+          + '" aria-label="' + dateLabel(date) + '"' + (dateKey(date) === todayKey ? ' aria-current="date"' : '')
+          + (selected ? ' aria-pressed="true"' : '')
+          + (isAllowed(date) ? '' : ' disabled') + '>' + iranPersianDigits(day) + '</button>';
       }
 
-      for (let day = 1; day <= daysInMonth; day++) {
-        const dayBtn = document.createElement('button');
-        dayBtn.type = 'button';
-        dayBtn.className = 'sdp-day-btn';
-        dayBtn.textContent = toFa(day);
+      panel.innerHTML =
+        '<div class="sdp-header">'
+        + '<button type="button" class="sdp-nav-btn sdp-prev" aria-label="ماه قبل"' + (previous ? ' disabled' : '') + '>›</button>'
+        + '<div class="sdp-selects"><select class="sdp-select sdp-month-select" aria-label="ماه">' + months + '</select>'
+        + '<button type="button" class="sdp-title sdp-year-btn" aria-label="انتخاب سال، ' + iranPersianDigits(year) + '">' + iranPersianDigits(year) + ' ▾</button></div>'
+        + '<button type="button" class="sdp-nav-btn sdp-next" aria-label="ماه بعد"' + (next ? ' disabled' : '') + '>‹</button></div>'
+        + '<div class="sdp-weekdays">' + weekdays.map(name => '<div title="' + name + '">' + name[0] + '</div>').join('') + '</div>'
+        + '<div class="sdp-days">' + days + '</div>'
+        + (isAllowed(today) ? '<div class="sdp-footer"><button type="button" class="sdp-today-btn">امروز ' + dateLabel(today) + '</button></div>' : '');
 
-        const formattedMonth = String(curJm).padStart(2, '0');
-        const formattedDay = String(day).padStart(2, '0');
-        const dateStr = `${curJy}/${formattedMonth}/${formattedDay}`;
-
-        if (input.value && toEn(input.value).includes(`${curJy}/${formattedMonth}/${formattedDay}`)) {
-          dayBtn.classList.add('selected');
-        }
-
-        dayBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          input.value = toFa(dateStr);
-          input.dispatchEvent(new Event('change', { bubbles: true }));
-          closeActivePicker();
-        });
-
-        daysGrid.appendChild(dayBtn);
-      }
-
-      container.querySelector('.sdp-prev').addEventListener('click', (e) => {
-        e.stopPropagation();
-        curJm--;
-        if (curJm < 1) {
-          curJm = 12;
-          curJy--;
-        }
-        clampYearMonth();
-        updateCalendar();
+      panel.querySelector('.sdp-month-select').addEventListener('change', event => {
+        month = Number(event.target.value);
+        showDays('.sdp-month-select');
       });
-
-      container.querySelector('.sdp-next').addEventListener('click', (e) => {
-        e.stopPropagation();
-        curJm++;
-        if (curJm > 12) {
-          curJm = 1;
-          curJy++;
-        }
-        clampYearMonth();
-        updateCalendar();
-      });
-
-      const monthSelect = container.querySelector('.sdp-month-select');
-      const yearSelect = container.querySelector('.sdp-year-select');
-      monthSelect.addEventListener('click', (e) => e.stopPropagation());
-      yearSelect.addEventListener('click', (e) => e.stopPropagation());
-      monthSelect.addEventListener('change', (e) => {
-        e.stopPropagation();
-        curJm = parseInt(monthSelect.value, 10) || curJm;
-        updateCalendar();
-      });
-      yearSelect.addEventListener('change', (e) => {
-        e.stopPropagation();
-        curJy = parseInt(yearSelect.value, 10) || curJy;
-        clampYearMonth();
-        updateCalendar();
-      });
-
-      container.querySelector('.sdp-year-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        viewMode = 'years';
-        yearPage = Math.floor((cfg.yearMax - curJy) / 12);
-        updateCalendar();
-      });
-
-      const todayBtn = container.querySelector('.sdp-today-btn');
-      if (todayBtn) {
-        todayBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (cfg.isBirth) {
-            curJy = cfg.yearMax;
-            curJm = tJm;
-          } else {
-            curJy = tJy;
-            curJm = tJm;
-          }
-          updateCalendar();
+      for (const [button, step] of [['.sdp-prev', -1], ['.sdp-next', 1]]) {
+        panel.querySelector(button).addEventListener('click', () => {
+          const index = year * 12 + month - 1 + step;
+          year = Math.floor(index / 12);
+          month = index % 12 + 1;
+          showDays(button);
         });
       }
-    }
-
-    function renderYearView() {
-      const totalYears = cfg.yearMax - cfg.yearMin + 1;
-      const totalPages = Math.max(1, Math.ceil(totalYears / 12));
-      if (yearPage < 0) yearPage = 0;
-      if (yearPage >= totalPages) yearPage = totalPages - 1;
-      const startY = cfg.yearMax - yearPage * 12;
-      const endY = Math.max(cfg.yearMin, startY - 11);
-
-      let yearsHtml = '';
-      for (let y = startY; y >= endY; y--) {
-        const active = y === curJy ? ' selected' : '';
-        yearsHtml += `<button type="button" class="sdp-year-cell${active}" data-year="${y}">${toFa(y)}</button>`;
+      panel.querySelector('.sdp-year-btn').addEventListener('click', () => {
+        yearPage = Math.floor((max.year - year) / 12);
+        showYears('.sdp-year-cell.selected');
+      });
+      panel.querySelector('.sdp-today-btn')?.addEventListener('click', () => choose(today));
+      panel.querySelector('.sdp-days').addEventListener('click', event => {
+        const day = Number(event.target.dataset.day);
+        if (day && isAllowed({ year, month, day })) choose({ year, month, day });
+      });
+      positionPicker();
+      if (focusSelector) {
+        (panel.querySelector(focusSelector + ':not(:disabled)') || panel.querySelector('.sdp-month-select')).focus({ preventScroll: true });
       }
-
-      container.innerHTML = `
-        <div class="sdp-header">
-          <button type="button" class="sdp-nav-btn sdp-year-prev" title="سال‌های جدیدتر">›</button>
-          <div class="sdp-title">انتخاب سال<div class="sdp-subtitle">${toFa(endY)} تا ${toFa(startY)}</div></div>
-          <button type="button" class="sdp-nav-btn sdp-year-next" title="سال‌های قدیمی‌تر">‹</button>
-        </div>
-        <div class="sdp-years-grid">${yearsHtml}</div>
-        <div class="sdp-footer">
-          <button type="button" class="sdp-back-btn">بازگشت به تقویم</button>
-        </div>
-      `;
-
-      container.querySelectorAll('.sdp-year-cell').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          curJy = parseInt(btn.dataset.year, 10) || curJy;
-          viewMode = 'days';
-          updateCalendar();
-        });
-      });
-
-      container.querySelector('.sdp-year-prev').addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (yearPage > 0) { yearPage--; renderYearView(); }
-      });
-      container.querySelector('.sdp-year-next').addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (yearPage < totalPages - 1) { yearPage++; renderYearView(); }
-      });
-      container.querySelector('.sdp-back-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        viewMode = 'days';
-        updateCalendar();
-      });
     }
 
-    updateCalendar();
-    document.body.appendChild(container);
-    activePicker = container;
+    function showYears(focusSelector) {
+      const newest = max.year - yearPage * 12;
+      const oldest = Math.max(min.year, newest - 11);
+      let years = '';
+      for (let choice = newest; choice >= oldest; choice--) {
+        years += '<button type="button" class="sdp-year-cell' + (choice === year ? ' selected' : '') + '" data-year="' + choice + '">'
+          + iranPersianDigits(choice) + '</button>';
+      }
+      panel.innerHTML =
+        '<div class="sdp-header">'
+        + '<button type="button" class="sdp-nav-btn sdp-year-prev" aria-label="سال‌های جدیدتر"' + (yearPage === 0 ? ' disabled' : '') + '>›</button>'
+        + '<div class="sdp-title">انتخاب سال</div>'
+        + '<button type="button" class="sdp-nav-btn sdp-year-next" aria-label="سال‌های قدیمی‌تر"' + (oldest === min.year ? ' disabled' : '') + '>‹</button></div>'
+        + '<div class="sdp-years-grid">' + years + '</div>'
+        + '<div class="sdp-footer"><button type="button" class="sdp-back-btn">بازگشت به تقویم</button></div>';
+
+      panel.querySelector('.sdp-years-grid').addEventListener('click', event => {
+        if (!event.target.dataset.year) return;
+        year = Number(event.target.dataset.year);
+        showDays('.sdp-year-btn');
+      });
+      for (const [button, step] of [['.sdp-year-prev', -1], ['.sdp-year-next', 1]]) {
+        panel.querySelector(button).addEventListener('click', () => {
+          yearPage += step;
+          showYears(button);
+        });
+      }
+      panel.querySelector('.sdp-back-btn').addEventListener('click', () => showDays('.sdp-year-btn'));
+      positionPicker();
+      (panel.querySelector(focusSelector + ':not(:disabled)') || panel.querySelector('.sdp-year-cell')).focus({ preventScroll: true });
+    }
+
+    showDays();
   }
+
+  // Deliberately delegated for date inputs added to the form after page load.
+  document.addEventListener('focusin', event => {
+    if (returningFocus) return;
+    if (event.target.matches(selector)) openPicker(event.target);
+    else if (!active?.panel.contains(event.target)) closePicker();
+  });
+  document.addEventListener('click', event => {
+    if (event.target.matches(selector)) openPicker(event.target);
+    else if (!active?.panel.contains(event.target)) closePicker();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && active) {
+      event.preventDefault();
+      event.stopPropagation();
+      closePicker(true);
+    } else if (event.key === 'ArrowDown' && event.target.matches(selector)) {
+      openPicker(event.target);
+      if (!active) return;
+      event.preventDefault();
+      (active.panel.querySelector('.sdp-day-btn.selected:not(:disabled), .sdp-day-btn[aria-current="date"]:not(:disabled)')
+        || active.panel.querySelector('.sdp-day-btn:not(:disabled)'))?.focus({ preventScroll: true });
+    }
+  }, true);
+  window.addEventListener('resize', () => active?.positionPicker());
+  window.visualViewport?.addEventListener('resize', () => active?.positionPicker());
+
+  function validateDate(input) {
+    const date = readDate(input.value);
+    const key = date && dateKey(date);
+    const min = input.dataset.minDate;
+    const max = input.dataset.maxDate;
+    let error = '';
+    if (input.value.trim() && !date) {
+      error = 'تاریخ شمسی معتبر وارد کنید، مانند ۱۴۰۵/۰۵/۱۸.';
+    } else if (key && ((min && key < min) || (max && key > max))) {
+      error = 'تاریخ را از بازهٔ مجاز تقویم انتخاب کنید.';
+    }
+    input.setCustomValidity(error);
+    return date;
+  }
+  document.addEventListener('input', event => {
+    if (event.target.matches(selector)) validateDate(event.target);
+  });
+
+  document.addEventListener('change', event => {
+    const input = event.target;
+    if (input.matches(selector)) {
+      const date = validateDate(input);
+      if (date) input.value = dateLabel(date);
+    } else if (input.matches('[data-iran-time]')) {
+      const value = iranLatinDigits(input.value);
+      const compact = /^(\d{1,2})(\d{2})$/.exec(value) || /^(\d{2})(\d{2})(\d{2})$/.exec(value);
+      const time = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(compact ? compact.slice(1).join(':') : value);
+      if (time && Number(time[1]) < 24 && Number(time[2]) < 60 && Number(time[3] || 0) < 60) {
+        input.value = iranPersianDigits(pad(time[1]) + ':' + time[2] + (time[3] && time[3] !== '00' ? ':' + time[3] : ''));
+      }
+    }
+  });
 }

@@ -171,7 +171,7 @@ require_once __DIR__ . '/header.php';
                 <tbody>
                     <?php foreach ($entries as $row): ?>
                         <tr>
-                            <td><?= e(shamsiDate((string) $row['created_at'])) ?> <span class="muted"><?= e(persianNumber(date('H:i', strtotime((string) $row['created_at'])))) ?></span></td>
+                            <td><?= e(shamsiDbTimestamp($row['created_at'], 'with_time')) ?></td>
                             <td><?= e(auditActorLabel($row)) ?></td>
                             <td><?= e(auditActionLabel((string) $row['action'])) ?></td>
                             <td>

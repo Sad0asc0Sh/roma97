@@ -53,25 +53,7 @@ function adminFamilyIsValidChildPhone(string $phone): bool
  */
 function adminFamilyValidChildDob(string $value): ?string
 {
-    $parsed = function_exists('parseJalaliDate') ? parseJalaliDate($value) : null;
-    if ($parsed !== null) {
-        $value = $parsed;
-    }
-    if (preg_match('/\A\d{4}-\d{2}-\d{2}\z/', $value) !== 1) {
-        return null;
-    }
-    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
-    if (!$date || $date->format('Y-m-d') !== $value) {
-        return null;
-    }
-    $today = new DateTimeImmutable('today');
-    if ($date >= $today) {
-        return null;
-    }
-    if ($date < $today->modify('-15 years')) {
-        return null;
-    }
-    return $value;
+    return parseChildBirthDate($value, true);
 }
 
 /** Strong password — same rule as register.php (authStrongPassword). */

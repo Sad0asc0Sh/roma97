@@ -24,7 +24,8 @@
                 </select>
             </label>
             <label>تاریخ (شمسی)
-                <input type="text" name="notice_date" class="form-control <?= $selectedNotice === null ? 'shamsi-datepicker' : '' ?>" data-year-past="0"
+                <input type="text" name="notice_date" class="form-control <?= $selectedNotice === null ? 'shamsi-datepicker' : '' ?>"
+                       dir="ltr" inputmode="numeric" autocomplete="off" data-min-date="<?= e(shamsiDate($todayYmd, 'Y-m-d')) ?>"
                        <?= $selectedNotice === null ? '' : 'readonly' ?>
                        value="<?= e(shamsiDate($selectedNotice['notice_date'] ?? $todayYmd, 'numeric')) ?>" required>
             </label>
@@ -36,7 +37,8 @@
                 </select>
             </label>
             <label>ساعت تقریبی ورود در صورت تأخیر
-                <input type="time" name="expected_arrival" class="form-control" value="<?= e(substr($selectedNotice['expected_arrival'] ?? '', 0, 5)) ?>">
+                <input type="text" name="expected_arrival" class="form-control" data-iran-time dir="ltr" inputmode="numeric"
+                       placeholder="۱۴:۳۰" value="<?= e(iranTimeForInput($selectedNotice['expected_arrival'] ?? null)) ?>">
             </label>
             <label class="parent-notice-note">یادداشت برای پذیرش و مربی (اختیاری)
                 <input type="text" name="note" class="form-control" maxlength="500" value="<?= e($selectedNotice['note'] ?? '') ?>">

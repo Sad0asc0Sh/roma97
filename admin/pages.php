@@ -110,13 +110,6 @@ function seedDefaultPages(PDO $pdo): void
     }
 }
 
-function formatAdminPageDate(string $date): string
-{
-    $timestamp = strtotime($date);
-
-    return $timestamp === false ? $date : shamsiDate(date('Y-m-d', $timestamp));
-}
-
 try {
     initializeCmsTables();
     $pdo = getDb();
@@ -342,7 +335,7 @@ require_once __DIR__ . '/header.php';
                             <tr>
                                 <td style="font-weight:600;"><?= e($page['title']) ?></td>
                                 <td><code style="background:var(--bg-lavender);padding:3px 8px;border-radius:6px;font-size:0.85rem;"><?= e($page['slug']) ?></code></td>
-                                <td><?= e(formatAdminPageDate($page['created_at'])) ?></td>
+                                <td><?= e(shamsiDbTimestamp($page['created_at'])) ?></td>
                                 <td>
                                     <a href="<?= e(url('page.php?slug=' . $page['slug'])) ?>" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">مشاهده</a>
                                     <a href="<?= e(url('admin/pages.php?edit=' . $page['id'])) ?>" class="btn btn-sm btn-secondary">ویرایش</a>

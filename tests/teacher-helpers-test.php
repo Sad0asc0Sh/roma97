@@ -89,22 +89,14 @@ testAssert(teacherValidOperationalDate('') === null, 'empty date is rejected');
 $jalaliToday = sprintf('%04d/%02d/%02d', $jy, $jm, $jd);
 testAssert(teacherValidOperationalDate($jalaliToday) === $today, 'Jalali form of today resolves to the same ISO date');
 
-// ── E. Time normalisation ───────────────────────────────────────────────────
-testAssert(teacherNormalizeTimeInput('07:05') === '07:05:00', 'HH:MM normalises to SQL time');
-testAssert(teacherNormalizeTimeInput('07:05:30') === '07:05:30', 'HH:MM:SS passes through');
-testAssert(teacherNormalizeTimeInput('24:00') === null, 'invalid hour rejected');
-testAssert(teacherNormalizeTimeInput('') === null && teacherNormalizeTimeInput(null) === null, 'empty time is null');
-testAssert(teacherFormatTimeShort('07:05:00') === '07:05', 'SQL time shortens to HH:MM');
-testAssert(teacherFormatTimeShort(null) === '', 'missing time renders empty');
-
-// ── F. Labels & badges ──────────────────────────────────────────────────────
+// ── E. Labels & badges ──────────────────────────────────────────────────────
 testAssert(teacherAttendanceStatusLabel('present') === 'حاضر', 'attendance label: present');
 testAssert(teacherAttendanceStatusLabel(null) === 'ثبت نشده', 'attendance label: unrecorded');
 testAssert(teacherAttendanceBadgeClass('absent') === 'tp-badge-absent', 'attendance badge: absent');
 testAssert(teacherChildGenderLabel('female') === 'دختر' && teacherChildGenderLabel('male') === 'پسر', 'gender labels');
 testAssert(teacherEventCategoryLabel('celebration') === 'جشن', 'event category label');
 
-// ── G. Classroom context & allow-list scoping (SQLite) ──────────────────────
+// ── F. Classroom context & allow-list scoping (SQLite) ──────────────────────
 $pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 $pdo->exec("CREATE TABLE classrooms (id INTEGER PRIMARY KEY, teacher_id INTEGER, name TEXT, description TEXT, capacity INTEGER, schedule TEXT)");
 $pdo->exec("CREATE TABLE children (id INTEGER PRIMARY KEY, status TEXT)");

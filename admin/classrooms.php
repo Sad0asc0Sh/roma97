@@ -289,7 +289,7 @@ require_once __DIR__ . '/header.php';
                 <div class="form-group form-group-full">
                     <label for="cl_schedule">توضیحات برنامه هفتگی</label>
                     <textarea id="cl_schedule" name="schedule" class="form-control" rows="4"
-                              placeholder="مثال: شنبه تا چهارشنبه ۸ تا ۱۶–Fri 8:00–16:00, Lunch 12:00–13:00..."><?= e((string) ($editClassroom['schedule'] ?? $formData['schedule'] ?? '')) ?></textarea>
+                              placeholder="شنبه تا چهارشنبه، ۰۸:۰۰ تا ۱۶:۰۰"><?= e((string) ($editClassroom['schedule'] ?? $formData['schedule'] ?? '')) ?></textarea>
                 </div>
                 <fieldset class="class-workdays form-group-full">
                     <legend>روزهای کاری کلاس</legend>
@@ -403,7 +403,7 @@ require_once __DIR__ . '/header.php';
                             <tr>
                                 <td style="font-weight:600;"><a href="<?= e(url('admin/child-detail.php?id=' . (int)$w['child_id'])) ?>"><?= e((string)$w['child_name']) ?></a></td>
                                 <td><span class="badge badge-info"><?= e($w['classroom_name']) ?></span></td>
-                                <td style="font-size:0.85rem; color:var(--adm-text-muted);"><?= e(shamsiDate((string)$w['requested_at'], 'with_time')) ?></td>
+                                <td style="font-size:0.85rem; color:var(--adm-text-muted);"><?= e(shamsiDbTimestamp((string)$w['requested_at'], 'with_time')) ?></td>
                                 <td>
                                     <a href="<?= e(url('admin/child-detail.php?id=' . (int)$w['child_id'])) ?>" class="btn btn-sm btn-primary">مشاهده و تخصیص</a>
                                 </td>

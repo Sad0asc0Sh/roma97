@@ -23,6 +23,8 @@ if (isPostRequest() && isset($_POST['action']) && $_POST['action'] === 'download
 
     try {
         $pdo = getDb();
+        // Export TIMESTAMP values in UTC so imports preserve their stored instants.
+        $pdo->exec("SET SESSION time_zone = '+00:00'");
 
         if (headers_sent()) {
             die('تولید پشتیبان به‌دلیل ارسال پیش‌فرض هدرها متوقف شد.');
@@ -32,7 +34,8 @@ if (isPostRequest() && isset($_POST['action']) && $_POST['action'] === 'download
             ob_end_clean();
         }
 
-        $dateStr = date('Y-m-d_H-i-s');
+        $now = time();
+        $dateStr = shamsiDate($now, 'Y-m-d') . '_' . date('H-i-s', $now);
         $filename = "roma_backup_{$dateStr}.sql";
         $safeFilename = rawurlencode($filename);
 
@@ -48,11 +51,13 @@ if (isPostRequest() && isset($_POST['action']) && $_POST['action'] === 'download
 
         fwrite($out, "-- ========================================================\n");
         fwrite($out, "-- ROMA Daycare Database Backup\n");
-        fwrite($out, "-- Generated at: " . date('Y-m-d H:i:s') . "\n");
+        fwrite($out, "-- زمان تهیه به وقت تهران " . shamsiDate($now, 'with_time') . "\n");
         fwrite($out, "-- Database: " . DB_NAME . "\n");
         fwrite($out, "-- ========================================================\n\n");
         fwrite($out, "SET FOREIGN_KEY_CHECKS = 0;\n");
         fwrite($out, "SET NAMES utf8mb4;\n");
+        fwrite($out, "SET @roma_backup_time_zone = @@SESSION.time_zone;\n");
+        fwrite($out, "SET SESSION time_zone = '+00:00';\n");
         fwrite($out, "SET sql_mode = 'STRICT_ALL_TABLES,NO_ENGINE_SUBSTITUTION';\n\n");
 
         // Fetch all tables in current database
@@ -105,6 +110,7 @@ if (isPostRequest() && isset($_POST['action']) && $_POST['action'] === 'download
         }
 
         fwrite($out, "SET FOREIGN_KEY_CHECKS = 1;\n");
+        fwrite($out, "SET SESSION time_zone = @roma_backup_time_zone;\n");
         fwrite($out, "-- BACKUP COMPLETE SUCCESSFULLY\n");
 
         fclose($out);

@@ -58,10 +58,9 @@ try {
         }
     }
     if ($can('tuition')) {
-        [$jy, $jm] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
-        $month = sprintf('%04d-%02d', $jy, $jm);
-        $stmt = $pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM tuition_payments WHERE month_year = ?');
-        $stmt->execute([$month]);
+        $month = shamsiDate($today, 'Y-m');
+        $stmt = $pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM tuition_payments WHERE payment_date BETWEEN ? AND ?');
+        $stmt->execute(jalaliMonthToGregorianRange($month));
         $metrics[] = ['دریافتی شهریه این ماه', persianNumber(number_format((float) $stmt->fetchColumn())), 'تومان · ' . formatShamsiMonthYear($month), 'tuition.php'];
         $billingQueue = array_filter(tuitionInvoiceRows($pdo), static fn (array $bill): bool => in_array(tuitionInvoiceState($bill, $today), ['overdue', 'discrepancy'], true));
         $tasks[] = [count($billingQueue), 'شهریهٔ نیازمند پیگیری', 'صورتحساب‌های سررسیدگذشته و دارای مغایرت', 'tuition.php#invoiceQueue'];
@@ -150,7 +149,7 @@ require __DIR__ . '/header.php';
         <div class="portal-section-heading"><h2>تازه به جمع ما پیوسته‌اند</h2><a href="<?= e(url('admin/children.php')) ?>">همه کودکان ←</a></div>
         <?php if (!$recentRegistrations): ?><p class="portal-empty">هنوز کودکی ثبت‌نام نشده است. از «ثبت‌نام کودک» شروع کنید.</p><?php endif; ?>
         <?php foreach ($recentRegistrations as $child): ?>
-            <div class="portal-row"><span class="portal-row-avatar"><?= e(userInitial($child['first_name'])) ?></span><div><a href="<?= e(url('admin/child-detail.php?id=' . (int) $child['id'])) ?>"><?= e($child['first_name'] . ' ' . $child['last_name']) ?></a><small><?= e(shamsiDate($child['created_at'])) ?></small></div><span class="badge <?= $child['status'] === 'active' ? 'badge-success' : 'badge-warning' ?>"><?= e(parentChildEnrollmentLabel($child['status'])) ?></span></div>
+            <div class="portal-row"><span class="portal-row-avatar"><?= e(userInitial($child['first_name'])) ?></span><div><a href="<?= e(url('admin/child-detail.php?id=' . (int) $child['id'])) ?>"><?= e($child['first_name'] . ' ' . $child['last_name']) ?></a><small><?= e(shamsiDbTimestamp($child['created_at'])) ?></small></div><span class="badge <?= $child['status'] === 'active' ? 'badge-success' : 'badge-warning' ?>"><?= e(parentChildEnrollmentLabel($child['status'])) ?></span></div>
         <?php endforeach; ?>
     </section>
     <?php endif; ?>

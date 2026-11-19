@@ -20,29 +20,6 @@ function parseAdminDetailChildId(mixed $value): int
     return is_int($id) ? $id : 0;
 }
 
-function adminDetailChildAge(string $dateOfBirth): string
-{
-    try {
-        $birthDate = new DateTimeImmutable($dateOfBirth);
-        $today = new DateTimeImmutable('today');
-
-        if ($birthDate >= $today) {
-            return 'نوزاد';
-        }
-
-        $years = $birthDate->diff($today)->y;
-        $months = $birthDate->diff($today)->m;
-
-        if ($years < 1) {
-            return $months . ' ماهه';
-        }
-
-        return $years . ' ساله';
-    } catch (Throwable) {
-        return 'نامشخص';
-    }
-}
-
 function adminDetailGenderLabel(?string $gender): string
 {
     return match ($gender) {
@@ -51,13 +28,6 @@ function adminDetailGenderLabel(?string $gender): string
         'other' => 'سایر',
         default => $gender !== null && trim($gender) !== '' ? trim($gender) : 'مشخص نشده',
     };
-}
-
-function formatAdminEnrollmentDate(string $datetime): string
-{
-    $ts = strtotime($datetime);
-
-    return $ts === false ? $datetime : formatPersianDate($datetime);
 }
 
 $childId = parseAdminDetailChildId($_GET['id'] ?? null);
@@ -231,9 +201,9 @@ $sgPhone = trim((string) ($row['second_guardian_phone'] ?? ''));
 
         <div class="adm-profile-meta">
             <div class="adm-profile-row"><span>جنسیت:</span> <strong><?= e(adminDetailGenderLabel(($row['gender'] ?? '') !== '' ? (string) $row['gender'] : null)) ?></strong></div>
-            <div class="adm-profile-row"><span>رده سنی:</span> <strong><?= e(adminDetailChildAge((string) ($row['date_of_birth'] ?? ''))) ?></strong></div>
+            <div class="adm-profile-row"><span>رده سنی:</span> <strong><?= e(formatIranAge($row['date_of_birth'] ?? null, true)) ?></strong></div>
             <div class="adm-profile-row"><span>تاریخ تولد:</span> <strong><?= e(shamsiDate((string) ($row['date_of_birth'] ?? ''))) ?></strong></div>
-            <div class="adm-profile-row"><span>تاریخ ثبت‌نام:</span> <strong><?= e(formatAdminEnrollmentDate((string) ($row['created_at'] ?? ''))) ?></strong></div>
+            <div class="adm-profile-row"><span>تاریخ ثبت‌نام:</span> <strong><?= e(shamsiDbTimestamp($row['created_at'] ?? null)) ?></strong></div>
         </div>
 
         <div class="admin-child-actions-sidebar">

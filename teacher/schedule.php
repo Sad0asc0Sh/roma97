@@ -108,7 +108,7 @@ require_once __DIR__ . '/header.php';
                         <div style="font-size:0.82rem;color:var(--tp-text-secondary);line-height:1.8;">
                             <?= e(shamsiDate((string) $ev['event_date'], 'with_day')) ?>
                             <?php if (!empty($ev['start_time'])): ?>
-                                · ساعت <?= e(persianNumber(teacherFormatTimeShort((string) $ev['start_time']))) ?>
+                                · ساعت <?= e(formatIranTime($ev['start_time'])) ?>
                             <?php endif; ?>
                         </div>
                         <?php if (trim((string) ($ev['description'] ?? '')) !== ''): ?>

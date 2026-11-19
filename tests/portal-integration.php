@@ -515,6 +515,56 @@ try {
     [,$session] = $request('parent/index.php', $parent);
     $assert(!isset($session['parent_id']), 'Suspended parent loses access in existing session');
     $pdo->exec("UPDATE parents SET status='active' WHERE id=1");
+
+    [$weeklyAttendance] = $request('parent/attendance.php', $parent, [], ['week' => '۱۴۰۵/۰۱/۰۲']);
+    preg_match_all('/<span class="day-name">([^<]+)<\/span>/', $weeklyAttendance, $weekLabels);
+    $assert($weekLabels[1] === ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'],
+        'The family attendance week runs Saturday through Friday, accepting a Persian date in the link');
+
+    $request('admin/messages.php', $manager, [
+        'action' => 'save_follow_up', 'reply_id' => $generalReply, 'follow_up_status' => 'in_progress',
+        'follow_up_admin_id' => '4', 'response_due_date' => '۱۴۰۵/۰۱/۰۱', 'response_due_time' => '۱۶:۳۵',
+    ]);
+    $assert($pdo->query("SELECT response_due_at FROM messages WHERE id={$generalReply}")->fetchColumn() === '2026-03-21 16:35:00',
+        'The follow-up form persists a Shamsi deadline with a Persian 24-hour time');
+
+    $localizedEvent = ['form_action' => 'save_event', 'title' => 'آزمون تقویم نوروز', 'category' => 'general',
+        'event_date' => '۱۴۰۵/۰۱/۰۱', 'start_time' => '۱۶:۳۰', 'end_time' => '١٧٣٠', 'status' => 'scheduled'];
+    $request('admin/events.php', $owner, $localizedEvent);
+    $request('admin/events.php', $owner, array_replace($localizedEvent, ['start_time' => '04:30 PM']));
+    $eventRows = $pdo->query("SELECT event_date, start_time, end_time FROM events WHERE title = 'آزمون تقویم نوروز'")->fetchAll(PDO::FETCH_ASSOC);
+    $assert($eventRows === [['event_date' => '2026-03-21', 'start_time' => '16:30:00', 'end_time' => '17:30:00']],
+        'Events store localized input correctly and reject AM/PM without creating a second record');
+
+    $request('admin/tuition.php', $accountant, ['child_id' => 1, 'amount' => 13456789, 'payment_date' => '۱۴۰۵/۰۱/۰۱',
+        'month_year' => '۱۴۰۴-۱۲', 'notes' => 'رسید نوروز']);
+    $ledgerPayment->execute([1, 1, '1405-01', 7428139, '2026-03-20']);
+    [$cashReport] = $request('admin/reports.php', $accountant, [], ['month_year' => '۱۴۰۵/۰۱']);
+    [$cashCsv] = $request('admin/export-csv.php', $accountant, [], ['type' => 'tuition', 'paid_in' => '1405-01']);
+    $assert(str_contains($cashReport, 'ورودی مالی ماه فروردین ۱۴۰۵') && str_contains($cashReport, '۱۳,۴۵۶,۷۸۹')
+        && str_contains($cashReport, 'دریافتی: ۷,۴۲۸,۱۳۹ تومان')
+        && str_contains($cashCsv, 'رسید نوروز') && str_contains($cashCsv, '۱ فروردین ۱۴۰۵') && !str_contains($cashCsv, '7428139'),
+        'Cash report, trend, and CSV agree on which side of Nowruz a payment belongs to');
+
+    $ledgerPayment->execute([1, 1, '2026-03', 500000, '2026-03-25']);
+    [$oldBillingPeriod] = $request('admin/tuition.php', $accountant, [], ['month_year' => '2026-03', 'filter' => 'all']);
+    $assert(str_contains($oldBillingPeriod, '۱۴۰۴/۱۲/۱۰ تا ۱۴۰۵/۰۱/۱۱') && substr_count($oldBillingPeriod, 'data-invoice-state=') === 1,
+        'Existing Gregorian billing keys stay accessible with an accurate Shamsi span and no projected rows');
+
+    $pdo->exec("SET SESSION time_zone = '+00:00'");
+    $pdo->exec("INSERT INTO audit_log (actor_type, action, created_at) VALUES
+        ('admin', 'calendar.test', '2026-03-20 20:29:00'), ('admin', 'calendar.test', '2026-03-20 20:30:00'),
+        ('admin', 'calendar.test', '2022-08-01 19:30:00')");
+    [$audit] = $request('admin/audit.php', $owner, [], ['action' => 'calendar.test']);
+    $assert(str_contains($audit, '۲۹ اسفند ۱۴۰۴ · ۲۳:۵۹') && str_contains($audit, '۱ فروردین ۱۴۰۵ · ۰۰:۰۰'),
+        'Database timestamps are displayed at the Tehran midnight boundary even on a UTC server');
+    $assert(str_contains($audit, '۱۱ مرداد ۱۴۰۱ · ۰۰:۰۰'),
+        'Archived timestamps use Iranian summer-time rules where they were in effect');
+    [$backup] = $request('admin/backup.php', $owner, ['action' => 'download_backup']);
+    $assert(str_contains($backup, "-- زمان تهیه به وقت تهران") && str_contains($backup, "SET SESSION time_zone = '+00:00';")
+        && str_contains($backup, "'calendar.test'") && str_contains($backup, "'2026-03-20 20:30:00'"),
+        'SQL backups label the generation time in Persian and preserve timestamp instants in UTC');
+
     echo "Portal integration: {$count} checks passed.\n";
     if ($keep) {
         file_put_contents(sys_get_temp_dir() . '/roma97-preview.json', json_encode(['database'=>$database,'directory'=>$directory]));

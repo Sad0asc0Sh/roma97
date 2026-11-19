@@ -11,15 +11,11 @@ require_once __DIR__ . '/../includes/functions.php';
 
 requireLogin();
 
-$selectedMonthYear = (string) ($_GET['month_year'] ?? '');
-if (!preg_match('/^\d{4}-\d{2}$/', $selectedMonthYear)) {
-    // Current Shamsi Month-Year
-    [$currentJy, $currentJm] = gregorianToJalali(
-        (int) date('Y'),
-        (int) date('n'),
-        (int) date('j')
-    );
-    $selectedMonthYear = sprintf('%04d-%02d', $currentJy, $currentJm);
+$monthInput = $_GET['month_year'] ?? null;
+$selectedMonthYear = (is_string($monthInput) ? portalMonthYear($monthInput) : null) ?? shamsiDate(time(), 'Y-m');
+$monthChoices = getShamsiMonthYearChoices();
+if (!in_array($selectedMonthYear, array_column($monthChoices, 'value'), true)) {
+    $monthChoices[] = ['value' => $selectedMonthYear, 'label' => formatShamsiMonthYear($selectedMonthYear)];
 }
 
 function expenseCategoryLabel(string $category): string
@@ -42,7 +38,7 @@ $totalSalaries = 0.0;
 $totalExpenses = 0.0;
 $totalGeneralExpenses = 0.0;
 $netProfitLoss = 0.0;
-$overdueChildren = [];
+$childrenWithBalance = [];
 $expensesByCategory = [];
 $trendRows = [];
 
@@ -61,40 +57,43 @@ try {
     initializeFinancialTables();
     $pdo = getDb();
 
-    // 1. Total Tuition Received in selected month_year
-    $tStmt = $pdo->prepare('SELECT SUM(amount) FROM tuition_payments WHERE month_year = :myear');
-    $tStmt->execute([':myear' => $selectedMonthYear]);
-    $totalTuition = (float) ($tStmt->fetchColumn() ?: 0);
-
-    // 2. Total Salaries Paid in selected month_year
-    $sStmt = $pdo->prepare('SELECT SUM(amount) FROM salary_payments WHERE month_year = :myear');
-    $sStmt->execute([':myear' => $selectedMonthYear]);
-    $totalSalaries = (float) ($sStmt->fetchColumn() ?: 0);
-
-    // 3. Total General Expenses in selected month_year using Gregorian date range
-    [$gregStart, $gregEnd] = jalaliMonthToGregorianRange($selectedMonthYear);
-
-    $expStmt = $pdo->prepare('SELECT category, amount FROM expenses WHERE expense_date BETWEEN :gstart AND :gend');
-    $expStmt->execute([':gstart' => $gregStart, ':gend' => $gregEnd]);
-    $monthExpenses = $expStmt->fetchAll();
-
-    foreach ($monthExpenses as $exp) {
-        $amt = (float) $exp['amount'];
-        $totalGeneralExpenses += $amt;
-        $cat = (string) $exp['category'];
-        if (!isset($expensesByCategory[$cat])) {
-            $expensesByCategory[$cat] = 0.0;
+    // Cash flow follows the transaction date. Receivables below follow the billed month.
+    $tuitionCash = $pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM tuition_payments WHERE payment_date BETWEEN ? AND ?');
+    $salaryCash = $pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM salary_payments WHERE payment_date BETWEEN ? AND ?');
+    $expenseCash = $pdo->prepare('SELECT category, SUM(amount) AS amount FROM expenses WHERE expense_date BETWEEN ? AND ? GROUP BY category');
+    for ($i = 5; $i >= 0; $i--) {
+        $month = shiftJalaliMonth($selectedMonthYear, -$i);
+        if (portalMonthYear($month) === null) {
+            continue;
         }
-        $expensesByCategory[$cat] += $amt;
-        if ($cat === 'sms') {
-            $smsCost += $amt;
+        $range = jalaliMonthToGregorianRange($month);
+        $tuitionCash->execute($range);
+        $salaryCash->execute($range);
+        $expenseCash->execute($range);
+        $tuition = (float) $tuitionCash->fetchColumn();
+        $salary = (float) $salaryCash->fetchColumn();
+        $expenses = array_map('floatval', $expenseCash->fetchAll(PDO::FETCH_KEY_PAIR));
+        $general = array_sum($expenses);
+        $outflow = $salary + $general;
+
+        $trendRows[] = [
+            'label' => formatShamsiMonthYear($month),
+            'in' => $tuition,
+            'out' => $outflow,
+            'net' => $tuition - $outflow,
+            'is_current' => $i === 0,
+        ];
+        if ($i === 0) {
+            $totalTuition = $tuition;
+            $totalSalaries = $salary;
+            $totalGeneralExpenses = $general;
+            $totalExpenses = $outflow;
+            $netProfitLoss = $tuition - $outflow;
+            $expensesByCategory = $expenses;
+            $smsCost = $expenses['sms'] ?? 0.0;
         }
     }
-
-    $totalExpenses = $totalSalaries + $totalGeneralExpenses;
-    $netProfitLoss = $totalTuition - $totalExpenses;
-
-    // 4. Receivables + overdue children for the selected month.
+    // Receivables for the selected billing month.
     //
     // Performance: this used to run three queries per active child (default
     // tuition, plan, payments) inside a loop — ~900 round-trips for a 300-child
@@ -113,7 +112,7 @@ try {
         // debt worth chasing (same threshold as the tuition page and parent portal).
         if ($balance >= tuitionSettleTolerance()) {
             $outstandingTuition += $balance;
-            $overdueChildren[] = [
+            $childrenWithBalance[] = [
                 'child_id'     => $childId,
                 'child_name'   => (string) $row['child_name'],
                 'parent_name'  => (string) $row['parent_name'],
@@ -133,39 +132,7 @@ try {
         : 0.0;
 
     // Biggest debts first — that is the order an owner wants to make calls in.
-    usort($overdueChildren, static fn($a, $b) => $b['balance'] <=> $a['balance']);
-
-    // ── 6-month trend: cash received vs expenses, one bar per Jalali month ──
-    // A single month tells an owner where they stand; the trend tells them
-    // whether the daycare is getting healthier or quietly bleeding.
-    $trendRows = [];
-    $trendAnchor = strtotime($gregStart);
-    for ($i = 5; $i >= 0; $i--) {
-        $monthStart = strtotime('-' . $i . ' months', $trendAnchor);
-        [$tJy, $tJm] = gregorianToJalali((int) date('Y', $monthStart), (int) date('n', $monthStart), 15);
-        $trendMonthYear = sprintf('%04d-%02d', $tJy, $tJm);
-        [$tStart, $tEnd] = jalaliMonthToGregorianRange($trendMonthYear);
-
-        $inStmt = $pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM tuition_payments WHERE month_year = :myear');
-        $inStmt->execute([':myear' => $trendMonthYear]);
-        $in = (float) $inStmt->fetchColumn();
-
-        $salStmt = $pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM salary_payments WHERE month_year = :myear');
-        $salStmt->execute([':myear' => $trendMonthYear]);
-        $tSalaries = (float) $salStmt->fetchColumn();
-
-        $gStmt = $pdo->prepare('SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE expense_date BETWEEN :gs AND :ge');
-        $gStmt->execute([':gs' => $tStart, ':ge' => $tEnd]);
-        $tGeneral = (float) $gStmt->fetchColumn();
-
-        $trendRows[] = [
-            'label'    => formatShamsiMonthYear($trendMonthYear),
-            'in'       => $in,
-            'out'      => $tSalaries + $tGeneral,
-            'net'      => $in - ($tSalaries + $tGeneral),
-            'is_current' => $trendMonthYear === $selectedMonthYear,
-        ];
-    }
+    usort($childrenWithBalance, static fn($a, $b) => $b['balance'] <=> $a['balance']);
 
 } catch (Throwable $e) {
     error_log($e->getMessage());
@@ -180,17 +147,17 @@ require_once __DIR__ . '/header.php';
     <div class="adm-page-head">
         <div class="adm-page-head-main">
             <h1>گزارش مالی (سود و زیان)</h1>
-            <p class="adm-page-subtitle">بررسی تراز درآمدها، هزینه‌ها، نرخ وصول و بدهی‌های معوق مهدکودک</p>
+            <p class="adm-page-subtitle">بررسی تراز درآمدها، هزینه‌ها، نرخ وصول و ماندهٔ شهریهٔ مهدکودک</p>
         </div>
         <div class="adm-page-actions">
-            <a href="<?= e(url('admin/export-csv.php?' . http_build_query(['type' => 'tuition', 'month_year' => $selectedMonthYear]))) ?>" class="btn btn-secondary">
+            <a href="<?= e(url('admin/export-csv.php?' . http_build_query(['type' => 'tuition', 'paid_in' => $selectedMonthYear]))) ?>" class="btn btn-secondary">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 <span>خروجی CSV شهریه این ماه</span>
             </a>
             <form method="get" action="<?= e(url('admin/reports.php')) ?>" class="inline-form" style="display: flex; gap: 8px; align-items: center;">
                 <label for="month_year" class="sr-only">انتخاب ماه</label>
                 <select name="month_year" id="month_year" class="form-control" onchange="this.form.submit()" style="min-width: 170px;">
-                    <?php foreach (getShamsiMonthYearChoices(24, 24) as $choice): ?>
+                    <?php foreach ($monthChoices as $choice): ?>
                         <option value="<?= e($choice['value']) ?>" <?= $choice['value'] === $selectedMonthYear ? 'selected' : '' ?>>
                             <?= e($choice['label']) ?>
                         </option>
@@ -204,9 +171,9 @@ require_once __DIR__ . '/header.php';
         <a href="#report-summary" class="adm-section-nav-link is-active">خلاصه تراز</a>
         <a href="#report-collections" class="adm-section-nav-link">وضعیت وصول شهریه</a>
         <?php if ($trendRows !== []): ?>
-            <a href="#report-trend" class="adm-section-nav-link">روند ۶ ماه اخیر</a>
+            <a href="#report-trend" class="adm-section-nav-link">روند ۶ ماهه</a>
         <?php endif; ?>
-        <a href="#report-breakdown" class="adm-section-nav-link">معوقات و هزینه‌ها</a>
+        <a href="#report-breakdown" class="adm-section-nav-link">ماندهٔ شهریه و هزینه‌ها</a>
     </nav>
 
     <!-- Summary KPI Cards -->
@@ -254,7 +221,7 @@ require_once __DIR__ . '/header.php';
             <div class="adm-kpi-card adm-kpi-card--danger">
                 <div class="adm-kpi-label">مانده وصول‌نشده</div>
                 <div class="adm-kpi-value"><?= e(persianNumber(number_format($outstandingTuition))) ?> <span class="adm-kpi-unit">تومان</span></div>
-                <div class="adm-kpi-meta"><?= e(persianNumber((string) count($overdueChildren))) ?> خانواده بدهکار</div>
+                <div class="adm-kpi-meta"><?= e(persianNumber((string) count($childrenWithBalance))) ?> کودک با ماندهٔ شهریه</div>
             </div>
 
             <div class="adm-kpi-card <?= $collectionRate >= 85 ? 'adm-kpi-card--success' : ($collectionRate >= 60 ? 'adm-kpi-card--warning' : 'adm-kpi-card--danger') ?>">
@@ -274,7 +241,7 @@ require_once __DIR__ . '/header.php';
 
         <div class="adm-callout adm-callout--info m-0">
             <div class="adm-callout-body">
-                «شهریه دریافتی» در کارت‌های بالا مبلغی است که واقعاً به حساب رسیده؛ «مانده وصول‌نشده» درآمدی است که هنوز وصول نشده و در سود/زیان لحاظ نشده است.
+                «شهریه دریافتی» جمع پرداخت‌های انجام‌شده در بازهٔ ماه انتخابی است. «مانده وصول‌نشده» بر اساس شهریهٔ همان ماه محاسبه می‌شود.
                 <?php if ($outstandingTuition > 0): ?>
                     برای ارسال یادآوری گروهی می‌توانید از <a href="<?= e(url('admin/sms-center.php')) ?>">مرکز پیامک</a> وضعیت اعلان‌ها را بررسی کنید.
                 <?php endif; ?>
@@ -286,7 +253,7 @@ require_once __DIR__ . '/header.php';
     <?php if ($trendRows !== []): ?>
     <div id="report-trend" class="admin-section">
         <div class="admin-section-header">
-            <h2 class="admin-section-title m-0">روند ۶ ماه اخیر (ورودی نقدی در برابر هزینه‌ها)</h2>
+            <h2 class="admin-section-title m-0">گردش مالی ۶ ماه منتهی به <?= e(formatShamsiMonthYear($selectedMonthYear)) ?></h2>
         </div>
         <div class="adm-trend-grid">
             <?php
@@ -322,12 +289,12 @@ require_once __DIR__ . '/header.php';
     <?php endif; ?>
 
     <div id="report-breakdown" class="admin-two-column">
-        <!-- Overdue Children Table -->
+        <!-- Outstanding tuition -->
         <div class="admin-section">
             <div class="admin-section-header">
-                <h2 class="admin-section-title">کودکان دارای شهریه معوق (ماه <?= e(formatShamsiMonthYear($selectedMonthYear)) ?>)</h2>
+                <h2 class="admin-section-title">کودکان دارای ماندهٔ شهریه (ماه <?= e(formatShamsiMonthYear($selectedMonthYear)) ?>)</h2>
             </div>
-            <?php if (empty($overdueChildren)): ?>
+            <?php if (empty($childrenWithBalance)): ?>
                 <div class="empty-state empty-state-sm">
                     <div class="empty-state-icon">
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
@@ -342,12 +309,12 @@ require_once __DIR__ . '/header.php';
                                 <th>نام کودک</th>
                                 <th>والد / تماس</th>
                                 <th>وضعیت پرداخت</th>
-                                <th>مبلغ بدهی معوق</th>
+                                <th>ماندهٔ شهریه</th>
                                 <th>عملیات</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($overdueChildren as $item): ?>
+                            <?php foreach ($childrenWithBalance as $item): ?>
                                 <?php
                                 $itemExpected = (float) ($item['expected'] ?? 0);
                                 $itemPaid = (float) ($item['paid'] ?? 0);

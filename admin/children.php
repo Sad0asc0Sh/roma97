@@ -40,29 +40,6 @@ function parseAdminChildListId(mixed $value): int
     return is_int($id) ? $id : 0;
 }
 
-function adminChildDisplayAge(string $dateOfBirth): string
-{
-    try {
-        $birthDate = new DateTimeImmutable($dateOfBirth);
-        $today = new DateTimeImmutable('today');
-
-        if ($birthDate >= $today) {
-            return 'نوزاد';
-        }
-
-        $years = $birthDate->diff($today)->y;
-        $months = $birthDate->diff($today)->m;
-
-        if ($years < 1) {
-            return $months . ' ماه';
-        }
-
-        return $years . ' سال';
-    } catch (Throwable) {
-        return 'نامشخص';
-    }
-}
-
 function adminChildGenderLabel(?string $gender): string
 {
     return match ($gender) {
@@ -261,7 +238,7 @@ $filterHref = static fn (string $value): string => url('admin/children.php?' . h
                                     <p class="admin-child-nickname">لقب: <?= e((string) $child['preferred_name']) ?></p>
                                 <?php endif; ?>
                                 <p class="admin-child-meta-line">
-                                    <span><?= e(adminChildDisplayAge((string) ($child['date_of_birth'] ?? ''))) ?></span>
+                                    <span><?= e(formatIranAge((string) ($child['date_of_birth'] ?? ''))) ?></span>
                                     <span class="meta-sep" aria-hidden="true">•</span>
                                     <span><?= e(adminChildGenderLabel(($child['gender'] ?? '') !== '' ? (string) $child['gender'] : null)) ?></span>
                                 </p>

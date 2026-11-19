@@ -190,7 +190,7 @@ if (isPostRequest()) {
             'bio'             => trim((string) ($_POST['bio'] ?? '')),
             'sort_order'      => (int) ($_POST['sort_order'] ?? 0),
             'show_in_team'    => isset($_POST['show_in_team']) ? 1 : 0,
-            'hire_date'       => trim((string) ($_POST['hire_date'] ?? '')),
+            'hire_date'       => is_string($_POST['hire_date'] ?? null) ? trim($_POST['hire_date']) : '',
             'salary'          => trim((string) ($_POST['salary'] ?? '')),
             'password'        => (string) ($_POST['password'] ?? ''),
             'status'          => in_array($_POST['status'] ?? '', ['pending', 'active', 'inactive'], true)
@@ -214,6 +214,11 @@ if (isPostRequest()) {
         }
         if ($fields['password'] !== '' && strlen($fields['password']) < 8) {
             $formErrors[] = 'رمز عبور باید حداقل ۸ کاراکتر باشد.';
+        }
+        $hireDateVal = parseIranDate($fields['hire_date']);
+        if (array_key_exists('hire_date', $_POST)
+            && (!is_string($_POST['hire_date']) || ($fields['hire_date'] !== '' && $hireDateVal === null))) {
+            $formErrors[] = 'تاریخ شروع همکاری را به شمسی وارد کنید، مانند ۱۴۰۵/۰۵/۱۸.';
         }
 
         if ($fields['salary'] !== '') {
@@ -258,7 +263,6 @@ if (isPostRequest()) {
                     $certPath   = handleTeacherUpload('certificate_file', 'certificates');
 
                     $salaryVal   = $fields['salary'] !== '' ? $fields['salary'] : null;
-                    $hireDateVal = $fields['hire_date'] !== '' ? $fields['hire_date'] : null;
 
                     if ($postAction === 'add') {
                         $stmt = $pdo->prepare(
@@ -320,6 +324,7 @@ if (isPostRequest()) {
                             ':so'  => $fields['sort_order'],
                             ':cf'  => $finalCert,
                             ':hd'  => $hireDateVal,
+                            ':set_hd' => (int) array_key_exists('hire_date', $_POST),
                             ':sl'  => $salaryVal,
                             ':st'  => $fields['status'],
                             ':id'  => $teacherId,
@@ -335,7 +340,7 @@ if (isPostRequest()) {
                                 avatar = :av, national_id = :ni, education_level = :el,
                                 major = :mj, role_title = :rt, bio = :bio,
                                 show_in_team = :sit, sort_order = :so,
-                                certificate_file = :cf, hire_date = :hd,
+                                certificate_file = :cf, hire_date = IF(:set_hd, :hd, hire_date),
                                 salary = :sl, status = :st{$pwClause}
                              WHERE id = :id"
                         );
@@ -454,7 +459,7 @@ require_once __DIR__ . '/header.php';
 
     <!-- ── Add / Edit Form Template (Hidden container for Drawer) ──────────────── -->
     <template id="teacherFormTemplate">
-        <form method="post" action="<?= e(url('admin/teachers.php')) ?>" enctype="multipart/form-data" novalidate>
+        <form method="post" action="<?= e(url('admin/teachers.php' . ($editTeacher ? '?edit=' . (int) $editTeacher['id'] : ''))) ?>" enctype="multipart/form-data" novalidate>
             <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
             <input type="hidden" name="action" value="<?= $editTeacher ? 'edit' : 'add' ?>">
             <?php if ($editTeacher): ?>
@@ -497,6 +502,12 @@ require_once __DIR__ . '/header.php';
                 <input type="text" id="tf_role_title" name="role_title" class="form-control"
                        placeholder="مثال: سرپرست مربیان"
                        value="<?= e((string) ($editTeacher['role_title'] ?? $formData['role_title'] ?? '')) ?>">
+            </div>
+            <div class="form-group">
+                <label for="tf_hire_date">تاریخ شمسی شروع همکاری (اختیاری)</label>
+                <input type="text" id="tf_hire_date" name="hire_date" class="form-control shamsi-datepicker"
+                       dir="ltr" inputmode="numeric" autocomplete="off" placeholder="۱۴۰۵/۰۵/۱۸"
+                       value="<?= e($formData['hire_date'] ?? (empty($editTeacher['hire_date']) ? '' : shamsiDate($editTeacher['hire_date'], 'numeric'))) ?>">
             </div>
             <div class="form-group">
                 <label for="tf_education_level">مدرک تحصیلی</label>

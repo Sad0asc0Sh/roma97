@@ -37,12 +37,6 @@ function portalAttendanceTimes(string $status, ?string $checkIn, ?string $checkO
     return [$checkIn, $checkOut];
 }
 
-function portalMonthYear(string $raw): ?string
-{
-    $raw = strtr(trim($raw), ['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9', '٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
-    return preg_match('/\A1[34]\d{2}-(0[1-9]|1[0-2])\z/', $raw) === 1 ? $raw : null;
-}
-
 /** Credit on one child's account does not settle another child's debt. */
 function portalTuitionTotals(array $breakdowns): array
 {

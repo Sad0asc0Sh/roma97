@@ -61,7 +61,7 @@ function setupHeader(): void
     if ($isCli) {
         return;
     }
-    echo '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8">'
+    echo '<!doctype html><html lang="fa-IR" dir="rtl"><head><meta charset="utf-8">'
         . '<title>ROMA Setup</title>'
         . '<style>body{font-family:sans-serif;max-width:700px;margin:40px auto;padding:0 20px;'
         . 'direction:ltr;text-align:left}h1{color:#333}.ok{color:green}.err{color:red}'

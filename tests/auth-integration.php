@@ -18,9 +18,6 @@ if (($argv[1] ?? '') === 'worker') {
     require $root . '/config.php';
     require $root . '/includes/auth.php';
     require $root . '/includes/csrf.php';
-    require $root . '/includes/sms.php';
-    require $root . '/includes/auth_flow.php';
-    require $root . '/includes/unified_auth.php';
     $_SESSION = $request['session'];
     $_SERVER['REQUEST_METHOD'] = $request['method'];
     $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
@@ -114,8 +111,9 @@ try {
     [$html, $session] = $request('login.php', ['identifier' => $phone, 'password' => $newPassword]);
     $check(($session['parent_id'] ?? null) === (int) $parent['id'], 'Login with recovered password succeeds');
     $token = bin2hex(random_bytes(32));
-    $stmt = $server->prepare("INSERT INTO password_reset_tokens (token,account_type,account_id,expires_at) VALUES (?, 'parent', ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))");
-    $stmt->execute([$token, $parent['id']]);
+    $expiresAt = new DateTimeImmutable('+1 hour', new DateTimeZone('Asia/Tehran'));
+    $stmt = $server->prepare("INSERT INTO password_reset_tokens (token,account_type,account_id,expires_at) VALUES (?, 'parent', ?, ?)");
+    $stmt->execute([$token, $parent['id'], $expiresAt->format('Y-m-d H:i:s')]);
     $lastPassword = 'GardenFinal123';
     [$html] = $request('reset-password.php', ['token' => $token, 'password' => $lastPassword, 'confirm_password' => $lastPassword]);
     $check(password_verify($lastPassword, $server->query('SELECT password FROM parents')->fetchColumn()), 'Token recovery changes password in MySQL');

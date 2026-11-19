@@ -140,7 +140,7 @@ $photoUrl = !empty($child['photo']) ? url((string) $child['photo']) : '';
         <div>
             <h2 style="margin:0 0 4px;font-size:1.2rem;"><?= e($fullName) ?></h2>
             <p class="tp-page-subtitle" style="margin:0;">
-                <?= e(teacherChildDisplayAge((string) $child['date_of_birth'])) ?>
+                <?= e(formatIranAge((string) $child['date_of_birth'])) ?>
                 <?php if (teacherChildGenderLabel($child['gender'] ?? null) !== ''): ?>
                     · <?= e(teacherChildGenderLabel($child['gender'] ?? null)) ?>
                 <?php endif; ?>
@@ -189,7 +189,7 @@ $photoUrl = !empty($child['photo']) ? url((string) $child['photo']) : '';
                 <?= e(teacherAttendanceStatusLabel($todayAtt['status'] ?? null)) ?>
             </span>
             <?php if ($todayAtt && ($todayAtt['check_in'] ?? '') !== ''): ?>
-                <span>ورود: <?= e(persianNumber(teacherFormatTimeShort((string) $todayAtt['check_in']))) ?></span>
+                <span>ورود: <?= e(formatIranTime($todayAtt['check_in'])) ?></span>
             <?php endif; ?>
         </div>
     </div>

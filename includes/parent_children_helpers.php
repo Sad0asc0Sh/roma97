@@ -9,29 +9,6 @@ if (!defined('ROOMA_APP')) {
  * Shared helpers for parent portal child listings and detail views.
  */
 
-function parentChildDisplayAge(string $dateOfBirth): string
-{
-    try {
-        $birthDate = new DateTimeImmutable($dateOfBirth);
-        $today = new DateTimeImmutable('today');
-
-        if ($birthDate >= $today) {
-            return 'نوزاد';
-        }
-
-        $years = $birthDate->diff($today)->y;
-        $months = $birthDate->diff($today)->m;
-
-        if ($years < 1) {
-            return persianNumber((string) $months) . ' ماه';
-        }
-
-        return persianNumber((string) $years) . ' سال';
-    } catch (Throwable) {
-        return 'نامشخص';
-    }
-}
-
 function parentChildGenderLabel(?string $gender): string
 {
     return match ($gender) {
@@ -67,29 +44,6 @@ function parentChildEnrollmentClass(string $status): string
     };
 }
 
-function parentChildDetailDateLabel(string $datetime): string
-{
-    return $datetime === '' ? 'نامشخص' : formatPersianDate($datetime);
-}
-
-function parentPortalParseDateYmd(string $raw): ?string
-{
-    if (preg_match('/\A\d{4}-\d{2}-\d{2}\z/', $raw) !== 1) {
-        return null;
-    }
-
-    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $raw);
-
-    return $date !== false && $date->format('Y-m-d') === $raw ? $raw : null;
-}
-
-function parentPortalMondayOfDate(DateTimeImmutable $date): DateTimeImmutable
-{
-    $dow = (int) $date->format('N');
-
-    return $date->modify('-' . ($dow - 1) . ' day');
-}
-
 function parentPortalAttendanceStatusLabel(string $status): string
 {
     return match ($status) {
@@ -119,19 +73,6 @@ function parentPortalAttendanceBadgeClass(?string $status): string
         'absent' => 'attendance-absent',
         default => 'attendance-none',
     };
-}
-
-function parentPortalFormatTimeShort(?string $sqlTime): string
-{
-    if ($sqlTime === null || $sqlTime === '') {
-        return '';
-    }
-
-    if (preg_match('/^(\d{2}:\d{2})/', $sqlTime, $matches)) {
-        return $matches[1];
-    }
-
-    return '';
 }
 
 /** Category label shown to parents */

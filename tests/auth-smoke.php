@@ -49,7 +49,7 @@ foreach ([['login', 'form'], ['register', 'form'], ['register', 'verify'], ['for
     $xpath = new DOMXPath($dom);
     $context = $authMode . '/' . $step;
     $check($xpath->query('//h1')->length === 1, "$context: one heading");
-    $check($xpath->query('//html[@lang="fa" and @dir="rtl"]')->length === 1, "$context: Persian RTL");
+    $check($xpath->query('//html[@lang="fa-IR" and @dir="rtl"]')->length === 1, "$context: Persian RTL");
     $check($xpath->query('//form//form')->length === 0, "$context: no nested forms");
     $check($xpath->query('//form')->length === ($step === 'verify' ? 2 : 1), "$context: separate resend form");
     foreach ($xpath->query('//form') as $form) {

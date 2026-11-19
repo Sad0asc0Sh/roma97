@@ -31,38 +31,6 @@ function isValidChildPhone(string $phone): bool
         || (childFormStringLength($phone) <= 20 && preg_match('/\A[0-9+\-\s]{7,20}\z/', $phone) === 1);
 }
 
-function validChildDateOfBirth(string $value): ?string
-{
-    $parsed = parseJalaliDate($value);
-    if ($parsed !== null) {
-        $value = $parsed;
-    }
-
-    if (preg_match('/\A\d{4}-\d{2}-\d{2}\z/', $value) !== 1) {
-        return null;
-    }
-
-    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
-
-    if (!$date || $date->format('Y-m-d') !== $value) {
-        return null;
-    }
-
-    $today = new DateTimeImmutable('today');
-
-    if ($date >= $today) {
-        return null;
-    }
-
-    // Daycare age range is roughly 0–6 years; anything older than 15 is a typo
-    // (e.g. 1300/01/01 entered instead of 1400/01/01) and would show absurd ages.
-    if ($date < $today->modify('-15 years')) {
-        return null;
-    }
-
-    return $value;
-}
-
 function uploadChildPhoto(array $file): ?string
 {
     if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
@@ -214,7 +182,7 @@ if (isPostRequest()) {
         $errors[] = 'لطفاً نام مستعار معتبر وارد کنید.';
     }
 
-    $dateOfBirth = validChildDateOfBirth($old['date_of_birth']);
+    $dateOfBirth = parseChildBirthDate($old['date_of_birth'], true);
 
     if ($dateOfBirth === null) {
         $errors[] = 'لطفاً تاریخ تولد معتبر و قبل از امروز وارد کنید.';
@@ -349,8 +317,9 @@ require_once __DIR__ . '/header.php';
              </div>
 
                 <div class="form-group">
-                    <label for="date_of_birth">تاریخ تولد</label>
-                    <input type="text" id="date_of_birth" name="date_of_birth" class="shamsi-datepicker" data-datepicker="birth" data-year-past="15" value="<?= e($old['date_of_birth']) ?>" placeholder="۱۳۹۹/۰۵/۱۸" required>
+                    <label for="date_of_birth">تاریخ شمسی تولد</label>
+                    <input type="text" id="date_of_birth" name="date_of_birth" class="shamsi-datepicker" data-datepicker="birth" dir="ltr" inputmode="numeric" autocomplete="off"
+                               data-min-date="<?= e(shamsiDate(earliestChildBirthDate(), 'Y-m-d')) ?>" data-max-date="<?= e(shamsiDate(strtotime('yesterday'), 'Y-m-d')) ?>" value="<?= e($old['date_of_birth']) ?>" placeholder="۱۳۹۹/۰۵/۱۸" required>
              </div>
          </div>
 

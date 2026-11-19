@@ -25,11 +25,22 @@ try {
     $pdo = getDb();
 
     if ($type === 'tuition') {
-        $monthYear = (string) ($_GET['month_year'] ?? '');
+        $monthInput = $_GET['month_year'] ?? null;
+        $paidInInput = $_GET['paid_in'] ?? null;
+        $monthYear = is_string($monthInput) ? portalMonthYear($monthInput) ?? legacyGregorianMonth($monthInput) : null;
+        $paidIn = is_string($paidInInput) ? portalMonthYear($paidInInput) : null;
+        if (($monthInput !== null && $monthInput !== '' && $monthYear === null)
+            || ($paidInInput !== null && $paidIn === null)) {
+            http_response_code(400);
+            exit('ماه انتخاب‌شده برای خروجی معتبر نیست.');
+        }
         $params = [];
         $whereSql = '';
 
-        if (preg_match('/^\d{4}-\d{2}$/', $monthYear)) {
+        if ($paidIn !== null) {
+            $whereSql = ' WHERE tp.payment_date BETWEEN ? AND ?';
+            $params = jalaliMonthToGregorianRange($paidIn);
+        } elseif ($monthYear !== null) {
             $whereSql = ' WHERE tp.month_year = :myear';
             $params[':myear'] = $monthYear;
         }
@@ -86,13 +97,17 @@ try {
                     shamsiDate((string) $row['payment_date']),
                     $methodLabel,
                     $row['notes'] ?? '—',
-                    shamsiDate((string) $row['created_at'], 'with_time'),
+                    shamsiDbTimestamp((string) $row['created_at'], 'with_time'),
                 ];
             }
         })();
 
-        $dateSuffix = $monthYear !== '' ? $monthYear : date('Y-m-d');
-        recordAudit('export.tuition_csv', 'tuition_payment', null, ['month' => $monthYear]);
+        $dateSuffix = $paidIn ?? $monthYear ?? shamsiDate(time(), 'Y-m-d');
+        if ($monthYear !== null && $paidIn === null && legacyGregorianMonth($monthYear) !== null) {
+            $first = new DateTimeImmutable($monthYear . '-01');
+            $dateSuffix = shamsiDate($first->format('Y-m-d'), 'Y-m-d') . '_' . shamsiDate($first->format('Y-m-t'), 'Y-m-d');
+        }
+        recordAudit('export.tuition_csv', 'tuition_payment', null, ['month' => $monthYear, 'paid_in' => $paidIn]);
         streamCsvDownload("tuition-export-{$dateSuffix}.csv", $headers, $generator);
     }
 
@@ -143,12 +158,12 @@ try {
                     shamsiDate((string) $row['payment_date']),
                     $methodLabel,
                     $row['notes'] ?? '—',
-                    shamsiDate((string) $row['created_at'], 'with_time'),
+                    shamsiDbTimestamp((string) $row['created_at'], 'with_time'),
                 ];
             }
         })();
 
-        $dateSuffix = date('Y-m-d');
+        $dateSuffix = shamsiDate(time(), 'Y-m-d');
         recordAudit('export.salary_csv', 'salary_payment', null);
         streamCsvDownload("salary-export-{$dateSuffix}.csv", $headers, $generator);
     }
@@ -237,12 +252,12 @@ try {
                     $row['medical_notes'] ?? '—',
                     $row['second_guardian_name'] ?? '—',
                     $row['second_guardian_phone'] ?? '—',
-                    shamsiDate((string) $row['created_at'], 'with_time'),
+                    shamsiDbTimestamp((string) $row['created_at'], 'with_time'),
                 ];
             }
         })();
 
-        $dateSuffix = date('Y-m-d');
+        $dateSuffix = shamsiDate(time(), 'Y-m-d');
         recordAudit('export.children_csv', 'child', null, ['status' => $statusFilter]);
         streamCsvDownload("children-export-{$dateSuffix}.csv", $headers, $generator);
     }

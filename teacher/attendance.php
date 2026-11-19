@@ -55,23 +55,10 @@ $transitionNotesChips = [
     '🕊️ ورود آرام؛ نیازمند فضای کم‌محرک در شروع صبح',
 ];
 
-function teacherAttendanceDate(string $raw): ?string
-{
-    return teacherValidOperationalDate($raw, 7);
-}
-
-function teacherAttendanceTime(?string $raw): ?string
-{
-    return teacherNormalizeTimeInput($raw);
-}
-
-function teacherTimeForInput(?string $sqlTime): string
-{
-    return teacherFormatTimeShort($sqlTime);
-}
-
 $today        = (new DateTimeImmutable('today'))->format('Y-m-d');
-$selectedDate = teacherAttendanceDate((string) ($_GET['date'] ?? $today)) ?? $today;
+$dateInput = $_GET['date'] ?? null;
+$parsedDate = teacherValidOperationalDate($dateInput);
+$selectedDate = $parsedDate ?? $today;
 $selectedFilter = $_GET['filter'] ?? 'all';
 $selectedFilter = in_array($selectedFilter, ['expected', 'notices', 'unrecorded'], true) ? $selectedFilter : 'all';
 
@@ -84,6 +71,9 @@ $summary     = ['present' => 0, 'late' => 0, 'excused' => 0, 'absent' => 0, 'uns
 
 $successMessage = getFlash('success');
 $errorMessage   = getFlash('error');
+if ($dateInput !== null && $parsedDate === null) {
+    $errorMessage ??= 'تاریخ شمسی را از امروز تا ۷ روز گذشته انتخاب کنید.';
+}
 
 try {
     initializeTeachersTables();
@@ -105,7 +95,7 @@ try {
                 redirect($redirectUrl);
             }
 
-            $postDate = teacherAttendanceDate((string) ($_POST['attendance_date'] ?? ''));
+            $postDate = teacherValidOperationalDate($_POST['attendance_date'] ?? null);
 
             if ($postDate === null) {
                 setFlash('error', 'تاریخ انتخاب‌شده معتبر نیست. حضور و غیاب فقط برای امروز و تا ۷ روز گذشته قابل ثبت است.');
@@ -166,12 +156,12 @@ SQL . ' ' . PORTAL_UPDATE_UNVERIFIED_ATTENDANCE);
                         $notes = substr($notes, 0, 2000);
                     }
 
-                    $checkIn  = teacherAttendanceTime($fields['check_in'] ?? null);
-                    $checkOut = teacherAttendanceTime($fields['check_out'] ?? null);
+                    $checkIn  = optionalIranTime($fields['check_in'] ?? null, 'ساعت ورود را به صورت ۲۴ ساعته وارد کنید، مانند ۰۸:۳۰.');
+                    $checkOut = optionalIranTime($fields['check_out'] ?? null, 'ساعت خروج را به صورت ۲۴ ساعته وارد کنید، مانند ۱۴:۳۰.');
 
                     if ($checkIn === null && in_array($status, ['present', 'late'], true) && $postDate === $today
                         && !array_key_exists($childId, $previousStatuses)) {
-                        $checkIn = date('H:i:00');
+                        $checkIn = date('H:i:s');
                     }
                     [$checkIn, $checkOut] = portalAttendanceTimes($status, $checkIn, $checkOut);
 
@@ -315,14 +305,17 @@ require_once __DIR__ . '/header.php';
 
     <?php if ($classroom !== null): ?>
         <form method="get" action="<?= e(url('teacher/attendance.php')) ?>" class="tp-page-actions">
-            <div>
-                <label for="date" class="sr-only">تاریخ</label>
-                <input type="date" id="date" name="date" class="tp-input" style="width:auto;"
-                    value="<?= e($selectedDate) ?>"
-                    max="<?= e($today) ?>"
-                    min="<?= e($todayObj->modify('-7 days')->format('Y-m-d')) ?>"
-                    onchange="this.form.submit()">
-            </div>
+            <input type="hidden" name="classroom_id" value="<?= e($classroomId) ?>">
+            <?php if ($selectedFilter !== 'all'): ?>
+                <input type="hidden" name="filter" value="<?= e($selectedFilter) ?>">
+            <?php endif; ?>
+            <label for="date" class="sr-only">تاریخ شمسی</label>
+            <input type="text" id="date" name="date" class="tp-input shamsi-datepicker" style="width:auto;"
+                dir="ltr" inputmode="numeric" autocomplete="off" required
+                value="<?= e(shamsiDate($selectedDate, 'numeric')) ?>"
+                data-max-date="<?= e(shamsiDate($today, 'Y-m-d')) ?>"
+                data-min-date="<?= e(shamsiDate($todayObj->modify('-7 days')->format('Y-m-d'), 'Y-m-d')) ?>">
+            <button type="submit" class="tp-btn tp-btn-secondary tp-btn-sm">نمایش</button>
             <?php if (!$isToday): ?>
                 <a href="<?= e(url('teacher/attendance.php')) ?>" class="tp-btn tp-btn-secondary tp-btn-sm">برو به امروز</a>
             <?php endif; ?>
@@ -460,8 +453,8 @@ require_once __DIR__ . '/header.php';
                 $hasRecord     = $currentStatus !== '';
                 $familyNotice = $attendancePlan['notices'][$childId] ?? null;
                 $photoUrl      = !empty($row['photo']) ? url((string) $row['photo']) : '';
-                $checkInShort  = teacherTimeForInput($row['check_in'] ?? null);
-                $checkOutShort = teacherTimeForInput($row['check_out'] ?? null);
+                $checkInShort  = iranTimeForInput($row['check_in'] ?? null);
+                $checkOutShort = iranTimeForInput($row['check_out'] ?? null);
                 $noteVal       = trim((string) ($row['notes'] ?? ''));
                 $pickupVerified = $row['pickup_verified_by'] !== null;
                 $hasExtraData  = $checkInShort !== '' || $checkOutShort !== '' || $noteVal !== '';
@@ -533,23 +526,27 @@ require_once __DIR__ . '/header.php';
                         <div>
                             <label for="in-<?= $childId ?>" class="tp-label">ساعت پذیرش صبح</label>
                             <div class="tp-time-input-group">
-                                <input type="time" id="in-<?= $childId ?>"
+                                <input type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰" id="in-<?= $childId ?>"
                                     name="attendance[<?= $childId ?>][check_in]"
                                     class="tp-input"
                                     <?= $pickupVerified ? 'disabled' : '' ?>
                                     value="<?= e($checkInShort) ?>">
-                                <button type="button" class="tp-now-btn" <?= $pickupVerified ? 'disabled' : '' ?> onclick="setNowTime('in-<?= $childId ?>')" title="ثبت ساعت اکنون">الان</button>
+                                <?php if ($isToday): ?>
+                                    <button type="button" class="tp-now-btn" <?= $pickupVerified ? 'disabled' : '' ?> onclick="setNowTime('in-<?= $childId ?>')" title="ثبت ساعت فعلی تهران">الان</button>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <div>
                             <label for="out-<?= $childId ?>" class="tp-label">ساعت تحویل به والد</label>
                             <div class="tp-time-input-group">
-                                <input type="time" id="out-<?= $childId ?>"
+                                <input type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰" id="out-<?= $childId ?>"
                                     name="attendance[<?= $childId ?>][check_out]"
                                     class="tp-input"
                                     <?= $pickupVerified ? 'disabled' : '' ?>
                                     value="<?= e($checkOutShort) ?>">
-                                <button type="button" class="tp-now-btn" <?= $pickupVerified ? 'disabled' : '' ?> onclick="setNowTime('out-<?= $childId ?>')" title="ثبت ساعت اکنون">الان</button>
+                                <?php if ($isToday): ?>
+                                    <button type="button" class="tp-now-btn" <?= $pickupVerified ? 'disabled' : '' ?> onclick="setNowTime('out-<?= $childId ?>')" title="ثبت ساعت فعلی تهران">الان</button>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <div>
@@ -589,17 +586,16 @@ require_once __DIR__ . '/header.php';
     var currentAttFilter = <?= json_encode($selectedFilter) ?>;
     var allExtraExpanded = false;
 
-    function nowHHMM() {
-        var now = new Date();
-        var hh = String(now.getHours()).padStart(2, '0');
-        var mm = String(now.getMinutes()).padStart(2, '0');
-        return hh + ':' + mm;
+    function currentAttendanceTime() {
+        var localNow = iranLocalNow().toISOString();
+        return localNow.slice(0, 10) === <?= json_encode($selectedDate) ?>
+            ? iranPersianDigits(localNow.slice(11, 19)) : '';
     }
 
     function onChildStatusChange(childId, statusVal) {
         var inInput = document.getElementById('in-' + childId);
         if (inInput && (statusVal === 'present' || statusVal === 'late') && !inInput.value) {
-            inInput.value = nowHHMM();
+            inInput.value = currentAttendanceTime();
         }
         var badge = document.getElementById('rec-badge-' + childId);
         if (badge) {
@@ -615,7 +611,7 @@ require_once __DIR__ . '/header.php';
     }
 
     function setAllAttendance(status) {
-        var timeStr = nowHHMM();
+        var timeStr = currentAttendanceTime();
         document.querySelectorAll('.attendance-row').forEach(function (row) {
             if (row.style.display === 'none' || row.dataset.expected !== '1' || row.hasAttribute('data-pickup-locked')) return;
             var input = row.querySelector('input[type="radio"][value="' + status + '"]');
@@ -633,7 +629,8 @@ require_once __DIR__ . '/header.php';
     function setNowTime(inputId) {
         var el = document.getElementById(inputId);
         if (!el) return;
-        el.value = nowHHMM();
+        var time = currentAttendanceTime();
+        if (time) { el.value = time; }
     }
 
     function setTransitionNote(childId, text) {

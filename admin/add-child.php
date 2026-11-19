@@ -186,8 +186,9 @@ $flashError = getFlash('error');
                         <input type="text" id="preferred_name" name="preferred_name" maxlength="100" value="<?= e($old['preferred_name']) ?>">
                     </div>
                     <div class="form-group">
-                        <label for="date_of_birth">تاریخ تولد (جلالی) <span class="req">*</span></label>
-                        <input type="text" id="date_of_birth" name="date_of_birth" class="shamsi-datepicker" data-datepicker="birth" data-year-past="15" placeholder="۱۳۹۹/۰۵/۱۸" value="<?= e($old['date_of_birth']) ?>" required>
+                        <label for="date_of_birth">تاریخ شمسی تولد <span class="req">*</span></label>
+                        <input type="text" id="date_of_birth" name="date_of_birth" class="shamsi-datepicker" data-datepicker="birth" dir="ltr" inputmode="numeric" autocomplete="off"
+                               data-min-date="<?= e(shamsiDate(earliestChildBirthDate(), 'Y-m-d')) ?>" data-max-date="<?= e(shamsiDate(strtotime('yesterday'), 'Y-m-d')) ?>" placeholder="۱۳۹۹/۰۵/۱۸" value="<?= e($old['date_of_birth']) ?>" required>
                     </div>
                 </div>
                 <div class="form-grid">

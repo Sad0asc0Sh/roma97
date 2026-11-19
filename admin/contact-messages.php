@@ -123,7 +123,7 @@ require_once __DIR__ . '/header.php';
                         </td>
                         <td><?= e($subjectLabel) ?></td>
                         <td style="max-width:340px;white-space:normal;line-height:1.7;"><?= nl2br(e($row['message'])) ?></td>
-                        <td style="white-space:nowrap;"><?= e(shamsiDate((string) $row['created_at'])) ?></td>
+                        <td style="white-space:nowrap;"><?= e(shamsiDbTimestamp((string) $row['created_at'])) ?></td>
                         <td style="white-space:nowrap;">
                             <div class="adm-row-actions">
                                 <form method="post" action="<?= e(url('admin/contact-messages.php')) ?>" class="inline-form">

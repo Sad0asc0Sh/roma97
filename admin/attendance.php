@@ -17,85 +17,10 @@ require_once __DIR__ . '/../includes/school_planning.php';
 requireLogin();
 require_once __DIR__ . '/../includes/portal_rules.php';
 
-function parseAttendanceDateString(string $raw): ?string
-{
-    $parsed = parseJalaliDate($raw);
-    if ($parsed !== null) {
-        return $parsed;
-    }
-
-    if (preg_match('/\A\d{4}-\d{2}-\d{2}\z/', $raw) !== 1) {
-        return null;
-    }
-
-    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $raw);
-
-    return $date !== false && $date->format('Y-m-d') === $raw ? $raw : null;
-}
-
-function attendanceTimeForInput(?string $sqlTime): string
-{
-    if ($sqlTime === null || $sqlTime === '') {
-        return '';
-    }
-
-    if (preg_match('/^\d{2}:\d{2}/', $sqlTime, $matches)) {
-        return $matches[0];
-    }
-
-    return '';
-}
-
-function normalizeAttendanceTime(?string $raw): ?string
-{
-    if ($raw === null) {
-        return null;
-    }
-
-    $raw = trim($raw);
-
-    if ($raw === '') {
-        return null;
-    }
-
-    if (preg_match('/\A([01]\d|2[0-3]):[0-5]\d\z/', $raw) === 1) {
-        return $raw . ':00';
-    }
-
-    if (preg_match('/\A([01]\d|2[0-3]):[0-5]\d:[0-5]\d\z/', $raw) === 1) {
-        return $raw;
-    }
-
-    return null;
-}
-
 function normalizeAttendanceNotes(string $notes): ?string
 {
     $notes = mb_substr(trim($notes), 0, 5000, 'UTF-8');
     return $notes === '' ? null : $notes;
-}
-
-function attendanceAgeFromDob(string $dateOfBirth): string
-{
-    try {
-        $birthDate = new DateTimeImmutable($dateOfBirth);
-        $today = new DateTimeImmutable('today');
-
-        if ($birthDate >= $today) {
-            return 'نوزاد';
-        }
-
-        $years = $birthDate->diff($today)->y;
-        $months = $birthDate->diff($today)->m;
-
-        if ($years < 1) {
-            return persianNumber((string) $months) . ' ماه';
-        }
-
-        return persianNumber((string) $years) . ' سال';
-    } catch (Throwable) {
-        return '—';
-    }
 }
 
 function attendanceStatusValue(array $child): string
@@ -183,7 +108,8 @@ function renderPickupControls(array $child): void
 
 $today = (new DateTimeImmutable('today'))->format('Y-m-d');
 $dateInput = $_GET['date'] ?? null;
-$selectedDate = is_string($dateInput) ? parseAttendanceDateString($dateInput) ?? $today : $today;
+$parsedDate = parseIranDate($dateInput);
+$selectedDate = $parsedDate ?? $today;
 $filterLabels = [
     'all' => 'همه وضعیت‌ها',
     'expected' => 'کودکان مورد انتظار',
@@ -201,7 +127,7 @@ $filterQuery = array_filter([
     'child_id' => $selectedChildId,
 ]);
 $attendanceUrl = static fn (string $date): string => url(
-    'admin/attendance.php?' . http_build_query(['date' => $date] + $filterQuery)
+    'admin/attendance.php?' . http_build_query(['date' => shamsiDate($date, 'Y-m-d')] + $filterQuery)
 );
 
 $scope = "c.status = 'active'";
@@ -226,6 +152,9 @@ $classrooms = [];
 $plan = ['holiday' => null, 'expected' => [], 'missing' => [], 'notices' => []];
 $successMessage = getFlash('success');
 $errorMessage = getFlash('error');
+if ($dateInput !== null && $parsedDate === null) {
+    $errorMessage ??= 'تاریخ حضور را به شمسی وارد کنید، مانند ۱۴۰۵/۰۵/۱۸.';
+}
 
 try {
     initializeAttendanceTable();
@@ -235,7 +164,7 @@ try {
     if (isPostRequest()) {
         $csrfToken = $_POST['csrf_token'] ?? null;
         $postDate = $_POST['attendance_date'] ?? null;
-        $parsedPostDate = is_string($postDate) ? parseAttendanceDateString($postDate) : null;
+        $parsedPostDate = parseIranDate($postDate);
 
         if (!is_string($csrfToken) || !validateCsrfToken($csrfToken)) {
             setFlash('error', 'درخواست نامعتبر است. لطفاً دوباره تلاش کنید.');
@@ -312,13 +241,9 @@ SQL;
             $pickupChildId = $pickup === null ? null : (int) $pickup[1];
             if ($pickupChildId !== null) {
                 $fields = $attendanceData[$pickupChildId] ?? [];
-                $checkoutInput = is_string($fields['check_out'] ?? null) ? $fields['check_out'] : '';
-                $checkout = normalizeAttendanceTime($checkoutInput);
-                $originalCheckout = normalizeAttendanceTime(is_string($fields['original_checkout'] ?? null) ? $fields['original_checkout'] : null);
-                if ($checkoutInput !== '' && $checkout === null) {
-                    throw new InvalidArgumentException('ساعت خروج معتبر نیست.');
-                }
-                if ($checkout !== null && $originalCheckout !== null && substr($checkout, 0, 5) === substr($originalCheckout, 0, 5)) {
+                $checkout = optionalIranTime($fields['check_out'] ?? null, 'ساعت خروج را به صورت ۲۴ ساعته وارد کنید، مانند ۱۴:۳۰.');
+                $originalCheckout = optionalIranTime($fields['original_checkout'] ?? null, 'ساعت خروج ثبت‌شده معتبر نیست. صفحه را دوباره باز کنید.');
+                if ($checkout === $originalCheckout) {
                     $checkout = null;
                 }
                 $pickupNotes = $fields['notes'] ?? null;
@@ -343,11 +268,9 @@ SQL;
                     continue;
                 }
 
-                $checkInRaw = isset($fields['check_in']) ? (string) $fields['check_in'] : '';
-                $checkOutRaw = isset($fields['check_out']) ? (string) $fields['check_out'] : '';
                 $notes = normalizeAttendanceNotes(is_string($fields['notes'] ?? null) ? $fields['notes'] : '');
-                $checkIn = normalizeAttendanceTime($checkInRaw);
-                $checkOut = normalizeAttendanceTime($checkOutRaw);
+                $checkIn = optionalIranTime($fields['check_in'] ?? null, 'ساعت ورود را به صورت ۲۴ ساعته وارد کنید، مانند ۰۸:۳۰.');
+                $checkOut = optionalIranTime($fields['check_out'] ?? null, 'ساعت خروج را به صورت ۲۴ ساعته وارد کنید، مانند ۱۴:۳۰.');
                 [$checkIn, $checkOut] = portalAttendanceTimes($status, $checkIn, $checkOut);
 
                 $values = [
@@ -359,7 +282,7 @@ SQL;
                     ':notes' => $notes,
                 ];
                 if ($filter === 'open_checkout') {
-                    $values[':original_checkout'] = normalizeAttendanceTime(is_string($fields['original_checkout'] ?? null) ? $fields['original_checkout'] : null);
+                    $values[':original_checkout'] = optionalIranTime($fields['original_checkout'] ?? null, 'ساعت خروج ثبت‌شده معتبر نیست. صفحه را دوباره باز کنید.');
                 }
                 $saveAttendance->execute($values);
                 if ($saveAttendance->rowCount() > 0 && ($previousStatuses[$childId] ?? null) !== $status) {
@@ -372,7 +295,7 @@ SQL;
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            if ($pickup !== null && $transactionError instanceof InvalidArgumentException) {
+            if ($transactionError instanceof InvalidArgumentException) {
                 setFlash('error', $transactionError->getMessage());
                 redirect($attendanceUrl($parsedPostDate));
             }
@@ -433,7 +356,7 @@ SQL;
         ]);
 
         $flashMessage = $pickupChildId !== null
-            ? 'تحویل کودک در ساعت ' . persianNumber(substr($confirmedCheckout, 0, 5)) . ' تأیید شد.'
+            ? 'تحویل کودک در ساعت ' . formatIranTime($confirmedCheckout) . ' تأیید شد.'
             : 'حضور و غیاب برای تاریخ ' . $displayFlashDate . ' ذخیره شد.';
 
         if ($changedAttendance === [] && $pickupChildId === null) {
@@ -525,8 +448,8 @@ require_once __DIR__ . '/header.php';
             <input type="hidden" name="child_id" value="<?= e($selectedChildId) ?>">
         <?php endif; ?>
         <div class="attendance-filter-field adm-filter-field">
-            <label for="attendance_date_pick" class="form-label">تاریخ</label>
-            <input type="text" id="attendance_date_pick" name="date" class="form-control shamsi-datepicker" value="<?= e(shamsiDate($selectedDate, 'numeric')) ?>">
+            <label for="attendance_date_pick" class="form-label">تاریخ شمسی</label>
+            <input type="text" id="attendance_date_pick" name="date" class="form-control shamsi-datepicker" dir="ltr" inputmode="numeric" autocomplete="off" required value="<?= e(shamsiDate($selectedDate, 'numeric')) ?>">
         </div>
         <div class="attendance-filter-field adm-filter-field">
             <label for="attendance_filter" class="form-label">وضعیت</label>
@@ -646,9 +569,9 @@ require_once __DIR__ . '/header.php';
                                                 <input type="hidden" name="attendance[<?= e($cid) ?>][original_checkout]" value="<?= e($child['check_out']) ?>">
                                                 <input
                                                     class="form-control time-input"
-                                                    type="time"
+                                                    type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰"
                                                     name="attendance[<?= e((string) $cid) ?>][check_in]"
-                                                    value="<?= e(attendanceTimeForInput($child['check_in'] ?? null)) ?>"
+                                                    value="<?= e(iranTimeForInput($child['check_in'] ?? null)) ?>"
                                                     <?= $child['pickup_verified_by'] !== null ? 'disabled' : '' ?>
                                                     style="padding:4px 8px;"
                                                 >
@@ -656,9 +579,9 @@ require_once __DIR__ . '/header.php';
                                             <td>
                                                 <input
                                                     class="form-control time-input"
-                                                    type="time"
+                                                    type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰"
                                                     name="attendance[<?= e((string) $cid) ?>][check_out]"
-                                                    value="<?= e(attendanceTimeForInput($child['check_out'] ?? null)) ?>"
+                                                    value="<?= e(iranTimeForInput($child['check_out'] ?? null)) ?>"
                                                     <?= $child['pickup_verified_by'] !== null ? 'disabled' : '' ?>
                                                     style="padding:4px 8px;"
                                                 >
@@ -699,7 +622,7 @@ require_once __DIR__ . '/header.php';
                                     <?php endif; ?>
                                     <div>
                                         <h2 class="attendance-card-name" style="font-size:1rem;font-weight:700;margin:0;"><?= e($fullName !== '' ? $fullName : 'کودک') ?></h2>
-                                        <p class="attendance-card-meta" style="font-size:0.8rem;color:var(--adm-text-muted);margin:2px 0 0;"><?= e(attendanceAgeFromDob((string) ($child['date_of_birth'] ?? ''))) ?> · <?= e($parentName !== '' ? $parentName : '—') ?><?php if ($classroomId === null && !empty($child['classroom_name'])): ?> · <?= e($child['classroom_name']) ?><?php endif; ?></p>
+                                        <p class="attendance-card-meta" style="font-size:0.8rem;color:var(--adm-text-muted);margin:2px 0 0;"><?= e(formatIranAge((string) ($child['date_of_birth'] ?? ''))) ?> · <?= e($parentName !== '' ? $parentName : '—') ?><?php if ($classroomId === null && !empty($child['classroom_name'])): ?> · <?= e($child['classroom_name']) ?><?php endif; ?></p>
                                     </div>
                                 </div>
                                 <?php renderFamilyAttendanceNotice($plan['notices'][$cid] ?? null); ?>
@@ -716,9 +639,9 @@ require_once __DIR__ . '/header.php';
                                         ورود
                                         <input
                                             class="form-control time-input"
-                                            type="time"
+                                            type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰"
                                             name="mobile_attendance[<?= e((string) $cid) ?>][check_in]"
-                                            value="<?= e(attendanceTimeForInput($child['check_in'] ?? null)) ?>"
+                                            value="<?= e(iranTimeForInput($child['check_in'] ?? null)) ?>"
                                             disabled
                                         >
                                     </label>
@@ -727,9 +650,9 @@ require_once __DIR__ . '/header.php';
                                         <input type="hidden" name="mobile_attendance[<?= e($cid) ?>][original_checkout]" value="<?= e($child['check_out']) ?>" disabled>
                                         <input
                                             class="form-control time-input"
-                                            type="time"
+                                            type="text" data-iran-time dir="ltr" inputmode="numeric" placeholder="۱۴:۳۰"
                                             name="mobile_attendance[<?= e((string) $cid) ?>][check_out]"
-                                            value="<?= e(attendanceTimeForInput($child['check_out'] ?? null)) ?>"
+                                            value="<?= e(iranTimeForInput($child['check_out'] ?? null)) ?>"
                                             disabled
                                         >
                                     </label>

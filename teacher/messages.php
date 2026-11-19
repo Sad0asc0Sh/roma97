@@ -325,7 +325,7 @@ require_once __DIR__ . '/header.php';
                                         گیرنده: <?= e($recipientName) ?>
                                     </span>
                                     <span style="font-size:0.75rem;color:var(--tp-text-muted);">
-                                        <?= e(shamsiDate((string) $msg['created_at'], 'with_time')) ?>
+                                        <?= e(shamsiDbTimestamp((string) $msg['created_at'], 'with_time')) ?>
                                     </span>
                                 </div>
                                 <h3 style="margin:0 0 4px;font-size:0.98rem;"><?= e((string) $msg['subject']) ?></h3>
@@ -374,7 +374,7 @@ require_once __DIR__ . '/header.php';
             </div>
             <div style="display:flex;flex-direction:column;gap:8px;font-size:0.88rem;margin-bottom:16px;">
                 <div><strong>گیرنده:</strong> <?= $viewMessage['parent_id'] ? e($viewMessage['first_name'] . ' ' . $viewMessage['last_name']) : 'همه والدین کلاس' ?></div>
-                <div><strong>تاریخ ارسال:</strong> <?= e(shamsiDate((string) $viewMessage['created_at'], 'with_day_time')) ?></div>
+                <div><strong>تاریخ ارسال:</strong> <?= e(shamsiDbTimestamp((string) $viewMessage['created_at'], 'with_day_time')) ?></div>
                 <div><strong>موضوع:</strong> <?= e((string) $viewMessage['subject']) ?></div>
             </div>
             <div style="background:var(--tp-surface-soft);border:1px solid var(--tp-border-light);border-radius:var(--tp-radius-sm);padding:16px;line-height:2;font-size:0.92rem;margin-bottom:18px;">

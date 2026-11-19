@@ -70,7 +70,7 @@ try {
 $navChildrenActive = in_array($currentPage, ['children.php', 'child-detail.php'], true);
 ?>
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa-IR" dir="rtl" data-iran-calendar="<?= e(iranCalendarData()) ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">

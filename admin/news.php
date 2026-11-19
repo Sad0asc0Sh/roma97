@@ -140,13 +140,6 @@ function uploadNewsImage(array $file): ?string
     return 'assets/uploads/' . $fileName;
 }
 
-function formatAdminNewsDate(string $date): string
-{
-    $timestamp = strtotime($date);
-
-    return $timestamp === false ? $date : shamsiDate(date('Y-m-d', $timestamp));
-}
-
 try {
     initializeCmsTables();
     $pdo = getDb();
@@ -384,7 +377,7 @@ require_once __DIR__ . '/header.php';
                         <?php foreach ($newsItems as $newsItem): ?>
                             <tr>
                                 <td style="font-weight:600;"><?= e($newsItem['title']) ?></td>
-                                <td><?= e(formatAdminNewsDate($newsItem['created_at'])) ?></td>
+                                <td><?= e(shamsiDbTimestamp($newsItem['created_at'])) ?></td>
                                 <td>
                                     <a href="<?= e(url('admin/news.php?edit=' . $newsItem['id'])) ?>" class="btn btn-sm btn-secondary">ویرایش</a>
                                     <form method="post" action="<?= e(url('admin/news.php')) ?>" class="inline-form" data-confirm="آیا از حذف خبر «<?= e($newsItem['title']) ?>» اطمینان دارید؟ این عملیات قابل بازگشت نیست.">

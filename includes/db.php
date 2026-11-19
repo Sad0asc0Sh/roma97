@@ -18,7 +18,7 @@ function getDb(): PDO
     $portPart = defined('DB_PORT') && (string) DB_PORT !== '' && !str_contains(DB_HOST, 'port=') ? ';port=' . DB_PORT : '';
     $dsn = 'mysql:host=' . DB_HOST . $portPart . ';dbname=' . DB_NAME . ';charset=utf8mb4';
 
-    $pdo = new PDO($dsn, DB_USER, DB_PASS, [
+    $connection = new PDO($dsn, DB_USER, DB_PASS, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
@@ -26,9 +26,36 @@ function getDb(): PDO
     ]);
     
     // Set strict SQL mode for data integrity
-    $pdo->exec("SET sql_mode = 'STRICT_ALL_TABLES,NO_ENGINE_SUBSTITUTION'");
+    $connection->exec("SET sql_mode = 'STRICT_ALL_TABLES,NO_ENGINE_SUBSTITUTION'");
 
-    return $pdo;
+    // Keep SQL NOW(), CURDATE(), and TIMESTAMP display on the same clock as PHP.
+    // A summer date after Iran stopped changing clocks also detects outdated zone tables.
+    $zone = new DateTimeZone(IRAN_TIMEZONE);
+    $probe = new DateTimeImmutable('2024-07-01 00:00:00', new DateTimeZone('UTC'));
+    $zoneName = $connection->quote($zone->getName());
+    $converted = $connection->query("SELECT CONVERT_TZ('2024-07-01 00:00:00', '+00:00', {$zoneName})")->fetchColumn();
+    $sessionZone = $converted === $probe->setTimezone($zone)->format('Y-m-d H:i:s')
+        ? $zone->getName()
+        : (new DateTimeImmutable('now', $zone))->format('P');
+    $connection->exec('SET SESSION time_zone = ' . $connection->quote($sessionZone));
+
+    return $pdo = $connection;
+}
+
+/** Read a SQL TIMESTAMP using the session zone, including fixed-offset hosts. */
+function iranDbTimestamp(?string $value): ?DateTimeImmutable
+{
+    if ($value === null || $value === '') {
+        return null;
+    }
+    static $sessionZone = null;
+    $sessionZone ??= new DateTimeZone((string) getDb()->query('SELECT @@SESSION.time_zone')->fetchColumn());
+    return iranDateTime($value, $sessionZone);
+}
+
+function shamsiDbTimestamp(?string $value, string $format = 'full'): string
+{
+    return shamsiDate(iranDbTimestamp($value)?->getTimestamp(), $format);
 }
 
 /**

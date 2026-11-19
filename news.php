@@ -194,9 +194,9 @@ require_once __DIR__ . '/templates/header.php';
                     </span>
                     <h1 class="article__title"><?php echo e($articleTitle); ?></h1>
                     <div class="article__meta">
-                        <time class="article__meta-item" datetime="<?php echo e((string) $singleNewsItem['created_at']); ?>">
+                        <time class="article__meta-item" datetime="<?php echo e(iranDbTimestamp($singleNewsItem['created_at'])?->format(DATE_ATOM)); ?>">
                             <?php echo icon('calendar', 14); ?>
-                            <?php echo e(shamsiDate((string) $singleNewsItem['created_at'])); ?>
+                            <?php echo e(shamsiDbTimestamp((string) $singleNewsItem['created_at'])); ?>
                         </time>
                         <span class="article__meta-item">
                             <?php echo icon('clock', 14); ?>
@@ -271,7 +271,7 @@ require_once __DIR__ . '/templates/header.php';
                         <div class="news-card__body">
                             <span class="news-card__date">
                                 <?php echo icon('calendar', 14); ?>
-                                <?php echo e(shamsiDate((string) $rel['created_at'])); ?>
+                                <?php echo e(shamsiDbTimestamp((string) $rel['created_at'])); ?>
                             </span>
                             <h3 class="news-card__title">
                                 <a href="<?php echo e($relUrl); ?>"><?php echo e((string) $rel['title']); ?></a>
@@ -363,7 +363,7 @@ require_once __DIR__ . '/templates/header.php';
                             <div class="news-card__body">
                                 <span class="news-card__date">
                                     <?php echo icon('calendar', 14); ?>
-                                    <?php echo e(shamsiDate((string) $newsItem['created_at'])); ?>
+                                    <?php echo e(shamsiDbTimestamp((string) $newsItem['created_at'])); ?>
                                 </span>
                                 <h2 class="news-card__title">
                                     <a href="<?php echo e($itemUrl); ?>"><?php echo e((string) $newsItem['title']); ?></a>

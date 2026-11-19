@@ -58,13 +58,9 @@ try {
         $category      = (string) ($_POST['category'] ?? 'other');
         $title         = trim((string) ($_POST['title'] ?? ''));
         $amount        = (float) ($_POST['amount'] ?? 0);
-        $expenseDateRaw = (string) ($_POST['expense_date'] ?? date('Y-m-d'));
-        $expenseDate   = parseJalaliDate($expenseDateRaw) ?? $expenseDateRaw;
+        $expenseDate   = parseIranDate($_POST['expense_date'] ?? date('Y-m-d'));
         $paymentMethod = (string) ($_POST['payment_method'] ?? 'cash');
         $notes         = trim((string) ($_POST['notes'] ?? ''));
-
-        $dateTimeCheck = DateTime::createFromFormat('Y-m-d', $expenseDate);
-        $isValidDate = $dateTimeCheck && $dateTimeCheck->format('Y-m-d') === $expenseDate;
 
         $allowedCategories = ['rent', 'utilities', 'food', 'maintenance', 'supplies', 'insurance', 'sms', 'other'];
         $allowedMethods    = ['cash', 'bank_transfer', 'check'];
@@ -73,11 +69,11 @@ try {
             $title === ''
             || $amount <= 0
             || $amount >= 1000000000
-            || !$isValidDate
+            || $expenseDate === null
             || !in_array($category, $allowedCategories, true)
             || !in_array($paymentMethod, $allowedMethods, true)
         ) {
-            setFlash('error', 'لطفاً همه فیلدهای الزامی را به‌درستی پر کنید (عنوان، مبلغ معتبر، تاریخ معتبر).');
+            setFlash('error', 'عنوان، مبلغ، تاریخ شمسی هزینه و روش پرداخت را بررسی کنید.');
             redirect(url('admin/expenses.php'));
         }
 
@@ -185,8 +181,8 @@ require_once __DIR__ . '/header.php';
                 </div>
 
                 <div class="form-group">
-                    <label for="expense_date" class="form-label">تاریخ هزینه</label>
-                    <input type="text" name="expense_date" id="expense_date" class="form-control shamsi-datepicker" value="<?= e(shamsiDate(date('Y-m-d'), 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸" required>
+                    <label for="expense_date" class="form-label">تاریخ شمسی هزینه</label>
+                    <input type="text" name="expense_date" id="expense_date" class="form-control shamsi-datepicker" dir="ltr" inputmode="numeric" autocomplete="off" value="<?= e(shamsiDate(date('Y-m-d'), 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸" required>
                 </div>
 
                 <div class="form-group">

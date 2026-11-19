@@ -760,7 +760,7 @@ foreach ($galleryItems as $g) {
                     <div class="news-card__body">
                         <span class="news-card__date">
                             <?php echo icon('calendar', 14); ?>
-                            <?php echo e(shamsiDate((string) $news['created_at'])); ?>
+                            <?php echo e(shamsiDbTimestamp((string) $news['created_at'])); ?>
                         </span>
                         <h3 class="news-card__title">
                             <a href="<?php echo e($newsUrl); ?>"><?php echo e((string) $news['title']); ?></a>

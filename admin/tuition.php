@@ -24,15 +24,12 @@ $invoiceFilters = ['review' => 'نیازمند پیگیری', 'needs_due_date' =
 $filterInput = $_GET['filter'] ?? null;
 $invoiceFilter = is_string($filterInput) && isset($invoiceFilters[$filterInput]) ? $filterInput : 'review';
 $monthInput = $_GET['month_year'] ?? null;
-$filterMonth = is_string($monthInput) ? portalMonthYear($monthInput) : null;
+$filterMonth = is_string($monthInput) ? portalMonthYear($monthInput) ?? legacyGregorianMonth($monthInput) : null;
 $today = date('Y-m-d');
 
 // Month shown in the status table (defaults to the current Shamsi month).
-$viewMonthYear = $filterMonth;
-if ($viewMonthYear === null) {
-    [$vJy, $vJm] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
-    $viewMonthYear = sprintf('%04d-%02d', $vJy, $vJm);
-}
+$viewMonthYear = $filterMonth ?? shamsiDate($today, 'Y-m');
+$isLegacyPeriod = legacyGregorianMonth($viewMonthYear) !== null;
 $monthChoices = getShamsiMonthYearChoices(24, 24);
 if (!in_array($viewMonthYear, array_column($monthChoices, 'value'), true)) {
     $monthChoices[] = ['value' => $viewMonthYear, 'label' => formatShamsiMonthYear($viewMonthYear)];
@@ -57,10 +54,10 @@ try {
 
         if ($formAction === 'set_plan' || $formAction === 'set_missing_due_dates') {
             $monthValue = $_POST['plan_month_year'] ?? null;
-            $monthYear = is_string($monthValue) ? portalMonthYear($monthValue) : null;
+            $monthYear = is_string($monthValue) ? portalMonthYear($monthValue) ?? legacyGregorianMonth($monthValue) : null;
             $dateIncluded = array_key_exists('due_date', $_POST);
             $dateValue = $_POST['due_date'] ?? null;
-            $dueDate = is_string($dateValue) ? parseJalaliDate($dateValue) : null;
+            $dueDate = parseIranDate($dateValue);
             if ($monthYear === null || (($dateIncluded || $formAction === 'set_missing_due_dates') && $dueDate === null)) {
                 setFlash('error', 'ماه شهریه و تاریخ سررسید معتبر را انتخاب کنید.');
                 redirect(url('admin/tuition.php#invoicePlan'));
@@ -92,6 +89,10 @@ try {
                 setFlash('error', 'کودک، مبلغ و یادداشت مغایرت را بررسی کنید.');
                 redirect($editUrl);
             }
+            if (legacyGregorianMonth($monthYear) !== null && !tuitionPeriodExists($pdo, $childId, $monthYear)) {
+                setFlash('error', 'برای این کودک در دورهٔ قدیمی سابقهٔ شهریه‌ای ثبت نشده است. یک ماه شمسی انتخاب کنید.');
+                redirect($editUrl);
+            }
             $planStmt = $pdo->prepare(
                 'INSERT INTO tuition_plans (child_id, month_year, expected_amount, due_date, discrepancy_note)
                  VALUES (:cid, :myear, :exp, :due_date, :discrepancy)
@@ -121,19 +122,20 @@ try {
 
         $childId       = (int) ($_POST['child_id'] ?? 0);
         $amount        = (float) ($_POST['amount'] ?? 0);
-        $paymentDateRaw = (string) ($_POST['payment_date'] ?? date('Y-m-d'));
-        $paymentDate   = parseJalaliDate($paymentDateRaw) ?? $paymentDateRaw;
+        $paymentDate   = parseIranDate($_POST['payment_date'] ?? $today);
         $paymentMethod = (string) ($_POST['payment_method'] ?? 'cash');
-        $monthYear     = portalMonthYear((string) ($_POST['month_year'] ?? ''));
+        $monthValue    = $_POST['month_year'] ?? null;
+        $monthYear     = is_string($monthValue) ? portalMonthYear($monthValue) ?? legacyGregorianMonth($monthValue) : null;
         $notes         = trim((string) ($_POST['notes'] ?? ''));
 
-        $dateTimeCheck = DateTime::createFromFormat('Y-m-d', $paymentDate);
-        $isValidDate = $dateTimeCheck && $dateTimeCheck->format('Y-m-d') === $paymentDate;
-
         $validMethods = ['cash', 'bank_transfer', 'check'];
-        if ($childId <= 0 || $amount <= 0 || $amount >= 1000000000 || !$isValidDate || $monthYear === null || !in_array($paymentMethod, $validMethods, true)) {
-            setFlash('error', 'لطفاً همه فیلدهای الزامی را به‌درستی پر کنید.');
+        if ($childId <= 0 || $amount <= 0 || $amount >= 1000000000 || $paymentDate === null || $monthYear === null || !in_array($paymentMethod, $validMethods, true)) {
+            setFlash('error', 'کودک، مبلغ، تاریخ شمسی پرداخت و ماه شهریه را بررسی کنید.');
             redirect(url('admin/tuition.php'));
+        }
+        if (legacyGregorianMonth($monthYear) !== null && !tuitionPeriodExists($pdo, $childId, $monthYear)) {
+            setFlash('error', 'برای این کودک در دورهٔ قدیمی سابقهٔ شهریه‌ای ثبت نشده است. یک ماه شمسی انتخاب کنید.');
+            redirect(url('admin/tuition.php#recordForm'));
         }
 
         // Resolve the owning parent and the names used in the receipt.
@@ -242,6 +244,15 @@ try {
     $children = $childrenStmt->fetchAll();
     $selectedChild = array_column($children, null, 'id')[$selectedChildId] ?? null;
 
+    $offeredMonths = array_fill_keys(array_column($monthChoices, 'value'), true);
+    $storedMonths = $pdo->query('SELECT month_year FROM tuition_plans UNION SELECT month_year FROM tuition_payments ORDER BY month_year DESC');
+    foreach ($storedMonths->fetchAll(PDO::FETCH_COLUMN) as $storedMonth) {
+        if (!isset($offeredMonths[$storedMonth])
+            && (portalMonthYear($storedMonth) === $storedMonth || legacyGregorianMonth($storedMonth) !== null)) {
+            $monthChoices[] = ['value' => $storedMonth, 'label' => formatShamsiMonthYear($storedMonth)];
+        }
+    }
+
     $bills = tuitionInvoiceRows($pdo, $invoiceFilter === 'all' ? $viewMonthYear : $filterMonth);
     $billingRows = [];
     foreach ($bills as $bill) {
@@ -251,14 +262,14 @@ try {
         $bill['state'] = tuitionInvoiceState($bill, $today);
         $billingRows[] = $bill;
     }
-    if ($selectedChild !== null) {
+    if ($selectedChild !== null && (!$isLegacyPeriod || $selectedInvoice !== null)) {
         $selectedBreakdown = $selectedInvoice ?? childTuitionBreakdown($pdo, $selectedChildId, $viewMonthYear);
     }
 
     $monthTotals = [];
     if ($invoiceFilter === 'all') {
         $actual = array_column($billingRows, null, 'child_id');
-        $active = activeChildrenTuitionBreakdown($pdo, $viewMonthYear);
+        $active = $isLegacyPeriod ? [] : activeChildrenTuitionBreakdown($pdo, $viewMonthYear);
         foreach (array_diff_key($active, $actual) as $projection) {
             $projection += ['month_year' => $viewMonthYear, 'due_date' => null, 'discrepancy_note' => null];
             $projection['state'] = tuitionInvoiceState($projection, $today);
@@ -362,8 +373,8 @@ require_once __DIR__ . '/header.php';
                 </div>
 
                 <div class="form-group">
-                    <label for="payment_date" class="form-label">تاریخ پرداخت</label>
-                    <input type="text" name="payment_date" id="payment_date" class="form-control shamsi-datepicker" value="<?= e(shamsiDate(date('Y-m-d'), 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸" required>
+                    <label for="payment_date" class="form-label">تاریخ شمسی پرداخت</label>
+                    <input type="text" name="payment_date" id="payment_date" class="form-control shamsi-datepicker" dir="ltr" inputmode="numeric" autocomplete="off" value="<?= e(shamsiDate(date('Y-m-d'), 'numeric')) ?>" placeholder="۱۴۰۵/۰۵/۱۸" required>
                 </div>
 
                 <div class="form-group">
@@ -415,7 +426,7 @@ require_once __DIR__ . '/header.php';
                     <button type="submit" class="btn btn-secondary">نمایش صورتحساب</button>
                 </form>
 
-                <?php if ($selectedChild !== null): ?>
+                <?php if ($selectedBreakdown !== null): ?>
                 <form method="post" action="<?= e(url('admin/tuition.php')) ?>" class="invoice-edit">
                     <h3><?= e(trim($selectedChild['first_name'] . ' ' . $selectedChild['last_name']) . ' · ' . formatShamsiMonthYear($viewMonthYear)) ?></h3>
                     <input type="hidden" name="csrf_token" value="<?= e(generateCsrfToken()) ?>">
@@ -429,7 +440,7 @@ require_once __DIR__ . '/header.php';
                     </div>
                     <div class="form-group">
                         <label for="invoice_due_date" class="form-label">سررسید پرداخت (شمسی)</label>
-                        <input type="text" name="due_date" id="invoice_due_date" class="form-control shamsi-datepicker" required
+                        <input type="text" name="due_date" id="invoice_due_date" class="form-control shamsi-datepicker" dir="ltr" inputmode="numeric" autocomplete="off" required
                                value="<?= e(empty($selectedInvoice['due_date']) ? '' : shamsiDate($selectedInvoice['due_date'], 'numeric')) ?>">
                     </div>
                     <div class="form-group">
@@ -457,7 +468,7 @@ require_once __DIR__ . '/header.php';
                             </select>
                         </label>
                         <label for="bulk_due_date">سررسید (شمسی)
-                            <input type="text" name="due_date" id="bulk_due_date" class="form-control shamsi-datepicker" required>
+                            <input type="text" name="due_date" id="bulk_due_date" class="form-control shamsi-datepicker" dir="ltr" inputmode="numeric" autocomplete="off" required>
                         </label>
                         <button type="submit" class="btn btn-secondary">ثبت سررسید گروهی</button>
                     </form>

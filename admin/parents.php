@@ -163,7 +163,7 @@ $fe=getFlash('error');$fs=getFlash('success');$resetLinkUrl=getFlash('reset_link
                 </td>
                 <td class="muted"><?= !empty($p['email']) ? e($p['email']) : '—' ?></td>
                 <td><?php $bc=match($p['status']){'active'=>'badge-success','pending'=>'badge-warning','suspended'=>'badge-danger',default=>'badge-info'};$sl=match($p['status']){'active'=>'فعال','pending'=>'در انتظار تأیید','suspended'=>'مسدود',default=>$p['status']};?><span class="badge <?=$bc?>"><?=$sl?></span></td>
-                <td class="muted"><?=e(shamsiDate((string)$p['created_at']))?></td>
+                <td class="muted"><?=e(shamsiDbTimestamp((string)$p['created_at']))?></td>
                 <td>
                     <div class="adm-row-actions">
                         <?php if($p['status']==='pending'):?>

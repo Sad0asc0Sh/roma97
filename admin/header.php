@@ -60,7 +60,7 @@ $hasContentGroup = $navCanAny(['admin/slides.php', 'admin/gallery.php', 'admin/n
 $hasSystemGroup = $navCanAny(['admin/audit.php', 'admin/backup.php', 'admin/settings.php']);
 ?>
 <!doctype html>
-<html lang="fa" dir="rtl" class="admin-shell-root">
+<html lang="fa-IR" dir="rtl" class="admin-shell-root" data-iran-calendar="<?= e(iranCalendarData()) ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">

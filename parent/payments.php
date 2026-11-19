@@ -35,8 +35,7 @@ try {
     $pdo = getDb();
     ensureTuitionInvoiceColumns($pdo);
 
-    [$jy, $jm] = gregorianToJalali((int) date('Y'), (int) date('n'), (int) date('j'));
-    $currentMonthYear = sprintf('%04d-%02d', $jy, $jm);
+    $currentMonthYear = shamsiDate(time(), 'Y-m');
 
     // Active children of this parent, with their current-month tuition position.
     $kidsStmt = $pdo->prepare(

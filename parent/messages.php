@@ -185,7 +185,7 @@ require_once __DIR__ . '/header.php';
                                 <span class="message-sender">
                                     <span class="sender-badge <?= e($msg['sender_type']) ?>"><?= e($msg['sender_name'] ?? 'کارمند') ?></span>
                             </span>
-                                <span class="message-date"><?= e(formatPersianDate($msg['created_at']))?></span>
+                                <span class="message-date"><?= e(shamsiDbTimestamp($msg['created_at']))?></span>
                         </div>
                             <h3 class="message-subject"><?= e($msg['subject'])?></h3>
                             <p class="message-preview">
@@ -265,7 +265,7 @@ require_once __DIR__ . '/header.php';
             <div class="card-body">
                 <div class="msg-meta">
                     <p><strong>از</strong> <?= e($viewMessage['sender_name'])?></p>
-                    <p><strong>تاریخ</strong> <?= e(formatPersianDate($viewMessage['created_at']))?></p>
+                    <p><strong>تاریخ</strong> <?= e(shamsiDbTimestamp($viewMessage['created_at']))?></p>
                     <p><strong>موضوع</strong> <?= e($viewMessage['subject'])?></p>
             </div>
                 <hr>

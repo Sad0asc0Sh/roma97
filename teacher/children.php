@@ -118,7 +118,7 @@ require_once __DIR__ . '/header.php';
             $hasMedical  = trim((string) ($child['medical_notes'] ?? '')) !== '';
             $attStatus   = $child['attendance_status'] ?? null;
             $repMood     = $child['report_mood'] ?? null;
-            $age         = teacherChildDisplayAge((string) $child['date_of_birth']);
+            $age         = formatIranAge((string) $child['date_of_birth']);
             $genderLabel = teacherChildGenderLabel($child['gender'] ?? null);
             ?>
             <article class="tp-child-card<?= ($hasAllergy || $hasMedical) ? ' tp-child-card--allergy' : '' ?>">

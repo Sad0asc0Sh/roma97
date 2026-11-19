@@ -755,7 +755,7 @@ require_once __DIR__ . '/header.php';
                                     <?php endif; ?>
                                 </td>
                                 <td class="muted" style="white-space:nowrap;">
-                                    <?= e(shamsiDate((string) $log['created_at'], 'with_time')) ?>
+                                    <?= e(shamsiDbTimestamp((string) $log['created_at'], 'with_time')) ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
