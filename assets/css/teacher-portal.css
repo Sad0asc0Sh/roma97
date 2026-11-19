@@ -191,7 +191,7 @@
     display: none !important;
 }
 
-.tp-search-toggle,
+.tp-action-btn.tp-search-toggle,
 .tp-search-close {
     display: none;
 }
@@ -1514,11 +1514,11 @@
 
     .tp-search-wrap { position: static; }
 
-    .tp-search-toggle { display: inline-flex; }
+    .tp-action-btn.tp-search-toggle { display: inline-flex; }
 
     .tp-search-wrap:not(.is-open) .tp-search-box { display: none; }
 
-    .tp-search-wrap.is-open .tp-search-toggle { display: none; }
+    .tp-search-wrap.is-open .tp-action-btn.tp-search-toggle { display: none; }
 
     .tp-search-wrap.is-open .tp-search-box {
         position: absolute;

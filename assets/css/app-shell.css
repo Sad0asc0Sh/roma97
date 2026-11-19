@@ -215,13 +215,14 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
   display: none !important;
 }
 
-.app-search-toggle,
+.app-topbar-btn.app-search-toggle,
 .app-search-close {
   display: none;
 }
 
 .app-search-box {
   position: relative;
+  display: block;
   width: 100%;
 }
 
@@ -1285,13 +1286,13 @@ body.admin-layout, body.teacher-layout, body.parent-portal-body {
     align-items: center;
     width: auto;
   }
-  .app-search-toggle {
+  .app-topbar-btn.app-search-toggle {
     display: inline-flex;
   }
   .app-search-shell:not(.is-open) .app-search-box {
     display: none;
   }
-  .app-search-shell.is-open .app-search-toggle {
+  .app-search-shell.is-open .app-topbar-btn.app-search-toggle {
     display: none;
   }
   .app-search-shell.is-open .app-search-box {
