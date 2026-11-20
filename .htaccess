@@ -159,6 +159,7 @@ FileETag None
 # ── PHP Upload & Resource Limits (Allow up to 50MB slide & media uploads) ──
 <IfModule mod_php.c>
     php_value upload_max_filesize 50M
+    php_value session.upload_progress.enabled 0
     php_value post_max_size 55M
     php_value memory_limit 256M
     php_value max_execution_time 300
@@ -166,6 +167,7 @@ FileETag None
 </IfModule>
 <IfModule mod_php7.c>
     php_value upload_max_filesize 50M
+    php_value session.upload_progress.enabled 0
     php_value post_max_size 55M
     php_value memory_limit 256M
     php_value max_execution_time 300
@@ -173,6 +175,7 @@ FileETag None
 </IfModule>
 <IfModule mod_php8.c>
     php_value upload_max_filesize 50M
+    php_value session.upload_progress.enabled 0
     php_value post_max_size 55M
     php_value memory_limit 256M
     php_value max_execution_time 300
